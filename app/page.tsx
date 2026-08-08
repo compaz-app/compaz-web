@@ -412,7 +412,7 @@ function Formulario() {
             </button>
 
             <p
-              className="text-xs text-center mt-1"
+              className="text-sm text-center mt-1 font-bold"
               style={{ color: "#4A3B6B", fontFamily: "var(--font-inter)" }}
             >
               Cada suscripción crea trabajo digno en Venezuela.
