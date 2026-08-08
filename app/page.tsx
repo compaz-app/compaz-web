@@ -219,34 +219,17 @@ function ComoFunciona() {
   );
 }
 
-// ─── Franja empleo ────────────────────────────────────────────────────────────
-
-function FranjaEmpleo() {
-  return (
-    <div
-      style={{ backgroundColor: "#FF6B2B" }}
-      className="py-10 px-6"
-    >
-      <div className="max-w-3xl mx-auto flex flex-col sm:flex-row items-center gap-4 sm:gap-8">
-        <span className="text-4xl shrink-0">🇻🇪</span>
-        <p
-          className="text-white text-lg sm:text-xl font-bold leading-snug text-center sm:text-left"
-          style={{ fontFamily: "var(--font-display)" }}
-        >
-          Cada visita que contratas crea un empleo digno en Venezuela.{" "}
-          <span className="font-normal opacity-90">
-            Los Compas son venezolanos que trabajan con condiciones justas, en su propio país.
-          </span>
-        </p>
-      </div>
-    </div>
-  );
-}
-
 // ─── Formulario ───────────────────────────────────────────────────────────────
 
 function Formulario() {
-  const [form, setForm] = useState({ nombre: "", contacto: "", ciudad: "", website: "" });
+  const [form, setForm] = useState({
+    nombre: "",
+    whatsapp: "",
+    email: "",
+    ciudad: "",
+    rol: "",
+    website: "",
+  });
   const [status, setStatus] = useState<"idle" | "loading" | "ok" | "error">("idle");
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -259,11 +242,17 @@ function Formulario() {
       const res = await fetch("/api/waitlist", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, turnstileToken }),
+        body: JSON.stringify({
+          nombre: form.nombre,
+          contacto: `WA: ${form.whatsapp} | Email: ${form.email} | Rol: ${form.rol}`,
+          ciudad: form.ciudad,
+          website: form.website,
+          turnstileToken,
+        }),
       });
       if (!res.ok) throw new Error("Error");
       setStatus("ok");
-      setForm({ nombre: "", contacto: "", ciudad: "", website: "" });
+      setForm({ nombre: "", whatsapp: "", email: "", ciudad: "", rol: "", website: "" });
     } catch {
       setStatus("error");
     }
@@ -326,29 +315,26 @@ function Formulario() {
               placeholder="Tu nombre"
               value={form.nombre}
               onChange={(e) => setForm({ ...form, nombre: e.target.value })}
-              className="w-full rounded-xl px-5 py-4 text-base outline-none focus:ring-2"
-              style={{
-                backgroundColor: "white",
-                color: "#1A0A3C",
-                fontFamily: "var(--font-inter)",
-                border: "2px solid transparent",
-                // @ts-ignore
-                "--tw-ring-color": "#2D1464",
-              }}
+              className="w-full rounded-xl px-5 py-4 text-base outline-none"
+              style={{ backgroundColor: "white", color: "#1A0A3C", fontFamily: "var(--font-inter)" }}
             />
             <input
-              type="text"
+              type="tel"
               required
-              placeholder="WhatsApp o email"
-              value={form.contacto}
-              onChange={(e) => setForm({ ...form, contacto: e.target.value })}
-              className="w-full rounded-xl px-5 py-4 text-base outline-none focus:ring-2"
-              style={{
-                backgroundColor: "white",
-                color: "#1A0A3C",
-                fontFamily: "var(--font-inter)",
-                border: "2px solid transparent",
-              }}
+              placeholder="Tu WhatsApp (con código de país)"
+              value={form.whatsapp}
+              onChange={(e) => setForm({ ...form, whatsapp: e.target.value })}
+              className="w-full rounded-xl px-5 py-4 text-base outline-none"
+              style={{ backgroundColor: "white", color: "#1A0A3C", fontFamily: "var(--font-inter)" }}
+            />
+            <input
+              type="email"
+              required
+              placeholder="Tu email"
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              className="w-full rounded-xl px-5 py-4 text-base outline-none"
+              style={{ backgroundColor: "white", color: "#1A0A3C", fontFamily: "var(--font-inter)" }}
             />
             <input
               type="text"
@@ -356,14 +342,46 @@ function Formulario() {
               placeholder="Ciudad donde vive tu familiar en Venezuela"
               value={form.ciudad}
               onChange={(e) => setForm({ ...form, ciudad: e.target.value })}
-              className="w-full rounded-xl px-5 py-4 text-base outline-none focus:ring-2"
-              style={{
-                backgroundColor: "white",
-                color: "#1A0A3C",
-                fontFamily: "var(--font-inter)",
-                border: "2px solid transparent",
-              }}
+              className="w-full rounded-xl px-5 py-4 text-base outline-none"
+              style={{ backgroundColor: "white", color: "#1A0A3C", fontFamily: "var(--font-inter)" }}
             />
+
+            {/* Selector de rol */}
+            <div className="flex flex-col gap-2">
+              <p
+                className="text-sm font-semibold px-1"
+                style={{ color: "#1A0A3C", fontFamily: "var(--font-inter)" }}
+              >
+                ¿Cómo quieres participar?
+              </p>
+              {[
+                { value: "familia", label: "Quiero contratar el servicio para mi familiar" },
+                { value: "compa", label: "Quiero ser Compa (trabajo en Venezuela)" },
+              ].map(({ value, label }) => (
+                <label
+                  key={value}
+                  className="flex items-center gap-3 rounded-xl px-5 py-4 cursor-pointer transition-colors"
+                  style={{
+                    backgroundColor: form.rol === value ? "#2D1464" : "white",
+                    color: form.rol === value ? "white" : "#1A0A3C",
+                    fontFamily: "var(--font-inter)",
+                    fontSize: "0.9rem",
+                  }}
+                >
+                  <input
+                    type="radio"
+                    name="rol"
+                    value={value}
+                    required
+                    checked={form.rol === value}
+                    onChange={() => setForm({ ...form, rol: value })}
+                    className="accent-current"
+                    style={{ accentColor: form.rol === value ? "white" : "#2D1464" }}
+                  />
+                  {label}
+                </label>
+              ))}
+            </div>
 
             {process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY && (
               <div
@@ -456,7 +474,6 @@ export default function Home() {
         <Hero />
         <QueHaceUnCompa />
         <ComoFunciona />
-        <FranjaEmpleo />
         <Formulario />
       </main>
       <Footer />
