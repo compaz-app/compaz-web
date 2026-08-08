@@ -457,18 +457,24 @@ function ListaDeEspera() {
   const [form, setForm] = useState({ nombre: "", contacto: "", ciudad: "", website: "" });
   const [status, setStatus] = useState<"idle" | "loading" | "ok" | "error">("idle");
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setStatus("loading");
+
+    // Obtener token de Cloudflare Turnstile (si está configurado)
+    const turnstileToken =
+      (e.currentTarget.querySelector('[name="cf-turnstile-response"]') as HTMLInputElement | null)
+        ?.value ?? "";
+
     try {
       const res = await fetch("/api/waitlist", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, turnstileToken }),
       });
       if (!res.ok) throw new Error("Error");
       setStatus("ok");
-      setForm({ nombre: "", contacto: "", ciudad: "" });
+      setForm({ nombre: "", contacto: "", ciudad: "", website: "" });
     } catch {
       setStatus("error");
     }
@@ -586,6 +592,16 @@ function ListaDeEspera() {
                 }}
               />
             </div>
+            {/* Cloudflare Turnstile — verificación humana invisible */}
+            {process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY && (
+              <div
+                className="cf-turnstile"
+                data-sitekey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY}
+                data-theme="light"
+                data-language="es"
+              />
+            )}
+
             {status === "error" && (
               <p id="form-error" role="alert" aria-live="assertive" className="text-sm font-semibold" style={{ color: "#1A0A3C" }}>
                 Hubo un error al enviar. Escríbenos directamente por{" "}
