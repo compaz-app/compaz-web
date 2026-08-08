@@ -1,7 +1,6 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import { useState } from "react";
 
 // ─── Nav ────────────────────────────────────────────────────────────────────
@@ -21,25 +20,6 @@ function Nav() {
           className="h-9 w-auto object-contain flex-shrink-0"
         />
         <div className="flex items-center gap-2 sm:gap-4">
-          <Link
-            href="/compas"
-            className="hidden md:inline text-white/75 hover:text-white text-sm font-medium transition-colors"
-          >
-            Nuestros Compas
-          </Link>
-          {/* WhatsApp: icon-only on mobile, text on desktop */}
-          <a
-            href="https://wa.me/message/compaz"
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="WhatsApp"
-            className="flex items-center gap-1.5 text-white/80 hover:text-white transition-colors min-h-[44px] min-w-[44px] justify-center sm:justify-start"
-          >
-            <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5" aria-hidden="true">
-              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-            </svg>
-            <span className="hidden sm:inline text-sm font-medium">WhatsApp</span>
-          </a>
           <a
             href="#lista-de-espera"
             style={{ backgroundColor: "#FF6B2B" }}
@@ -628,165 +608,6 @@ function ListaDeEspera() {
   );
 }
 
-// ─── Compas activos ──────────────────────────────────────────────────────────
-
-const compas = [
-  {
-    nombre: "Ana R.",
-    zona: "Chacao, Caracas",
-    foto: "/images/compa-mujer4.jpg",
-    rating: "5.0",
-    visitas: 34,
-    resena: "Muy puntual y cariñosa con mi mamá. Se quedó más de lo acordado porque ella quería seguir hablando.",
-    familia: "Familia R.",
-  },
-  {
-    nombre: "Carlos P.",
-    zona: "Baruta, Caracas",
-    foto: "/images/compa-carlos.jpg",
-    rating: "4.8",
-    visitas: 17,
-    resena: "Mi papá lo espera cada semana. Le ayuda con las pastillas y lo lleva al médico sin problema.",
-    familia: "Familia M.",
-  },
-  {
-    nombre: "María G.",
-    zona: "Los Palos Grandes, Caracas",
-    foto: "/images/compa-mujer3.jpg",
-    rating: "4.9",
-    visitas: 24,
-    resena: "Mi abuela dice que es como tener una nieta en casa. Ya no se siente sola.",
-    familia: "Familia G.",
-  },
-  {
-    nombre: "Rosa M.",
-    zona: "El Hatillo, Caracas",
-    foto: "/images/compa-mujer7.jpg",
-    rating: "4.9",
-    visitas: 28,
-    resena: "Acompañó a mi mamá al cardiólogo y tomó notas de todo lo que dijo el doctor.",
-    familia: "Familia L.",
-  },
-];
-
-function CompasActivos() {
-  return (
-    <section style={{ backgroundColor: "#FDFAF6" }} className="py-24">
-      <div className="max-w-6xl mx-auto px-6">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-12">
-          <h2
-            className="text-4xl lg:text-5xl font-extrabold leading-tight"
-            style={{ color: "#2D1464", fontFamily: "var(--font-display)" }}
-          >
-            Conoce a los Compas
-            <br />
-            que ya están activos.
-          </h2>
-          <p
-            className="text-base max-w-xs sm:text-right"
-            style={{ color: "#4A3B6B", fontFamily: "var(--font-inter)" }}
-          >
-            Cada uno verificado antes de su primera visita.
-          </p>
-        </div>
-
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          {compas.map((c) => (
-            <div
-              key={c.nombre}
-              className="rounded-2xl overflow-hidden flex flex-col"
-              style={{ backgroundColor: "white", border: "2px solid #E8E0D4" }}
-            >
-              <div className="relative">
-                <Image
-                  src={c.foto}
-                  alt={c.nombre}
-                  width={400}
-                  height={260}
-                  className="w-full object-cover"
-                  style={{ height: 200 }}
-                />
-                <div
-                  className="absolute top-3 left-3 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold"
-                  style={{ backgroundColor: "white", color: "#2D1464" }}
-                >
-                  <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="#FF6B2B" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                  </svg>
-                  Verificado
-                </div>
-              </div>
-              <div className="p-5 flex flex-col flex-1">
-                <div className="flex items-start justify-between mb-1">
-                  <div>
-                    <p
-                      className="font-extrabold text-lg"
-                      style={{ color: "#2D1464", fontFamily: "var(--font-display)" }}
-                    >
-                      {c.nombre}
-                    </p>
-                    <p
-                      className="text-xs"
-                      style={{ color: "#6B5C90", fontFamily: "var(--font-inter)" }}
-                    >
-                      {c.zona}
-                    </p>
-                  </div>
-                  <p
-                    className="font-bold text-base shrink-0"
-                    style={{ color: "#2D1464", fontFamily: "var(--font-display)" }}
-                  >
-                    {c.rating} <span style={{ color: "#FF6B2B" }}>&#9733;</span>
-                  </p>
-                </div>
-                <p
-                  className="text-xs mt-1 mb-3"
-                  style={{ color: "#6B5C90", fontFamily: "var(--font-inter)" }}
-                >
-                  {c.visitas} visitas realizadas
-                </p>
-                <blockquote
-                  className="text-sm leading-relaxed pt-3 flex-1"
-                  style={{
-                    color: "#4A3B6B",
-                    fontFamily: "var(--font-inter)",
-                    borderTop: "1px solid #E8E0D4",
-                  }}
-                >
-                  "{c.resena}"
-                  <footer
-                    className="text-xs mt-2 font-semibold"
-                    style={{ color: "#6B5C90" }}
-                  >
-                    — {c.familia}
-                  </footer>
-                </blockquote>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
-          <a
-            href="#lista-de-espera"
-            style={{ backgroundColor: "#FF6B2B" }}
-            className="inline-flex items-center gap-2 text-white font-bold px-8 py-4 rounded-full hover:opacity-90 transition-opacity"
-          >
-            Únete para elegir tu Compa
-          </a>
-          <Link
-            href="/compas"
-            className="text-sm font-semibold hover:opacity-80 transition-opacity"
-            style={{ color: "#2D1464", fontFamily: "var(--font-display)" }}
-          >
-            Ver todos los Compas →
-          </Link>
-        </div>
-      </div>
-    </section>
-  );
-}
-
 // ─── Equipo ───────────────────────────────────────────────────────────────────
 
 const equipo = [
@@ -885,9 +706,7 @@ function Footer() {
           <div className="grid grid-cols-2 gap-x-8 md:gap-x-16 gap-y-3">
             {[
               { label: "Cómo funciona", href: "#como-funciona" },
-              { label: "Nuestros Compas", href: "/compas" },
               { label: "Lista de espera", href: "#lista-de-espera" },
-              { label: "WhatsApp", href: "https://wa.me/message/compaz" },
               { label: "@elcompaz", href: "https://instagram.com/elcompaz" },
               { label: "Privacidad", href: "/privacidad" },
             ].map((l) => (
@@ -903,21 +722,6 @@ function Footer() {
                 {l.label}
               </a>
             ))}
-
-            {/* Inversionistas — visible en la columna de links */}
-            <Link
-              href="/inversionistas"
-              className="inline-flex items-center gap-2 transition-opacity hover:opacity-80 col-span-2 sm:col-span-1 mt-2 self-start"
-              style={{ fontFamily: "var(--font-display)" }}
-            >
-              <span className="arrow-bounce text-base" style={{ color: "#FFD23F" }}>→</span>
-              <span
-                className="text-sm font-bold px-3 py-1 rounded-full"
-                style={{ backgroundColor: "#FF6B2B", color: "white" }}
-              >
-                inversionistas
-              </span>
-            </Link>
           </div>
         </div>
 
@@ -992,7 +796,6 @@ export default function Home() {
         <WaveDivider from="#FF6B2B" to="#FDFAF6" shape={2} />
         <Solucion />
         <ComoFunciona />
-        <CompasActivos />
         <Equipo />
         <WaveDivider from="#FDFAF6" to="#FFD23F" shape={1} flip />
         <ListaDeEspera />
