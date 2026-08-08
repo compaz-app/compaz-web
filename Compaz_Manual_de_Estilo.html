@@ -1,0 +1,1258 @@
+<title>Compaz — Manual de Estilo</title>
+<style>
+  /* ── TOKENS ──────────────────────────────────────────── */
+  :root {
+    --purple:       #2D1464;
+    --purple-dark:  #1A0A3C;
+    --purple-light: #3D2080;
+    --orange:       #FF6B2B;
+    --orange-dark:  #E05520;
+    --yellow:       #FFD23F;
+    --warm-white:   #FDFAF6;
+    --warm-gray:    #F5F0E8;
+    --ink-primary:  #1A0A3C;
+    --ink-mid:      #4A3B6B;
+    --ink-muted:    #6B5C90;
+    --border:       #E8E0D4;
+
+    --f-display: 'Trebuchet MS', 'Arial Black', system-ui, sans-serif;
+    --f-body:    -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+
+    /* page tokens */
+    --bg:        var(--warm-white);
+    --surface:   #fff;
+    --text:      var(--ink-primary);
+    --text-2:    var(--ink-mid);
+    --text-3:    var(--ink-muted);
+    --rule:      var(--border);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:      #13082a;
+      --surface: #1e1040;
+      --text:    #f0eaf8;
+      --text-2:  #c4b5e8;
+      --text-3:  #8b7baa;
+      --rule:    #2e1f5e;
+    }
+  }
+  :root[data-theme="light"] {
+    --bg:        var(--warm-white);
+    --surface:   #fff;
+    --text:      var(--ink-primary);
+    --text-2:    var(--ink-mid);
+    --text-3:    var(--ink-muted);
+    --rule:      var(--border);
+  }
+  :root[data-theme="dark"] {
+    --bg:      #13082a;
+    --surface: #1e1040;
+    --text:    #f0eaf8;
+    --text-2:  #c4b5e8;
+    --text-3:  #8b7baa;
+    --rule:    #2e1f5e;
+  }
+
+  /* ── RESET ───────────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--f-body);
+    font-size: 16px;
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+  img { max-width: 100%; display: block; }
+  a { color: var(--orange); text-decoration: none; }
+  a:hover { opacity: .8; }
+  h1,h2,h3,h4 { text-wrap: balance; font-family: var(--f-display); }
+
+  /* ── THEME TOGGLE ────────────────────────────────────── */
+  .theme-toggle {
+    position: fixed;
+    top: 16px; right: 16px;
+    z-index: 100;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 999px;
+    padding: 6px 14px;
+    font-size: 12px;
+    font-family: var(--f-body);
+    cursor: pointer;
+    color: var(--text-2);
+    transition: opacity .15s;
+  }
+  .theme-toggle:hover { opacity: .7; }
+
+  /* ── LAYOUT ──────────────────────────────────────────── */
+  .wrap { max-width: 860px; margin: 0 auto; padding: 0 24px; }
+  .wrap--wide { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+
+  section { padding: 80px 0; }
+  section + section { border-top: 1px solid var(--rule); }
+
+  /* ── HERO ────────────────────────────────────────────── */
+  .hero {
+    background: var(--purple-dark);
+    padding: 96px 24px 80px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 60% 80% at 110% 10%, rgba(255,107,43,.18), transparent);
+    pointer-events: none;
+  }
+  .hero-eyebrow {
+    display: inline-block;
+    font-family: var(--f-display);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--yellow);
+    margin-bottom: 24px;
+  }
+  .hero-title {
+    font-family: var(--f-display);
+    font-size: clamp(2.8rem, 6vw, 5rem);
+    font-weight: 900;
+    line-height: 1.0;
+    color: #fff;
+    margin-bottom: 20px;
+    letter-spacing: -.02em;
+  }
+  .hero-title span { color: var(--orange); }
+  .hero-sub {
+    font-size: 1.1rem;
+    color: rgba(255,255,255,.7);
+    max-width: 540px;
+    line-height: 1.6;
+    margin-bottom: 48px;
+  }
+  .hero-meta {
+    display: flex;
+    gap: 32px;
+    flex-wrap: wrap;
+    border-top: 1px solid rgba(255,255,255,.12);
+    padding-top: 32px;
+  }
+  .hero-meta-item { font-size: 12px; color: rgba(255,255,255,.5); letter-spacing: .04em; }
+  .hero-meta-item strong { display: block; color: rgba(255,255,255,.85); font-size: 13px; margin-bottom: 2px; }
+
+  /* ── SECTION HEADERS ─────────────────────────────────── */
+  .section-label {
+    font-family: var(--f-display);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--orange);
+    margin-bottom: 8px;
+  }
+  .section-title {
+    font-family: var(--f-display);
+    font-size: clamp(1.7rem, 3vw, 2.4rem);
+    font-weight: 900;
+    letter-spacing: -.01em;
+    line-height: 1.1;
+    color: var(--text);
+    margin-bottom: 12px;
+  }
+  .section-desc {
+    font-size: 1rem;
+    color: var(--text-2);
+    max-width: 60ch;
+    margin-bottom: 48px;
+  }
+
+  /* ── COLOR PALETTE ───────────────────────────────────── */
+  .palette-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 16px;
+  }
+  .swatch {
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid var(--rule);
+  }
+  .swatch-chip {
+    height: 80px;
+    position: relative;
+  }
+  .swatch-chip.dark-text::after {
+    content: 'Aa';
+    position: absolute;
+    bottom: 10px; right: 14px;
+    font-family: var(--f-display);
+    font-weight: 900;
+    font-size: 18px;
+    color: rgba(26,10,60,.35);
+  }
+  .swatch-chip.light-text::after {
+    content: 'Aa';
+    position: absolute;
+    bottom: 10px; right: 14px;
+    font-family: var(--f-display);
+    font-weight: 900;
+    font-size: 18px;
+    color: rgba(255,255,255,.35);
+  }
+  .swatch-info {
+    padding: 12px 14px;
+    background: var(--surface);
+  }
+  .swatch-name {
+    font-family: var(--f-display);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 2px;
+  }
+  .swatch-hex {
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    color: var(--text-3);
+    display: block;
+    margin-bottom: 4px;
+  }
+  .swatch-role {
+    font-size: 11px;
+    color: var(--text-3);
+    line-height: 1.4;
+  }
+
+  /* ── PALETTE SECTION BG ──────────────────────────────── */
+  .section-palette { background: var(--bg); }
+
+  /* ── TYPOGRAPHY ──────────────────────────────────────── */
+  .type-specimen {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 16px;
+    overflow: hidden;
+    margin-bottom: 24px;
+  }
+  .type-specimen-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--rule);
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .type-role {
+    font-family: var(--f-display);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--text-3);
+  }
+  .type-specs {
+    font-size: 11px;
+    color: var(--text-3);
+    font-family: 'Courier New', monospace;
+  }
+  .type-specimen-body { padding: 28px 28px; }
+
+  .specimen-display {
+    font-family: var(--f-display);
+    font-size: clamp(2.4rem, 6vw, 4rem);
+    font-weight: 900;
+    line-height: 1.05;
+    letter-spacing: -.02em;
+    color: var(--text);
+  }
+  .specimen-headline {
+    font-family: var(--f-display);
+    font-size: clamp(1.6rem, 3vw, 2.4rem);
+    font-weight: 900;
+    line-height: 1.15;
+    color: var(--text);
+  }
+  .specimen-title {
+    font-family: var(--f-display);
+    font-size: 1.125rem;
+    font-weight: 700;
+    line-height: 1.3;
+    color: var(--text);
+  }
+  .specimen-body {
+    font-family: var(--f-body);
+    font-size: 1rem;
+    font-weight: 400;
+    line-height: 1.7;
+    color: var(--text-2);
+    max-width: 65ch;
+  }
+  .specimen-label {
+    font-family: var(--f-display);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--orange);
+  }
+  .specimen-mono {
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    color: var(--text-2);
+    background: var(--warm-gray);
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+
+  .font-card {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 16px;
+    padding: 28px;
+    margin-bottom: 16px;
+  }
+  .font-name {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    color: var(--text-3);
+    margin-bottom: 16px;
+    font-family: var(--f-display);
+    font-weight: 700;
+  }
+  .font-display-sample {
+    font-family: var(--f-display);
+    font-size: 2.5rem;
+    font-weight: 900;
+    line-height: 1.0;
+    color: var(--text);
+    letter-spacing: -.02em;
+    margin-bottom: 12px;
+  }
+  .font-alpha {
+    font-family: var(--f-display);
+    font-size: 14px;
+    color: var(--text-3);
+    letter-spacing: .04em;
+    font-weight: 700;
+    margin-bottom: 16px;
+  }
+  .font-weights {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+  .font-weight-item { font-family: var(--f-display); font-size: 15px; color: var(--text-2); }
+
+  .font-body-sample {
+    font-family: var(--f-body);
+    font-size: 1rem;
+    line-height: 1.7;
+    color: var(--text-2);
+    max-width: 60ch;
+    margin-bottom: 12px;
+  }
+  .font-body-alpha {
+    font-family: var(--f-body);
+    font-size: 14px;
+    color: var(--text-3);
+    letter-spacing: .04em;
+  }
+
+  /* ── COMPONENTS ──────────────────────────────────────── */
+  .component-section { background: var(--bg); }
+
+  .component-row {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: 40px;
+  }
+  .component-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--text-3);
+    font-weight: 700;
+    font-family: var(--f-display);
+    margin-bottom: 12px;
+  }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: 15px;
+    border-radius: 999px;
+    border: none;
+    cursor: pointer;
+    transition: opacity .15s;
+    text-decoration: none;
+    white-space: nowrap;
+    min-height: 44px;
+    padding: 0 24px;
+  }
+  .btn:hover { opacity: .85; }
+  .btn-primary { background: var(--orange); color: #fff; box-shadow: 0 8px 24px rgba(224,85,32,.25); }
+  .btn-ghost { background: transparent; color: #fff; border: 2px solid rgba(255,255,255,.3); }
+  .btn-ghost:hover { background: rgba(255,255,255,.1); opacity: 1; }
+  .btn-secondary { background: var(--purple); color: #fff; }
+
+  .btn-demo-wrap {
+    background: var(--purple);
+    border-radius: 16px;
+    padding: 28px;
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+
+  /* Cards */
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  .card {
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+  }
+  .card-dark {
+    background: var(--purple);
+    border: none;
+    border-radius: 16px;
+    padding: 20px;
+    color: #fff;
+  }
+  .card-name {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+  .card-meta {
+    font-size: 12px;
+    color: var(--text-3);
+    margin-bottom: 12px;
+  }
+  .card-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--warm-gray);
+    color: var(--ink-mid);
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    font-family: var(--f-display);
+  }
+  .card-dark-title { font-family: var(--f-display); font-weight: 700; font-size: 15px; margin-bottom: 6px; }
+  .card-dark-text { font-size: 13px; color: rgba(255,255,255,.7); line-height: 1.5; }
+
+  /* Chips */
+  .chip {
+    display: inline-block;
+    background: var(--warm-gray);
+    color: var(--purple);
+    border-radius: 12px;
+    padding: 10px 16px;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: var(--f-body);
+  }
+  .chips-wrap { display: flex; gap: 10px; flex-wrap: wrap; }
+
+  /* Input */
+  .input-wrap { max-width: 360px; }
+  .input-field {
+    width: 100%;
+    background: var(--surface);
+    border: 2px solid rgba(45,20,100,.2);
+    border-radius: 12px;
+    padding: 14px 18px;
+    font-size: 1rem;
+    font-family: var(--f-body);
+    color: var(--text);
+    outline: none;
+    transition: border-color .15s;
+  }
+  .input-field:focus { border-color: var(--purple); }
+  .input-field::placeholder { color: var(--text-3); }
+
+  /* Nav example */
+  .nav-example {
+    background: var(--purple);
+    border-radius: 16px;
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .nav-logo { font-family: var(--f-display); font-weight: 900; color: #fff; font-size: 20px; letter-spacing: -.01em; }
+  .nav-links { display: flex; gap: 24px; align-items: center; }
+  .nav-link { font-size: 14px; color: rgba(255,255,255,.75); font-weight: 500; cursor: pointer; }
+  .nav-link:hover { color: #fff; }
+
+  /* ── DO / DON'T ──────────────────────────────────────── */
+  .rules-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 640px) { .rules-grid { grid-template-columns: 1fr; } }
+  .rule-card {
+    border-radius: 16px;
+    padding: 24px;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+  }
+  .rule-card.do { border-top: 4px solid #22c55e; }
+  .rule-card.dont { border-top: 4px solid #ef4444; }
+  .rule-heading {
+    font-family: var(--f-display);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+  .rule-card.do .rule-heading { color: #22c55e; }
+  .rule-card.dont .rule-heading { color: #ef4444; }
+  .rule-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+  .rule-list li {
+    display: flex;
+    gap: 10px;
+    font-size: 14px;
+    color: var(--text-2);
+    line-height: 1.45;
+  }
+  .rule-list li::before {
+    content: '✓';
+    color: #22c55e;
+    font-weight: 700;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .rule-card.dont .rule-list li::before { content: '✗'; color: #ef4444; }
+
+  /* ── VOICE ───────────────────────────────────────────── */
+  .voice-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+    overflow-x: auto;
+  }
+  .voice-table th {
+    font-family: var(--f-display);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    padding: 10px 16px;
+    text-align: left;
+    background: var(--surface);
+    color: var(--text-3);
+    border-bottom: 1px solid var(--rule);
+  }
+  .voice-table td {
+    padding: 12px 16px;
+    vertical-align: top;
+    border-bottom: 1px solid var(--rule);
+    color: var(--text-2);
+    line-height: 1.5;
+  }
+  .voice-table tr:last-child td { border-bottom: none; }
+  .voice-table td:first-child { color: var(--text); font-weight: 500; }
+  .voice-correct { color: #22c55e !important; }
+  .voice-wrong { color: #ef4444 !important; text-decoration: line-through; }
+  .table-wrap { background: var(--surface); border: 1px solid var(--rule); border-radius: 16px; overflow: hidden; overflow-x: auto; }
+
+  /* ── SPACING SCALE ───────────────────────────────────── */
+  .spacing-grid { display: flex; flex-direction: column; gap: 12px; }
+  .spacing-row { display: flex; align-items: center; gap: 16px; }
+  .spacing-bar-wrap { flex: 1; height: 12px; background: var(--rule); border-radius: 99px; overflow: hidden; }
+  .spacing-bar { height: 100%; background: var(--orange); border-radius: 99px; }
+  .spacing-name { font-family: 'Courier New', monospace; font-size: 12px; color: var(--text-3); width: 40px; flex-shrink: 0; }
+  .spacing-value { font-size: 12px; color: var(--text-3); width: 36px; text-align: right; flex-shrink: 0; }
+
+  /* ── WAVE DIVIDER ────────────────────────────────────── */
+  .wave-orange { color: var(--orange); fill: var(--orange); }
+  .divider-orange { background: var(--orange); padding: 64px 24px; }
+  .divider-orange .section-title { color: #fff; }
+  .divider-orange .section-desc { color: rgba(255,255,255,.8); }
+
+  /* ── RADIUS SCALE ─────────────────────────────────────── */
+  .radius-grid { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-end; }
+  .radius-swatch {
+    background: var(--surface);
+    border: 2px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--f-display);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-3);
+    flex-direction: column;
+    gap: 6px;
+    padding: 20px;
+  }
+  .radius-label { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
+
+  /* ── LOGO SECTION ─────────────────────────────────────── */
+  .logo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; margin-bottom: 32px; }
+  .logo-card {
+    border-radius: 16px;
+    padding: 36px 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+  }
+  .logo-card-label { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; font-family: var(--f-display); font-weight: 700; }
+  .logo-placeholder {
+    font-family: var(--f-display);
+    font-weight: 900;
+    font-size: 1.5rem;
+    letter-spacing: -.02em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .logo-icon { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+
+  /* ── FOOTER ───────────────────────────────────────────── */
+  .doc-footer {
+    background: var(--purple-dark);
+    padding: 48px 24px;
+    text-align: center;
+  }
+  .doc-footer-title {
+    font-family: var(--f-display);
+    font-weight: 900;
+    font-size: 1.4rem;
+    color: #fff;
+    margin-bottom: 8px;
+  }
+  .doc-footer-sub { font-size: 13px; color: rgba(255,255,255,.45); }
+  .doc-footer-tag {
+    display: inline-block;
+    margin-top: 24px;
+    background: rgba(255,107,43,.2);
+    color: var(--orange);
+    border-radius: 999px;
+    padding: 6px 16px;
+    font-size: 12px;
+    font-weight: 700;
+    font-family: var(--f-display);
+    letter-spacing: .06em;
+    text-transform: uppercase;
+  }
+
+  /* ── RESPONSIVE ───────────────────────────────────────── */
+  @media (max-width: 640px) {
+    section { padding: 56px 0; }
+    .hero { padding: 72px 24px 56px; }
+    .palette-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+
+<button class="theme-toggle" onclick="
+  const r = document.documentElement;
+  const t = r.dataset.theme;
+  r.dataset.theme = (!t || t === 'light') ? 'dark' : 'light';
+  this.textContent = r.dataset.theme === 'dark' ? '☀ Claro' : '◐ Oscuro';
+">◐ Oscuro</button>
+
+<!-- ════════════════════════════════ HERO ════════════════ -->
+<header class="hero">
+  <div class="wrap">
+    <span class="hero-eyebrow">Compaz · Manual de Estilo</span>
+    <h1 class="hero-title">
+      Identidad<br><span>visual</span><br>de marca.
+    </h1>
+    <p class="hero-sub">
+      Sistema de diseño para todos los materiales de Compaz: web, redes sociales, WhatsApp Business, presentaciones, e impreso. Fuente única de verdad.
+    </p>
+    <div class="hero-meta">
+      <div class="hero-meta-item"><strong>Versión</strong>1.0</div>
+      <div class="hero-meta-item"><strong>Audiencia</strong>Diseñadores · Redactores · Claude Code</div>
+      <div class="hero-meta-item"><strong>Última revisión</strong>Agosto 2026</div>
+    </div>
+  </div>
+</header>
+
+<!-- ════════════════════════════ ESENCIA ════════════════ -->
+<section>
+  <div class="wrap">
+    <p class="section-label">01 — Esencia</p>
+    <h2 class="section-title">El vecino de confianza</h2>
+    <p class="section-desc">
+      Compaz es el equivalente visual de un vecino de confianza: alguien a quien dejas entrar a tu casa sin pensarlo dos veces, que conoce el nombre de tu familia, y llama después de la visita para decirte que todo está bien.
+    </p>
+
+    <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(240px,1fr)); gap:16px;">
+      <div class="card" style="border-top: 4px solid var(--orange);">
+        <p class="card-name" style="margin-bottom:8px;">Qué es Compaz</p>
+        <p style="font-size:14px; color: var(--text-2); line-height:1.6;">Una plataforma de cuidado por compañía para adultos mayores en Venezuela, pagada por hijos y familiares en el exterior.</p>
+      </div>
+      <div class="card" style="border-top: 4px solid var(--yellow);">
+        <p class="card-name" style="margin-bottom:8px;">North Star creativo</p>
+        <p style="font-size:14px; color: var(--text-2); line-height:1.6;">"El Vecino de Confianza" — cálido, confiable, cercano. No un startup, no una plataforma clínica: un servicio que la comunidad construyó.</p>
+      </div>
+      <div class="card" style="border-top: 4px solid var(--purple);">
+        <p class="card-name" style="margin-bottom:8px;">Frase ancla</p>
+        <p style="font-size:1.05rem; color: var(--purple); font-weight:700; font-family: var(--f-display); line-height:1.3;">"Presente, aunque tú no puedas estarlo."</p>
+      </div>
+      <div class="card" style="border-top: 4px solid var(--ink-muted);">
+        <p class="card-name" style="margin-bottom:8px;">Lo que Compaz NO es</p>
+        <p style="font-size:14px; color: var(--text-2); line-height:1.6;">No corporativo. No clínico/médico. No infantil. No una agencia genérica de servicios. No jerga fintech ni startup.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════ PALETA ════════════════ -->
+<section class="section-palette">
+  <div class="wrap">
+    <p class="section-label">02 — Color</p>
+    <h2 class="section-title">La paleta venezolana</h2>
+    <p class="section-desc">Tres colores saturados ancla (morado, naranja, amarillo) sobre un fondo casi blanco. Cada color es una sección, no solo un acento.</p>
+
+    <div class="palette-grid">
+
+      <div class="swatch">
+        <div class="swatch-chip light-text" style="background:#2D1464;"></div>
+        <div class="swatch-info">
+          <p class="swatch-name">Compaz Purple</p>
+          <code class="swatch-hex">#2D1464</code>
+          <p class="swatch-role">Nav, hero, secciones de contraste, cards oscuras.</p>
+        </div>
+      </div>
+
+      <div class="swatch">
+        <div class="swatch-chip light-text" style="background:#1A0A3C;"></div>
+        <div class="swatch-info">
+          <p class="swatch-name">Purple Darker</p>
+          <code class="swatch-hex">#1A0A3C</code>
+          <p class="swatch-role">Footer. Texto primario en fondos claros.</p>
+        </div>
+      </div>
+
+      <div class="swatch">
+        <div class="swatch-chip light-text" style="background:#FF6B2B;"></div>
+        <div class="swatch-info">
+          <p class="swatch-name">Compaz Orange</p>
+          <code class="swatch-hex">#FF6B2B</code>
+          <p class="swatch-role">CTA primario, acción, énfasis. El color que el ojo ve primero.</p>
+        </div>
+      </div>
+
+      <div class="swatch">
+        <div class="swatch-chip dark-text" style="background:#FFD23F;"></div>
+        <div class="swatch-info">
+          <p class="swatch-name">Compaz Yellow</p>
+          <code class="swatch-hex">#FFD23F</code>
+          <p class="swatch-role">Eyebrows de sección, subrayado wavy, links en footer oscuro.</p>
+        </div>
+      </div>
+
+      <div class="swatch">
+        <div class="swatch-chip dark-text" style="background:#FDFAF6; border:1px solid #E8E0D4;"></div>
+        <div class="swatch-info">
+          <p class="swatch-name">Warm White</p>
+          <code class="swatch-hex">#FDFAF6</code>
+          <p class="swatch-role">Fondo de página. Respiro entre secciones de color.</p>
+        </div>
+      </div>
+
+      <div class="swatch">
+        <div class="swatch-chip dark-text" style="background:#F5F0E8;"></div>
+        <div class="swatch-info">
+          <p class="swatch-name">Warm Gray</p>
+          <code class="swatch-hex">#F5F0E8</code>
+          <p class="swatch-role">Chips de servicio, superficies de card blancas en secciones claras.</p>
+        </div>
+      </div>
+
+      <div class="swatch">
+        <div class="swatch-chip light-text" style="background:#4A3B6B;"></div>
+        <div class="swatch-info">
+          <p class="swatch-name">Ink Mid</p>
+          <code class="swatch-hex">#4A3B6B</code>
+          <p class="swatch-role">Texto secundario, subencabezados, copy descriptivo. Pasa WCAG AA (~9:1).</p>
+        </div>
+      </div>
+
+      <div class="swatch">
+        <div class="swatch-chip light-text" style="background:#6B5C90;"></div>
+        <div class="swatch-info">
+          <p class="swatch-name">Ink Muted</p>
+          <code class="swatch-hex">#6B5C90</code>
+          <p class="swatch-role">Solo metadatos grandes (+18px). No en párrafos — falla WCAG AA en fondos claros.</p>
+        </div>
+      </div>
+
+      <div class="swatch">
+        <div class="swatch-chip dark-text" style="background:#E8E0D4;"></div>
+        <div class="swatch-info">
+          <p class="swatch-name">Border Subtle</p>
+          <code class="swatch-hex">#E8E0D4</code>
+          <p class="swatch-role">Bordes de card, divisores. Siempre 1–2px. Nunca como franja decorativa.</p>
+        </div>
+      </div>
+
+    </div>
+
+    <div style="margin-top:32px; background:var(--surface); border:1px solid var(--rule); border-radius:16px; padding:24px;">
+      <p class="component-label" style="margin-bottom:16px;">Regla de oro</p>
+      <p style="font-size:14px; color:var(--text-2); line-height:1.6; max-width:68ch;">
+        Cuando una sección usa un color de marca como fondo, lo usa a <strong style="color:var(--text);">full bleed</strong> — sin paneles parciales ni color solo de un lado. El color es la identidad de la sección, no su decoración. Colores vibrantes y de alto contraste: evitar siempre tonos pastel, desaturados, azul corporativo frío, o rosa genérico de "cuidado".
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════ TIPOGRAFÍA ════════════════ -->
+<section>
+  <div class="wrap">
+    <p class="section-label">03 — Tipografía</p>
+    <h2 class="section-title">Display + cuerpo</h2>
+    <p class="section-desc">Dos familias con ejes de contraste claros: una geométrica extrabold para titulares, una humanista neutral para cuerpo. Sin serif — este no es un brand editorial.</p>
+
+    <!-- Font cards -->
+    <div class="font-card">
+      <p class="font-name">Display — Bricolage Grotesque</p>
+      <div class="font-display-sample">Presente.</div>
+      <p class="font-alpha">A B C D E F G H I J K L M N Ñ O P Q R S T U V W X Y Z</p>
+      <p class="font-alpha" style="font-weight:400; letter-spacing:0;">a b c d e f g h i j k l m n ñ o p q r s t u v w x y z  0 1 2 3 4 5 6 7 8 9</p>
+      <div class="font-weights">
+        <span class="font-weight-item" style="font-weight:600;">SemiBold 600</span>
+        <span class="font-weight-item" style="font-weight:700;">Bold 700</span>
+        <span class="font-weight-item" style="font-weight:800;">ExtraBold 800</span>
+      </div>
+      <p style="margin-top:16px; font-size:12px; color:var(--text-3);">Pesos en producción: 600, 700, 800 · Self-hosted en build via <code style="background:var(--warm-gray);padding:2px 5px;border-radius:4px;">next/font/google</code></p>
+    </div>
+
+    <div class="font-card">
+      <p class="font-name">Cuerpo — Inter</p>
+      <p class="font-body-sample">Compaz conecta a hijos e hijas en el exterior con su familia en Venezuela. Un Compa los visita, los acompaña, y tú recibes fotos y notas de cada visita. Para saber que están bien, no solo imaginarlo.</p>
+      <p class="font-body-alpha">A B C D E F G H I J K L M N Ñ O P Q R S T U V W X Y Z · a b c d e f g h i j k l m n ñ o p q r s t u v w x y z</p>
+      <div class="font-weights" style="margin-top:12px;">
+        <span style="font-family:var(--f-body); font-size:15px; color:var(--text-2); font-weight:400;">Regular 400</span>
+        <span style="font-family:var(--f-body); font-size:15px; color:var(--text-2); font-weight:500;">Medium 500</span>
+        <span style="font-family:var(--f-body); font-size:15px; color:var(--text-2); font-weight:600;">SemiBold 600</span>
+      </div>
+    </div>
+
+    <!-- Hierarchy -->
+    <p class="component-label" style="margin-top:40px; margin-bottom:16px;">Jerarquía tipográfica</p>
+
+    <div class="type-specimen">
+      <div class="type-specimen-header">
+        <span class="type-role">Display</span>
+        <span class="type-specs">Bricolage Grotesque · 800 · clamp(2.5rem,7vw,4.5rem) · lh 1.05 · ls -0.01em</span>
+      </div>
+      <div class="type-specimen-body">
+        <p class="specimen-display">Presente, aunque tú no puedas estarlo.</p>
+      </div>
+    </div>
+
+    <div class="type-specimen">
+      <div class="type-specimen-header">
+        <span class="type-role">Headline</span>
+        <span class="type-specs">Bricolage Grotesque · 800 · clamp(1.75rem,4vw,3rem) · lh 1.15</span>
+      </div>
+      <div class="type-specimen-body">
+        <p class="specimen-headline">¿Cómo funciona?</p>
+      </div>
+    </div>
+
+    <div class="type-specimen">
+      <div class="type-specimen-header">
+        <span class="type-role">Title</span>
+        <span class="type-specs">Bricolage Grotesque · 700 · 1.125rem · lh 1.3</span>
+      </div>
+      <div class="type-specimen-body">
+        <p class="specimen-title">Valentina R. — Chacao, Caracas · 34 visitas</p>
+      </div>
+    </div>
+
+    <div class="type-specimen">
+      <div class="type-specimen-header">
+        <span class="type-role">Body</span>
+        <span class="type-specs">Inter · 400 · 1rem · lh 1.7 · max 65–75ch</span>
+      </div>
+      <div class="type-specimen-body">
+        <p class="specimen-body">Cada Compa pasa por verificación de identidad, revisión de referencias personales, entrevista presencial, y una primera visita supervisada antes de trabajar de forma independiente. Recibes su perfil completo antes de la primera visita.</p>
+      </div>
+    </div>
+
+    <div class="type-specimen">
+      <div class="type-specimen-header">
+        <span class="type-role">Label / Eyebrow</span>
+        <span class="type-specs">Bricolage Grotesque · 700 · 0.75rem · ls +0.08em · uppercase · máx 2/página</span>
+      </div>
+      <div class="type-specimen-body">
+        <p class="specimen-label">Cuidamos con amistad</p>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ════════════════════════════ COMPONENTES ════════════════ -->
+<section class="component-section">
+  <div class="wrap">
+    <p class="section-label">04 — Componentes</p>
+    <h2 class="section-title">Vocabulario visual</h2>
+    <p class="section-desc">Elementos recurrentes y sus reglas de uso.</p>
+
+    <!-- NAV -->
+    <p class="component-label">Navegación</p>
+    <div class="nav-example">
+      <span class="nav-logo">compaz</span>
+      <div class="nav-links">
+        <span class="nav-link">Nuestros Compas</span>
+        <span class="nav-link">WhatsApp</span>
+        <a class="btn btn-primary" style="font-size:14px; padding:0 18px; min-height:40px;">Únete</a>
+      </div>
+    </div>
+    <p style="font-size:12px; color:var(--text-3); margin-bottom:40px;">Fondo <code class="specimen-mono">#2D1464</code> · Sticky · z-index 50 · Logo 36px alto · CTA naranja siempre visible · Touch target mínimo 44px</p>
+
+    <!-- BUTTONS -->
+    <p class="component-label">Botones</p>
+    <div class="btn-demo-wrap">
+      <a class="btn btn-primary">Únete a la lista de espera</a>
+      <a class="btn btn-ghost">Habla con nosotros</a>
+    </div>
+    <div style="display:flex; gap:16px; flex-wrap:wrap; margin-bottom:8px;">
+      <a class="btn btn-secondary">Ver nuestros Compas</a>
+    </div>
+    <p style="font-size:12px; color:var(--text-3); margin-bottom:40px;">Pill radius 9999px · Primary: naranja + sombra <code class="specimen-mono">rgba(224,85,32,.30)</code> solo en hero · Ghost: solo sobre fondos oscuros · Hover: opacity 0.9, no cambiar color</p>
+
+    <!-- CARDS -->
+    <p class="component-label">Cards</p>
+    <div class="card-grid">
+      <div class="card">
+        <div style="width:100%;height:80px;background:var(--warm-gray);border-radius:8px;margin-bottom:14px;display:flex;align-items:center;justify-content:center; font-size:13px; color:var(--text-3);">Foto del Compa</div>
+        <p class="card-name">Ana Rodríguez</p>
+        <p class="card-meta">Chacao, Caracas · 34 visitas</p>
+        <div class="chips-wrap">
+          <span class="card-tag">✓ Verificada</span>
+          <span class="card-tag">Acompañamiento</span>
+        </div>
+      </div>
+      <div class="card-dark">
+        <p class="card-dark-title">Última visita</p>
+        <p class="card-dark-text">"Tu mamá está muy bien. Hicimos las compras juntos. Mañana le llevo las frutas."</p>
+        <p style="font-size:11px; color:rgba(255,255,255,.4); margin-top:12px;">Hoy, 3:42 pm · Ana R.</p>
+      </div>
+    </div>
+    <p style="font-size:12px; color:var(--text-3); margin-bottom:40px;">Card Compa: fondo blanco, borde <code class="specimen-mono">2px #E8E0D4</code>, radius 16px · Card oscura: <code class="specimen-mono">#2D1464</code> o <code class="specimen-mono">#FF6B2B</code>, sombra float · Sin cards anidadas</p>
+
+    <!-- CHIPS -->
+    <p class="component-label">Chips de servicio</p>
+    <div class="chips-wrap" style="margin-bottom:8px;">
+      <span class="chip">Acompañamiento</span>
+      <span class="chip">Compras y mandados</span>
+      <span class="chip">Llamadas de seguimiento</span>
+      <span class="chip">Reporte con fotos</span>
+    </div>
+    <p style="font-size:12px; color:var(--text-3); margin-bottom:40px;">Fondo <code class="specimen-mono">#F5F0E8</code>, texto <code class="specimen-mono">#2D1464</code>, radius 12px · Solo texto, sin íconos · No interactivos</p>
+
+    <!-- INPUT -->
+    <p class="component-label">Campo de entrada</p>
+    <div class="input-wrap" style="margin-bottom:8px;">
+      <input class="input-field" type="email" inputmode="email" placeholder="tu@email.com" />
+    </div>
+    <p style="font-size:12px; color:var(--text-3); margin-bottom:40px;">Fondo blanco · Borde <code class="specimen-mono">2px rgba(45,20,100,.2)</code> · Focus: <code class="specimen-mono">outline: 2px solid #2D1464</code> · <code class="specimen-mono">type="email" inputMode="email"</code> para correos · Label sr-only + placeholder visible</p>
+
+  </div>
+</section>
+
+<!-- ════════════════════════════ ESPACIADO ════════════════ -->
+<section>
+  <div class="wrap">
+    <p class="section-label">05 — Espaciado y forma</p>
+    <h2 class="section-title">Escala de espacio y radio</h2>
+    <p class="section-desc">Sistema de 6 tokens de espaciado y 4 tokens de radio. Consistencia sin rigidez.</p>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:40px;">
+      <div>
+        <p class="component-label" style="margin-bottom:16px;">Espaciado</p>
+        <div class="spacing-grid">
+          <div class="spacing-row">
+            <span class="spacing-name">xs</span>
+            <div class="spacing-bar-wrap"><div class="spacing-bar" style="width:8%;"></div></div>
+            <span class="spacing-value">12px</span>
+          </div>
+          <div class="spacing-row">
+            <span class="spacing-name">sm</span>
+            <div class="spacing-bar-wrap"><div class="spacing-bar" style="width:13%;"></div></div>
+            <span class="spacing-value">16px</span>
+          </div>
+          <div class="spacing-row">
+            <span class="spacing-name">md</span>
+            <div class="spacing-bar-wrap"><div class="spacing-bar" style="width:19%;"></div></div>
+            <span class="spacing-value">24px</span>
+          </div>
+          <div class="spacing-row">
+            <span class="spacing-name">lg</span>
+            <div class="spacing-bar-wrap"><div class="spacing-bar" style="width:32%;"></div></div>
+            <span class="spacing-value">40px</span>
+          </div>
+          <div class="spacing-row">
+            <span class="spacing-name">xl</span>
+            <div class="spacing-bar-wrap"><div class="spacing-bar" style="width:51%;"></div></div>
+            <span class="spacing-value">64px</span>
+          </div>
+          <div class="spacing-row">
+            <span class="spacing-name">2xl</span>
+            <div class="spacing-bar-wrap"><div class="spacing-bar" style="width:76%;"></div></div>
+            <span class="spacing-value">96px</span>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <p class="component-label" style="margin-bottom:16px;">Radio de borde</p>
+        <div style="display:flex;flex-direction:column;gap:16px;">
+          <div style="display:flex;align-items:center;gap:16px;">
+            <div style="width:60px;height:40px;background:var(--orange);border-radius:12px;flex-shrink:0;"></div>
+            <div>
+              <p style="font-family:var(--f-display);font-weight:700;font-size:13px;color:var(--text);">sm — 12px</p>
+              <p style="font-size:12px;color:var(--text-3);">Chips, inputs, cards pequeñas</p>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:16px;">
+            <div style="width:60px;height:40px;background:var(--purple);border-radius:16px;flex-shrink:0;"></div>
+            <div>
+              <p style="font-family:var(--f-display);font-weight:700;font-size:13px;color:var(--text);">md — 16px</p>
+              <p style="font-size:12px;color:var(--text-3);">Cards de Compas, pricing, formularios</p>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:16px;">
+            <div style="width:60px;height:40px;background:var(--ink-mid);border-radius:24px;flex-shrink:0;"></div>
+            <div>
+              <p style="font-family:var(--f-display);font-weight:700;font-size:13px;color:var(--text);">lg — 24px</p>
+              <p style="font-size:12px;color:var(--text-3);">Containers grandes, modales</p>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:16px;">
+            <div style="width:60px;height:40px;background:var(--orange);border-radius:999px;flex-shrink:0;"></div>
+            <div>
+              <p style="font-family:var(--f-display);font-weight:700;font-size:13px;color:var(--text);">pill — 9999px</p>
+              <p style="font-size:12px;color:var(--text-3);">Todos los botones, badges, tags de nav</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════ VOZ ════════════════ -->
+<section style="background:var(--purple-dark); padding:80px 0;">
+  <div class="wrap">
+    <p class="section-label" style="color:var(--yellow);">06 — Voz y tono</p>
+    <h2 class="section-title" style="color:#fff;">Las palabras también son diseño</h2>
+    <p class="section-desc" style="color:rgba(255,255,255,.65);">Español neutro sin modismos específicos. Frases cortas y directas. Tono de "amigo que resuelve", no de empresa que vende.</p>
+
+    <div class="table-wrap">
+      <table class="voice-table">
+        <thead>
+          <tr>
+            <th style="background:#1e1040;">Concepto</th>
+            <th style="background:#1e1040;">✓ Correcto</th>
+            <th style="background:#1e1040;">✗ Evitar</th>
+          </tr>
+        </thead>
+        <tbody style="background:#13082a;">
+          <tr>
+            <td style="color:rgba(255,255,255,.5);">El cuidador</td>
+            <td class="voice-correct">Un Compa</td>
+            <td class="voice-wrong" style="color:#ef4444;">Cuidador / trabajador / empleado</td>
+          </tr>
+          <tr>
+            <td style="color:rgba(255,255,255,.5);">La persona mayor</td>
+            <td class="voice-correct">Tu mamá / tu familiar</td>
+            <td class="voice-wrong" style="color:#ef4444;">Paciente / adulto mayor dependiente</td>
+          </tr>
+          <tr>
+            <td style="color:rgba(255,255,255,.5);">La acción del servicio</td>
+            <td class="voice-correct">"Un Compa visita a tu familiar"</td>
+            <td class="voice-wrong" style="color:#ef4444;">"Se asigna un cuidador al paciente"</td>
+          </tr>
+          <tr>
+            <td style="color:rgba(255,255,255,.5);">El resultado</td>
+            <td class="voice-correct">"Recibes fotos y notas de cada visita"</td>
+            <td class="voice-wrong" style="color:#ef4444;">"Se genera un reporte de servicio"</td>
+          </tr>
+          <tr>
+            <td style="color:rgba(255,255,255,.5);">Flexibilidad</td>
+            <td class="voice-correct">"Ajustas cuando quieras, sin penalidades"</td>
+            <td class="voice-wrong" style="color:#ef4444;">"Modificación sujeta a términos"</td>
+          </tr>
+          <tr>
+            <td style="color:rgba(255,255,255,.5);">Lenguaje de VC</td>
+            <td class="voice-correct">Solo en /inversionistas</td>
+            <td class="voice-wrong" style="color:#ef4444;">Escalar / B2B2C / múltiplo / moat en web pública</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-top:24px;">
+      <div style="background:rgba(255,255,255,.06);border-radius:12px;padding:16px;">
+        <p style="font-family:var(--f-display);font-weight:700;font-size:12px;color:var(--yellow);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px;">Empatía primero</p>
+        <p style="font-size:13px;color:rgba(255,255,255,.6);line-height:1.5;">Nombrar el problema antes de hablar del producto.</p>
+      </div>
+      <div style="background:rgba(255,255,255,.06);border-radius:12px;padding:16px;">
+        <p style="font-family:var(--f-display);font-weight:700;font-size:12px;color:var(--yellow);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px;">Solución simple</p>
+        <p style="font-size:13px;color:rgba(255,255,255,.6);line-height:1.5;">Qué hace Compaz en una frase, sin tecnicismos.</p>
+      </div>
+      <div style="background:rgba(255,255,255,.06);border-radius:12px;padding:16px;">
+        <p style="font-family:var(--f-display);font-weight:700;font-size:12px;color:var(--yellow);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px;">Prueba</p>
+        <p style="font-size:13px;color:rgba(255,255,255,.6);line-height:1.5;">Verificación, reportes, testimonios reales.</p>
+      </div>
+      <div style="background:rgba(255,255,255,.06);border-radius:12px;padding:16px;">
+        <p style="font-family:var(--f-display);font-weight:700;font-size:12px;color:var(--yellow);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px;">Un CTA</p>
+        <p style="font-size:13px;color:rgba(255,255,255,.6);line-height:1.5;">Una sola acción principal por pieza. Nunca varias compitiendo.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════ DO / DON'T ════════════════ -->
+<section>
+  <div class="wrap">
+    <p class="section-label">07 — Reglas</p>
+    <h2 class="section-title">Haz y no hagas</h2>
+    <p class="section-desc">Las reglas absolutas que distinguen el sistema de Compaz de los defaults genéricos.</p>
+
+    <div class="rules-grid">
+      <div class="rule-card do">
+        <p class="rule-heading">✓ Haz</p>
+        <ul class="rule-list">
+          <li>Usar naranja para el CTA primario en todos los contextos. Un solo color de acción.</li>
+          <li>Full bleed cuando una sección usa color de marca como fondo. Sin paneles parciales.</li>
+          <li>Mostrar nombres reales, barrios reales, conteos reales de visitas.</li>
+          <li><code class="specimen-mono">text-wrap: balance</code> en todos los h1–h3.</li>
+          <li>Máximo 3 wave dividers por página, solo en las transiciones más significativas.</li>
+          <li>WCAG AA en todo texto de cuerpo e interfaz (4.5:1 mínimo).</li>
+          <li><code class="specimen-mono">aria-label</code> en todos los elementos solo-icono.</li>
+          <li>Touch targets mínimo 44×44px en botones y enlaces de nav.</li>
+          <li>Fotos reales de personas latinas — nunca stock anglosajón genérico.</li>
+        </ul>
+      </div>
+      <div class="rule-card dont">
+        <p class="rule-heading">✗ No hagas</p>
+        <ul class="rule-list">
+          <li><strong>Gradient text</strong> — <code class="specimen-mono">background-clip: text</code> + gradiente. Prohibido.</li>
+          <li><strong>Side-stripe borders</strong> — <code class="specimen-mono">border-left &gt; 1px</code> como acento decorativo. Prohibido.</li>
+          <li><strong>Glassmorphism</strong> — blur y glass cards como default decorativo. Prohibido.</li>
+          <li>Frío corporativo: azul navy, blanco hospital, lenguaje clínico, layouts de formulario de seguro.</li>
+          <li>SaaS genérico: cards con gradiente, dashboards de métricas, "escala tu negocio".</li>
+          <li>Marcos de caridad o ayuda humanitaria. Las familias no son casos de caridad.</li>
+          <li>Eyebrow labels en más de 2 secciones por página — es el scaffold de IA.</li>
+          <li><code class="specimen-mono">ink-muted (#6B5C90)</code> en texto de párrafo sobre fondos claros.</li>
+          <li>Bricolage Grotesque como fuente de cuerpo. Inter para body, siempre.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════ SHADOW ════════════════ -->
+<section style="background:var(--warm-gray);">
+  <div class="wrap">
+    <p class="section-label">08 — Elevación y movimiento</p>
+    <h2 class="section-title">Plano por defecto</h2>
+    <p class="section-desc">Compaz es plano. Las sombras significan llegada — úsalas solo en elementos que simulan algo que llegó a tu espacio.</p>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;margin-bottom:40px;">
+      <div>
+        <div style="background:#fff;border-radius:16px;padding:24px;margin-bottom:10px;box-shadow:0 8px 32px rgba(26,10,60,.25);">
+          <p style="font-family:var(--f-display);font-weight:700;font-size:13px;color:var(--ink-primary);margin-bottom:4px;">Sombra float</p>
+          <p style="font-size:12px;color:var(--ink-muted);line-height:1.5;">Cards "Última visita" y "Reporte enviado"</p>
+        </div>
+        <code class="specimen-mono" style="font-size:11px;">0 8px 32px rgba(26,10,60,.25)</code>
+      </div>
+      <div>
+        <div style="background:#fff;border-radius:16px;padding:24px;margin-bottom:10px;box-shadow:0 2px 8px rgba(26,10,60,.08);">
+          <p style="font-family:var(--f-display);font-weight:700;font-size:13px;color:var(--ink-primary);margin-bottom:4px;">Card lift (opcional)</p>
+          <p style="font-size:12px;color:var(--ink-muted);line-height:1.5;">Cards de pricing y perfil de Compas</p>
+        </div>
+        <code class="specimen-mono" style="font-size:11px;">0 2px 8px rgba(26,10,60,.08)</code>
+      </div>
+      <div>
+        <div style="background:#fff;border-radius:16px;padding:24px;margin-bottom:10px;">
+          <p style="font-family:var(--f-display);font-weight:700;font-size:13px;color:var(--ink-primary);margin-bottom:4px;">Sin sombra (default)</p>
+          <p style="font-size:12px;color:var(--ink-muted);line-height:1.5;">Nav, secciones, botones, inputs, containers en reposo</p>
+        </div>
+        <code class="specimen-mono" style="font-size:11px;">none</code>
+      </div>
+    </div>
+
+    <p class="component-label" style="margin-bottom:16px;">Movimiento</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;">
+        <p style="font-family:var(--f-display);font-weight:700;font-size:13px;color:var(--text);margin-bottom:6px;">wavy-underline</p>
+        <p style="font-size:12px;color:var(--text-3);line-height:1.5;">Animación SVG en "Presente" — ola amarilla continua. El único elemento decorativo de firma.</p>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;">
+        <p style="font-family:var(--f-display);font-weight:700;font-size:13px;color:var(--text);margin-bottom:6px;">arrow-bounce</p>
+        <p style="font-size:12px;color:var(--text-3);line-height:1.5;">Flecha → que se desplaza 6px a la derecha, 1s ease-in-out, para links de atención.</p>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;">
+        <p style="font-family:var(--f-display);font-weight:700;font-size:13px;color:var(--text);margin-bottom:6px;">prefers-reduced-motion</p>
+        <p style="font-size:12px;color:var(--text-3);line-height:1.5;">Obligatorio en todas las animaciones. Siempre <code class="specimen-mono">animation: none</code> como fallback.</p>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;">
+        <p style="font-family:var(--f-display);font-weight:700;font-size:13px;color:var(--text);margin-bottom:6px;">Transiciones UI</p>
+        <p style="font-size:12px;color:var(--text-3);line-height:1.5;">Botones: <code class="specimen-mono">opacity .15s</code>. Acordeón: <code class="specimen-mono">200ms ease</code>. Sin bounce ni elastic.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════ PROMPT ════════════════ -->
+<div class="divider-orange">
+  <div class="wrap">
+    <p class="section-label" style="color:rgba(255,255,255,.7);">09 — Para Claude Code</p>
+    <h2 class="section-title" style="color:#fff;margin-bottom:20px;">Prompt de referencia</h2>
+    <p style="font-size:1rem;color:rgba(255,255,255,.8);line-height:1.7;max-width:68ch;margin-bottom:24px;">
+      Pega esto al inicio de cualquier sesión de diseño para Compaz:
+    </p>
+    <div style="background:rgba(26,10,60,.5);border-radius:16px;padding:24px;font-family:'Courier New',monospace;font-size:13px;color:rgba(255,255,255,.85);line-height:1.8;backdrop-filter:blur(8px);">
+      "Antes de escribir o diseñar, revisa el DESIGN.md de Compaz. Aplica la paleta de color (purple #2D1464, naranja #FF6B2B, amarillo #FFD23F, warm-white #FDFAF6), fuentes (Bricolage Grotesque para display, Inter para cuerpo), tono de voz cálido orientado a la familia. Si es contenido público, nunca uses jerga de VC. Bans absolutos: gradient text, border-left decorativo, glassmorphism. Máximo 2 eyebrow labels por página. WCAG AA en todo el texto."
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════ FOOTER ════════════════ -->
+<footer class="doc-footer">
+  <p class="doc-footer-title">Compaz · Manual de Estilo v1.0</p>
+  <p class="doc-footer-sub">Este documento es la fuente única de verdad visual de la marca. Actualizar cuando cambie el sistema de diseño.</p>
+  <span class="doc-footer-tag">Confidencial · Uso interno</span>
+</footer>
