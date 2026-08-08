@@ -165,7 +165,7 @@ const pasos = [
   {
     num: "01",
     titulo: "Tú eliges la frecuencia",
-    desc: "Dinos con qué frecuencia necesitas visitas — semanal, quincenal o mensual.",
+    desc: "Dinos con qué frecuencia necesitas visitas: semanal, quincenal o mensual.",
   },
   {
     num: "02",
@@ -216,6 +216,30 @@ function ComoFunciona() {
         </div>
       </div>
     </section>
+  );
+}
+
+// ─── Franja empleo ────────────────────────────────────────────────────────────
+
+function FranjaEmpleo() {
+  return (
+    <div
+      style={{ backgroundColor: "#FF6B2B" }}
+      className="py-10 px-6"
+    >
+      <div className="max-w-3xl mx-auto flex flex-col sm:flex-row items-center gap-4 sm:gap-8">
+        <span className="text-4xl shrink-0">🇻🇪</span>
+        <p
+          className="text-white text-lg sm:text-xl font-bold leading-snug text-center sm:text-left"
+          style={{ fontFamily: "var(--font-display)" }}
+        >
+          Cada visita que contratas crea un empleo digno en Venezuela.{" "}
+          <span className="font-normal opacity-90">
+            Los Compas son venezolanos que trabajan con condiciones justas, en su propio país.
+          </span>
+        </p>
+      </div>
+    </div>
   );
 }
 
@@ -432,6 +456,7 @@ export default function Home() {
         <Hero />
         <QueHaceUnCompa />
         <ComoFunciona />
+        <FranjaEmpleo />
         <Formulario />
       </main>
       <Footer />
