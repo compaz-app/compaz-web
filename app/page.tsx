@@ -454,7 +454,7 @@ function ComoFunciona() {
 // ─── Lista de espera ──────────────────────────────────────────────────────────
 
 function ListaDeEspera() {
-  const [form, setForm] = useState({ nombre: "", contacto: "", ciudad: "" });
+  const [form, setForm] = useState({ nombre: "", contacto: "", ciudad: "", website: "" });
   const [status, setStatus] = useState<"idle" | "loading" | "ok" | "error">("idle");
 
   async function handleSubmit(e: React.FormEvent) {
@@ -513,6 +513,17 @@ function ListaDeEspera() {
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Honeypot — invisible para humanos, los bots lo llenan */}
+            <input
+              type="text"
+              name="website"
+              value={form.website}
+              onChange={(e) => setForm({ ...form, website: e.target.value })}
+              tabIndex={-1}
+              aria-hidden="true"
+              autoComplete="off"
+              style={{ position: "absolute", left: "-9999px", width: "1px", height: "1px", overflow: "hidden" }}
+            />
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
                 <label htmlFor="form-nombre" className="sr-only">Tu nombre</label>

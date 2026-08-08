@@ -52,11 +52,17 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  let body: { nombre?: unknown; contacto?: unknown; ciudad?: unknown };
+  let body: { nombre?: unknown; contacto?: unknown; ciudad?: unknown; website?: unknown };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Solicitud inválida" }, { status: 400 });
+  }
+
+  // Honeypot: los bots llenan este campo oculto, los humanos no lo ven.
+  // Respondemos 200 para no alertar al bot, pero no guardamos nada.
+  if (typeof body.website === "string" && body.website.trim().length > 0) {
+    return NextResponse.json({ ok: true });
   }
 
   const nombreRaw = typeof body.nombre === "string" ? body.nombre : "";
