@@ -27,14 +27,14 @@ function corsHeaders(origin: string) {
   };
 }
 
-// ── Preflight OPTIONS ─────────────────────────────────────────────────────────
+// ── Preflight OPTIONS ────────────────────────────────────────────────────────
 export async function OPTIONS(req: NextRequest) {
   const origin = getAllowedOrigin(req);
   if (!origin) return new NextResponse(null, { status: 403 });
   return new NextResponse(null, { status: 204, headers: corsHeaders(origin) });
 }
 
-// ── Rate limiting in-memory ───────────────────────────────────────────────────
+// ── Rate limiting in-memory ──────────────────────────────────────────────────
 // Nota: en serverless cada instancia tiene su propio contador. La primera línea
 // de defensa real es Cloudflare Turnstile; esto es una capa adicional.
 const RATE_LIMIT_MAX = 3;
@@ -85,16 +85,18 @@ async function verifyTurnstile(token: string, ip: string): Promise<boolean> {
 }
 
 // ── Sanitización ──────────────────────────────────────────────────────────────
-const MAX_LEN = { nombre: 100, contacto: 200, ciudad: 100 };
+const MAX_LEN = { nombre: 100, contacto: 200, ciudad: 100, whatsapp: 30, email: 100 };
 
 function stripHtml(value: string): string {
   return value.replace(/<[^>]*>/g, "").trim();
 }
 
-function isValidContacto(value: string): boolean {
-  const email = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  const phone = /^[\d\s+()-]{6,20}$/;
-  return email.test(value) || phone.test(value);
+function isValidEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+function isValidPhone(value: string): boolean {
+  return /^[\d\s+()-]{6,20}$/.test(value);
 }
 
 // ── Handler principal ────────────────────────────────────────────────────────
@@ -138,21 +140,25 @@ export async function POST(req: NextRequest) {
   // 5. Validar campos
   const nombreRaw = typeof body.nombre === "string" ? body.nombre : "";
   const contactoRaw = typeof body.contacto === "string" ? body.contacto : "";
+  const whatsappRaw = typeof body.whatsapp === "string" ? body.whatsapp : "";
+  const emailRaw = typeof body.email === "string" ? body.email : "";
   const ciudadRaw = typeof body.ciudad === "string" ? body.ciudad : "";
 
   const nombre = stripHtml(nombreRaw).slice(0, MAX_LEN.nombre);
   const contacto = stripHtml(contactoRaw).slice(0, MAX_LEN.contacto);
+  const whatsapp = stripHtml(whatsappRaw).slice(0, MAX_LEN.whatsapp);
+  const email = stripHtml(emailRaw).slice(0, MAX_LEN.email);
   const ciudad = stripHtml(ciudadRaw).slice(0, MAX_LEN.ciudad);
 
-  if (!nombre || !contacto || !ciudad) {
+  if (!nombre || !contacto || !ciudad || !whatsapp || !email) {
     return NextResponse.json({ error: "Faltan campos" }, { status: 400, headers });
   }
 
-  if (!isValidContacto(contacto)) {
+  if (!isValidPhone(whatsapp) || !isValidEmail(email)) {
     return NextResponse.json(
-      { error: "El contacto debe ser un email o teléfono válido" },
+      { error: "Revisa el WhatsApp y el email" },
       { status: 400, headers }
-    );
+   );
   }
 
   // 6. Guardar en Airtable
