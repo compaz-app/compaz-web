@@ -260,6 +260,77 @@ function ComoFunciona() {
   );
 }
 
+// ─── Equipo ───────────────────────────────────────────────────────────────────
+
+const equipo = [
+  {
+    nombre: "Juan Tenreiro",
+    rol: "Founder",
+    foto: "/images/juan-tenreiro.jpg",
+    bio: "Juan fundó Compaz después de vivir en carne propia la distancia entre cuidar a la familia y estar lejos de Venezuela. Antes de Compaz, trabajó en construir productos y operaciones en etapas tempranas, con foco en resolver problemas reales de comunidades latinoamericanas. Cree que la tecnología puede devolverle presencia a quienes la distancia les quitó.",
+  },
+  {
+    nombre: "Luis Mendoza",
+    rol: "Co-Founder",
+    foto: "/images/luis-mendoza.jpg",
+    bio: "Luis se sumó a Compaz para construir la capa operativa y de confianza que el modelo necesita: verificación, calidad de servicio, y relación con las familias. Su experiencia en operaciones y logística lo llevó a ver de cerca cómo la distancia afecta a las familias migrantes, y decidió que quería ser parte de la solución.",
+  },
+];
+
+function Equipo() {
+  return (
+    <section style={{ backgroundColor: "#FDFAF6" }} className="py-24 px-6">
+      <div className="max-w-4xl mx-auto">
+        <h2
+          className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-center mb-14 leading-tight"
+          style={{ color: "#2D1464", fontFamily: "var(--font-display)", textWrap: "balance" }}
+        >
+          El equipo detrás de Compaz
+        </h2>
+
+        <div className="grid sm:grid-cols-2 gap-6">
+          {equipo.map((p) => (
+            <div
+              key={p.nombre}
+              className="flex flex-col sm:flex-row gap-5 items-start rounded-2xl p-6 sm:p-7"
+              style={{ backgroundColor: "white", border: "1.5px solid #E8E0D4" }}
+            >
+              <Image
+                src={p.foto}
+                alt={p.nombre}
+                width={80}
+                height={80}
+                className="rounded-full object-cover shrink-0"
+                style={{ width: 80, height: 80 }}
+              />
+              <div>
+                <p
+                  className="font-extrabold text-lg mb-0.5"
+                  style={{ color: "#2D1464", fontFamily: "var(--font-display)" }}
+                >
+                  {p.nombre}
+                </p>
+                <p
+                  className="text-sm font-semibold mb-3"
+                  style={{ color: "#FF6B2B", fontFamily: "var(--font-display)" }}
+                >
+                  {p.rol}
+                </p>
+                <p
+                  className="text-sm leading-relaxed"
+                  style={{ color: "#6B5C90", fontFamily: "var(--font-inter)" }}
+                >
+                  {p.bio}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 // ─── Formulario ───────────────────────────────────────────────────────────────
 
 function Formulario({ rolInicial }: { rolInicial: string }) {
@@ -531,7 +602,9 @@ export default function Home() {
         <QueHaceUnCompa />
         <WaveDivider from="#FDFAF6" to="#2D1464" shape={2} />
         <ComoFunciona />
-        <WaveDivider from="#2D1464" to="#FFD23F" shape={1} flip />
+        <WaveDivider from="#2D1464" to="#FDFAF6" shape={3} />
+        <Equipo />
+        <WaveDivider from="#FDFAF6" to="#FFD23F" shape={1} flip />
         <Formulario rolInicial={rolSeleccionado} />
       </main>
       <Footer />
