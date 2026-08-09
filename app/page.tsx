@@ -16,11 +16,11 @@ import {
 // ─── Wave Divider ─────────────────────────────────────────────────────────────
 
 const WAVE_PATHS: Record<number, string> = {
-  1: "M0,40 C480,80 960,0 1440,40 L1440,80 L0,80 Z",
-  2: "M0,60 C240,20 480,80 720,38 C960,0 1200,65 1440,35 L1440,80 L0,80 Z",
-  3: "M0,20 C360,80 1080,10 1440,65 L1440,80 L0,80 Z",
-  4: "M0,55 C180,80 360,20 540,60 C720,95 900,15 1080,55 C1200,78 1380,40 1440,52 L1440,80 L0,80 Z",
-  5: "M0,25 C280,25 420,75 640,68 C820,62 1100,18 1440,45 L1440,80 L0,80 Z",
+  1: "M0,60 C480,0 960,0 1440,60 L1440,80 L0,80 Z",       // cóncava (baja al centro)
+  2: "M0,20 C480,80 960,80 1440,20 L1440,80 L0,80 Z",      // convexa (sube al centro)
+  3: "M0,0 C480,0 1200,80 1440,80 L1440,80 L0,80 Z",       // inclinada izquierda→derecha
+  4: "M0,80 C240,80 960,0 1440,0 L1440,80 L0,80 Z",        // inclinada derecha→izquierda
+  5: "M0,40 C600,80 840,0 1440,40 L1440,80 L0,80 Z",       // suave asimétrica
 };
 
 function WaveDivider({ from, to, shape, flip = false }: { from: string; to: string; shape: 1 | 2 | 3 | 4 | 5; flip?: boolean }) {
@@ -102,33 +102,38 @@ function Hero({ onSelectRol }: { onSelectRol: (rol: string) => void }) {
       />
 
       {/* Contenido */}
-      <div className="relative z-10 text-center px-6 max-w-3xl mx-auto flex flex-col items-center gap-8">
-        <h1
-          className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white leading-tight"
-          style={{ fontFamily: "var(--font-display)", textWrap: "balance" }}
-        >
-          Tu mamá se quedó sin con quién ir al banco, al médico, al mercado.
-        </h1>
-        <p
-          className="text-lg sm:text-xl leading-relaxed max-w-xl"
-          style={{ color: "rgba(255,255,255,0.85)", fontFamily: "var(--font-inter)" }}
-        >
-          Un <strong className="text-white">Compa</strong> lo acompaña como lo haría un amigo de toda la vida. Tú recibes fotos y notas de cada visita, directo a tu WhatsApp.
-        </p>
-        <div className="flex flex-col sm:flex-row items-center gap-4">
+      <div className="relative z-10 w-full max-w-5xl mx-auto px-6 flex flex-col sm:flex-row items-center gap-8 sm:gap-16">
+        {/* Texto — izquierda */}
+        <div className="flex-1 flex flex-col gap-5 text-left">
+          <h1
+            className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-white leading-tight"
+            style={{ fontFamily: "var(--font-display)", textWrap: "balance" }}
+          >
+            ¿Tu mamá se quedó sin compañía para ir al médico, al banco, al mercado?
+          </h1>
+          <p
+            className="text-base sm:text-xl leading-relaxed"
+            style={{ color: "rgba(255,255,255,0.85)", fontFamily: "var(--font-inter)" }}
+          >
+            Un <strong className="text-white">Compita</strong> lo acompaña como lo haría un amigo de toda la vida. Tú recibes fotos y notas de cada visita, directo a tu WhatsApp.
+          </p>
+        </div>
+
+        {/* Botones — derecha en desktop, abajo en móvil */}
+        <div className="flex flex-col items-stretch gap-3 shrink-0 w-full sm:w-auto">
           <button
             onClick={() => irAFormulario("familia")}
-            style={{ backgroundColor: "#FF6B2B" }}
-            className="inline-flex items-center text-white font-bold text-base sm:text-lg px-8 py-4 rounded-full hover:opacity-90 transition-opacity"
+            style={{ backgroundColor: "#FF6B2B", textDecoration: "none" }}
+            className="inline-flex items-center justify-center text-white font-bold text-sm sm:text-lg px-6 sm:px-8 py-4 rounded-full hover:opacity-90 transition-opacity whitespace-nowrap"
           >
-            Quiero un Compa para mi familiar
+            Quiero un Compita para mi familiar
           </button>
           <button
             onClick={() => irAFormulario("compa")}
-            className="inline-flex items-center font-bold text-base sm:text-lg px-8 py-4 rounded-full hover:opacity-90 transition-opacity"
-            style={{ backgroundColor: "rgba(255,255,255,0.15)", color: "white", border: "2px solid rgba(255,255,255,0.6)" }}
+            className="inline-flex items-center justify-center font-bold text-sm sm:text-lg px-6 sm:px-8 py-4 rounded-full hover:opacity-90 transition-opacity whitespace-nowrap"
+            style={{ backgroundColor: "rgba(255,255,255,0.15)", color: "white", border: "2px solid rgba(255,255,255,0.6)", textDecoration: "none" }}
           >
-            Quiero trabajar como Compa
+            Quiero trabajar como Compita
           </button>
         </div>
       </div>
@@ -193,7 +198,7 @@ function QueHaceUnCompa() {
           className="mt-10 text-center text-sm font-medium"
           style={{ color: "#6B5C90", fontFamily: "var(--font-inter)" }}
         >
-          Cada Compa pasa por verificación de identidad y antecedentes antes de su primera visita.
+          Cada Compita pasa por verificación de identidad y antecedentes antes de su primera visita.
         </p>
       </div>
     </section>
@@ -210,8 +215,8 @@ const pasos = [
   },
   {
     num: "02",
-    titulo: "Te asignamos un Compa",
-    desc: "Te conectamos con un Compa verificado cerca de tu familiar en Venezuela.",
+    titulo: "Te asignamos un Compita",
+    desc: "Te conectamos con un Compita verificado cerca de tu familiar en Venezuela.",
   },
   {
     num: "03",
@@ -395,7 +400,7 @@ function Formulario({ rolInicial }: { rolInicial: string }) {
           className="text-3xl sm:text-4xl font-extrabold text-center mb-4 leading-tight"
           style={{ color: "#1A0A3C", fontFamily: "var(--font-display)", textWrap: "balance" }}
         >
-          Pronto arrancamos en Caracas. Solo 50 familias en el piloto.
+          Pronto iniciaremos en Caracas. Solo 50 familias en el piloto.
         </h2>
         <p
           className="text-center text-lg font-semibold mb-2"
@@ -486,7 +491,7 @@ function Formulario({ rolInicial }: { rolInicial: string }) {
               </p>
               {[
                 { value: "familia", label: "Quiero contratar el servicio para mi familiar" },
-                { value: "compa", label: "Quiero ser Compa (trabajo en Venezuela)" },
+                { value: "compa", label: "Quiero ser Compita (trabajo en Venezuela)" },
               ].map(({ value, label }) => (
                 <label
                   key={value}
@@ -536,6 +541,7 @@ function Formulario({ rolInicial }: { rolInicial: string }) {
                 backgroundColor: "#2D1464",
                 color: "white",
                 fontFamily: "var(--font-display)",
+                textDecoration: "none",
               }}
             >
               {status === "loading" ? "Enviando…" : "Quiero ser parte del piloto"}
