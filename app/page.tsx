@@ -374,6 +374,11 @@ function Formulario({ rolInicial }: { rolInicial: string }) {
       if (!res.ok) throw new Error("Error");
       setStatus("ok");
       setForm({ nombre: "", whatsapp: "", email: "", ciudad: "", rol: "", website: "" });
+      // Meta Pixel: evento de conversión (no solo PageView)
+      (window as typeof window & { fbq?: (...args: unknown[]) => void }).fbq?.(
+        "track",
+        "Lead"
+      );
     } catch {
       setStatus("error");
     }
