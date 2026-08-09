@@ -75,7 +75,7 @@ function Hero() {
           className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white leading-tight"
           style={{ fontFamily: "var(--font-display)", textWrap: "balance" }}
         >
-          Tu papá se quedó sin con quién ir al banco, al médico, al mercado.
+          Tu mamá se quedó sin con quién ir al banco, al médico, al mercado.
         </h1>
         <p
           className="text-lg sm:text-xl leading-relaxed max-w-xl"
