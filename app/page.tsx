@@ -102,33 +102,38 @@ function Hero({ onSelectRol }: { onSelectRol: (rol: string) => void }) {
       />
 
       {/* Contenido */}
-      <div className="relative z-10 text-center px-6 max-w-3xl mx-auto flex flex-col items-center gap-8">
-        <h1
-          className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white leading-tight"
-          style={{ fontFamily: "var(--font-display)", textWrap: "balance" }}
-        >
-          Tu mamá se quedó sin con quién ir al banco, al médico, al mercado.
-        </h1>
-        <p
-          className="text-lg sm:text-xl leading-relaxed max-w-xl"
-          style={{ color: "rgba(255,255,255,0.85)", fontFamily: "var(--font-inter)" }}
-        >
-          Un <strong className="text-white">Compa</strong> lo acompaña como lo haría un amigo de toda la vida. Tú recibes fotos y notas de cada visita, directo a tu WhatsApp.
-        </p>
-        <div className="flex flex-col sm:flex-row items-center gap-4">
+      <div className="relative z-10 w-full max-w-5xl mx-auto px-6 flex flex-col sm:flex-row items-center gap-10 sm:gap-16">
+        {/* Texto — izquierda */}
+        <div className="flex-1 flex flex-col gap-6 text-left">
+          <h1
+            className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white leading-tight"
+            style={{ fontFamily: "var(--font-display)", textWrap: "balance" }}
+          >
+            ¿Tu mamá se quedó sin con quién ir al banco, al médico, al mercado?
+          </h1>
+          <p
+            className="text-lg sm:text-xl leading-relaxed"
+            style={{ color: "rgba(255,255,255,0.85)", fontFamily: "var(--font-inter)" }}
+          >
+            Un <strong className="text-white">Compita</strong> lo acompaña como lo haría un amigo de toda la vida. Tú recibes fotos y notas de cada visita, directo a tu WhatsApp.
+          </p>
+        </div>
+
+        {/* Botones — derecha */}
+        <div className="flex flex-col items-stretch gap-4 shrink-0">
           <button
             onClick={() => irAFormulario("familia")}
             style={{ backgroundColor: "#FF6B2B" }}
-            className="inline-flex items-center text-white font-bold text-base sm:text-lg px-8 py-4 rounded-full hover:opacity-90 transition-opacity"
+            className="inline-flex items-center justify-center text-white font-bold text-base sm:text-lg px-8 py-4 rounded-full hover:opacity-90 transition-opacity"
           >
-            Quiero un Compa para mi familiar
+            Quiero un Compita para mi familiar
           </button>
           <button
             onClick={() => irAFormulario("compa")}
-            className="inline-flex items-center font-bold text-base sm:text-lg px-8 py-4 rounded-full hover:opacity-90 transition-opacity"
+            className="inline-flex items-center justify-center font-bold text-base sm:text-lg px-8 py-4 rounded-full hover:opacity-90 transition-opacity"
             style={{ backgroundColor: "rgba(255,255,255,0.15)", color: "white", border: "2px solid rgba(255,255,255,0.6)" }}
           >
-            Quiero trabajar como Compa
+            Quiero trabajar como Compita
           </button>
         </div>
       </div>
@@ -193,7 +198,7 @@ function QueHaceUnCompa() {
           className="mt-10 text-center text-sm font-medium"
           style={{ color: "#6B5C90", fontFamily: "var(--font-inter)" }}
         >
-          Cada Compa pasa por verificación de identidad y antecedentes antes de su primera visita.
+          Cada Compita pasa por verificación de identidad y antecedentes antes de su primera visita.
         </p>
       </div>
     </section>
@@ -210,8 +215,8 @@ const pasos = [
   },
   {
     num: "02",
-    titulo: "Te asignamos un Compa",
-    desc: "Te conectamos con un Compa verificado cerca de tu familiar en Venezuela.",
+    titulo: "Te asignamos un Compita",
+    desc: "Te conectamos con un Compita verificado cerca de tu familiar en Venezuela.",
   },
   {
     num: "03",
@@ -408,7 +413,7 @@ function Formulario({ rolInicial }: { rolInicial: string }) {
               </p>
               {[
                 { value: "familia", label: "Quiero contratar el servicio para mi familiar" },
-                { value: "compa", label: "Quiero ser Compa (trabajo en Venezuela)" },
+                { value: "compa", label: "Quiero ser Compita (trabajo en Venezuela)" },
               ].map(({ value, label }) => (
                 <label
                   key={value}
