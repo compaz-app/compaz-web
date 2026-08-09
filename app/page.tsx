@@ -318,8 +318,8 @@ function Formulario({ rolInicial }: { rolInicial: string }) {
           style={{ color: "#1A0A3C", fontFamily: "var(--font-display)", textWrap: "balance" }}
         >
           Pronto arrancamos en Caracas. Solo 50 familias en el piloto.
-          <span style={{ display: "block", marginTop: "1.25rem", textDecoration: "underline" }}>Preinscripciones</span>
-          <span style={{ display: "block", textDecoration: "underline" }}>hasta el 15 de agosto.</span>
+          <span style={{ display: "block", marginTop: "1.25rem", textDecoration: "underline", fontSize: "1.6rem" }}>Preinscripciones</span>
+          <span style={{ display: "block", textDecoration: "underline", fontSize: "1.6rem" }}>hasta el 15 de agosto.</span>
         </h2>
         <p
           className="text-center text-lg font-semibold mb-10"
