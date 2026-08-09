@@ -13,6 +13,33 @@ import {
   MessageCircle,
 } from "lucide-react";
 
+// ─── Wave Divider ─────────────────────────────────────────────────────────────
+
+const WAVE_PATHS: Record<number, string> = {
+  1: "M0,40 C480,80 960,0 1440,40 L1440,80 L0,80 Z",
+  2: "M0,60 C240,20 480,80 720,38 C960,0 1200,65 1440,35 L1440,80 L0,80 Z",
+  3: "M0,20 C360,80 1080,10 1440,65 L1440,80 L0,80 Z",
+  4: "M0,55 C180,80 360,20 540,60 C720,95 900,15 1080,55 C1200,78 1380,40 1440,52 L1440,80 L0,80 Z",
+  5: "M0,25 C280,25 420,75 640,68 C820,62 1100,18 1440,45 L1440,80 L0,80 Z",
+};
+
+function WaveDivider({ from, to, shape, flip = false }: { from: string; to: string; shape: 1 | 2 | 3 | 4 | 5; flip?: boolean }) {
+  return (
+    <div style={{ backgroundColor: from, lineHeight: 0, fontSize: 0 }}>
+      <svg
+        viewBox="0 0 1440 80"
+        xmlns="http://www.w3.org/2000/svg"
+        preserveAspectRatio="none"
+        className="w-full block h-10 sm:h-14 lg:h-16"
+        style={flip ? { transform: "scaleX(-1)" } : undefined}
+        aria-hidden="true"
+      >
+        <path d={WAVE_PATHS[shape]} fill={to} />
+      </svg>
+    </div>
+  );
+}
+
 // ─── Nav ─────────────────────────────────────────────────────────────────────
 
 function Nav() {
@@ -496,7 +523,9 @@ export default function Home() {
       <main>
         <Hero onSelectRol={setRolSeleccionado} />
         <QueHaceUnCompa />
+        <WaveDivider from="#FDFAF6" to="#2D1464" shape={2} />
         <ComoFunciona />
+        <WaveDivider from="#2D1464" to="#FFD23F" shape={1} flip />
         <Formulario rolInicial={rolSeleccionado} />
       </main>
       <Footer />
