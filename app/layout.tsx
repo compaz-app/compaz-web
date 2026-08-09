@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Bricolage_Grotesque, Inter } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 
 const bricolage = Bricolage_Grotesque({
@@ -46,6 +47,11 @@ export default function RootLayout({
     <html lang="es">
       <body className={`${bricolage.variable} ${inter.variable}`}>
         {children}
+        {/* Cloudflare Turnstile — carga solo cuando se necesita */}
+        <Script
+          src="https://challenges.cloudflare.com/turnstile/v0/api.js"
+          strategy="lazyOnload"
+        />
       </body>
     </html>
   );

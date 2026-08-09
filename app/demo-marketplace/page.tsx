@@ -90,12 +90,6 @@ export default function DemoMarketplace() {
             >
               Vista previa — proximamente
             </span>
-            <Link
-              href="/inversionistas"
-              className="text-white/60 hover:text-white text-sm font-medium transition-colors"
-            >
-              Inversionistas
-            </Link>
           </div>
         </div>
       </nav>
