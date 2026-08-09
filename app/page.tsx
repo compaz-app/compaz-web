@@ -102,36 +102,36 @@ function Hero({ onSelectRol }: { onSelectRol: (rol: string) => void }) {
       />
 
       {/* Contenido */}
-      <div className="relative z-10 w-full max-w-5xl mx-auto px-6 flex flex-col sm:flex-row items-center gap-10 sm:gap-16">
+      <div className="relative z-10 w-full max-w-5xl mx-auto px-6 flex flex-col sm:flex-row items-center gap-8 sm:gap-16">
         {/* Texto — izquierda */}
-        <div className="flex-1 flex flex-col gap-6 text-left">
+        <div className="flex-1 flex flex-col gap-5 text-left">
           <h1
-            className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white leading-tight"
+            className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-white leading-tight"
             style={{ fontFamily: "var(--font-display)", textWrap: "balance" }}
           >
             ¿Tu mamá se quedó sin compañía para ir al médico, al banco, al mercado?
           </h1>
           <p
-            className="text-lg sm:text-xl leading-relaxed"
+            className="text-base sm:text-xl leading-relaxed"
             style={{ color: "rgba(255,255,255,0.85)", fontFamily: "var(--font-inter)" }}
           >
             Un <strong className="text-white">Compita</strong> lo acompaña como lo haría un amigo de toda la vida. Tú recibes fotos y notas de cada visita, directo a tu WhatsApp.
           </p>
         </div>
 
-        {/* Botones — derecha */}
-        <div className="flex flex-col items-stretch gap-4 shrink-0">
+        {/* Botones — derecha en desktop, abajo en móvil */}
+        <div className="flex flex-col items-stretch gap-3 shrink-0 w-full sm:w-auto">
           <button
             onClick={() => irAFormulario("familia")}
-            style={{ backgroundColor: "#FF6B2B" }}
-            className="inline-flex items-center justify-center text-white font-bold text-base sm:text-lg px-8 py-4 rounded-full hover:opacity-90 transition-opacity"
+            style={{ backgroundColor: "#FF6B2B", textDecoration: "none" }}
+            className="inline-flex items-center justify-center text-white font-bold text-sm sm:text-lg px-6 sm:px-8 py-4 rounded-full hover:opacity-90 transition-opacity whitespace-nowrap"
           >
             Quiero un Compita para mi familiar
           </button>
           <button
             onClick={() => irAFormulario("compa")}
-            className="inline-flex items-center justify-center font-bold text-base sm:text-lg px-8 py-4 rounded-full hover:opacity-90 transition-opacity"
-            style={{ backgroundColor: "rgba(255,255,255,0.15)", color: "white", border: "2px solid rgba(255,255,255,0.6)" }}
+            className="inline-flex items-center justify-center font-bold text-sm sm:text-lg px-6 sm:px-8 py-4 rounded-full hover:opacity-90 transition-opacity whitespace-nowrap"
+            style={{ backgroundColor: "rgba(255,255,255,0.15)", color: "white", border: "2px solid rgba(255,255,255,0.6)", textDecoration: "none" }}
           >
             Quiero trabajar como Compita
           </button>
@@ -463,6 +463,7 @@ function Formulario({ rolInicial }: { rolInicial: string }) {
                 backgroundColor: "#2D1464",
                 color: "white",
                 fontFamily: "var(--font-display)",
+                textDecoration: "none",
               }}
             >
               {status === "loading" ? "Enviando…" : "Quiero ser parte del piloto"}
