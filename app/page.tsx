@@ -317,7 +317,7 @@ function Formulario({ rolInicial }: { rolInicial: string }) {
           className="text-3xl sm:text-4xl font-extrabold text-center mb-4 leading-tight"
           style={{ color: "#1A0A3C", fontFamily: "var(--font-display)", textWrap: "balance" }}
         >
-          Arrancamos en Caracas en septiembre. Estamos seleccionando las primeras 50 familias del piloto.
+          Pronto arrancamos en Caracas. Solo 50 familias en el piloto. Preinscripciones hasta el 15 de agosto.
         </h2>
         <p
           className="text-center text-lg font-semibold mb-10"
