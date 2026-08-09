@@ -319,7 +319,7 @@ function Formulario({ rolInicial }: { rolInicial: string }) {
         >
           Pronto arrancamos en Caracas. Solo 50 familias en el piloto.
           <br />
-          <span style={{ textDecoration: "underline" }}>Preinscripciones hasta el 15 de agosto.</span>
+          <span style={{ textDecoration: "underline", whiteSpace: "nowrap" }}>Preinscripciones hasta el 15 de agosto.</span>
         </h2>
         <p
           className="text-center text-lg font-semibold mb-10"
