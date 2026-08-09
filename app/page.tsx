@@ -317,7 +317,8 @@ function Formulario({ rolInicial }: { rolInicial: string }) {
           className="text-3xl sm:text-4xl font-extrabold text-center mb-4 leading-tight"
           style={{ color: "#1A0A3C", fontFamily: "var(--font-display)", textWrap: "balance" }}
         >
-          Pronto arrancamos en Caracas. Solo 50 familias en el piloto. Preinscripciones hasta el 15 de agosto.
+          Pronto arrancamos en Caracas. Solo 50 familias en el piloto.{" "}
+          <span style={{ color: "#FF6B2B" }}>Preinscripciones hasta el 15 de agosto.</span>
         </h2>
         <p
           className="text-center text-lg font-semibold mb-10"
