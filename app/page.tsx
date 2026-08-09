@@ -293,6 +293,8 @@ function Formulario({ rolInicial }: { rolInicial: string }) {
         body: JSON.stringify({
           nombre: form.nombre,
           contacto: `WA: ${form.whatsapp} | Email: ${form.email} | Rol: ${form.rol}`,
+          whatsapp: form.whatsapp,
+          email: form.email,
           ciudad: form.ciudad,
           website: form.website,
           turnstileToken,
