@@ -43,8 +43,13 @@ function Nav() {
 
 // ─── Hero ─────────────────────────────────────────────────────────────────────
 
-function Hero() {
+function Hero({ onSelectRol }: { onSelectRol: (rol: string) => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);
+
+  function irAFormulario(rol: string) {
+    onSelectRol(rol);
+    document.getElementById("formulario")?.scrollIntoView({ behavior: "smooth" });
+  }
 
   return (
     <section className="relative w-full h-screen overflow-hidden flex items-center justify-center">
@@ -83,13 +88,22 @@ function Hero() {
         >
           Un <strong className="text-white">Compa</strong> lo acompaña como lo haría un amigo de toda la vida. Tú recibes fotos y notas de cada visita, directo a tu WhatsApp.
         </p>
-        <a
-          href="#formulario"
-          style={{ backgroundColor: "#FF6B2B" }}
-          className="inline-flex items-center text-white font-bold text-base sm:text-lg px-8 py-4 rounded-full hover:opacity-90 transition-opacity"
-        >
-          Quiero un Compa para mi familiar
-        </a>
+        <div className="flex flex-col sm:flex-row items-center gap-4">
+          <button
+            onClick={() => irAFormulario("familia")}
+            style={{ backgroundColor: "#FF6B2B" }}
+            className="inline-flex items-center text-white font-bold text-base sm:text-lg px-8 py-4 rounded-full hover:opacity-90 transition-opacity"
+          >
+            Quiero un Compa para mi familiar
+          </button>
+          <button
+            onClick={() => irAFormulario("compa")}
+            className="inline-flex items-center font-bold text-base sm:text-lg px-8 py-4 rounded-full hover:opacity-90 transition-opacity"
+            style={{ backgroundColor: "rgba(255,255,255,0.15)", color: "white", border: "2px solid rgba(255,255,255,0.6)" }}
+          >
+            Quiero trabajar como Compa
+          </button>
+        </div>
       </div>
 
       {/* Flecha hacia abajo */}
@@ -221,15 +235,22 @@ function ComoFunciona() {
 
 // ─── Formulario ───────────────────────────────────────────────────────────────
 
-function Formulario() {
+function Formulario({ rolInicial }: { rolInicial: string }) {
   const [form, setForm] = useState({
     nombre: "",
     whatsapp: "",
     email: "",
     ciudad: "",
-    rol: "",
+    rol: rolInicial,
     website: "",
   });
+
+  // Sincronizar cuando rolInicial cambia desde el hero
+  const prevRolInicial = useRef(rolInicial);
+  if (prevRolInicial.current !== rolInicial) {
+    prevRolInicial.current = rolInicial;
+    setForm((f) => ({ ...f, rol: rolInicial }));
+  }
   const [status, setStatus] = useState<"idle" | "loading" | "ok" | "error">("idle");
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -467,14 +488,16 @@ function Footer() {
 // ─── Home ─────────────────────────────────────────────────────────────────────
 
 export default function Home() {
+  const [rolSeleccionado, setRolSeleccionado] = useState("");
+
   return (
     <>
       <Nav />
       <main>
-        <Hero />
+        <Hero onSelectRol={setRolSeleccionado} />
         <QueHaceUnCompa />
         <ComoFunciona />
-        <Formulario />
+        <Formulario rolInicial={rolSeleccionado} />
       </main>
       <Footer />
     </>
