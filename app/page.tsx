@@ -351,43 +351,63 @@ function Equipo() {
           El equipo detrás de Compaz
         </h2>
 
-        <div className="grid sm:grid-cols-2 gap-6">
-          {equipo.map((p) => (
-            <div
-              key={p.nombre}
-              className="flex flex-col sm:flex-row gap-5 items-start rounded-2xl p-6 sm:p-7"
-              style={{ backgroundColor: "white", border: "1.5px solid #E8E0D4" }}
-            >
-              <Image
-                src={p.foto}
-                alt={p.nombre}
-                width={80}
-                height={80}
-                className="rounded-full object-cover shrink-0"
-                style={{ width: 80, height: 80 }}
-              />
-              <div>
-                <p
-                  className="font-extrabold text-lg mb-0.5"
-                  style={{ color: "#2D1464", fontFamily: "var(--font-display)" }}
-                >
-                  {p.nombre}
-                </p>
-                <p
-                  className="text-sm font-semibold mb-3"
-                  style={{ color: "#FF6B2B", fontFamily: "var(--font-display)" }}
-                >
-                  {p.rol}
-                </p>
-                <p
-                  className="text-sm leading-relaxed"
-                  style={{ color: "#6B5C90", fontFamily: "var(--font-inter)" }}
-                >
-                  {p.bio}
-                </p>
+        <div className="flex flex-col lg:flex-row gap-8 items-center">
+          {/* Bios */}
+          <div className="flex flex-col gap-6 flex-1 w-full">
+            {equipo.map((p) => (
+              <div
+                key={p.nombre}
+                className="flex flex-col sm:flex-row gap-5 items-start rounded-2xl p-6 sm:p-7"
+                style={{ backgroundColor: "white", border: "1.5px solid #E8E0D4" }}
+              >
+                <Image
+                  src={p.foto}
+                  alt={p.nombre}
+                  width={80}
+                  height={80}
+                  className="rounded-full object-cover shrink-0"
+                  style={{ width: 80, height: 80 }}
+                />
+                <div>
+                  <p
+                    className="font-extrabold text-lg mb-0.5"
+                    style={{ color: "#2D1464", fontFamily: "var(--font-display)" }}
+                  >
+                    {p.nombre}
+                  </p>
+                  <p
+                    className="text-sm font-semibold mb-3"
+                    style={{ color: "#FF6B2B", fontFamily: "var(--font-display)" }}
+                  >
+                    {p.rol}
+                  </p>
+                  <p
+                    className="text-sm leading-relaxed"
+                    style={{ color: "#6B5C90", fontFamily: "var(--font-inter)" }}
+                  >
+                    {p.bio}
+                  </p>
+                </div>
               </div>
+            ))}
+          </div>
+
+          {/* Video */}
+          <div className="shrink-0 mx-auto lg:mx-0" style={{ width: "min(280px, 100%)", maxWidth: 320 }}>
+            <div
+              className="rounded-2xl overflow-hidden"
+              style={{ aspectRatio: "9/16", border: "1.5px solid #E8E0D4" }}
+            >
+              <iframe
+                src="https://www.youtube.com/embed/lJkK9CrzkxM"
+                width="100%"
+                height="100%"
+                style={{ display: "block" }}
+                allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
             </div>
-          ))}
+          </div>
         </div>
       </div>
     </section>
