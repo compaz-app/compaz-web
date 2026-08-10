@@ -169,8 +169,8 @@ const actividades = [
 const pilares = [
   {
     Icon: ShieldCheck,
-    titulo: "Entrevista rigurosa",
-    desc: "Cada Compita pasa por una entrevista personal y verificación judicial antes de su primera visita.",
+    titulo: "Un equipo, no un extraño",
+    desc: "Nuestros Compitas son personas seleccionadas y entrenadas por Compaz. Cada uno pasa por entrevista personal y verificación judicial antes de unirse al equipo.",
   },
   {
     Icon: Camera,
