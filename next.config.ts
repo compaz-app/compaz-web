@@ -19,7 +19,7 @@ const securityHeaders = [
   {
     key: "Content-Security-Policy",
     value:
-      "default-src 'self'; script-src 'self' 'unsafe-inline' https://connect.facebook.net https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; frame-src https://challenges.cloudflare.com; connect-src 'self' https://api.airtable.com https://www.facebook.com https://challenges.cloudflare.com; frame-ancestors 'none'",
+      "default-src 'self'; script-src 'self' 'unsafe-inline' https://connect.facebook.net https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; frame-src https://challenges.cloudflare.com https://www.youtube.com; connect-src 'self' https://api.airtable.com https://www.facebook.com https://challenges.cloudflare.com; frame-ancestors 'none'",
   },
 ];
 
