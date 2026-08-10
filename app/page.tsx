@@ -170,7 +170,7 @@ const pilares = [
   {
     Icon: ShieldCheck,
     titulo: "Un equipo, no un extraño",
-    desc: "Nuestros Compitas son personas seleccionadas y entrenadas por Compaz. Cada uno pasa por entrevista personal y verificación judicial antes de unirse al equipo.",
+    desc: "Nuestro equipo es seleccionado y verificado por Compaz. No son extraños: son personas de confianza que conocemos.",
   },
   {
     Icon: Camera,
