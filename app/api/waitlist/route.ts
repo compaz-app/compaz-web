@@ -67,8 +67,11 @@ function getClientIp(req: NextRequest): string {
 async function verifyTurnstile(token: string, ip: string): Promise<boolean> {
   const secret = process.env.TURNSTILE_SECRET_KEY;
   if (!secret) {
-    // Sin clave configurada → pasar (modo dev / sin Turnstile)
-    return true;
+    // Sin clave configurada:
+    //  - En desarrollo local → pasar, para poder probar el formulario sin Turnstile.
+    //  - En producción → RECHAZAR (fail-closed). Si la clave falta o se borra por
+    //    error en Netlify, el formulario se cierra en vez de quedar abierto a bots.
+    return process.env.NODE_ENV !== "production";
   }
   if (!token) return false;
 
