@@ -458,7 +458,7 @@ function Formulario({ rolInicial }: { rolInicial: string }) {
           className="text-3xl sm:text-4xl font-extrabold text-center mb-4 leading-tight"
           style={{ color: "#1A0A3C", fontFamily: "var(--font-display)", textWrap: "balance" }}
         >
-          Pronto iniciaremos en Caracas. Solo 50 familias en el piloto.
+          Pronto iniciaremos en Venezuela. Solo 50 familias en el piloto.
         </h2>
         <p
           className="text-center text-lg font-semibold mb-2"
