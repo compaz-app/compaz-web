@@ -11,6 +11,9 @@ import {
   Wrench,
   Video,
   MessageCircle,
+  ShieldCheck,
+  Camera,
+  MapPin,
 } from "lucide-react";
 
 // ─── Wave Divider ─────────────────────────────────────────────────────────────
@@ -161,6 +164,61 @@ const actividades = [
   { Icon: MessageCircle, label: "Simplemente conversar" },
 ];
 
+// ─── Sección de confianza ─────────────────────────────────────────────────────
+
+const pilares = [
+  {
+    Icon: ShieldCheck,
+    titulo: "Un equipo, no un extraño",
+    desc: "Nuestro equipo, formado por nosotros. Cada Compita es verificado por Compaz antes de su primera visita.",
+  },
+  {
+    Icon: Camera,
+    titulo: "Reporte después de cada visita",
+    desc: "Fotos y notas directo a tu WhatsApp para que sepas exactamente cómo estuvo tu familiar.",
+  },
+  {
+    Icon: MapPin,
+    titulo: "Ubicación en tiempo real",
+    desc: "Durante la visita puedes ver dónde está tu familiar en todo momento.",
+  },
+];
+
+function SeccionConfianza() {
+  return (
+    <section style={{ backgroundColor: "#2D1464" }} className="py-24 px-6">
+      <div className="max-w-4xl mx-auto">
+        <h2
+          className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-center mb-16 text-white leading-tight"
+          style={{ fontFamily: "var(--font-display)", textWrap: "balance" }}
+        >
+          Diseñado para que confíes. Construido para que estés seguro.
+        </h2>
+
+        <div className="grid sm:grid-cols-3 gap-8">
+          {pilares.map(({ Icon, titulo, desc }) => (
+            <div key={titulo} className="flex flex-col items-center text-center gap-4">
+              <Icon size={40} strokeWidth={1.6} style={{ color: "#FF6B2B" }} />
+              <h3
+                className="text-lg font-bold text-white"
+                style={{ fontFamily: "var(--font-display)" }}
+              >
+                {titulo}
+              </h3>
+              <p
+                className="text-sm leading-relaxed"
+                style={{ color: "rgba(255,255,255,0.70)", fontFamily: "var(--font-inter)" }}
+              >
+                {desc}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function QueHaceUnCompa() {
   return (
     <section style={{ backgroundColor: "#FDFAF6" }} className="py-24 px-6">
@@ -293,43 +351,63 @@ function Equipo() {
           El equipo detrás de Compaz
         </h2>
 
-        <div className="grid sm:grid-cols-2 gap-6">
-          {equipo.map((p) => (
-            <div
-              key={p.nombre}
-              className="flex flex-col sm:flex-row gap-5 items-start rounded-2xl p-6 sm:p-7"
-              style={{ backgroundColor: "white", border: "1.5px solid #E8E0D4" }}
-            >
-              <Image
-                src={p.foto}
-                alt={p.nombre}
-                width={80}
-                height={80}
-                className="rounded-full object-cover shrink-0"
-                style={{ width: 80, height: 80 }}
-              />
-              <div>
-                <p
-                  className="font-extrabold text-lg mb-0.5"
-                  style={{ color: "#2D1464", fontFamily: "var(--font-display)" }}
-                >
-                  {p.nombre}
-                </p>
-                <p
-                  className="text-sm font-semibold mb-3"
-                  style={{ color: "#FF6B2B", fontFamily: "var(--font-display)" }}
-                >
-                  {p.rol}
-                </p>
-                <p
-                  className="text-sm leading-relaxed"
-                  style={{ color: "#6B5C90", fontFamily: "var(--font-inter)" }}
-                >
-                  {p.bio}
-                </p>
+        <div className="flex flex-col lg:flex-row gap-8 items-center">
+          {/* Bios */}
+          <div className="flex flex-col gap-6 flex-1 w-full">
+            {equipo.map((p) => (
+              <div
+                key={p.nombre}
+                className="flex flex-col sm:flex-row gap-5 items-start rounded-2xl p-6 sm:p-7"
+                style={{ backgroundColor: "white", border: "1.5px solid #E8E0D4" }}
+              >
+                <Image
+                  src={p.foto}
+                  alt={p.nombre}
+                  width={80}
+                  height={80}
+                  className="rounded-full object-cover shrink-0"
+                  style={{ width: 80, height: 80 }}
+                />
+                <div>
+                  <p
+                    className="font-extrabold text-lg mb-0.5"
+                    style={{ color: "#2D1464", fontFamily: "var(--font-display)" }}
+                  >
+                    {p.nombre}
+                  </p>
+                  <p
+                    className="text-sm font-semibold mb-3"
+                    style={{ color: "#FF6B2B", fontFamily: "var(--font-display)" }}
+                  >
+                    {p.rol}
+                  </p>
+                  <p
+                    className="text-sm leading-relaxed"
+                    style={{ color: "#6B5C90", fontFamily: "var(--font-inter)" }}
+                  >
+                    {p.bio}
+                  </p>
+                </div>
               </div>
+            ))}
+          </div>
+
+          {/* Video */}
+          <div className="shrink-0 mx-auto lg:mx-0" style={{ width: "min(280px, 100%)", maxWidth: 320 }}>
+            <div
+              className="rounded-2xl overflow-hidden"
+              style={{ aspectRatio: "9/16", border: "1.5px solid #E8E0D4" }}
+            >
+              <iframe
+                src="https://www.youtube.com/embed/k-Hv2PMzhRg"
+                width="100%"
+                height="100%"
+                style={{ display: "block" }}
+                allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
             </div>
-          ))}
+          </div>
         </div>
       </div>
     </section>
@@ -400,7 +478,7 @@ function Formulario({ rolInicial }: { rolInicial: string }) {
           className="text-3xl sm:text-4xl font-extrabold text-center mb-4 leading-tight"
           style={{ color: "#1A0A3C", fontFamily: "var(--font-display)", textWrap: "balance" }}
         >
-          Pronto iniciaremos en Caracas. Solo 50 familias en el piloto.
+          Pronto iniciaremos en Venezuela. Solo 50 familias en el piloto.
         </h2>
         <p
           className="text-center text-lg font-semibold mb-2"
@@ -610,6 +688,7 @@ export default function Home() {
       <Nav />
       <main>
         <Hero onSelectRol={setRolSeleccionado} />
+        <SeccionConfianza />
         <QueHaceUnCompa />
         <WaveDivider from="#FDFAF6" to="#2D1464" shape={2} />
         <ComoFunciona />
