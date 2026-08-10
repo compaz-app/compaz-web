@@ -11,6 +11,9 @@ import {
   Wrench,
   Video,
   MessageCircle,
+  ShieldCheck,
+  Camera,
+  MapPin,
 } from "lucide-react";
 
 // ─── Wave Divider ─────────────────────────────────────────────────────────────
@@ -160,6 +163,61 @@ const actividades = [
   { Icon: Video,       label: "Videollamadas" },
   { Icon: MessageCircle, label: "Simplemente conversar" },
 ];
+
+// ─── Sección de confianza ─────────────────────────────────────────────────────
+
+const pilares = [
+  {
+    Icon: ShieldCheck,
+    titulo: "Entrevista rigurosa",
+    desc: "Cada Compita pasa por una entrevista personal y verificación judicial antes de su primera visita.",
+  },
+  {
+    Icon: Camera,
+    titulo: "Reporte después de cada visita",
+    desc: "Fotos y notas directo a tu WhatsApp para que sepas exactamente cómo estuvo tu familiar.",
+  },
+  {
+    Icon: MapPin,
+    titulo: "Ubicación en tiempo real",
+    desc: "Durante la visita puedes ver dónde está tu familiar en todo momento.",
+  },
+];
+
+function SeccionConfianza() {
+  return (
+    <section style={{ backgroundColor: "#2D1464" }} className="py-24 px-6">
+      <div className="max-w-4xl mx-auto">
+        <h2
+          className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-center mb-16 text-white leading-tight"
+          style={{ fontFamily: "var(--font-display)", textWrap: "balance" }}
+        >
+          Diseñado para que confíes. Construido para que estés seguro.
+        </h2>
+
+        <div className="grid sm:grid-cols-3 gap-8">
+          {pilares.map(({ Icon, titulo, desc }) => (
+            <div key={titulo} className="flex flex-col items-center text-center gap-4">
+              <Icon size={40} strokeWidth={1.6} style={{ color: "#FF6B2B" }} />
+              <h3
+                className="text-lg font-bold text-white"
+                style={{ fontFamily: "var(--font-display)" }}
+              >
+                {titulo}
+              </h3>
+              <p
+                className="text-sm leading-relaxed"
+                style={{ color: "rgba(255,255,255,0.70)", fontFamily: "var(--font-inter)" }}
+              >
+                {desc}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
 
 function QueHaceUnCompa() {
   return (
@@ -610,6 +668,7 @@ export default function Home() {
       <Nav />
       <main>
         <Hero onSelectRol={setRolSeleccionado} />
+        <SeccionConfianza />
         <QueHaceUnCompa />
         <WaveDivider from="#FDFAF6" to="#2D1464" shape={2} />
         <ComoFunciona />
