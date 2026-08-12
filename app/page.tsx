@@ -588,13 +588,13 @@ function Formulario({ rolInicial }: { rolInicial: string }) {
           className="text-3xl sm:text-4xl font-extrabold text-center mb-4 leading-tight"
           style={{ color: "#1A0A3C", fontFamily: "var(--font-display)", textWrap: "balance" }}
         >
-          Pronto iniciaremos en Venezuela. Solo 50 familias en el piloto.
+          Pronto iniciaremos en Venezuela. Solo 10 familias en el piloto.
         </h2>
         <p
           className="text-center text-base font-medium mb-6"
           style={{ color: "#2D1464", fontFamily: "var(--font-inter)" }}
         >
-          Solo trabajamos con 50 familias en esta primera etapa. Queremos conocer cada caso personalmente.
+          Solo trabajamos con 10 familias en esta primera etapa. Queremos conocer cada caso personalmente.
         </p>
         <p
           className="text-center text-lg font-semibold mb-2"
