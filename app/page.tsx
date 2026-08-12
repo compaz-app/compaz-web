@@ -105,25 +105,25 @@ function Hero({ onSelectRol }: { onSelectRol: (rol: string) => void }) {
       />
 
       {/* Contenido */}
-      <div className="relative z-10 w-full max-w-5xl mx-auto px-6 flex flex-col sm:flex-row items-center gap-8 sm:gap-16">
-        {/* Texto — izquierda */}
-        <div className="flex-1 flex flex-col gap-5 text-left">
+      <div className="relative z-10 w-full max-w-4xl mx-auto px-6 flex flex-col lg:flex-row items-center gap-8 lg:gap-16">
+        {/* Texto */}
+        <div className="flex-1 flex flex-col gap-5 text-center lg:text-left items-center lg:items-start">
           <h1
-            className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-white leading-tight"
+            className="text-3xl md:text-5xl lg:text-6xl font-extrabold text-white leading-tight"
             style={{ fontFamily: "var(--font-display)", textWrap: "balance" }}
           >
             ¿Tu mamá se quedó sin compañía para ir al médico, al banco, al mercado?
           </h1>
           <p
-            className="text-base sm:text-xl leading-relaxed"
+            className="text-base md:text-lg leading-relaxed max-w-xl"
             style={{ color: "rgba(255,255,255,0.85)", fontFamily: "var(--font-inter)" }}
           >
             Nuestro equipo va a donde tú no puedes ir. Un <strong className="text-white">Compita verificado por nosotros</strong> acompaña a tu familiar, y tú recibes fotos y notas de cada visita, directo a tu WhatsApp.
           </p>
         </div>
 
-        {/* Botones — derecha en desktop, abajo en móvil */}
-        <div className="flex flex-col items-stretch gap-3 shrink-0 w-full sm:w-auto">
+        {/* Botones */}
+        <div className="flex flex-col items-stretch gap-3 shrink-0 w-full sm:w-80 lg:w-auto">
           <button
             onClick={() => irAFormulario("familia")}
             style={{ backgroundColor: "#FF6B2B", textDecoration: "none" }}
