@@ -361,17 +361,17 @@ function FAQ() {
   const [abierto, setAbierto] = useState<number | null>(null);
 
   return (
-    <section style={{ backgroundColor: "#FDFAF6" }} className="py-24 px-6">
+    <section style={{ backgroundColor: "#2D1464" }} className="py-24 px-6">
       <div className="max-w-4xl mx-auto">
         <h2
-          className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-center mb-4 leading-tight"
-          style={{ color: "#2D1464", fontFamily: "var(--font-display)", textWrap: "balance" }}
+          className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-center mb-4 leading-tight text-white"
+          style={{ fontFamily: "var(--font-display)", textWrap: "balance" }}
         >
           ¿Tienes dudas? Es normal.
         </h2>
         <p
           className="text-center text-base leading-relaxed mb-14 max-w-2xl mx-auto"
-          style={{ color: "#6B5C90", fontFamily: "var(--font-inter)" }}
+          style={{ color: "rgba(255,255,255,0.70)", fontFamily: "var(--font-inter)" }}
         >
           Mandar a alguien a casa de tu familiar es una decisión seria. Acá respondemos lo que más nos preguntan.
         </p>
@@ -390,7 +390,7 @@ function FAQ() {
               >
                 <span
                   className="font-bold text-base leading-snug"
-                  style={{ color: "#2D1464", fontFamily: "var(--font-display)" }}
+                  style={{ color: "#1A0A3C", fontFamily: "var(--font-display)" }}
                 >
                   {q}
                 </span>
@@ -809,9 +809,10 @@ export default function Home() {
         <WaveDivider from="#FDFAF6" to="#2D1464" shape={2} />
         <ComoFunciona />
         <WaveDivider from="#2D1464" to="#FDFAF6" shape={3} />
-        <FAQ />
         <Equipo />
-        <WaveDivider from="#FDFAF6" to="#FFD23F" shape={1} flip />
+        <WaveDivider from="#FDFAF6" to="#2D1464" shape={4} />
+        <FAQ />
+        <WaveDivider from="#2D1464" to="#FFD23F" shape={1} flip />
         <Formulario rolInicial={rolSeleccionado} />
       </main>
       <Footer />
