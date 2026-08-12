@@ -175,7 +175,7 @@ const pilares = [
   {
     Icon: Camera,
     titulo: "Sabes exactamente cómo estuvo.",
-    desc: "Fotos y resumen directo a tu WhatsApp después de cada visita. No «todo bien» — te contamos lo real.",
+    desc: "Fotos y resumen directo a tu WhatsApp después de cada visita. No solo «todo bien»: te contamos lo que pasó de verdad.",
   },
   {
     Icon: MapPin,
