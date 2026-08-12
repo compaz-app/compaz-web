@@ -810,10 +810,10 @@ export default function Home() {
         <ComoFunciona />
         <WaveDivider from="#2D1464" to="#FDFAF6" shape={3} />
         <Equipo />
-        <WaveDivider from="#FDFAF6" to="#2D1464" shape={4} />
-        <FAQ />
-        <WaveDivider from="#2D1464" to="#FFD23F" shape={1} flip />
+        <WaveDivider from="#FDFAF6" to="#FFD23F" shape={1} flip />
         <Formulario rolInicial={rolSeleccionado} />
+        <WaveDivider from="#FFD23F" to="#2D1464" shape={2} />
+        <FAQ />
       </main>
       <Footer />
     </>
