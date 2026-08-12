@@ -170,17 +170,17 @@ const pilares = [
   {
     Icon: ShieldCheck,
     titulo: "Son nuestros, no de una app.",
-    desc: "Cada Compita pasa por verificación de identidad con cédula, revisión de antecedentes penales, y una entrevista personal con nosotros. No los conseguimos en ninguna plataforma: los seleccionamos, los formamos, y respondemos por ellos.",
+    desc: "Verificación de cédula, antecedentes penales y entrevista personal. Los seleccionamos y respondemos por ellos.",
   },
   {
     Icon: Camera,
     titulo: "Sabes exactamente cómo estuvo.",
-    desc: "Después de cada visita, tu Compita te manda fotos y un resumen directo a tu WhatsApp. No «todo bien» — te contamos qué hicieron, cómo estaba tu familiar, y si hay algo que debas saber.",
+    desc: "Fotos y resumen directo a tu WhatsApp después de cada visita. No «todo bien» — te contamos lo real.",
   },
   {
     Icon: MapPin,
     titulo: "Ves cada visita en tiempo real.",
-    desc: "Durante la visita puedes seguir la ubicación de tu familiar en todo momento. Tú estás presente, aunque estés lejos.",
+    desc: "Sigue la ubicación de tu familiar durante la visita. Presente, aunque estés lejos.",
   },
 ];
 
