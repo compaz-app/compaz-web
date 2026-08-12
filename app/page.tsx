@@ -509,7 +509,7 @@ function Equipo() {
               style={{ aspectRatio: "9/16", border: "1.5px solid #E8E0D4" }}
             >
               <iframe
-                src="https://www.youtube.com/embed/k-Hv2PMzhRg"
+                src="https://www.youtube.com/embed/QPCwjzuUzjU"
                 width="100%"
                 height="100%"
                 style={{ display: "block" }}
