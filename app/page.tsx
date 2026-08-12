@@ -259,12 +259,6 @@ function QueHaceUnCompa() {
           ))}
         </div>
 
-        <p
-          className="mt-10 text-center text-sm font-medium"
-          style={{ color: "#6B5C90", fontFamily: "var(--font-inter)" }}
-        >
-          Cada Compita pasa por verificación de identidad y antecedentes antes de su primera visita.
-        </p>
       </div>
     </section>
   );
