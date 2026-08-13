@@ -88,7 +88,7 @@ async function verifyTurnstile(token: string, ip: string): Promise<boolean> {
 }
 
 // ── Sanitización ──────────────────────────────────────────────────────────────
-const MAX_LEN = { nombre: 100, contacto: 200, ciudad: 100, whatsapp: 30, email: 100 };
+const MAX_LEN = { nombre: 100, contacto: 200, ciudad: 100, whatsapp: 30, email: 100, utm: 50 };
 
 function stripHtml(value: string): string {
   return value.replace(/<[^>]*>/g, "").trim();
@@ -145,13 +145,13 @@ export async function POST(req: NextRequest) {
   const contactoRaw = typeof body.contacto === "string" ? body.contacto : "";
   const whatsappRaw = typeof body.whatsapp === "string" ? body.whatsapp : "";
   const emailRaw = typeof body.email === "string" ? body.email : "";
-  const ciudadRaw = typeof body.ciudad === "string" ? body.ciudad : "";
+  const ciudadRaw = typeof body.ciudad === "string" ? body.ciudad : ""; const utmSourceRaw = typeof body.utmSource === "string" ? body.utmSource : ""; const utmMediumRaw = typeof body.utmMedium === "string" ? body.utmMedium : ""; const utmCampaignRaw = typeof body.utmCampaign === "string" ? body.utmCampaign : "";
 
   const nombre = stripHtml(nombreRaw).slice(0, MAX_LEN.nombre);
   const contacto = stripHtml(contactoRaw).slice(0, MAX_LEN.contacto);
   const whatsapp = stripHtml(whatsappRaw).slice(0, MAX_LEN.whatsapp);
   const email = stripHtml(emailRaw).slice(0, MAX_LEN.email);
-  const ciudad = stripHtml(ciudadRaw).slice(0, MAX_LEN.ciudad);
+  const ciudad = stripHtml(ciudadRaw).slice(0, MAX_LEN.ciudad); const utmSource = stripHtml(utmSourceRaw).slice(0, MAX_LEN.utm); const utmMedium = stripHtml(utmMediumRaw).slice(0, MAX_LEN.utm); const utmCampaign = stripHtml(utmCampaignRaw).slice(0, MAX_LEN.utm);
 
   if (!nombre || !contacto || !ciudad || !whatsapp || !email) {
     return NextResponse.json({ error: "Faltan campos" }, { status: 400, headers });
@@ -170,7 +170,7 @@ export async function POST(req: NextRequest) {
   const tableName = process.env.AIRTABLE_TABLE_NAME ?? "Lista de Espera";
 
   if (!airtableKey || !baseId) {
-    console.log("Waitlist entry (sin Airtable):", { nombre, contacto, ciudad });
+    console.log("Waitlist entry (sin Airtable):", { nombre, contacto, ciudad, utmSource, utmMedium, utmCampaign });
     return NextResponse.json({ ok: true }, { headers });
   }
 
@@ -183,7 +183,7 @@ export async function POST(req: NextRequest) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        fields: { Nombre: nombre, Contacto: contacto, Ciudad: ciudad, Fecha: new Date().toISOString() },
+        fields: { Nombre: nombre, Contacto: contacto, Ciudad: ciudad, Fecha: new Date().toISOString(), "UTM Source": utmSource, "UTM Medium": utmMedium, "UTM Campaign": utmCampaign },
       }),
     }
   );
