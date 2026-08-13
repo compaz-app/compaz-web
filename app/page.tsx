@@ -272,24 +272,35 @@ function QueHaceUnCompa() {
               Contamos con Compitas con perfil de enfermería certificado. Cuéntanos tu caso.
             </p>
           </div>
-          <button
-            onClick={() => {
-              const mailto = "mailto:hola@micompaz.com?subject=Necesito%20un%20Compita%20con%20perfil%20m%C3%A9dico";
-              const gmail = "https://mail.google.com/mail/?view=cm&fs=1&to=hola@micompaz.com&su=Necesito+un+Compita+con+perfil+m%C3%A9dico";
-              let opened = false;
-              const onBlur = () => { opened = true; };
-              window.addEventListener("blur", onBlur, { once: true });
-              window.location.href = mailto;
-              setTimeout(() => {
-                window.removeEventListener("blur", onBlur);
-                if (!opened) window.open(gmail, "_blank");
-              }, 500);
-            }}
-            className="shrink-0 font-bold text-sm px-6 py-3 rounded-full hover:opacity-90 transition-opacity whitespace-nowrap cursor-pointer"
-            style={{ backgroundColor: "white", color: "#FF6B2B", fontFamily: "var(--font-display)", border: "none" }}
-          >
-            Escríbenos →
-          </button>
+          <div className="shrink-0 relative group">
+            <button
+              className="font-bold text-sm px-6 py-3 rounded-full hover:opacity-90 transition-opacity whitespace-nowrap cursor-pointer"
+              style={{ backgroundColor: "white", color: "#FF6B2B", fontFamily: "var(--font-display)", border: "none" }}
+            >
+              Escríbenos →
+            </button>
+            <div
+              className="absolute right-0 bottom-full mb-2 hidden group-focus-within:flex flex-col rounded-xl overflow-hidden shadow-lg z-50"
+              style={{ minWidth: "160px" }}
+            >
+              <a
+                href="mailto:hola@micompaz.com?subject=Necesito%20un%20Compita%20con%20perfil%20m%C3%A9dico"
+                className="px-4 py-3 text-sm font-semibold hover:opacity-80 transition-opacity whitespace-nowrap"
+                style={{ backgroundColor: "white", color: "#2D1464", fontFamily: "var(--font-display)" }}
+              >
+                📧 Correo
+              </a>
+              <a
+                href="https://mail.google.com/mail/?view=cm&fs=1&to=hola@micompaz.com&su=Necesito+un+Compita+con+perfil+m%C3%A9dico"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-4 py-3 text-sm font-semibold hover:opacity-80 transition-opacity whitespace-nowrap"
+                style={{ backgroundColor: "#f3f0ff", color: "#2D1464", fontFamily: "var(--font-display)" }}
+              >
+                ✉️ Gmail
+              </a>
+            </div>
+          </div>
         </div>
 
       </div>
