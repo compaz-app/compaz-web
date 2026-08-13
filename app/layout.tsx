@@ -35,11 +35,11 @@ export const metadata: Metadata = {
     siteName: "Compaz",
     locale: "es_VE",
     type: "website",
-    images: [{ url: "https://micompaz.com/og-image.png", width: 1200, height: 630 }],
+    images: [{ url: "https://micompaz.com/images/og-image.png", width: 1200, height: 630 }],
   },
   twitter: {
     card: "summary_large_image",
-    images: ["https://micompaz.com/og-image.png"],
+    images: ["https://micompaz.com/images/og-image.png"],
   },
 };
 
