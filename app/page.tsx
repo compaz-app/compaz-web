@@ -105,25 +105,25 @@ function Hero({ onSelectRol }: { onSelectRol: (rol: string) => void }) {
       />
 
       {/* Contenido */}
-      <div className="relative z-10 w-full max-w-5xl mx-auto px-6 flex flex-col sm:flex-row items-center gap-8 sm:gap-16">
-        {/* Texto — izquierda */}
-        <div className="flex-1 flex flex-col gap-5 text-left">
+      <div className="relative z-10 w-full max-w-4xl mx-auto px-6 flex flex-col lg:flex-row items-center gap-8 lg:gap-16">
+        {/* Texto */}
+        <div className="flex-1 flex flex-col gap-5 text-center lg:text-left items-center lg:items-start">
           <h1
-            className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-white leading-tight"
+            className="text-3xl md:text-5xl lg:text-6xl font-extrabold text-white leading-tight"
             style={{ fontFamily: "var(--font-display)", textWrap: "balance" }}
           >
             ¿Tu mamá se quedó sin compañía para ir al médico, al banco, al mercado?
           </h1>
           <p
-            className="text-base sm:text-xl leading-relaxed"
+            className="text-base md:text-lg leading-relaxed max-w-xl"
             style={{ color: "rgba(255,255,255,0.85)", fontFamily: "var(--font-inter)" }}
           >
-            Un <strong className="text-white">Compita</strong> lo acompaña como lo haría un amigo de toda la vida. Tú recibes fotos y notas de cada visita, directo a tu WhatsApp.
+            Nuestro equipo va a donde tú no puedes ir. Un <strong className="text-white">Compita verificado por nosotros</strong> acompaña a tu familiar, y tú recibes fotos y notas de cada visita, directo a tu WhatsApp.
           </p>
         </div>
 
-        {/* Botones — derecha en desktop, abajo en móvil */}
-        <div className="flex flex-col items-stretch gap-3 shrink-0 w-full sm:w-auto">
+        {/* Botones */}
+        <div className="flex flex-col items-stretch gap-3 shrink-0 w-full sm:w-80 lg:w-auto">
           <button
             onClick={() => irAFormulario("familia")}
             style={{ backgroundColor: "#FF6B2B", textDecoration: "none" }}
@@ -169,18 +169,18 @@ const actividades = [
 const pilares = [
   {
     Icon: ShieldCheck,
-    titulo: "Un equipo, no un extraño",
-    desc: "Nuestro equipo, formado por nosotros. Cada Compita es verificado por Compaz antes de su primera visita.",
+    titulo: "Son nuestros, no de una app.",
+    desc: "Verificación de cédula, antecedentes penales y entrevista personal. Los seleccionamos y respondemos por ellos.",
   },
   {
     Icon: Camera,
-    titulo: "Reporte después de cada visita",
-    desc: "Fotos y notas directo a tu WhatsApp para que sepas exactamente cómo estuvo tu familiar.",
+    titulo: "Sabes exactamente cómo estuvo.",
+    desc: "Fotos y resumen directo a tu WhatsApp después de cada visita. No solo «todo bien»: te contamos lo que pasó de verdad.",
   },
   {
     Icon: MapPin,
-    titulo: "Ubicación en tiempo real",
-    desc: "Durante la visita puedes ver dónde está tu familiar en todo momento.",
+    titulo: "Ves cada visita en tiempo real.",
+    desc: "Sigue la ubicación de tu familiar durante la visita. Presente, aunque estés lejos.",
   },
 ];
 
@@ -192,7 +192,7 @@ function SeccionConfianza() {
           className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-center mb-16 text-white leading-tight"
           style={{ fontFamily: "var(--font-display)", textWrap: "balance" }}
         >
-          Diseñado para que confíes. Construido para que estés seguro.
+          Tu familiar no va a recibir a un extraño. Va a recibir a alguien de nuestro equipo.
         </h2>
 
         <div className="grid sm:grid-cols-3 gap-8">
@@ -227,8 +227,15 @@ function QueHaceUnCompa() {
           className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-center mb-14 leading-tight"
           style={{ color: "#2D1464", fontFamily: "var(--font-display)", textWrap: "balance" }}
         >
-          No es un cuidador. Es un amigo de confianza.
+          No mandamos a un extraño. Mandamos a alguien que ya conocemos.
         </h2>
+
+        <p
+          className="text-center text-base leading-relaxed mb-12 max-w-2xl mx-auto"
+          style={{ color: "#6B5C90", fontFamily: "var(--font-inter)" }}
+        >
+          Cada Compita es seleccionado, entrenado y supervisado por nuestro equipo. Verificamos su identidad, revisamos sus antecedentes, y solo entonces lo asignamos a una familia.
+        </p>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6">
           {actividades.map(({ Icon, label }) => (
@@ -252,12 +259,6 @@ function QueHaceUnCompa() {
           ))}
         </div>
 
-        <p
-          className="mt-10 text-center text-sm font-medium"
-          style={{ color: "#6B5C90", fontFamily: "var(--font-inter)" }}
-        >
-          Cada Compita pasa por verificación de identidad y antecedentes antes de su primera visita.
-        </p>
       </div>
     </section>
   );
@@ -273,8 +274,8 @@ const pasos = [
   },
   {
     num: "02",
-    titulo: "Te asignamos un Compita",
-    desc: "Te conectamos con un Compita verificado cerca de tu familiar en Venezuela.",
+    titulo: "Nosotros elegimos a tu Compita.",
+    desc: "Nuestro equipo selecciona al Compita más adecuado según la zona y las necesidades de tu familiar. Tú nos das el contexto; nosotros hacemos la selección.",
   },
   {
     num: "03",
@@ -323,6 +324,108 @@ function ComoFunciona() {
   );
 }
 
+// ─── FAQ ─────────────────────────────────────────────────────────────────────
+
+const faqs = [
+  {
+    q: "¿Cómo sé que el Compita es confiable?",
+    a: "Antes de su primera visita, cada Compita pasa por tres filtros: verificación de identidad con cédula, revisión de antecedentes penales, y una entrevista personal con nuestro equipo. No trabajamos con personas que no conocemos. Si en algún momento no te sientes cómodo con tu Compita asignado, lo cambiamos sin costo ni pregunta.",
+  },
+  {
+    q: "¿El Compita trabaja por su cuenta o trabaja con ustedes?",
+    a: "Con nosotros. No somos una aplicación que conecta a desconocidos — somos un equipo. Cada Compita fue seleccionado, entrenado y es supervisado por Compaz. Si algo sale mal, nosotros respondemos.",
+  },
+  {
+    q: "¿Qué pasa si algo sale mal durante una visita?",
+    a: "Tienes nuestro contacto directo en todo momento. Si ocurre cualquier situación durante una visita — un accidente, un problema de salud, lo que sea — tu Compita nos notifica de inmediato y nosotros te contactamos. No eres un ticket de soporte: somos personas reales al otro lado.",
+  },
+  {
+    q: "¿Mi familiar tiene que dejar entrar al Compita solo?",
+    a: "No necesariamente. Las primeras visitas pueden hacerse con un familiar o vecino de confianza presente, hasta que tu familiar se sienta cómodo. Nosotros acompañamos ese proceso. La confianza se construye, no se exige.",
+  },
+  {
+    q: "¿Puedo hablar con ustedes antes de inscribirme?",
+    a: "Sí, y lo recomendamos. Escríbenos a hola@micompaz.com y cuéntanos la situación de tu familiar. Te respondemos personalmente.",
+  },
+  {
+    q: "¿El cuidado a domicilio está regulado en Venezuela?",
+    a: "Sí. La Ley Orgánica para la Atención y Desarrollo Integral de las Personas Adultas Mayores (Gaceta Oficial N° 6.641, 2021) reconoce el derecho de todo adulto mayor a recibir atención digna, incluyendo atención domiciliaria. Compaz opera dentro de ese marco: los Compitas son acompañantes verificados que respetan la autonomía y dignidad de la persona que visitan.",
+  },
+  {
+    q: "¿En qué ciudades de Venezuela operan?",
+    a: "Estamos comenzando en Caracas. Si tu familiar está en otra ciudad, inscríbete igualmente — estamos expandiendo y queremos saber dónde hay más necesidad.",
+  },
+];
+
+function FAQ() {
+  const [abierto, setAbierto] = useState<number | null>(null);
+
+  return (
+    <section style={{ backgroundColor: "#2D1464" }} className="py-24 px-6">
+      <div className="max-w-4xl mx-auto">
+        <h2
+          className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-center mb-4 leading-tight text-white"
+          style={{ fontFamily: "var(--font-display)", textWrap: "balance" }}
+        >
+          ¿Tienes dudas? Es normal.
+        </h2>
+        <p
+          className="text-center text-base leading-relaxed mb-14 max-w-2xl mx-auto"
+          style={{ color: "rgba(255,255,255,0.70)", fontFamily: "var(--font-inter)" }}
+        >
+          Mandar a alguien a casa de tu familiar es una decisión seria. Acá respondemos lo que más nos preguntan.
+        </p>
+
+        <div className="flex flex-col gap-3">
+          {faqs.map(({ q, a }, i) => (
+            <div
+              key={i}
+              className="rounded-2xl overflow-hidden"
+              style={{ backgroundColor: "white", border: "1.5px solid #E8E0D4" }}
+            >
+              <button
+                onClick={() => setAbierto(abierto === i ? null : i)}
+                className="w-full flex items-center justify-between gap-4 text-left px-6 py-5"
+                aria-expanded={abierto === i}
+              >
+                <span
+                  className="font-bold text-base leading-snug"
+                  style={{ color: "#1A0A3C", fontFamily: "var(--font-display)" }}
+                >
+                  {q}
+                </span>
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 20 20"
+                  fill="none"
+                  stroke="#FF6B2B"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="shrink-0 transition-transform duration-200"
+                  style={{ transform: abierto === i ? "rotate(180deg)" : "rotate(0deg)" }}
+                  aria-hidden="true"
+                >
+                  <path d="M5 8l5 5 5-5" />
+                </svg>
+              </button>
+              {abierto === i && (
+                <p
+                  className="px-6 pb-5 text-sm leading-relaxed"
+                  style={{ color: "#6B5C90", fontFamily: "var(--font-inter)" }}
+                >
+                  {a}
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 // ─── Equipo ───────────────────────────────────────────────────────────────────
 
 const equipo = [
@@ -350,6 +453,13 @@ function Equipo() {
         >
           El equipo detrás de Compaz
         </h2>
+
+        <p
+          className="text-center text-base leading-relaxed mb-12 max-w-2xl mx-auto"
+          style={{ color: "#6B5C90", fontFamily: "var(--font-inter)" }}
+        >
+          Compaz lo fundamos venezolanos que vivimos la misma distancia que tú. Conocemos esa angustia de no saber cómo está tu mamá. Por eso construimos esto: no como un negocio genérico de cuidado, sino como algo que necesitábamos y no existía.
+        </p>
 
         <div className="flex flex-col lg:flex-row gap-8 items-center">
           {/* Bios */}
@@ -399,7 +509,7 @@ function Equipo() {
               style={{ aspectRatio: "9/16", border: "1.5px solid #E8E0D4" }}
             >
               <iframe
-                src="https://www.youtube.com/embed/k-Hv2PMzhRg"
+                src="https://www.youtube.com/embed/QPCwjzuUzjU"
                 width="100%"
                 height="100%"
                 style={{ display: "block" }}
@@ -478,8 +588,14 @@ function Formulario({ rolInicial }: { rolInicial: string }) {
           className="text-3xl sm:text-4xl font-extrabold text-center mb-4 leading-tight"
           style={{ color: "#1A0A3C", fontFamily: "var(--font-display)", textWrap: "balance" }}
         >
-          Pronto iniciaremos en Venezuela. Solo 50 familias en el piloto.
+          Pronto iniciaremos en Venezuela. Solo 10 familias en el piloto.
         </h2>
+        <p
+          className="text-center text-base font-medium mb-6"
+          style={{ color: "#2D1464", fontFamily: "var(--font-inter)" }}
+        >
+          Solo trabajamos con 10 familias en esta primera etapa. Queremos conocer cada caso personalmente.
+        </p>
         <p
           className="text-center text-lg font-semibold mb-2"
           style={{ color: "#2D1464", fontFamily: "var(--font-display)" }}
@@ -696,6 +812,8 @@ export default function Home() {
         <Equipo />
         <WaveDivider from="#FDFAF6" to="#FFD23F" shape={1} flip />
         <Formulario rolInicial={rolSeleccionado} />
+        <WaveDivider from="#FFD23F" to="#2D1464" shape={2} />
+        <FAQ />
       </main>
       <Footer />
     </>
