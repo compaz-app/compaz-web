@@ -16,7 +16,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Compaz — Cuidado y compañía para tu familiar en Venezuela [v2]",
+  title: "Compaz — Cuidado y compañía para tu familiar en Venezuela",
   description:
     "Compaz conecta a hijos e hijas en el exterior con su familia en Venezuela. Un Compa los visita, los acompaña, y tú recibes fotos y notas de cada visita.",
   keywords: [
