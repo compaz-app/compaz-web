@@ -272,13 +272,24 @@ function QueHaceUnCompa() {
               Contamos con Compitas con perfil de enfermería certificado. Cuéntanos tu caso.
             </p>
           </div>
-          <a
-            href="mailto:hola@micompaz.com?subject=Necesito%20un%20Compita%20con%20perfil%20médico"
-            className="shrink-0 font-bold text-sm px-6 py-3 rounded-full hover:opacity-90 transition-opacity whitespace-nowrap"
-            style={{ backgroundColor: "white", color: "#FF6B2B", fontFamily: "var(--font-display)" }}
+          <button
+            onClick={() => {
+              const mailto = "mailto:hola@micompaz.com?subject=Necesito%20un%20Compita%20con%20perfil%20m%C3%A9dico";
+              const gmail = "https://mail.google.com/mail/?view=cm&fs=1&to=hola@micompaz.com&su=Necesito+un+Compita+con+perfil+m%C3%A9dico";
+              let opened = false;
+              const onBlur = () => { opened = true; };
+              window.addEventListener("blur", onBlur, { once: true });
+              window.location.href = mailto;
+              setTimeout(() => {
+                window.removeEventListener("blur", onBlur);
+                if (!opened) window.open(gmail, "_blank");
+              }, 500);
+            }}
+            className="shrink-0 font-bold text-sm px-6 py-3 rounded-full hover:opacity-90 transition-opacity whitespace-nowrap cursor-pointer"
+            style={{ backgroundColor: "white", color: "#FF6B2B", fontFamily: "var(--font-display)", border: "none" }}
           >
             Escríbenos →
-          </a>
+          </button>
         </div>
 
       </div>
