@@ -156,7 +156,7 @@ function Hero({ onSelectRol }: { onSelectRol: (rol: string) => void }) {
 const actividades = [
   { Icon: ShoppingCart, label: "Supermercado" },
   { Icon: Building2,   label: "Banco" },
-  { Icon: Stethoscope, label: "Médico" },
+  { Icon: Stethoscope, label: "Acompañar al médico" },
   { Icon: Dumbbell,    label: "Ejercicio" },
   { Icon: Banknote,    label: "Cobrar pensión" },
   { Icon: Wrench,      label: "Cambiar un bombillo" },
@@ -227,15 +227,8 @@ function QueHaceUnCompa() {
           className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-center mb-14 leading-tight"
           style={{ color: "#2D1464", fontFamily: "var(--font-display)", textWrap: "balance" }}
         >
-          No mandamos a un extraño. Mandamos a alguien que ya conocemos.
+          Un Compita para todo lo que necesites.
         </h2>
-
-        <p
-          className="text-center text-base leading-relaxed mb-12 max-w-2xl mx-auto"
-          style={{ color: "#6B5C90", fontFamily: "var(--font-inter)" }}
-        >
-          Cada Compita es seleccionado, entrenado y supervisado por nuestro equipo. Verificamos su identidad, revisamos sus antecedentes, y solo entonces lo asignamos a una familia.
-        </p>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6">
           {actividades.map(({ Icon, label }) => (
@@ -257,6 +250,35 @@ function QueHaceUnCompa() {
               </span>
             </div>
           ))}
+        </div>
+
+        {/* Card especial médica */}
+        <div
+          className="mt-4 sm:mt-6 rounded-2xl px-8 py-7 flex flex-col sm:flex-row items-center gap-5"
+          style={{ backgroundColor: "#2D1464" }}
+        >
+          <Stethoscope size={40} strokeWidth={1.6} className="shrink-0" style={{ color: "#FF6B2B" }} />
+          <div className="flex-1 text-center sm:text-left">
+            <p
+              className="font-extrabold text-lg leading-snug mb-1 text-white"
+              style={{ fontFamily: "var(--font-display)" }}
+            >
+              ¿Tu familiar necesita atención médica especializada?
+            </p>
+            <p
+              className="text-sm leading-relaxed"
+              style={{ color: "white", fontFamily: "var(--font-inter)" }}
+            >
+              Contamos con Compitas con perfil de enfermería certificado. Cuéntanos tu caso.
+            </p>
+          </div>
+          <a
+            href="mailto:hola@micompaz.com?subject=Necesito%20un%20Compita%20con%20perfil%20médico"
+            className="shrink-0 font-bold text-sm px-6 py-3 rounded-full hover:opacity-90 transition-opacity whitespace-nowrap"
+            style={{ backgroundColor: "white", color: "#FF6B2B", fontFamily: "var(--font-display)" }}
+          >
+            Escríbenos →
+          </a>
         </div>
 
       </div>
