@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ShoppingCart,
   Building2,
@@ -550,6 +550,7 @@ function Formulario({ rolInicial }: { rolInicial: string }) {
     const turnstileToken =
       (e.currentTarget.querySelector('[name="cf-turnstile-response"]') as HTMLInputElement | null)
         ?.value ?? "";
+    const params = new URLSearchParams(window.location.search);
     try {
       const res = await fetch("/api/waitlist", {
         method: "POST",
@@ -562,6 +563,9 @@ function Formulario({ rolInicial }: { rolInicial: string }) {
           ciudad: form.ciudad,
           website: form.website,
           turnstileToken,
+          utmSource: params.get("utm_source") ?? "",
+          utmMedium: params.get("utm_medium") ?? "",
+          utmCampaign: params.get("utm_campaign") ?? "",
         }),
       });
       if (!res.ok) throw new Error("Error");
@@ -798,6 +802,18 @@ function Footer() {
 
 export default function Home() {
   const [rolSeleccionado, setRolSeleccionado] = useState("");
+
+  // Si llega desde el flyer de reclutamiento de enfermería (QR con UTM),
+  // preseleccionamos automáticamente el rol "Quiero ser Compita" para reducir fricción.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (
+      params.get("utm_source") === "flyer" &&
+      params.get("utm_campaign") === "reclutamiento_enfermeria"
+    ) {
+      setRolSeleccionado("compa");
+    }
+  }, []);
 
   return (
     <>
