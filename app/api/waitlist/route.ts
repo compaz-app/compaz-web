@@ -14,8 +14,8 @@ function getAllowedOrigin(req: NextRequest): string | null {
   const origin = req.headers.get("origin");
   if (!origin) return null;
   if (ALLOWED_ORIGINS.includes(origin)) return origin;
-  // Permitir previews de Netlify: *.netlify.app
-  if (/^https:\/\/[a-z0-9-]+--compaz.*\.netlify\.app$/.test(origin)) return origin;
+  // Solo deploy previews del repo compaz-web (formato exacto de Netlify CI)
+  if (/^https:\/\/deploy-preview-\d+--compaz-web\.netlify\.app$/.test(origin)) return origin;
   return null;
 }
 
@@ -37,7 +37,11 @@ export async function OPTIONS(req: NextRequest) {
 // ── Rate limiting in-memory ──────────────────────────────────────────────────
 // Nota: en serverless cada instancia tiene su propio contador. La primera línea
 // de defensa real es Cloudflare Turnstile; esto es una capa adicional.
-const RATE_LIMIT_MAX = 3;
+// En serverless cada instancia tiene su propio contador, así que el límite real
+// puede ser RATE_LIMIT_MAX × número de instancias activas. Turnstile es la defensa
+// principal; esto es una capa adicional para el caso en que Turnstile falle.
+// Bajado a 1 para que incluso con múltiples instancias el abuse sea mínimo.
+const RATE_LIMIT_MAX = 1;
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
 const requestLog = new Map<string, number[]>();
 
