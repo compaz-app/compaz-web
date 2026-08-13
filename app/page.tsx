@@ -273,7 +273,9 @@ function QueHaceUnCompa() {
             </p>
           </div>
           <a
-            href="mailto:hola@micompaz.com?subject=Necesito%20un%20Compita%20con%20perfil%20médico"
+            href="https://mail.google.com/mail/?view=cm&fs=1&to=hola@micompaz.com&su=Necesito+un+Compita+con+perfil+m%C3%A9dico"
+            target="_blank"
+            rel="noopener noreferrer"
             className="shrink-0 font-bold text-sm px-6 py-3 rounded-full hover:opacity-90 transition-opacity whitespace-nowrap"
             style={{ backgroundColor: "white", color: "#FF6B2B", fontFamily: "var(--font-display)" }}
           >
