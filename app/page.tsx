@@ -274,7 +274,7 @@ function QueHaceUnCompa() {
             </p>
             <p
               className="text-sm leading-relaxed"
-              style={{ color: "rgba(255,255,255,0.85)", fontFamily: "var(--font-inter)" }}
+              style={{ color: "white", fontFamily: "var(--font-inter)" }}
             >
               Contamos con Compitas con perfil de enfermería certificado. Cuéntanos tu caso.
             </p>
