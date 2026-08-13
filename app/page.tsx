@@ -223,13 +223,6 @@ function QueHaceUnCompa() {
   return (
     <section style={{ backgroundColor: "#FDFAF6" }} className="py-24 px-6">
       <div className="max-w-4xl mx-auto">
-        <h2
-          className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-center mb-14 leading-tight"
-          style={{ color: "#2D1464", fontFamily: "var(--font-display)", textWrap: "balance" }}
-        >
-          No mandamos a un extraño. Mandamos a alguien que ya conocemos.
-        </h2>
-
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6">
           {actividades.map(({ Icon, label }) => (
             <div
