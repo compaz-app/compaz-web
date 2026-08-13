@@ -156,7 +156,7 @@ function Hero({ onSelectRol }: { onSelectRol: (rol: string) => void }) {
 const actividades = [
   { Icon: ShoppingCart, label: "Supermercado" },
   { Icon: Building2,   label: "Banco" },
-  { Icon: Stethoscope, label: "Médico" },
+  { Icon: Stethoscope, label: "Acompañar al médico" },
   { Icon: Dumbbell,    label: "Ejercicio" },
   { Icon: Banknote,    label: "Cobrar pensión" },
   { Icon: Wrench,      label: "Cambiar un bombillo" },
