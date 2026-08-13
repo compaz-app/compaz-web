@@ -259,6 +259,35 @@ function QueHaceUnCompa() {
           ))}
         </div>
 
+        {/* Card especial médica */}
+        <div
+          className="mt-4 sm:mt-6 rounded-2xl px-8 py-7 flex flex-col sm:flex-row items-center gap-5"
+          style={{ backgroundColor: "#FF6B2B" }}
+        >
+          <Stethoscope size={40} strokeWidth={1.6} className="shrink-0" style={{ color: "white" }} />
+          <div className="flex-1 text-center sm:text-left">
+            <p
+              className="font-extrabold text-lg leading-snug mb-1 text-white"
+              style={{ fontFamily: "var(--font-display)" }}
+            >
+              ¿Tu familiar necesita atención médica especializada?
+            </p>
+            <p
+              className="text-sm leading-relaxed"
+              style={{ color: "rgba(255,255,255,0.85)", fontFamily: "var(--font-inter)" }}
+            >
+              Contamos con Compitas con perfil de enfermería certificado. Cuéntanos tu caso.
+            </p>
+          </div>
+          <a
+            href="mailto:hola@micompaz.com?subject=Necesito%20un%20Compita%20con%20perfil%20médico"
+            className="shrink-0 font-bold text-sm px-6 py-3 rounded-full hover:opacity-90 transition-opacity whitespace-nowrap"
+            style={{ backgroundColor: "white", color: "#FF6B2B", fontFamily: "var(--font-display)" }}
+          >
+            Escríbenos →
+          </a>
+        </div>
+
       </div>
     </section>
   );
