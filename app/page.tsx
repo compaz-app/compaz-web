@@ -230,13 +230,6 @@ function QueHaceUnCompa() {
           No mandamos a un extraño. Mandamos a alguien que ya conocemos.
         </h2>
 
-        <p
-          className="text-center text-base leading-relaxed mb-12 max-w-2xl mx-auto"
-          style={{ color: "#6B5C90", fontFamily: "var(--font-inter)" }}
-        >
-          Cada Compita es seleccionado, entrenado y supervisado por nuestro equipo. Verificamos su identidad, revisamos sus antecedentes, y solo entonces lo asignamos a una familia.
-        </p>
-
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6">
           {actividades.map(({ Icon, label }) => (
             <div
@@ -262,9 +255,9 @@ function QueHaceUnCompa() {
         {/* Card especial médica */}
         <div
           className="mt-4 sm:mt-6 rounded-2xl px-8 py-7 flex flex-col sm:flex-row items-center gap-5"
-          style={{ backgroundColor: "#FF6B2B" }}
+          style={{ backgroundColor: "#2D1464" }}
         >
-          <Stethoscope size={40} strokeWidth={1.6} className="shrink-0" style={{ color: "white" }} />
+          <Stethoscope size={40} strokeWidth={1.6} className="shrink-0" style={{ color: "#FF6B2B" }} />
           <div className="flex-1 text-center sm:text-left">
             <p
               className="font-extrabold text-lg leading-snug mb-1 text-white"
