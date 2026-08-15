@@ -1,0 +1,1436 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Compaz — Demo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,700;12..96,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --orange: #FF6B2B;
+      --purple: #2D1464;
+      --purple-dark: #1A0A3C;
+      --yellow: #FFD23F;
+      --warm-white: #FDFAF6;
+      --warm-gray: #F5F0E8;
+      --ink: #1A0A3C;
+      --ink-mid: #4A3B6B;
+      --ink-light: #6B5C90;
+      --border: #E8E0D4;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--warm-white);
+      color: var(--ink);
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+    h1, h2, h3, h4 { font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; line-height: 1.1; text-wrap: balance; }
+
+    /* Buttons */
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 14px 28px; border-radius: 9999px; font-family: 'Inter', sans-serif; font-weight: 700; font-size: 0.95rem; cursor: pointer; border: none; text-decoration: none; transition: opacity 0.18s, transform 0.15s; }
+    .btn:hover { opacity: 0.88; transform: translateY(-1px); }
+    .btn-primary { background: var(--orange); color: #fff; }
+    .btn-ghost { background: rgba(255,255,255,0.15); color: #fff; border: 2px solid rgba(255,255,255,0.6); }
+    .btn-purple { background: var(--purple); color: #fff; }
+    .btn-yellow { background: var(--yellow); color: var(--ink); }
+    .btn-white { background: #fff; color: var(--orange); }
+    .btn-sm { padding: 10px 20px; font-size: 0.875rem; }
+
+    /* Nav */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      background: rgba(45,20,100,0.85);
+      backdrop-filter: blur(12px);
+    }
+    .nav-inner {
+      max-width: 960px; margin: 0 auto;
+      padding: 12px 24px;
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    }
+    .nav-logo img { height: 36px; width: auto; display: block; }
+    .nav-right { display: flex; align-items: center; gap: 12px; }
+    .badge-demo { background: var(--yellow); color: var(--ink); font-weight: 700; font-size: 0.78rem; padding: 5px 12px; border-radius: 9999px; }
+
+    /* Hero */
+    #hero { position: relative; width: 100%; min-height: 100vh; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+    #hero video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .hero-overlay { position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(10,4,30,0.55) 0%, rgba(10,4,30,0.72) 100%); }
+    .hero-content {
+      position: relative; z-index: 2;
+      max-width: 960px; width: 100%;
+      margin: 0 auto; padding: 120px 24px 80px;
+      display: flex; flex-direction: row; align-items: center; gap: 64px;
+    }
+    .hero-text { flex: 1; display: flex; flex-direction: column; gap: 20px; }
+    .hero-text h1 { font-size: clamp(2rem, 5vw, 3.5rem); color: #fff; line-height: 1.1; }
+    .hero-text p { font-size: 1.05rem; color: rgba(255,255,255,0.85); line-height: 1.65; max-width: 520px; }
+    .hero-buttons { display: flex; flex-direction: column; gap: 12px; flex-shrink: 0; width: 300px; }
+    .hero-arrow { position: absolute; bottom: 32px; left: 0; right: 0; display: flex; justify-content: center; animation: bounce 1.5s ease-in-out infinite; z-index: 2; }
+    @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(8px)} }
+
+    /* Wave */
+    .wave { display: block; line-height: 0; font-size: 0; }
+    .wave svg { display: block; width: 100%; height: 56px; }
+
+    /* Section common */
+    .section-inner { max-width: 960px; margin: 0 auto; padding: 96px 24px; }
+
+    /* Pilares — dark purple, NO cards */
+    #pilares { background: var(--purple); }
+    #pilares h2 { color: #fff; text-align: center; font-size: clamp(1.75rem,4vw,2.75rem); margin-bottom: 64px; }
+    .pilares-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 40px; }
+    .pilar-item { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 16px; }
+    .pilar-item h3 { color: #fff; font-size: 1.1rem; }
+    .pilar-item p { color: rgba(255,255,255,0.70); font-size: 0.9rem; line-height: 1.65; }
+
+    /* Servicios */
+    #servicios { background: var(--warm-white); }
+    #servicios h2 { color: var(--purple); font-size: clamp(1.75rem,4vw,2.75rem); text-align: center; margin-bottom: 56px; }
+    .servicios-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 16px; }
+    .servicio-card {
+      display: flex; flex-direction: column; align-items: center; gap: 12px;
+      border-radius: 16px; padding: 28px 16px;
+      background: #fff; border: 1.5px solid var(--border);
+    }
+    .servicio-card span { font-size: 0.875rem; font-weight: 600; color: var(--purple); text-align: center; line-height: 1.3; }
+    .servicios-extra {
+      border-radius: 16px; padding: 28px 32px;
+      background: var(--purple);
+      display: flex; flex-direction: row; align-items: center; gap: 20px;
+    }
+    .servicios-extra-text { flex: 1; }
+    .servicios-extra-text strong { display: block; font-family: 'Bricolage Grotesque',sans-serif; font-weight: 800; font-size: 1.05rem; color: #fff; margin-bottom: 4px; }
+    .servicios-extra-text p { font-size: 0.875rem; color: rgba(255,255,255,0.85); }
+
+    /* Cómo funciona — dark purple, NO card boxes */
+    #como { background: var(--purple); }
+    #como h2 { color: #fff; text-align: center; font-size: clamp(1.75rem,4vw,2.75rem); margin-bottom: 64px; }
+    .pasos-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 40px; }
+    .paso-item { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 16px; }
+    .paso-num { font-family: 'Bricolage Grotesque',sans-serif; font-weight: 800; font-size: 3rem; color: var(--orange); line-height: 1; }
+    .paso-item h3 { color: #fff; font-size: 1.1rem; }
+    .paso-item p { color: rgba(255,255,255,0.70); font-size: 0.9rem; line-height: 1.65; }
+
+    /* Planes */
+    #planes { background: var(--warm-gray); }
+    #planes h2 { color: var(--purple); font-size: clamp(1.75rem,4vw,2.75rem); margin-bottom: 8px; }
+    .planes-subtitle { color: var(--ink-mid); margin-bottom: 48px; font-size: 0.95rem; }
+    .planes-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; align-items: start; }
+    .plan-card { background: #fff; border: 1.5px solid var(--border); border-radius: 16px; padding: 24px; position: relative; transition: box-shadow 0.2s; }
+    .plan-card:hover { box-shadow: 0 6px 24px rgba(45,20,100,0.1); }
+    .plan-card.featured { border-color: var(--orange); box-shadow: 0 4px 20px rgba(255,107,43,0.15); }
+    .plan-badge { position: absolute; top: -13px; left: 50%; transform: translateX(-50%); background: var(--orange); color: #fff; font-size: 0.72rem; font-weight: 700; padding: 4px 12px; border-radius: 9999px; white-space: nowrap; }
+    .plan-name { font-family: 'Bricolage Grotesque',sans-serif; font-weight: 800; font-size: 1.15rem; color: var(--ink); margin-bottom: 4px; }
+    .plan-price { font-family: 'Bricolage Grotesque',sans-serif; font-weight: 800; font-size: 1.9rem; color: var(--purple); margin-bottom: 16px; }
+    .plan-price span { font-size: 0.9rem; font-weight: 500; color: var(--ink-mid); }
+    .plan-features { list-style: none; margin-bottom: 20px; }
+    .plan-features li { font-size: 0.84rem; color: var(--ink-mid); padding: 6px 0; border-bottom: 1px solid var(--border); display: flex; align-items: flex-start; gap: 8px; }
+    .plan-features li:last-child { border-bottom: none; }
+    .plan-features li::before { content: '✓'; color: var(--orange); font-weight: 700; flex-shrink: 0; }
+
+    /* Compitas */
+    #compitas { background: var(--warm-white); }
+    #compitas h2 { color: var(--purple); font-size: clamp(1.75rem,4vw,2.75rem); margin-bottom: 8px; }
+    .compitas-subtitle { color: var(--ink-mid); margin-bottom: 40px; }
+    .filter-box { background: #fff; border: 1.5px solid var(--border); border-radius: 16px; padding: 24px 28px; margin-bottom: 32px; }
+    .filter-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px; margin-bottom: 20px; }
+    .filter-label { font-size: 0.75rem; font-weight: 600; color: var(--ink-mid); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; display: block; }
+    .filter-select { width: 100%; padding: 10px 14px; border: 1.5px solid var(--border); border-radius: 10px; font-family: 'Inter',sans-serif; font-size: 0.9rem; color: var(--ink); background: var(--warm-white); appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%234A3B6B' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; }
+    .filter-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .filter-chip { padding: 6px 14px; border-radius: 9999px; border: 1.5px solid var(--border); background: transparent; font-family: 'Inter',sans-serif; font-size: 0.82rem; font-weight: 500; color: var(--ink-mid); cursor: pointer; transition: all 0.15s; }
+    .filter-chip.active { border-color: var(--purple); background: var(--purple); color: #fff; }
+
+    .banner-locked { background: var(--purple); border-radius: 14px; padding: 20px 24px; display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 32px; }
+    .banner-locked-text { color: #fff; }
+    .banner-locked-text strong { display: block; font-size: 1rem; margin-bottom: 4px; }
+    .banner-locked-text p { font-size: 0.85rem; opacity: 0.72; }
+    .banner-unlocked { background: #1a5c32; border-radius: 14px; padding: 18px 24px; color: #fff; margin-bottom: 32px; display: none; }
+
+    .compitas-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; }
+    .compita-card { background: #fff; border: 1.5px solid var(--border); border-radius: 16px; overflow: hidden; transition: border-color 0.25s; }
+    .compita-card.selected { border-color: var(--orange); box-shadow: 0 4px 20px rgba(255,107,43,0.15); }
+    .compita-photo { position: relative; height: 200px; overflow: hidden; }
+    .compita-photo img { width: 100%; height: 100%; object-fit: cover; transition: filter 0.4s; }
+    .compita-photo.locked img { filter: blur(14px) brightness(0.7); }
+    .lock-overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #fff; text-align: center; padding: 16px; transition: opacity 0.4s; }
+    .compita-photo:not(.locked) .lock-overlay { opacity: 0; pointer-events: none; }
+    .lock-overlay svg { margin-bottom: 8px; }
+    .lock-overlay p { font-size: 0.75rem; opacity: 0.85; line-height: 1.4; }
+    .compita-body { padding: 18px; }
+    .compita-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2px; }
+    .compita-name { font-family: 'Bricolage Grotesque',sans-serif; font-weight: 800; font-size: 1.1rem; color: var(--ink); }
+    .verified-badge { background: #e8f5e9; color: #2e7d32; font-size: 0.68rem; font-weight: 700; padding: 3px 8px; border-radius: 9999px; white-space: nowrap; }
+    .compita-zona { font-size: 0.78rem; color: var(--ink-mid); margin-bottom: 4px; }
+    .compita-esp { font-size: 0.82rem; font-weight: 600; color: var(--purple); margin-bottom: 8px; }
+    .compita-bio { font-size: 0.8rem; color: var(--ink-mid); line-height: 1.55; margin-bottom: 10px; }
+    .compita-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
+    .c-chip { background: var(--warm-gray); color: var(--purple); font-size: 0.68rem; font-weight: 500; padding: 3px 9px; border-radius: 9999px; }
+    .compita-rating { font-size: 0.78rem; color: var(--ink-mid); margin-bottom: 14px; }
+    .media-label { font-size: 0.72rem; font-weight: 600; color: var(--ink-mid); margin-bottom: 5px; }
+    .media-note { font-size: 0.7rem; color: var(--ink-mid); margin-top: 4px; opacity: 0.7; }
+    .compita-media audio, .compita-media video { width: 100%; border-radius: 8px; }
+    .audio-block { display: block; margin-bottom: 14px; }
+    .video-block { display: none; margin-bottom: 14px; }
+    .resenas { border-top: 1px solid var(--border); padding-top: 14px; }
+    .resena { margin-bottom: 10px; }
+    .resena-head { display: flex; align-items: center; gap: 8px; margin-bottom: 3px; }
+    .resena-avatar { width: 26px; height: 26px; border-radius: 50%; background: var(--border); filter: blur(3px); overflow: hidden; flex-shrink: 0; }
+    .resena-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .resena-meta strong { font-size: 0.75rem; }
+    .resena-meta span { font-size: 0.72rem; color: var(--ink-mid); }
+    .resena-stars { color: #f59e0b; font-size: 0.72rem; }
+    .resena-text { font-size: 0.78rem; color: var(--ink-mid); line-height: 1.5; font-style: italic; }
+    .btn-elegir { display: none; width: 100%; margin-top: 14px; text-align: center; }
+    .btn-elegir.visible { display: block; }
+
+    /* Equipo */
+    #equipo { background: var(--warm-white); }
+    #equipo h2 { color: var(--purple); font-size: clamp(1.75rem,4vw,2.75rem); text-align: center; margin-bottom: 12px; }
+    .equipo-intro { text-align: center; color: var(--ink-light); max-width: 640px; margin: 0 auto 48px; line-height: 1.65; }
+    .equipo-layout { display: flex; flex-direction: row; gap: 32px; align-items: flex-start; }
+    .equipo-bios { flex: 1; display: flex; flex-direction: column; gap: 20px; }
+    .founder-card { background: #fff; border: 1.5px solid var(--border); border-radius: 16px; padding: 24px 28px; display: flex; gap: 20px; align-items: flex-start; }
+    .founder-photo { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+    .founder-name { font-family: 'Bricolage Grotesque',sans-serif; font-weight: 800; font-size: 1.1rem; color: var(--purple); margin-bottom: 2px; }
+    .founder-role { font-size: 0.82rem; font-weight: 600; color: var(--orange); margin-bottom: 8px; }
+    .founder-bio { font-size: 0.875rem; color: var(--ink-light); line-height: 1.6; }
+    .equipo-video { flex-shrink: 0; width: 240px; }
+    .equipo-video-wrap { border-radius: 16px; overflow: hidden; border: 1.5px solid var(--border); aspect-ratio: 9/16; }
+    .equipo-video-wrap iframe { display: block; width: 100%; height: 100%; border: none; }
+
+    /* FAQ — dark purple bg, white cards */
+    #faq { background: var(--purple); }
+    #faq h2 { color: #fff; font-size: clamp(1.75rem,4vw,2.75rem); text-align: center; margin-bottom: 8px; }
+    .faq-sub { text-align: center; color: rgba(255,255,255,0.70); margin-bottom: 48px; line-height: 1.65; max-width: 560px; margin-left: auto; margin-right: auto; }
+    .faq-list { display: flex; flex-direction: column; gap: 10px; }
+    .faq-item { background: #fff; border: 1.5px solid var(--border); border-radius: 16px; overflow: hidden; }
+    .faq-q { width: 100%; background: none; border: none; text-align: left; padding: 20px 24px; font-family: 'Bricolage Grotesque',sans-serif; font-weight: 700; font-size: 1rem; color: var(--ink); cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+    .faq-q svg { flex-shrink: 0; transition: transform 0.2s; stroke: var(--orange); }
+    .faq-item.open .faq-q svg { transform: rotate(180deg); }
+    .faq-a { max-height: 0; overflow: hidden; transition: max-height 0.3s ease; }
+    .faq-a-inner { padding: 0 24px 20px; font-size: 0.9rem; color: var(--ink-light); line-height: 1.7; }
+    .faq-item.open .faq-a { max-height: 400px; }
+
+    /* Waitlist — YELLOW */
+    #waitlist { background: var(--yellow); }
+    #waitlist h2 { color: var(--ink); font-size: clamp(1.75rem,4vw,2.75rem); text-align: center; margin-bottom: 12px; }
+    .waitlist-sub { text-align: center; color: var(--purple); font-weight: 500; margin-bottom: 8px; }
+    .waitlist-highlight { text-align: center; font-family: 'Bricolage Grotesque',sans-serif; font-weight: 800; font-size: 1.25rem; color: var(--ink); text-decoration: underline; margin-bottom: 40px; }
+    .waitlist-form-wrap { max-width: 520px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+    .wl-input { width: 100%; padding: 14px 18px; border-radius: 12px; border: none; font-family: 'Inter',sans-serif; font-size: 0.95rem; color: var(--ink); background: #fff; outline: none; }
+    .wl-radio-group { display: flex; flex-direction: column; gap: 8px; }
+    .wl-radio { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-radius: 12px; background: #fff; color: var(--ink); font-size: 0.9rem; cursor: pointer; transition: background 0.15s, color 0.15s; }
+    .wl-radio:has(input:checked) { background: var(--purple); color: #fff; }
+    .wl-radio input { accent-color: var(--purple); }
+    .wl-footer { text-align: center; font-size: 0.85rem; font-weight: 600; color: var(--ink-mid); margin-top: 4px; }
+
+    /* Alianzas */
+    #alianzas { background: var(--warm-gray); }
+    #alianzas h2 { color: var(--purple); font-size: clamp(1.75rem,4vw,2.75rem); margin-bottom: 8px; }
+    .alianzas-sub { color: var(--ink-mid); margin-bottom: 32px; }
+    .tabs-nav { display: flex; gap: 4px; background: var(--border); border-radius: 12px; padding: 4px; width: fit-content; margin-bottom: 32px; }
+    .tab-btn { padding: 9px 18px; border-radius: 10px; border: none; background: transparent; font-family: 'Inter',sans-serif; font-weight: 600; font-size: 0.875rem; color: var(--ink-mid); cursor: pointer; transition: all 0.15s; }
+    .tab-btn.active { background: #fff; color: var(--ink); box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+    .tab-panel > p { color: var(--ink-mid); max-width: 540px; margin-bottom: 20px; }
+    .seguros-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-bottom: 24px; }
+    .seguro-card { background: #fff; border: 1.5px solid var(--border); border-radius: 12px; padding: 18px; }
+    .seguro-name { font-weight: 600; font-size: 0.875rem; color: var(--ink); margin-bottom: 6px; }
+    .seguro-tag { background: var(--warm-gray); color: var(--ink-mid); font-size: 0.7rem; font-weight: 600; padding: 3px 8px; border-radius: 9999px; display: inline-block; }
+
+    /* Inversores */
+    #inversores { background: var(--purple-dark); }
+    .inv-kicker { font-family: 'Inter',sans-serif; font-weight: 600; font-size: 0.78rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--yellow); margin-bottom: 12px; }
+    #inversores h2 { color: #fff; font-size: clamp(1.75rem,4vw,2.75rem); margin-bottom: 10px; }
+    .inv-sub { color: rgba(255,255,255,0.60); font-size: 1.05rem; max-width: 580px; margin-bottom: 56px; line-height: 1.6; }
+    .stats-grid { display: grid; grid-template-columns: repeat(3,1fr); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; overflow: hidden; margin-bottom: 56px; }
+    .stat-cell { padding: 32px 28px; border-right: 1px solid rgba(255,255,255,0.1); }
+    .stat-cell:last-child { border-right: none; }
+    .stat-num { font-family: 'Bricolage Grotesque',sans-serif; font-weight: 800; font-size: 2.75rem; color: var(--yellow); line-height: 1; margin-bottom: 6px; }
+    .stat-label { color: #fff; font-weight: 600; margin-bottom: 4px; }
+    .stat-sub { color: rgba(255,255,255,0.42); font-size: 0.82rem; }
+    .inv-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; margin-bottom: 56px; }
+    .inv-col h3 { color: #fff; font-size: 1.15rem; margin-bottom: 14px; }
+    .inv-col p { color: rgba(255,255,255,0.60); font-size: 0.9rem; line-height: 1.75; }
+    .inv-col p + p { margin-top: 10px; }
+    .roadmap h3 { color: #fff; font-size: 1.15rem; margin-bottom: 20px; }
+    .roadmap-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 56px; }
+    .roadmap-item { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.09); border-radius: 12px; padding: 18px; }
+    .roadmap-item .flag { font-size: 1.3rem; margin-bottom: 8px; }
+    .roadmap-item h4 { color: #fff; font-size: 0.9rem; margin-bottom: 4px; }
+    .roadmap-item p { color: rgba(255,255,255,0.48); font-size: 0.8rem; line-height: 1.5; }
+    .inv-founders { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 48px; }
+    .inv-founder { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.09); border-radius: 14px; padding: 20px; display: flex; align-items: center; gap: 16px; }
+    .inv-founder img { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; flex-shrink: 0; border: 2px solid rgba(255,255,255,0.15); }
+    .inv-founder h4 { color: #fff; font-size: 0.95rem; margin-bottom: 2px; }
+    .inv-role { color: var(--yellow); font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
+    .inv-founder p { color: rgba(255,255,255,0.50); font-size: 0.8rem; line-height: 1.5; }
+    .inv-cta { text-align: center; }
+    .inv-cta-note { margin-top: 12px; color: rgba(255,255,255,0.36); font-size: 0.82rem; }
+
+    /* Footer */
+    footer { background: var(--purple-dark); border-top: 1px solid rgba(255,255,255,0.07); padding: 40px 24px; }
+    .footer-inner { max-width: 960px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+    .footer-logo img { height: 36px; width: auto; opacity: 0.85; }
+    .footer-links { display: flex; gap: 24px; }
+    .footer-links a { color: rgba(255,255,255,0.50); font-size: 0.875rem; text-decoration: none; transition: color 0.15s; }
+    .footer-links a:hover { color: rgba(255,255,255,0.85); }
+    .footer-copy { color: rgba(255,255,255,0.28); font-size: 0.78rem; }
+    .footer-founders { max-width: 960px; margin: 16px auto 0; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.06); text-align: center; color: rgba(255,255,255,0.18); font-size: 0.72rem; }
+
+    /* Modales */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(26,10,60,0.75); backdrop-filter: blur(4px); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 20px; opacity: 0; pointer-events: none; transition: opacity 0.22s; }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+    .modal-card { background: #fff; border-radius: 20px; padding: 36px; max-width: 460px; width: 100%; position: relative; transform: translateY(16px); transition: transform 0.22s; }
+    .modal-overlay.open .modal-card { transform: translateY(0); }
+    .modal-close { position: absolute; top: 14px; right: 14px; width: 30px; height: 30px; border-radius: 50%; border: none; background: var(--warm-gray); cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center; color: var(--ink-mid); }
+    .modal-title { font-family: 'Bricolage Grotesque',sans-serif; font-weight: 800; font-size: 1.45rem; color: var(--ink); margin-bottom: 6px; }
+    .modal-sub { color: var(--ink-mid); font-size: 0.875rem; margin-bottom: 20px; }
+    .plan-summary { background: var(--warm-gray); border-radius: 10px; padding: 12px 16px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+    .plan-summary-name { font-weight: 600; color: var(--ink); }
+    .plan-summary-price { font-weight: 700; color: var(--orange); }
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; font-size: 0.72rem; font-weight: 600; color: var(--ink-mid); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 5px; }
+    .form-group input { width: 100%; padding: 10px 14px; border: 1.5px solid var(--border); border-radius: 10px; font-family: 'Inter',sans-serif; font-size: 0.9rem; color: var(--ink); background: #fff; outline: none; transition: border-color 0.15s; }
+    .form-group input:focus { border-color: var(--purple); }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .modal-disclaimer { font-size: 0.72rem; color: var(--ink-mid); text-align: center; margin-top: 12px; opacity: 0.6; }
+    .modal-confirm { text-align: center; padding: 16px 0; }
+    .modal-confirm-icon { font-size: 3rem; margin-bottom: 14px; }
+    .modal-confirm-title { font-family: 'Bricolage Grotesque',sans-serif; font-weight: 800; font-size: 1.6rem; color: var(--ink); margin-bottom: 10px; }
+    .modal-confirm-text { color: var(--ink-mid); margin-bottom: 24px; line-height: 1.65; font-size: 0.95rem; }
+
+    /* Toast */
+    #toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(60px); background: var(--purple); color: #fff; padding: 13px 26px; border-radius: 9999px; font-size: 0.9rem; font-weight: 500; z-index: 300; opacity: 0; transition: transform 0.28s ease, opacity 0.28s ease; white-space: nowrap; box-shadow: 0 6px 20px rgba(26,10,60,0.28); }
+    #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .pilares-grid, .pasos-grid { grid-template-columns: 1fr; gap: 32px; }
+      .planes-grid { grid-template-columns: 1fr 1fr; }
+      .compitas-grid { grid-template-columns: 1fr 1fr; }
+      .equipo-layout { flex-direction: column; }
+      .equipo-video { width: 100%; max-width: 280px; margin: 0 auto; }
+      .inv-cols { grid-template-columns: 1fr; }
+      .roadmap-grid { grid-template-columns: 1fr 1fr; }
+      .inv-founders { grid-template-columns: 1fr; }
+      .stats-grid { grid-template-columns: 1fr; }
+      .filter-row { grid-template-columns: 1fr; }
+      .servicios-grid { grid-template-columns: repeat(2,1fr); }
+      .hero-content { flex-direction: column; padding: 100px 24px 72px; }
+      .hero-buttons { width: 100%; }
+    }
+    @media (max-width: 600px) {
+      .planes-grid { grid-template-columns: 1fr; }
+      .compitas-grid { grid-template-columns: 1fr; }
+      .seguros-grid { grid-template-columns: 1fr 1fr; }
+      .roadmap-grid { grid-template-columns: 1fr; }
+      .badge-demo { display: none; }
+      .servicios-extra { flex-direction: column; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-inner">
+    <a href="#hero" class="nav-logo">
+      <img src="https://micompaz.com/logo-nav.webp" alt="Compaz"
+           onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+      <span style="display:none;color:#fff;font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:1.4rem">Compaz</span>
+    </a>
+    <div class="nav-right">
+      <span class="badge-demo">Demo privada</span>
+      <a href="#planes" class="btn btn-primary btn-sm">Ver planes</a>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section id="hero">
+  <video autoplay muted playsinline>
+    <source src="https://micompaz.com/video-hero.mp4" type="video/mp4">
+  </video>
+  <div class="hero-overlay"></div>
+  <div class="hero-content">
+    <div class="hero-text">
+      <h1>¿Tu mamá se quedó sin compañía para ir al médico, al banco, al mercado?</h1>
+      <p>Nuestro equipo va a donde tú no puedes ir. Un <strong style="color:#fff">Compita verificado por nosotros</strong> acompaña a tu familiar, y tú recibes fotos y notas de cada visita, directo a tu WhatsApp.</p>
+    </div>
+    <div class="hero-buttons">
+      <a href="#planes" class="btn btn-primary" style="font-size:1rem;padding:16px 24px">Quiero un Compita para mi familiar</a>
+      <a href="mailto:compitas@micompaz.com" class="btn btn-ghost" style="font-size:1rem;padding:16px 24px">Quiero trabajar como Compita</a>
+    </div>
+  </div>
+  <div class="hero-arrow">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+  </div>
+</section>
+
+<!-- PILARES (fondo morado oscuro, sin cards, iconos Lucide SVG) -->
+<section id="pilares">
+  <div class="section-inner">
+    <h2>Tu familiar no va a recibir a un extraño. Va a recibir a alguien de nuestro equipo.</h2>
+    <div class="pilares-grid">
+      <div class="pilar-item">
+        <!-- ShieldCheck -->
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#FF6B2B" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+        <h3>Son nuestros, no de una app.</h3>
+        <p>Verificación de cédula, antecedentes penales y entrevista personal. Los seleccionamos y respondemos por ellos.</p>
+      </div>
+      <div class="pilar-item">
+        <!-- Camera -->
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#FF6B2B" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 4h-5L7 7H4a2 2 0 00-2 2v9a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+        <h3>Sabes exactamente cómo estuvo.</h3>
+        <p>Fotos y resumen directo a tu WhatsApp después de cada visita. No solo «todo bien»: te contamos lo que pasó de verdad.</p>
+      </div>
+      <div class="pilar-item">
+        <!-- MapPin -->
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#FF6B2B" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 0116 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        <h3>Ves cada visita en tiempo real.</h3>
+        <p>Sigue la ubicación de tu familiar durante la visita. Presente, aunque estés lejos.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- WAVE 1: morado → warm-white -->
+<div class="wave" style="background:#2D1464">
+  <svg viewBox="0 0 1440 80" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" aria-hidden="true">
+    <path d="M0,20 C480,80 960,80 1440,20 L1440,80 L0,80 Z" fill="#FDFAF6"/>
+  </svg>
+</div>
+
+<!-- SERVICIOS -->
+<section id="servicios">
+  <div class="section-inner">
+    <h2>Un Compita para todo lo que necesites.</h2>
+    <div class="servicios-grid">
+      <!-- ShoppingCart -->
+      <div class="servicio-card">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#FF6B2B" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 002 1.58h9.78a2 2 0 001.95-1.57l1.65-7.43H5.12"/></svg>
+        <span>Supermercado</span>
+      </div>
+      <!-- Building2 (Banco) -->
+      <div class="servicio-card">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#FF6B2B" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 22V4a2 2 0 012-2h8a2 2 0 012 2v18z"/><path d="M6 12H4a2 2 0 00-2 2v6a2 2 0 002 2h2"/><path d="M18 9h2a2 2 0 012 2v9a2 2 0 01-2 2h-2"/><path d="M10 6h4M10 10h4M10 14h4M10 18h4"/></svg>
+        <span>Banco</span>
+      </div>
+      <!-- Stethoscope (Médico) -->
+      <div class="servicio-card">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#FF6B2B" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.8 2.3a.3.3 0 105 0H4a2 2 0 00-2 2v5a6 6 0 006 6 6 6 0 006-6V4a2 2 0 00-2-2h-.8"/><path d="M8 15v1a6 6 0 006 6v0a6 6 0 006-6v-4"/><circle cx="20" cy="10" r="2"/></svg>
+        <span>Acompañar al médico</span>
+      </div>
+      <!-- Dumbbell (Ejercicio) -->
+      <div class="servicio-card">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#FF6B2B" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 5v14M18 5v14M8 8h8M8 16h8M2 8h2v8H2zM20 8h2v8h-2z"/></svg>
+        <span>Ejercicio</span>
+      </div>
+      <!-- Banknote (Pensión) -->
+      <div class="servicio-card">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#FF6B2B" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>
+        <span>Cobrar pensión</span>
+      </div>
+      <!-- Wrench (Bombillo) -->
+      <div class="servicio-card">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#FF6B2B" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
+        <span>Cambiar un bombillo</span>
+      </div>
+      <!-- Video (Videollamadas) -->
+      <div class="servicio-card">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#FF6B2B" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 8l-6 4 6 4V8z"/><rect width="14" height="12" x="2" y="6" rx="2"/></svg>
+        <span>Asistencia con tecnología</span>
+      </div>
+      <!-- MessageCircle -->
+      <div class="servicio-card">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#FF6B2B" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+        <span>Simplemente conversar</span>
+      </div>
+    </div>
+    <!-- Card especial médica -->
+    <div class="servicios-extra">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#FF6B2B" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink:0"><path d="M4.8 2.3a.3.3 0 105 0H4a2 2 0 00-2 2v5a6 6 0 006 6 6 6 0 006-6V4a2 2 0 00-2-2h-.8"/><path d="M8 15v1a6 6 0 006 6v0a6 6 0 006-6v-4"/><circle cx="20" cy="10" r="2"/></svg>
+      <div class="servicios-extra-text">
+        <strong>¿Tu familiar necesita atención médica especializada?</strong>
+        <p>Contamos con Compitas con perfil de enfermería certificado. Cuéntanos tu caso.</p>
+      </div>
+      <a href="mailto:hola@micompaz.com" class="btn btn-white btn-sm" style="flex-shrink:0">Escríbenos →</a>
+    </div>
+  </div>
+</section>
+
+<!-- WAVE 2: warm-white → morado -->
+<div class="wave" style="background:#FDFAF6">
+  <svg viewBox="0 0 1440 80" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" aria-hidden="true">
+    <path d="M0,20 C480,80 960,80 1440,20 L1440,80 L0,80 Z" fill="#2D1464"/>
+  </svg>
+</div>
+
+<!-- CÓMO FUNCIONA (morado, sin card boxes, números naranja) -->
+<section id="como">
+  <div class="section-inner">
+    <h2>Simple para ti. Significativo para ellos.</h2>
+    <div class="pasos-grid">
+      <div class="paso-item">
+        <span class="paso-num">01</span>
+        <h3>Elige tu plan</h3>
+        <p>Dinos qué frecuencia necesitas y cuánto quieres invertir. Desde una visita puntual hasta acompañamiento mensual ilimitado.</p>
+      </div>
+      <div class="paso-item">
+        <span class="paso-num">02</span>
+        <h3>Encuentra a tu Compita</h3>
+        <p>Cuéntanos qué necesita tu familiar y te mostramos las mejores opciones disponibles en su zona. Tú eliges.</p>
+      </div>
+      <div class="paso-item">
+        <span class="paso-num">03</span>
+        <h3>Recibe el reporte</h3>
+        <p>Después de cada visita, fotos y notas directo a tu WhatsApp. Tu familiar estuvo acompañado. Tú lo viviste con ellos.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- WAVE 3: morado → warm-gray -->
+<div class="wave" style="background:#2D1464">
+  <svg viewBox="0 0 1440 80" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" aria-hidden="true">
+    <path d="M0,0 C480,0 1200,80 1440,80 L1440,80 L0,80 Z" fill="#F5F0E8"/>
+  </svg>
+</div>
+
+<!-- PLANES -->
+<section id="planes">
+  <div class="section-inner">
+    <h2>Elige el plan que necesita tu familiar.</h2>
+    <p class="planes-subtitle">Todos los planes incluyen Compitas verificados y reporte por WhatsApp después de cada visita.</p>
+    <div class="planes-grid">
+      <div class="plan-card">
+        <div class="plan-name">Básico</div>
+        <div class="plan-price">$29<span>/mes</span></div>
+        <ul class="plan-features">
+          <li>1 visita mensual (2 horas)</li>
+          <li>Reporte por WhatsApp</li>
+          <li>Compita verificado</li>
+          <li>Compañía y mandados básicos</li>
+          <li>Cobertura Caracas</li>
+        </ul>
+        <button class="btn btn-purple" style="width:100%" onclick="openModal('Básico','$29/mes')">Elegir Básico</button>
+      </div>
+      <div class="plan-card featured">
+        <div class="plan-badge">Más popular</div>
+        <div class="plan-name">Estándar</div>
+        <div class="plan-price">$59<span>/mes</span></div>
+        <ul class="plan-features">
+          <li>4 visitas mensuales (2 horas c/u)</li>
+          <li>Reporte con fotos por WhatsApp</li>
+          <li>Seguimiento GPS en tiempo real</li>
+          <li>Mandados, médico, banco, ejercicio</li>
+          <li>Asistencia tecnológica incluida</li>
+          <li>Cobertura nacional</li>
+        </ul>
+        <button class="btn btn-primary" style="width:100%" onclick="openModal('Estándar','$59/mes')">Elegir Estándar</button>
+      </div>
+      <div class="plan-card">
+        <div class="plan-name">Premium</div>
+        <div class="plan-price">$99<span>/mes</span></div>
+        <ul class="plan-features">
+          <li>Visitas ilimitadas</li>
+          <li>Compita preferencial fijo</li>
+          <li>Enfermería disponible</li>
+          <li>Atención de emergencias</li>
+          <li>Trámites especiales incluidos</li>
+          <li>Todo lo del Estándar</li>
+        </ul>
+        <button class="btn btn-purple" style="width:100%" onclick="openModal('Premium','$99/mes')">Elegir Premium</button>
+      </div>
+      <div class="plan-card">
+        <div class="plan-name">À la carta</div>
+        <div class="plan-price">$19<span>/visita</span></div>
+        <ul class="plan-features">
+          <li>Sin suscripción mensual</li>
+          <li>Reserva cuando lo necesites</li>
+          <li>Elige el servicio específico</li>
+          <li>Compita verificado disponible</li>
+          <li>Reserva con 24h de anticipación</li>
+        </ul>
+        <button class="btn btn-purple" style="width:100%" onclick="openModal('À la carta','$19/visita')">Reservar visita</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- COMPITAS -->
+<section id="compitas" style="background:#fff;border-top:1px solid #E8E0D4">
+  <div class="section-inner">
+    <h2>Encuentra al Compita ideal para tu familiar.</h2>
+    <p class="compitas-subtitle">Cuéntanos qué necesita y te mostramos quién está disponible en su zona.</p>
+
+    <div class="filter-box">
+      <div class="filter-row">
+        <div>
+          <label class="filter-label">Zona</label>
+          <select class="filter-select">
+            <option>Caracas</option><option>Valencia</option><option>Maracaibo</option><option>Barquisimeto</option><option>Otra ciudad</option>
+          </select>
+        </div>
+        <div>
+          <label class="filter-label">Servicio</label>
+          <div class="filter-chips">
+            <button class="filter-chip" onclick="toggleChip(this)">Compañía</button>
+            <button class="filter-chip" onclick="toggleChip(this)">Médico</button>
+            <button class="filter-chip" onclick="toggleChip(this)">Mandados</button>
+            <button class="filter-chip" onclick="toggleChip(this)">Ejercicio</button>
+            <button class="filter-chip" onclick="toggleChip(this)">Enfermería</button>
+            <button class="filter-chip" onclick="toggleChip(this)">Tecnología</button>
+          </div>
+        </div>
+        <div>
+          <label class="filter-label">Requisito especial</label>
+          <div class="filter-chips">
+            <button class="filter-chip" onclick="toggleChip(this)">Tiene carro</button>
+            <button class="filter-chip" onclick="toggleChip(this)">Perfil médico</button>
+            <button class="filter-chip" onclick="toggleChip(this)">Disponibilidad mañana</button>
+          </div>
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="mostrarCompitas()">Buscar Compitas disponibles</button>
+    </div>
+
+    <div class="banner-locked" id="bannerLocked">
+      <div class="banner-locked-text">
+        <strong>🔒 Activa tu plan para ver los perfiles completos.</strong>
+        <p>Puedes escuchar la presentación en audio de cada Compita. La foto y el video se desbloquean al contratar.</p>
+      </div>
+      <a href="#planes" class="btn btn-primary btn-sm" style="flex-shrink:0">Ver planes</a>
+    </div>
+    <div class="banner-unlocked" id="bannerUnlocked">
+      <strong>✅ Perfiles desbloqueados.</strong> Selecciona al Compita ideal para tu familiar.
+    </div>
+
+    <div id="busqueda-status" style="display:none;text-align:center;margin-bottom:16px;font-size:0.875rem;color:var(--ink-mid);font-weight:500"></div>
+    <div class="compitas-grid" id="compitasGrid" style="opacity:0;transform:translateY(16px);transition:opacity 0.45s,transform 0.45s">
+
+      <!-- DANIELA -->
+      <div class="compita-card" id="card-daniela">
+        <div class="compita-photo locked" id="photo-daniela">
+          <img src="https://micompaz.com/images/compa-mujer1.jpg" alt="Daniela"
+               onerror="this.src='https://i.pravatar.cc/400?img=47'">
+          <div class="lock-overlay">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+            <p>Foto disponible al activar tu plan</p>
+          </div>
+        </div>
+        <div class="compita-body">
+          <div class="compita-header">
+            <span class="compita-name" id="name-daniela">Daniela</span>
+            <span class="verified-badge">Verificado ✓</span>
+          </div>
+          <div class="compita-zona">📍 Chacao, Caracas</div>
+          <div class="compita-esp">Enfermería certificada y acompañamiento médico</div>
+          <div class="compita-bio">"Soy enfermera desde hace 8 años y lo que más me gusta es acompañar a mis pacientes al médico, no solo llevarlos. Pregunto, tomo nota, y cuando llegamos a casa le explico a la familia todo lo que pasó."</div>
+          <div class="compita-chips">
+            <span class="c-chip">Enfermería</span><span class="c-chip">Médico</span><span class="c-chip">Compañía</span><span class="c-chip">Ejercicio</span>
+          </div>
+          <div class="compita-rating">⭐ 5.0 · 47 visitas</div>
+          <div class="compita-media">
+            <div class="audio-block" id="audio-daniela">
+              <div class="media-label">🎙️ Presentación en audio</div>
+              <audio controls><source src="" type="audio/mpeg"></audio>
+              <div class="media-note">El video se desbloquea con tu plan</div>
+            </div>
+            <div class="video-block" id="video-daniela">
+              <video controls poster="https://i.pravatar.cc/400?img=47"><source src="https://www.w3schools.com/html/mov_bbb.mp4" type="video/mp4"></video>
+            </div>
+          </div>
+          <div class="resenas">
+            <div class="resena">
+              <div class="resena-head"><div class="resena-avatar"><img src="https://i.pravatar.cc/40?img=5" alt=""></div><div class="resena-meta"><strong>Carmen R.</strong> <span>· Santiago de Chile</span></div></div>
+              <div class="resena-stars">⭐⭐⭐⭐⭐</div>
+              <div class="resena-text">"Daniela acompañó a mi mamá al cardiólogo y me llamó después para explicarme todo lo que dijo el doctor. Yo estaba en Chile y sentí que había estado ahí."</div>
+            </div>
+            <div class="resena">
+              <div class="resena-head"><div class="resena-avatar"><img src="https://i.pravatar.cc/40?img=11" alt=""></div><div class="resena-meta"><strong>Rodrigo M.</strong> <span>· Miami</span></div></div>
+              <div class="resena-stars">⭐⭐⭐⭐⭐</div>
+              <div class="resena-text">"Mi papá no quería que nadie lo ayudara. Con Daniela cambió en la segunda visita. Ahora la espera los martes."</div>
+            </div>
+          </div>
+          <button class="btn btn-primary btn-elegir" id="elegir-daniela" onclick="elegirCompita('Daniela',this)">Elegir a Daniela</button>
+        </div>
+      </div>
+
+      <!-- CARLOS -->
+      <div class="compita-card" id="card-carlos">
+        <div class="compita-photo locked" id="photo-carlos">
+          <img src="https://micompaz.com/images/compa-carlos.jpg" alt="Carlos"
+               onerror="this.src='https://i.pravatar.cc/400?img=12'">
+          <div class="lock-overlay">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+            <p>Foto disponible al activar tu plan</p>
+          </div>
+        </div>
+        <div class="compita-body">
+          <div class="compita-header">
+            <span class="compita-name" id="name-carlos">Carlos</span>
+            <span class="verified-badge">Verificado ✓</span>
+          </div>
+          <div class="compita-zona">📍 Las Mercedes, Caracas</div>
+          <div class="compita-esp">Mandados, trámites bancarios y gestiones</div>
+          <div class="compita-bio">"Trabajé 12 años en banca y conozco cada trámite, cada cola, cada formulario. Ahora uso eso para que los abuelos no tengan que lidiar solos con eso."</div>
+          <div class="compita-chips">
+            <span class="c-chip">Mandados</span><span class="c-chip">Banco</span><span class="c-chip">Pensión</span><span class="c-chip">Compañía</span>
+          </div>
+          <div class="compita-rating">⭐ 4.9 · 55 visitas</div>
+          <div class="compita-media">
+            <div class="audio-block" id="audio-carlos">
+              <div class="media-label">🎙️ Presentación en audio</div>
+              <audio controls><source src="" type="audio/mpeg"></audio>
+              <div class="media-note">El video se desbloquea con tu plan</div>
+            </div>
+            <div class="video-block" id="video-carlos">
+              <video controls><source src="https://www.w3schools.com/html/mov_bbb.mp4" type="video/mp4"></video>
+            </div>
+          </div>
+          <div class="resenas">
+            <div class="resena">
+              <div class="resena-head"><div class="resena-avatar"><img src="https://i.pravatar.cc/40?img=8" alt=""></div><div class="resena-meta"><strong>Valentina P.</strong> <span>· Madrid</span></div></div>
+              <div class="resena-stars">⭐⭐⭐⭐⭐</div>
+              <div class="resena-text">"Mi abuela tenía meses sin poder cobrar su pensión. Carlos lo resolvió en una sola mañana."</div>
+            </div>
+            <div class="resena">
+              <div class="resena-head"><div class="resena-avatar"><img src="https://i.pravatar.cc/40?img=18" alt=""></div><div class="resena-meta"><strong>Luis A.</strong> <span>· Bogotá</span></div></div>
+              <div class="resena-stars">⭐⭐⭐⭐⭐</div>
+              <div class="resena-text">"Lo enviamos para un mandado y terminó jugando dominó con mi abuelo dos horas. Mi abuelo nos llamó feliz esa noche."</div>
+            </div>
+          </div>
+          <button class="btn btn-primary btn-elegir" id="elegir-carlos" onclick="elegirCompita('Carlos',this)">Elegir a Carlos</button>
+        </div>
+      </div>
+
+      <!-- SOFÍA -->
+      <div class="compita-card" id="card-sofia">
+        <div class="compita-photo locked" id="photo-sofia">
+          <img src="https://micompaz.com/images/compa-mujer2.jpg" alt="Sofía"
+               onerror="this.src='https://i.pravatar.cc/400?img=27'">
+          <div class="lock-overlay">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+            <p>Foto disponible al activar tu plan</p>
+          </div>
+        </div>
+        <div class="compita-body">
+          <div class="compita-header">
+            <span class="compita-name" id="name-sofia">Sofía</span>
+            <span class="verified-badge">Verificado ✓</span>
+          </div>
+          <div class="compita-zona">📍 Baruta, Caracas</div>
+          <div class="compita-esp">Ejercicio para adultos mayores y salidas</div>
+          <div class="compita-bio">"Soy instructora de yoga adaptado y llevo 5 años trabajando con adultos mayores. Lo que más me motiva es ver a alguien que llegó con miedo a moverse, salir caminando solo."</div>
+          <div class="compita-chips">
+            <span class="c-chip">Ejercicio</span><span class="c-chip">Compañía</span><span class="c-chip">Salidas</span><span class="c-chip">Médico</span>
+          </div>
+          <div class="compita-rating">⭐ 4.9 · 31 visitas</div>
+          <div class="compita-media">
+            <div class="audio-block" id="audio-sofia">
+              <div class="media-label">🎙️ Presentación en audio</div>
+              <audio controls><source src="" type="audio/mpeg"></audio>
+              <div class="media-note">El video se desbloquea con tu plan</div>
+            </div>
+            <div class="video-block" id="video-sofia">
+              <video controls><source src="https://www.w3schools.com/html/mov_bbb.mp4" type="video/mp4"></video>
+            </div>
+          </div>
+          <div class="resenas">
+            <div class="resena">
+              <div class="resena-head"><div class="resena-avatar"><img src="https://i.pravatar.cc/40?img=21" alt=""></div><div class="resena-meta"><strong>Andrea G.</strong> <span>· Barcelona</span></div></div>
+              <div class="resena-stars">⭐⭐⭐⭐⭐</div>
+              <div class="resena-text">"Mi mamá tiene 78 años y Sofía la lleva a caminar tres veces a la semana. Me manda fotos de las dos riendo."</div>
+            </div>
+            <div class="resena">
+              <div class="resena-head"><div class="resena-avatar"><img src="https://i.pravatar.cc/40?img=33" alt=""></div><div class="resena-meta"><strong>José T.</strong> <span>· Buenos Aires</span></div></div>
+              <div class="resena-stars">⭐⭐⭐⭐⭐</div>
+              <div class="resena-text">"Sofía diseñó una rutina específica para mi papá según lo que dijo el médico. Va mucho más allá de lo que esperábamos."</div>
+            </div>
+          </div>
+          <button class="btn btn-primary btn-elegir" id="elegir-sofia" onclick="elegirCompita('Sofía',this)">Elegir a Sofía</button>
+        </div>
+      </div>
+
+      <!-- MIGUEL -->
+      <div class="compita-card" id="card-miguel">
+        <div class="compita-photo locked" id="photo-miguel">
+          <img src="https://micompaz.com/images/compa-hombre5.jpg" alt="Miguel"
+               onerror="this.src='https://i.pravatar.cc/400?img=57'">
+          <div class="lock-overlay">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+            <p>Foto disponible al activar tu plan</p>
+          </div>
+        </div>
+        <div class="compita-body">
+          <div class="compita-header">
+            <span class="compita-name" id="name-miguel">Miguel</span>
+            <span class="verified-badge">Verificado ✓</span>
+          </div>
+          <div class="compita-zona">📍 Valencia, Carabobo</div>
+          <div class="compita-esp">Asistencia tecnológica y compañía</div>
+          <div class="compita-bio">"Me apasiona la tecnología y me apasiona enseñarla. Hay algo especial en la cara de un abuelo cuando logra hacer una videollamada solo por primera vez."</div>
+          <div class="compita-chips">
+            <span class="c-chip">Tecnología</span><span class="c-chip">Compañía</span><span class="c-chip">Mandados</span>
+          </div>
+          <div class="compita-rating">⭐ 4.8 · 23 visitas</div>
+          <div class="compita-media">
+            <div class="audio-block" id="audio-miguel">
+              <div class="media-label">🎙️ Presentación en audio</div>
+              <audio controls><source src="" type="audio/mpeg"></audio>
+              <div class="media-note">El video se desbloquea con tu plan</div>
+            </div>
+            <div class="video-block" id="video-miguel">
+              <video controls><source src="https://www.w3schools.com/html/mov_bbb.mp4" type="video/mp4"></video>
+            </div>
+          </div>
+          <div class="resenas">
+            <div class="resena">
+              <div class="resena-head"><div class="resena-avatar"><img src="https://i.pravatar.cc/40?img=41" alt=""></div><div class="resena-meta"><strong>Patricia V.</strong> <span>· Nueva York</span></div></div>
+              <div class="resena-stars">⭐⭐⭐⭐⭐</div>
+              <div class="resena-text">"Mi abuela vivía sin poder hablar con nosotros por WhatsApp. Miguel le configuró todo y ahora nos llama ella a nosotros."</div>
+            </div>
+            <div class="resena">
+              <div class="resena-head"><div class="resena-avatar"><img src="https://i.pravatar.cc/40?img=52" alt=""></div><div class="resena-meta"><strong>Andrés C.</strong> <span>· Lima</span></div></div>
+              <div class="resena-stars">⭐⭐⭐⭐⭐</div>
+              <div class="resena-text">"Se quedó conversando con mi papá de béisbol dos horas. Me dijo que fue el mejor día que había tenido en meses."</div>
+            </div>
+          </div>
+          <button class="btn btn-primary btn-elegir" id="elegir-miguel" onclick="elegirCompita('Miguel',this)">Elegir a Miguel</button>
+        </div>
+      </div>
+
+      <!-- ELENA (pool extra, oculta por defecto) -->
+      <div class="compita-card" id="card-elena" data-tags="companía,conversacion,salidas,compania" style="display:none">
+        <div class="compita-photo locked" id="photo-elena">
+          <img src="https://i.pravatar.cc/400?img=32" alt="Elena">
+          <div class="lock-overlay">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+            <p>Foto disponible al activar tu plan</p>
+          </div>
+        </div>
+        <div class="compita-body">
+          <div class="compita-header">
+            <span class="compita-name" id="name-elena">Elena</span>
+            <span class="verified-badge">Verificado ✓</span>
+          </div>
+          <div class="compita-zona">📍 Barquisimeto, Lara</div>
+          <div class="compita-esp">Compañía, conversación y actividades sociales</div>
+          <div class="compita-bio">"Fui maestra por 25 años y aprendí que nadie se abre con un extraño. Me gusta llegar, conocer a las personas, y desde la segunda visita ya somos amigos. Me encanta leer en voz alta, jugar cartas y salir a caminar."</div>
+          <div class="compita-chips">
+            <span class="c-chip">Compañía</span><span class="c-chip">Conversación</span><span class="c-chip">Salidas</span>
+          </div>
+          <div class="compita-rating">⭐ 5.0 · 38 visitas</div>
+          <div class="compita-media">
+            <div class="audio-block" id="audio-elena">
+              <div class="media-label">🎙️ Presentación en audio</div>
+              <audio controls><source src="" type="audio/mpeg"></audio>
+              <div class="media-note">El video se desbloquea con tu plan</div>
+            </div>
+            <div class="video-block" id="video-elena">
+              <video controls><source src="https://www.w3schools.com/html/mov_bbb.mp4" type="video/mp4"></video>
+            </div>
+          </div>
+          <div class="resenas">
+            <div class="resena">
+              <div class="resena-head"><div class="resena-avatar"><img src="https://i.pravatar.cc/40?img=14" alt=""></div><div class="resena-meta"><strong>Mariana F.</strong> <span>· Toronto</span></div></div>
+              <div class="resena-stars">⭐⭐⭐⭐⭐</div>
+              <div class="resena-text">"Mi mamá es muy difícil de tratar con desconocidos. Con Elena fue diferente desde el primer día. Ahora la espera con el café listo."</div>
+            </div>
+          </div>
+          <button class="btn btn-primary btn-elegir" id="elegir-elena" onclick="elegirCompita('Elena',this)">Elegir a Elena</button>
+        </div>
+      </div>
+
+      <!-- ROBERTO (pool extra, oculto por defecto) -->
+      <div class="compita-card" id="card-roberto" data-tags="mandados,banco,pension,tramites,carro" style="display:none">
+        <div class="compita-photo locked" id="photo-roberto">
+          <img src="https://i.pravatar.cc/400?img=68" alt="Roberto">
+          <div class="lock-overlay">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+            <p>Foto disponible al activar tu plan</p>
+          </div>
+        </div>
+        <div class="compita-body">
+          <div class="compita-header">
+            <span class="compita-name" id="name-roberto">Roberto</span>
+            <span class="verified-badge">Verificado ✓</span>
+          </div>
+          <div class="compita-zona">📍 Maracaibo, Zulia</div>
+          <div class="compita-esp">Trámites, gestiones y mandados exprés</div>
+          <div class="compita-bio">"Conozco Maracaibo de punta a punta y sé cómo resolver cualquier trámite sin colas eternas. Banco, pensión, supermercado — lo que haga falta. Tengo carro propio y puedo ir a donde sea."</div>
+          <div class="compita-chips">
+            <span class="c-chip">Mandados</span><span class="c-chip">Banco</span><span class="c-chip">Pensión</span><span class="c-chip">Tiene carro</span>
+          </div>
+          <div class="compita-rating">⭐ 4.9 · 44 visitas</div>
+          <div class="compita-media">
+            <div class="audio-block" id="audio-roberto">
+              <div class="media-label">🎙️ Presentación en audio</div>
+              <audio controls><source src="" type="audio/mpeg"></audio>
+              <div class="media-note">El video se desbloquea con tu plan</div>
+            </div>
+            <div class="video-block" id="video-roberto">
+              <video controls><source src="https://www.w3schools.com/html/mov_bbb.mp4" type="video/mp4"></video>
+            </div>
+          </div>
+          <div class="resenas">
+            <div class="resena">
+              <div class="resena-head"><div class="resena-avatar"><img src="https://i.pravatar.cc/40?img=62" alt=""></div><div class="resena-meta"><strong>Carlos E.</strong> <span>· Panamá</span></div></div>
+              <div class="resena-stars">⭐⭐⭐⭐⭐</div>
+              <div class="resena-text">"Roberto resolvió en un día lo que mi mamá tenía meses sin poder hacer sola. Confiable, rápido y nos mandó fotos de todo."</div>
+            </div>
+          </div>
+          <button class="btn btn-primary btn-elegir" id="elegir-roberto" onclick="elegirCompita('Roberto',this)">Elegir a Roberto</button>
+        </div>
+      </div>
+
+      <!-- VALENTINA (pool extra, oculta por defecto) -->
+      <div class="compita-card" id="card-valentina" data-tags="enfermeria,medico,compania,cuidado,perfilmedico" style="display:none">
+        <div class="compita-photo locked" id="photo-valentina">
+          <img src="https://i.pravatar.cc/400?img=44" alt="Valentina">
+          <div class="lock-overlay">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+            <p>Foto disponible al activar tu plan</p>
+          </div>
+        </div>
+        <div class="compita-body">
+          <div class="compita-header">
+            <span class="compita-name" id="name-valentina">Valentina</span>
+            <span class="verified-badge">Verificado ✓</span>
+          </div>
+          <div class="compita-zona">📍 El Rosal, Caracas</div>
+          <div class="compita-esp">Enfermería especializada y cuidado post-operatorio</div>
+          <div class="compita-bio">"Soy enfermera con 10 años de experiencia en geriatría. Trabajo con adultos mayores que salen del hospital y necesitan cuidado los primeros días en casa: medicación, movilidad, seguimiento de señales vitales."</div>
+          <div class="compita-chips">
+            <span class="c-chip">Enfermería</span><span class="c-chip">Médico</span><span class="c-chip">Compañía</span><span class="c-chip">Perfil médico</span>
+          </div>
+          <div class="compita-rating">⭐ 5.0 · 29 visitas</div>
+          <div class="compita-media">
+            <div class="audio-block" id="audio-valentina">
+              <div class="media-label">🎙️ Presentación en audio</div>
+              <audio controls><source src="" type="audio/mpeg"></audio>
+              <div class="media-note">El video se desbloquea con tu plan</div>
+            </div>
+            <div class="video-block" id="video-valentina">
+              <video controls><source src="https://www.w3schools.com/html/mov_bbb.mp4" type="video/mp4"></video>
+            </div>
+          </div>
+          <div class="resenas">
+            <div class="resena">
+              <div class="resena-head"><div class="resena-avatar"><img src="https://i.pravatar.cc/40?img=9" alt=""></div><div class="resena-meta"><strong>Isabel R.</strong> <span>· Houston</span></div></div>
+              <div class="resena-stars">⭐⭐⭐⭐⭐</div>
+              <div class="resena-text">"Mi papá salió de cirugía y Valentina estuvo con él los primeros 5 días. Yo dormí tranquila desde el exterior por primera vez en meses."</div>
+            </div>
+          </div>
+          <button class="btn btn-primary btn-elegir" id="elegir-valentina" onclick="elegirCompita('Valentina',this)">Elegir a Valentina</button>
+        </div>
+      </div>
+
+      <!-- PEDRO (pool extra, oculto por defecto) -->
+      <div class="compita-card" id="card-pedro" data-tags="tecnologia,videollamadas,compania,carro,manana" style="display:none">
+        <div class="compita-photo locked" id="photo-pedro">
+          <img src="https://i.pravatar.cc/400?img=77" alt="Pedro">
+          <div class="lock-overlay">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+            <p>Foto disponible al activar tu plan</p>
+          </div>
+        </div>
+        <div class="compita-body">
+          <div class="compita-header">
+            <span class="compita-name" id="name-pedro">Pedro</span>
+            <span class="verified-badge">Verificado ✓</span>
+          </div>
+          <div class="compita-zona">📍 Altamira, Caracas</div>
+          <div class="compita-esp">Tecnología, redes y asistencia digital completa</div>
+          <div class="compita-bio">"Me llevo el teléfono, la tablet, el router y lo que haga falta. Si tu familiar necesita hablar con el médico por Zoom o pagar un servicio por app, me aseguro de que funcione antes de irme."</div>
+          <div class="compita-chips">
+            <span class="c-chip">Tecnología</span><span class="c-chip">Compañía</span><span class="c-chip">Tiene carro</span><span class="c-chip">Disp. mañana</span>
+          </div>
+          <div class="compita-rating">⭐ 4.8 · 17 visitas</div>
+          <div class="compita-media">
+            <div class="audio-block" id="audio-pedro">
+              <div class="media-label">🎙️ Presentación en audio</div>
+              <audio controls><source src="" type="audio/mpeg"></audio>
+              <div class="media-note">El video se desbloquea con tu plan</div>
+            </div>
+            <div class="video-block" id="video-pedro">
+              <video controls><source src="https://www.w3schools.com/html/mov_bbb.mp4" type="video/mp4"></video>
+            </div>
+          </div>
+          <div class="resenas">
+            <div class="resena">
+              <div class="resena-head"><div class="resena-avatar"><img src="https://i.pravatar.cc/40?img=73" alt=""></div><div class="resena-meta"><strong>Diego M.</strong> <span>· Ciudad de México</span></div></div>
+              <div class="resena-stars">⭐⭐⭐⭐⭐</div>
+              <div class="resena-text">"Pedro llegó a las 9am, configuró todo, enseñó a mi abuela a llamarnos por video y se fue a las 11. Puntualísimo y muy paciente."</div>
+            </div>
+          </div>
+          <button class="btn btn-primary btn-elegir" id="elegir-pedro" onclick="elegirCompita('Pedro',this)">Elegir a Pedro</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- EQUIPO -->
+<section id="equipo">
+  <div class="section-inner">
+    <h2>El equipo detrás de Compaz</h2>
+    <p class="equipo-intro">Compaz lo fundamos venezolanos que vivimos la misma distancia que tú. Conocemos esa angustia de no saber cómo está tu mamá. Por eso construimos esto: no como un negocio genérico de cuidado, sino como algo que necesitábamos y no existía.</p>
+    <div class="equipo-layout">
+      <div class="equipo-bios">
+        <div class="founder-card">
+          <img class="founder-photo" src="https://micompaz.com/images/juan-tenreiro.jpg" alt="Juan Tenreiro" onerror="this.src='https://i.pravatar.cc/200?img=70'">
+          <div>
+            <div class="founder-name">Juan Tenreiro</div>
+            <div class="founder-role">Founder</div>
+            <p class="founder-bio">Juan fundó Compaz después de vivir en carne propia la distancia entre cuidar a la familia y estar lejos de Venezuela. Antes de Compaz, trabajó en construir productos y operaciones en etapas tempranas, con foco en resolver problemas reales de comunidades latinoamericanas.</p>
+          </div>
+        </div>
+        <div class="founder-card">
+          <img class="founder-photo" src="https://micompaz.com/images/luis-mendoza.jpg" alt="Luis Mendoza" onerror="this.src='https://i.pravatar.cc/200?img=65'">
+          <div>
+            <div class="founder-name">Luis Mendoza</div>
+            <div class="founder-role">Co-Founder</div>
+            <p class="founder-bio">Luis se sumó a Compaz para construir la capa operativa y de confianza que el modelo necesita: verificación, calidad de servicio, y relación con las familias. Su experiencia en operaciones y logística lo llevó a ver de cerca cómo la distancia afecta a las familias migrantes.</p>
+          </div>
+        </div>
+      </div>
+      <div class="equipo-video">
+        <div class="equipo-video-wrap">
+          <iframe src="https://www.youtube.com/embed/QPCwjzuUzjU" title="Compaz" allowfullscreen loading="lazy"></iframe>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- WAVE: warm-white → yellow -->
+<div class="wave" style="background:#FDFAF6">
+  <svg viewBox="0 0 1440 80" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" aria-hidden="true">
+    <path d="M0,60 C480,0 960,0 1440,60 L1440,80 L0,80 Z" fill="#FFD23F"/>
+  </svg>
+</div>
+
+<!-- WAITLIST — fondo amarillo -->
+<section id="waitlist">
+  <div class="section-inner">
+    <h2>Pronto iniciaremos en Venezuela. Solo 10 familias en el piloto.</h2>
+    <p class="waitlist-sub">Solo trabajamos con 10 familias en esta primera etapa. Queremos conocer cada caso personalmente.</p>
+    <p class="waitlist-sub" style="font-weight:700;font-size:1.05rem">El primer mes es nuestro regalo.</p>
+    <p class="waitlist-highlight">Preinscripciones hasta el 20 de agosto.</p>
+    <div class="waitlist-form-wrap">
+      <div class="wl-radio-group">
+        <label class="wl-radio"><input type="radio" name="tipo" value="familia" checked> Quiero contratar el servicio para mi familiar</label>
+        <label class="wl-radio"><input type="radio" name="tipo" value="compa"> Quiero ser Compita (trabajo en Venezuela)</label>
+        <label class="wl-radio"><input type="radio" name="tipo" value="piloto"> Quiero ser parte del piloto</label>
+      </div>
+      <a href="mailto:hola@micompaz.com" class="btn btn-purple" style="justify-content:center">Quiero ser parte del piloto</a>
+      <p class="wl-footer">Cada suscripción crea trabajo digno en Venezuela.</p>
+    </div>
+  </div>
+</section>
+
+<!-- WAVE: yellow → morado -->
+<div class="wave" style="background:#FFD23F">
+  <svg viewBox="0 0 1440 80" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" aria-hidden="true">
+    <path d="M0,20 C480,80 960,80 1440,20 L1440,80 L0,80 Z" fill="#2D1464"/>
+  </svg>
+</div>
+
+<!-- FAQ — fondo morado, tarjetas blancas -->
+<section id="faq">
+  <div class="section-inner">
+    <h2>¿Tienes dudas? Es normal.</h2>
+    <p class="faq-sub">Mandar a alguien a casa de tu familiar es una decisión seria. Acá respondemos lo que más nos preguntan.</p>
+    <div class="faq-list">
+      <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">¿Cómo sé que el Compita es confiable? <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8l5 5 5-5"/></svg></button><div class="faq-a"><div class="faq-a-inner">Antes de su primera visita, cada Compita pasa por tres filtros: verificación de identidad con cédula, revisión de antecedentes penales, y una entrevista personal con nuestro equipo. Si en algún momento no te sientes cómodo con tu Compita asignado, lo cambiamos sin costo ni pregunta.</div></div></div>
+      <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">¿El Compita trabaja por su cuenta o trabaja con ustedes? <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8l5 5 5-5"/></svg></button><div class="faq-a"><div class="faq-a-inner">Con nosotros. No somos una aplicación que conecta a desconocidos — somos un equipo. Cada Compita fue seleccionado, entrenado y es supervisado por Compaz. Si algo sale mal, nosotros respondemos.</div></div></div>
+      <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">¿Qué pasa si algo sale mal durante una visita? <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8l5 5 5-5"/></svg></button><div class="faq-a"><div class="faq-a-inner">Tienes nuestro contacto directo en todo momento. Si ocurre cualquier situación durante una visita, tu Compita nos notifica de inmediato y nosotros te contactamos. No eres un ticket de soporte: somos personas reales al otro lado.</div></div></div>
+      <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">¿Mi familiar tiene que dejar entrar al Compita solo? <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8l5 5 5-5"/></svg></button><div class="faq-a"><div class="faq-a-inner">No necesariamente. Las primeras visitas pueden hacerse con un familiar o vecino de confianza presente, hasta que tu familiar se sienta cómodo. La confianza se construye, no se exige.</div></div></div>
+      <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">¿Puedo hablar con ustedes antes de inscribirme? <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8l5 5 5-5"/></svg></button><div class="faq-a"><div class="faq-a-inner">Sí, y lo recomendamos. Escríbenos a hola@micompaz.com y cuéntanos la situación de tu familiar. Te respondemos personalmente.</div></div></div>
+      <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">¿El cuidado a domicilio está regulado en Venezuela? <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8l5 5 5-5"/></svg></button><div class="faq-a"><div class="faq-a-inner">Sí. La Ley Orgánica para la Atención y Desarrollo Integral de las Personas Adultas Mayores (Gaceta Oficial N° 6.641, 2021) reconoce el derecho de todo adulto mayor a recibir atención digna, incluyendo atención domiciliaria.</div></div></div>
+      <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">¿En qué ciudades de Venezuela operan? <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8l5 5 5-5"/></svg></button><div class="faq-a"><div class="faq-a-inner">Estamos comenzando en Caracas y Valencia. Si tu familiar está en otra ciudad, inscríbete igualmente — estamos expandiendo y queremos saber dónde hay más necesidad.</div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ALIANZAS -->
+<section id="alianzas" style="background:var(--warm-gray)">
+  <div class="section-inner">
+    <h2>Contrata como quieras.</h2>
+    <p class="alianzas-sub">Si tienes una póliza de seguro privado en Venezuela, el cuidado puede estar incluido.</p>
+    <div class="tabs-nav">
+      <button class="tab-btn active" onclick="switchTab('particular',this)">Particular</button>
+      <button class="tab-btn" onclick="switchTab('seguro',this)">Seguro de salud</button>
+      <button class="tab-btn" onclick="switchTab('convenio',this)">Convenio empresarial</button>
+    </div>
+    <div id="tab-particular" class="tab-panel active">
+      <p>Paga directo, sin intermediarios. Tú eliges el plan y tu Compita llega a casa de tu familiar sin papeleos.</p>
+      <a href="#planes" class="btn btn-purple btn-sm">Ver planes</a>
+    </div>
+    <div id="tab-seguro" class="tab-panel">
+      <p>Si tu póliza incluye Compaz, actívalo sin costo extra. Estamos en proceso de alianza con las principales aseguradoras privadas de Venezuela.</p>
+      <div class="seguros-grid">
+        <div class="seguro-card"><div class="seguro-name">Mercantil Seguros</div><span class="seguro-tag">Próximamente</span></div>
+        <div class="seguro-card"><div class="seguro-name">Seguros Caracas</div><span class="seguro-tag">Próximamente</span></div>
+        <div class="seguro-card"><div class="seguro-name">MAPFRE Venezuela</div><span class="seguro-tag">Próximamente</span></div>
+        <div class="seguro-card"><div class="seguro-name">La Previsora</div><span class="seguro-tag">Próximamente</span></div>
+        <div class="seguro-card"><div class="seguro-name">Seguros Universitas</div><span class="seguro-tag">Próximamente</span></div>
+        <div class="seguro-card"><div class="seguro-name">Seguros Pirámide</div><span class="seguro-tag">Próximamente</span></div>
+      </div>
+      <a href="mailto:hola@micompaz.com" class="btn btn-purple btn-sm">¿Eres aseguradora? Hablemos →</a>
+    </div>
+    <div id="tab-convenio" class="tab-panel">
+      <p>¿Tu empresa tiene un programa de bienestar para empleados? Compaz puede ser parte del paquete. Consulta con tu área de RR.HH. o escríbenos directamente.</p>
+      <a href="mailto:hola@micompaz.com" class="btn btn-purple btn-sm">Conoce los convenios</a>
+    </div>
+  </div>
+</section>
+
+<!-- WAVE: warm-gray → purple-dark -->
+<div class="wave" style="background:var(--warm-gray)">
+  <svg viewBox="0 0 1440 80" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" aria-hidden="true">
+    <path d="M0,0 C480,0 960,80 1440,80 L1440,80 L0,80 Z" fill="#1A0A3C"/>
+  </svg>
+</div>
+
+<!-- INVERSORES -->
+<section id="inversores">
+  <div class="section-inner">
+    <div class="inv-kicker">Para Casa212</div>
+    <h2>Construimos algo que necesitábamos y no existía.</h2>
+    <p class="inv-sub">Compaz nació de una experiencia propia. Dos venezolanos viviendo lejos de su familia, sin manera de estar presentes cuando más se necesitaba.</p>
+
+    <div style="margin-bottom:56px">
+      <h3 style="color:#fff;font-size:1.15rem;margin-bottom:14px">El problema</h3>
+      <p style="color:rgba(255,255,255,0.60);font-size:0.9rem;line-height:1.75">Según Convite A.C., hay 3.6 millones de personas mayores de 60 años en Venezuela. El 11% vive solo. Eso son entre 500,000 y 600,000 adultos mayores esperando un reencuentro que no llega. Al mismo tiempo, según la Plataforma R4V (ACNUR/OIM), 7.7 millones de venezolanos viven fuera del país. Esa distancia no se cierra con una llamada de WhatsApp. Compaz existe para cerrarla de verdad. <a href="https://conviteac.org/wp-content/uploads/2025/03/CONDICIONES-DE-VIDA-Y-SALUD-DE-LAS-PERSONAS-MAYORES-EN-VENEZUELA-1.pdf" target="_blank" rel="noopener" style="color:rgba(255,255,255,0.28);font-size:0.75rem;text-decoration:none;border-bottom:1px solid rgba(255,255,255,0.15)">Convite A.C., 2024 ↗</a> · <a href="https://www.r4v.info/" target="_blank" rel="noopener" style="color:rgba(255,255,255,0.28);font-size:0.75rem;text-decoration:none;border-bottom:1px solid rgba(255,255,255,0.15)">R4V / ACNUR / OIM, 2024 ↗</a></p>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-cell">
+        <div class="stat-num">7.7M</div>
+        <div class="stat-label">venezolanos fuera del país</div>
+        <div class="stat-sub">6.7M en América Latina y el Caribe · mayo 2024</div>
+        <a href="https://www.r4v.info/" target="_blank" rel="noopener" style="display:inline-block;margin-top:10px;font-size:0.7rem;color:rgba(255,255,255,0.30);text-decoration:none;border-bottom:1px solid rgba(255,255,255,0.15)">Fuente: R4V / ACNUR / OIM ↗</a>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-num">500K–600K</div>
+        <div class="stat-label">adultos mayores viven solos</div>
+        <div class="stat-sub">el 11% de los 3.6M mayores de 60 años en Venezuela</div>
+        <a href="https://conviteac.org/wp-content/uploads/2025/03/CONDICIONES-DE-VIDA-Y-SALUD-DE-LAS-PERSONAS-MAYORES-EN-VENEZUELA-1.pdf" target="_blank" rel="noopener" style="display:inline-block;margin-top:10px;font-size:0.7rem;color:rgba(255,255,255,0.30);text-decoration:none;border-bottom:1px solid rgba(255,255,255,0.15)">Fuente: Convite A.C., 2024 ↗</a>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-num">$4B</div>
+        <div class="stat-label">en remesas anuales</div>
+        <div class="stat-sub">el hábito de enviar dinero ya existe</div>
+        <a href="https://data.worldbank.org/indicator/BX.TRF.PWKR.CD.DT?locations=VE" target="_blank" rel="noopener" style="display:inline-block;margin-top:10px;font-size:0.7rem;color:rgba(255,255,255,0.30);text-decoration:none;border-bottom:1px solid rgba(255,255,255,0.15)">Fuente: Banco Mundial ↗</a>
+      </div>
+    </div>
+
+    <div class="inv-cols">
+      <div class="inv-col">
+        <h3>El modelo</h3>
+        <p>Compaz cobra a la familia una suscripción mensual o una tarifa por visita. De ese ingreso se cubre la compensación al Compita por hora de servicio. La diferencia es el margen de Compaz. Sin cobros adicionales.</p>
+        <p style="margin-top:12px">Expandirse no requiere construir nada. Requiere reclutar personas locales y verificarlas. Ese es el modelo, y personas hay en todas partes.</p>
+      </div>
+      <div class="inv-col">
+        <h3>La referencia</h3>
+        <p>Papa Inc. resolvió el mismo problema de soledad y acompañamiento para adultos mayores en EE.UU. Recaudaron más de <strong style="color:#fff">$240M</strong> y fueron valorados en <strong style="color:#fff">$1.4B</strong> en 2021. Su palanca de escala fueron los convenios con aseguradoras: un solo acuerdo no traía un cliente, traía decenas de miles. Venezuela tiene 51 aseguradoras privadas activas. Esa es la visión de largo plazo de Compaz. <a href="https://www.mobihealthnews.com/news/senior-care-platform-papa-scoops-150m-series-d-funding" target="_blank" rel="noopener" style="color:rgba(255,255,255,0.28);font-size:0.75rem;text-decoration:none;border-bottom:1px solid rgba(255,255,255,0.15)">MobiHealthNews ↗</a> · <a href="https://www.forbes.com/sites/brucejapsen/2021/11/04/digital-healths-newest-unicorn-provides-lonely-people-with-a-family-on-demand/" target="_blank" rel="noopener" style="color:rgba(255,255,255,0.28);font-size:0.75rem;text-decoration:none;border-bottom:1px solid rgba(255,255,255,0.15)">Forbes, 2021 ↗</a></p>
+      </div>
+    </div>
+
+    <div style="margin-bottom:56px">
+      <h3 style="color:#fff;font-size:1.15rem;margin-bottom:14px">Tracción y validación</h3>
+      <p style="color:rgba(255,255,255,0.60);font-size:0.9rem;line-height:1.75">Validación inicial con aproximadamente 10 personas de la diáspora venezolana a través de comunidades en Facebook y red cercana. El patrón es consistente: todos reconocen el problema de inmediato y todos conocen a alguien que lo necesita. La estrategia de adquisición incluye campañas pagas en Meta dirigidas a venezolanos en el exterior.</p>
+    </div>
+
+    <div class="roadmap">
+      <h3>Visión de expansión</h3>
+      <div class="roadmap-grid">
+        <div class="roadmap-item"><div class="flag">🇻🇪</div><h4>Venezuela — Hoy</h4><p>Piloto en Caracas. 7.7M venezolanos fuera del país.</p></div>
+        <div class="roadmap-item"><div class="flag">🇸🇻</div><h4>El Salvador</h4><p>2.6M en EE.UU. El 23% del PIB son remesas. <a href="https://diarioelsalvador.com/2-5-millones-de-salvadorenos-viven-en-estados-unidos/397391/" target="_blank" rel="noopener" style="color:rgba(255,255,255,0.28);font-size:0.72rem;text-decoration:none;border-bottom:1px solid rgba(255,255,255,0.15)">↗</a> <a href="https://diario.elmundo.sv/economia/el-salvador-es-el-segundo-pais-latinoamericano-que-mas-recibe-remesas-en-relacion-a-su-pib-en-2024" target="_blank" rel="noopener" style="color:rgba(255,255,255,0.28);font-size:0.72rem;text-decoration:none;border-bottom:1px solid rgba(255,255,255,0.15)">↗</a></p></div>
+        <div class="roadmap-item"><div class="flag">🇩🇴</div><h4>Rep. Dominicana</h4><p>2.8M en el exterior. Alta tradición de remesas familiares. <a href="https://index.gob.do/informe-del-registro-sociodemografico-de-los-dominicanos-en-el-exterior-2024/" target="_blank" rel="noopener" style="color:rgba(255,255,255,0.28);font-size:0.72rem;text-decoration:none;border-bottom:1px solid rgba(255,255,255,0.15)">↗</a></p></div>
+        <div class="roadmap-item"><div class="flag">🌎</div><h4>América Latina</h4><p>Migrantes regionales con familia en origen.</p></div>
+      </div>
+    </div>
+
+    <div class="inv-founders">
+      <div class="inv-founder">
+        <img src="https://micompaz.com/images/juan-tenreiro.jpg" alt="Juan Tenreiro" onerror="this.src='https://i.pravatar.cc/200?img=70'">
+        <div><h4>Juan Tenreiro</h4><div class="inv-role">Founder</div><p>Productos y operaciones en etapas tempranas. Construyó Compaz desde la experiencia propia.</p></div>
+      </div>
+      <div class="inv-founder">
+        <img src="https://micompaz.com/images/luis-mendoza.jpg" alt="Luis Mendoza" onerror="this.src='https://i.pravatar.cc/200?img=65'">
+        <div><h4>Luis Mendoza</h4><div class="inv-role">Co-Founder</div><p>Operaciones y logística. Diseñó el sistema de verificación y calidad de Compaz.</p></div>
+      </div>
+    </div>
+
+    <div class="inv-cta">
+      <a href="mailto:hola@micompaz.com" class="btn btn-yellow" style="font-size:1.05rem;padding:18px 40px">Habla con nosotros</a>
+      <p class="inv-cta-note">hola@micompaz.com</p>
+    </div>
+
+    <div style="margin-top:56px;padding-top:32px;border-top:1px solid rgba(255,255,255,0.07)">
+      <p style="font-size:0.72rem;font-weight:600;color:rgba(255,255,255,0.22);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:14px">Fuentes</p>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <a href="https://conviteac.org/wp-content/uploads/2025/03/CONDICIONES-DE-VIDA-Y-SALUD-DE-LAS-PERSONAS-MAYORES-EN-VENEZUELA-1.pdf" target="_blank" rel="noopener" style="font-size:0.78rem;color:rgba(255,255,255,0.28);text-decoration:none;">↗ Convite A.C. (2024) — Condiciones de vida y salud de las personas mayores en Venezuela</a>
+        <a href="https://provea.org/actualidad/venezuela-en-deuda-con-la-proteccion-social-de-adultos-mayores/" target="_blank" rel="noopener" style="font-size:0.78rem;color:rgba(255,255,255,0.28);text-decoration:none;">↗ PROVEA — Venezuela en deuda con la protección social de adultos mayores</a>
+        <a href="https://www.r4v.info/" target="_blank" rel="noopener" style="font-size:0.78rem;color:rgba(255,255,255,0.28);text-decoration:none;">↗ R4V / ACNUR / OIM (mayo 2024) — 7.7M venezolanos en el exterior</a>
+        <a href="https://data.worldbank.org/indicator/BX.TRF.PWKR.CD.DT?locations=VE" target="_blank" rel="noopener" style="font-size:0.78rem;color:rgba(255,255,255,0.28);text-decoration:none;">↗ Banco Mundial — Remesas personales recibidas, Venezuela</a>
+        <a href="https://www.mobihealthnews.com/news/senior-care-platform-papa-scoops-150m-series-d-funding" target="_blank" rel="noopener" style="font-size:0.78rem;color:rgba(255,255,255,0.28);text-decoration:none;">↗ MobiHealthNews — Papa closes $150M Series D funding</a>
+        <a href="https://www.forbes.com/sites/brucejapsen/2021/11/04/digital-healths-newest-unicorn-provides-lonely-people-with-a-family-on-demand/" target="_blank" rel="noopener" style="font-size:0.78rem;color:rgba(255,255,255,0.28);text-decoration:none;">↗ Forbes (nov. 2021) — Digital Health's Newest Unicorn: Papa Inc. valuada en $1.4B</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <a href="#hero" class="footer-logo">
+      <img src="https://micompaz.com/logo-mono.png" alt="Compaz"
+           onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+      <span style="display:none;color:rgba(255,255,255,0.7);font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:1.2rem">Compaz</span>
+    </a>
+    <div class="footer-links">
+      <a href="https://instagram.com/elcompaz" target="_blank">@elcompaz</a>
+      <a href="mailto:hola@micompaz.com">Privacidad</a>
+    </div>
+    <p class="footer-copy">© 2026 Compaz. Todos los derechos reservados.</p>
+  </div>
+  <div class="footer-founders">Fundado por Juan Tenreiro y Luis Mendoza.</div>
+</footer>
+
+<!-- MODAL PAGO -->
+<div class="modal-overlay" id="modalPago">
+  <div class="modal-card">
+    <button class="modal-close" onclick="closeModal('modalPago')">✕</button>
+    <div class="modal-title">Activa tu plan</div>
+    <p class="modal-sub">Completa los datos para acceder a los perfiles de Compitas.</p>
+    <div class="plan-summary">
+      <span class="plan-summary-name" id="modalPlanName">Estándar</span>
+      <span class="plan-summary-price" id="modalPlanPrice">$59/mes</span>
+    </div>
+    <div class="form-group"><label>Tu nombre</label><input type="text" placeholder="Ana García"></div>
+    <div class="form-group"><label>Email</label><input type="email" placeholder="tu@email.com"></div>
+    <div class="form-group"><label>Número de tarjeta</label><input type="text" placeholder="4242 4242 4242 4242"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Vencimiento</label><input type="text" placeholder="MM/AA"></div>
+      <div class="form-group"><label>CVV</label><input type="text" placeholder="123"></div>
+    </div>
+    <button class="btn btn-primary" style="width:100%;margin-top:6px" onclick="confirmarPago()">Confirmar pago →</button>
+    <p class="modal-disclaimer">🔒 Demo privada · Ningún cobro real será procesado</p>
+  </div>
+</div>
+
+<!-- MODAL CONFIRMACIÓN -->
+<div class="modal-overlay" id="modalConfirm">
+  <div class="modal-card">
+    <div class="modal-confirm">
+      <div class="modal-confirm-icon">✅</div>
+      <div class="modal-confirm-title">¡Plan activado!</div>
+      <p class="modal-confirm-text">Ahora puedes ver los perfiles completos y elegir al Compita ideal para tu familiar. Tu primera visita quedará coordinada en menos de 24 horas.</p>
+      <button class="btn btn-primary" style="width:100%" onclick="verCompitas()">Ver Compitas disponibles →</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+  let planDesbloqueado = false;
+
+  // ── Datos del pool completo de Compitas ──────────────────────────────────
+  const POOL = {
+    daniela:  { tags: ['medico','enfermeria','compania','ejercicio'] },
+    carlos:   { tags: ['mandados','banco','pension','compania','tramites'] },
+    sofia:    { tags: ['ejercicio','compania','salidas','medico'] },
+    miguel:   { tags: ['tecnologia','compania','mandados','videollamadas'] },
+    elena:    { tags: ['compania','conversacion','salidas'] },
+    roberto:  { tags: ['mandados','banco','pension','tramites','carro'] },
+    valentina:{ tags: ['enfermeria','medico','compania','perfilmedico'] },
+    pedro:    { tags: ['tecnologia','compania','carro','videollamadas','manana'] },
+  };
+
+  // Mapa chip-label → tag normalizado
+  const CHIP_MAP = {
+    'Compañía': 'compania', 'Médico': 'medico', 'Mandados': 'mandados',
+    'Ejercicio': 'ejercicio', 'Enfermería': 'enfermeria', 'Tecnología': 'tecnologia',
+    'Tiene carro': 'carro', 'Perfil médico': 'perfilmedico', 'Disponibilidad mañana': 'manana',
+  };
+
+  // Chips activos → tags buscados
+  function chipsTags() {
+    return [...document.querySelectorAll('.filter-chip.active')]
+      .map(c => CHIP_MAP[c.textContent.trim()] || c.textContent.toLowerCase().trim())
+      .filter(Boolean);
+  }
+
+  // Calcula relevancia de cada Compita para los tags seleccionados
+  function rankPool(tags) {
+    return Object.entries(POOL)
+      .map(([id, data]) => ({
+        id,
+        score: tags.length === 0 ? 0 : tags.filter(t => data.tags.includes(t)).length
+      }))
+      .sort((a, b) => b.score - a.score);
+  }
+
+  function mostrarCompitas() {
+    const tags = chipsTags();
+    const ranked = rankPool(tags);
+
+    // Si hay búsqueda activa, mostrar los 4 más relevantes (que tengan ≥1 match si hay filtros)
+    let toShow;
+    if (tags.length > 0) {
+      const matches = ranked.filter(r => r.score > 0).slice(0, 4);
+      toShow = matches.length > 0 ? matches : ranked.slice(0, 4);
+    } else {
+      // Sin filtros: mostrar los 4 originales
+      toShow = ['daniela','carlos','sofia','miguel'].map(id => ({ id, score: 0 }));
+    }
+
+    const toShowIds = new Set(toShow.map(r => r.id));
+    const allIds = Object.keys(POOL);
+
+    // Ocultar grid con fade, luego reorganizar, luego mostrar
+    const grid = document.getElementById('compitasGrid');
+    grid.style.opacity = '0';
+    grid.style.transform = 'translateY(12px)';
+
+    setTimeout(() => {
+      allIds.forEach(id => {
+        const card = document.getElementById('card-' + id);
+        if (!card) return;
+        card.style.display = toShowIds.has(id) ? '' : 'none';
+      });
+
+      // Actualizar estado de desbloqueo si ya está pagado
+      if (planDesbloqueado) _aplicarDesbloqueo();
+
+      const status = document.getElementById('busqueda-status');
+      if (tags.length > 0) {
+        const label = tags.map(t => Object.entries(CHIP_MAP).find(([,v]) => v===t)?.[0] || t).join(', ');
+        status.textContent = `Mostrando ${toShowIds.size} Compitas disponibles para: ${label}`;
+        status.style.display = 'block';
+      } else {
+        status.style.display = 'none';
+      }
+
+      grid.style.opacity = '1';
+      grid.style.transform = 'translateY(0)';
+    }, 280);
+  }
+
+  // Mostrar perfiles por defecto al cargar
+  window.addEventListener('load', () => {
+    setTimeout(() => {
+      const g = document.getElementById('compitasGrid');
+      g.style.opacity = '1';
+      g.style.transform = 'translateY(0)';
+    }, 300);
+  });
+
+  // ── Modales ──────────────────────────────────────────────────────────────
+  function openModal(name, price) {
+    document.getElementById('modalPlanName').textContent = name;
+    document.getElementById('modalPlanPrice').textContent = price;
+    document.getElementById('modalPago').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeModal(id) {
+    document.getElementById(id).classList.remove('open');
+    document.body.style.overflow = '';
+  }
+  function confirmarPago() {
+    closeModal('modalPago');
+    setTimeout(() => document.getElementById('modalConfirm').classList.add('open'), 300);
+  }
+  function verCompitas() {
+    closeModal('modalConfirm');
+    desbloquearCompitas();
+    setTimeout(() => document.getElementById('compitas').scrollIntoView({ behavior: 'smooth' }), 350);
+  }
+
+  document.querySelectorAll('.modal-overlay').forEach(o => {
+    o.addEventListener('click', e => {
+      if (e.target === o) { o.classList.remove('open'); document.body.style.overflow = ''; }
+    });
+  });
+
+  // ── Desbloqueo ───────────────────────────────────────────────────────────
+  const APELLIDOS = {
+    daniela:'R.', carlos:'M.', sofia:'G.', miguel:'V.',
+    elena:'C.', roberto:'L.', valentina:'P.', pedro:'A.'
+  };
+
+  function _aplicarDesbloqueo() {
+    Object.keys(POOL).forEach(n => {
+      const photo = document.getElementById('photo-' + n);
+      const nameEl = document.getElementById('name-' + n);
+      const audio  = document.getElementById('audio-' + n);
+      const video  = document.getElementById('video-' + n);
+      const elegir = document.getElementById('elegir-' + n);
+      if (!photo) return;
+      photo.classList.remove('locked');
+      if (nameEl && !nameEl.dataset.unlocked) {
+        nameEl.textContent = nameEl.textContent.trim() + ' ' + APELLIDOS[n];
+        nameEl.dataset.unlocked = '1';
+      }
+      if (audio) audio.style.display = 'none';
+      if (video) video.style.display = 'block';
+      if (elegir) elegir.classList.add('visible');
+    });
+  }
+
+  function desbloquearCompitas() {
+    if (planDesbloqueado) return;
+    planDesbloqueado = true;
+    document.getElementById('bannerLocked').style.display = 'none';
+    document.getElementById('bannerUnlocked').style.display = 'block';
+    _aplicarDesbloqueo();
+  }
+
+  // ── Selección ────────────────────────────────────────────────────────────
+  function elegirCompita(nombre, btn) {
+    document.querySelectorAll('.compita-card').forEach(c => c.classList.remove('selected'));
+    btn.closest('.compita-card').classList.add('selected');
+    showToast(nombre + ' seleccionado. Te contactamos en menos de 24 horas. 🎉');
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3500);
+  }
+
+  function toggleChip(el) { el.classList.toggle('active'); }
+
+  function switchTab(id, btn) {
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + id).classList.add('active');
+    btn.classList.add('active');
+  }
+
+  function toggleFaq(btn) {
+    const item = btn.closest('.faq-item');
+    const wasOpen = item.classList.contains('open');
+    document.querySelectorAll('.faq-item.open').forEach(i => i.classList.remove('open'));
+    if (!wasOpen) item.classList.add('open');
+  }
+</script>
+</body>
+</html>
