@@ -75,17 +75,15 @@ function Nav() {
 
 function Hero({ onSelectRol }: { onSelectRol: (rol: string) => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [isMobile, setIsMobile] = useState(false);
+  const [isMobile, setIsMobile] = useState<boolean | null>(null);
 
   useEffect(() => {
-    setIsMobile(window.innerWidth < 768);
-  }, []);
-
-  useEffect(() => {
-    if (!isMobile && videoRef.current) {
+    const mobile = window.innerWidth < 768;
+    setIsMobile(mobile);
+    if (!mobile && videoRef.current) {
       videoRef.current.play().catch(() => {});
     }
-  }, [isMobile]);
+  }, []);
 
   function irAFormulario(rol: string) {
     onSelectRol(rol);
@@ -102,8 +100,8 @@ function Hero({ onSelectRol }: { onSelectRol: (rol: string) => void }) {
         className="absolute inset-0 w-full h-full object-cover"
         fetchPriority="high"
       />
-      {/* Video — solo desktop, carga diferida */}
-      {!isMobile && (
+      {/* Video — solo desktop, carga diferida. null = aún no sabemos (SSR), no renderizar */}
+      {isMobile === false && (
         <video
           ref={videoRef}
           src="/video-hero.mp4"
