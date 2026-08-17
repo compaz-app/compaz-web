@@ -572,7 +572,7 @@ function Equipo() {
               style={{ aspectRatio: "9/16", border: "1.5px solid #E8E0D4" }}
             >
               <iframe
-                src="https://www.youtube.com/embed/QPCwjzuUzjU"
+                src="https://www.youtube.com/embed/0mYoBW9lrQg"
                 width="100%"
                 height="100%"
                 style={{ display: "block" }}
@@ -670,8 +670,7 @@ function Formulario({ rolInicial }: { rolInicial: string }) {
           El primer mes es nuestro regalo.
         </p>
         <p className="text-center mb-10 mt-6">
-          <span style={{ display: "block", textDecoration: "underline", fontSize: "1.6rem", fontFamily: "var(--font-display)", fontWeight: 800, color: "#1A0A3C" }}>Preinscripciones</span>
-          <span style={{ display: "block", textDecoration: "underline", fontSize: "1.6rem", fontFamily: "var(--font-display)", fontWeight: 800, color: "#1A0A3C" }}>hasta el 20 de agosto.</span>
+          <span style={{ display: "block", textDecoration: "underline", fontSize: "1.6rem", fontFamily: "var(--font-display)", fontWeight: 800, color: "#1A0A3C" }}>Preinscripciones abiertas.</span>
         </p>
 
         {status === "ok" ? (
