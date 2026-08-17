@@ -129,7 +129,7 @@ function Hero({ onSelectRol }: { onSelectRol: (rol: string) => void }) {
         <div className="flex-1 flex flex-col gap-5 text-center lg:text-left items-center lg:items-start">
           <h1
             className="text-3xl md:text-5xl lg:text-6xl font-extrabold text-white leading-tight"
-            style={{ fontFamily: "var(--font-display)", textWrap: "balance" }}
+            style={{ fontFamily: "var(--font-display), system-ui, sans-serif", textWrap: "balance" }}
           >
             ¿Tu mamá se quedó sin compañía para ir al médico, al banco, al mercado?
           </h1>
