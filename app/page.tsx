@@ -75,6 +75,17 @@ function Nav() {
 
 function Hero({ onSelectRol }: { onSelectRol: (rol: string) => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    setIsMobile(window.innerWidth < 768);
+  }, []);
+
+  useEffect(() => {
+    if (!isMobile && videoRef.current) {
+      videoRef.current.play().catch(() => {});
+    }
+  }, [isMobile]);
 
   function irAFormulario(rol: string) {
     onSelectRol(rol);
@@ -83,20 +94,28 @@ function Hero({ onSelectRol }: { onSelectRol: (rol: string) => void }) {
 
   return (
     <section className="relative w-full h-screen overflow-hidden flex items-center justify-center">
-      {/* Video de fondo */}
-      <video
-        ref={videoRef}
-        src="/video-hero.mp4"
-        autoPlay
-        muted
-        playsInline
+      {/* Imagen poster — visible siempre, especialmente en móvil */}
+      <img
+        src="/images/hero-v3.jpg"
+        alt=""
+        aria-hidden="true"
         className="absolute inset-0 w-full h-full object-cover"
-        onEnded={() => {
-          if (videoRef.current) {
-            videoRef.current.pause();
-          }
-        }}
+        fetchPriority="high"
       />
+      {/* Video — solo desktop, carga diferida */}
+      {!isMobile && (
+        <video
+          ref={videoRef}
+          src="/video-hero.mp4"
+          preload="none"
+          muted
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover"
+          onEnded={() => {
+            if (videoRef.current) videoRef.current.pause();
+          }}
+        />
+      )}
 
       {/* Overlay oscuro */}
       <div
