@@ -83,24 +83,15 @@ function Hero({ onSelectRol }: { onSelectRol: (rol: string) => void }) {
 
   return (
     <section className="relative w-full h-screen overflow-hidden flex items-center justify-center">
-      {/* Imagen de fondo — siempre visible, cubre cualquier flash */}
-      <img
-        src="/images/hero-v3.jpg"
-        alt=""
-        aria-hidden="true"
-        className="absolute inset-0 w-full h-full object-cover"
-        fetchPriority="high"
-      />
-      {/* Video — invisible hasta que empieza a reproducirse, evita flash del primer frame */}
+      {/* Video con poster del primer frame exacto — sin flash de imagen ajena */}
       <video
         ref={videoRef}
         src="/video-hero.mp4"
         autoPlay
         muted
         playsInline
-        className="absolute inset-0 w-full h-full object-cover hidden md:block"
-        style={{ opacity: 0, transition: "opacity 0.4s ease" }}
-        onPlaying={(e) => { (e.target as HTMLVideoElement).style.opacity = "1"; }}
+        poster="/images/hero-poster.jpg"
+        className="absolute inset-0 w-full h-full object-cover"
         onEnded={() => {
           if (videoRef.current) videoRef.current.pause();
         }}
