@@ -75,15 +75,6 @@ function Nav() {
 
 function Hero({ onSelectRol }: { onSelectRol: (rol: string) => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [isMobile, setIsMobile] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    const mobile = window.innerWidth < 768;
-    setIsMobile(mobile);
-    if (!mobile && videoRef.current) {
-      videoRef.current.play().catch(() => {});
-    }
-  }, []);
 
   function irAFormulario(rol: string) {
     onSelectRol(rol);
@@ -92,7 +83,7 @@ function Hero({ onSelectRol }: { onSelectRol: (rol: string) => void }) {
 
   return (
     <section className="relative w-full h-screen overflow-hidden flex items-center justify-center">
-      {/* Imagen poster — visible siempre, especialmente en móvil */}
+      {/* Imagen de fondo — siempre visible, cubre cualquier flash */}
       <img
         src="/images/hero-v3.jpg"
         alt=""
@@ -100,21 +91,19 @@ function Hero({ onSelectRol }: { onSelectRol: (rol: string) => void }) {
         className="absolute inset-0 w-full h-full object-cover"
         fetchPriority="high"
       />
-      {/* Video — solo desktop, carga diferida. null = aún no sabemos (SSR), no renderizar */}
-      {isMobile === false && (
-        <video
-          ref={videoRef}
-          src="/video-hero.mp4"
-          preload="none"
-          poster="/images/hero-v3.jpg"
-          muted
-          playsInline
-          className="absolute inset-0 w-full h-full object-cover"
-          onEnded={() => {
-            if (videoRef.current) videoRef.current.pause();
-          }}
-        />
-      )}
+      {/* Video — siempre en el DOM para evitar hydration flash, oculto en móvil via CSS */}
+      <video
+        ref={videoRef}
+        src="/video-hero.mp4"
+        autoPlay
+        muted
+        playsInline
+        poster="/images/hero-v3.jpg"
+        className="absolute inset-0 w-full h-full object-cover hidden md:block"
+        onEnded={() => {
+          if (videoRef.current) videoRef.current.pause();
+        }}
+      />
 
       {/* Overlay oscuro */}
       <div
