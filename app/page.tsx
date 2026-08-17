@@ -91,15 +91,16 @@ function Hero({ onSelectRol }: { onSelectRol: (rol: string) => void }) {
         className="absolute inset-0 w-full h-full object-cover"
         fetchPriority="high"
       />
-      {/* Video — siempre en el DOM para evitar hydration flash, oculto en móvil via CSS */}
+      {/* Video — invisible hasta que empieza a reproducirse, evita flash del primer frame */}
       <video
         ref={videoRef}
         src="/video-hero.mp4"
         autoPlay
         muted
         playsInline
-        poster="/images/hero-v3.jpg"
         className="absolute inset-0 w-full h-full object-cover hidden md:block"
+        style={{ opacity: 0, transition: "opacity 0.4s ease" }}
+        onPlaying={(e) => { (e.target as HTMLVideoElement).style.opacity = "1"; }}
         onEnded={() => {
           if (videoRef.current) videoRef.current.pause();
         }}
