@@ -108,6 +108,7 @@ function Hero({ onSelectRol }: { onSelectRol: (rol: string) => void }) {
           ref={videoRef}
           src="/video-hero.mp4"
           preload="none"
+          poster="/images/hero-v3.jpg"
           muted
           playsInline
           className="absolute inset-0 w-full h-full object-cover"
