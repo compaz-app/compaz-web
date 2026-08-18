@@ -43,6 +43,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     images: ["https://micompaz.com/images/og-image.png"],
   },
+    other: { "facebook-domain-verification": "o9x9mlpmzzo8egcdn345ehqwfjc2w" },
 };
 
 export default function RootLayout({
