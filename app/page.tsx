@@ -647,7 +647,7 @@ function Formulario({ rolInicial }: { rolInicial: string }) {
           className="text-center text-lg font-semibold mb-2"
           style={{ color: "#2D1464", fontFamily: "var(--font-display)" }}
         >
-          El primer mes es nuestro regalo.
+          La primera hora del mes es nuestro regalo.
         </p>
         <p className="text-center mb-10 mt-6">
           <span style={{ display: "block", textDecoration: "underline", fontSize: "1.6rem", fontFamily: "var(--font-display)", fontWeight: 800, color: "#1A0A3C" }}>Preinscripciones abiertas.</span>
