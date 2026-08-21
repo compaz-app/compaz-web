@@ -72,10 +72,7 @@ export default function RootLayout({
             gtag('config', 'G-FRP8LD7M8K');
           `}
         </Script>
-        {/* Contentsquare / Hotjar — Session Replay y mapas de calor */}
-        <Script id="contentsquare" strategy="afterInteractive">
-          {`(function(w,d,s,t,e,a,m){w[e]=w[e]||function(){(w[e].q=w[e].q||[]).push(arguments)};a=d.createElement(s);m=d.getElementsByTagName(s)[0];a.async=1;a.src=t;m.parentNode.insertBefore(a,m)})(window,document,'script','https://edge.fullstory.com/s/fs.js','_uxa');_uxa('trackPageview');`}
-        </Script>
+        {/* Contentsquare — Session Replay y mapas de calor */}
         <Script src="https://t.contentsquare.net/uxa/ca2bf728965ae.js" strategy="afterInteractive" />
         {/* Meta Pixel — solo se activa si hay un Pixel ID configurado */}
         {metaPixelId && (
