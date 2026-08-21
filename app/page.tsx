@@ -328,12 +328,13 @@ function QueHaceUnCompa() {
             </p>
           </div>
           <div className="shrink-0 relative group">
-            <button
-              className="font-bold text-sm px-6 py-3 rounded-full hover:opacity-90 transition-opacity whitespace-nowrap cursor-pointer"
-              style={{ backgroundColor: "white", color: "#FF6B2B", fontFamily: "var(--font-display)", border: "none" }}
+            <a
+              href="mailto:hola@micompaz.com?subject=Atenci%C3%B3n%20m%C3%A9dica%20especializada"
+              className="font-bold text-sm px-6 py-3 rounded-full hover:opacity-90 transition-opacity whitespace-nowrap cursor-pointer inline-block"
+              style={{ backgroundColor: "white", color: "#FF6B2B", fontFamily: "var(--font-display)", textDecoration: "none" }}
             >
               Escríbenos →
-            </button>
+            </a>
             <div
               className="absolute right-0 bottom-full mb-2 hidden group-focus-within:flex flex-col rounded-xl overflow-hidden shadow-lg z-50"
               style={{ minWidth: "160px" }}
