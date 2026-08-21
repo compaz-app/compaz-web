@@ -55,6 +55,9 @@ export default function RootLayout({
 
   return (
     <html lang="es">
+      <head>
+        <script src="https://t.contentsquare.net/uxa/ca2bf728965ae.js" async></script>
+      </head>
       <body className={`${bricolage.variable} ${inter.variable}`}>
         {children}
         {/* Cloudflare Turnstile — carga solo cuando se necesita */}
@@ -72,8 +75,6 @@ export default function RootLayout({
             gtag('config', 'G-FRP8LD7M8K');
           `}
         </Script>
-        {/* Contentsquare — Session Replay y mapas de calor */}
-        <Script src="https://t.contentsquare.net/uxa/ca2bf728965ae.js" strategy="afterInteractive" />
         {/* Meta Pixel — solo se activa si hay un Pixel ID configurado */}
         {metaPixelId && (
           <>
