@@ -43,6 +43,44 @@ function WaveDivider({ from, to, shape, flip = false }: { from: string; to: stri
   );
 }
 
+// ─── YouTube Facade ───────────────────────────────────────────────────────────
+
+function YouTubeFacade({ videoId }: { videoId: string }) {
+  const [playing, setPlaying] = useState(false);
+  const thumb = `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+
+  if (playing) {
+    return (
+      <div className="rounded-2xl overflow-hidden" style={{ aspectRatio: "9/16", border: "1.5px solid #E8E0D4" }}>
+        <iframe
+          src={`https://www.youtube.com/embed/${videoId}?autoplay=1`}
+          width="100%"
+          height="100%"
+          style={{ display: "block" }}
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+        />
+      </div>
+    );
+  }
+
+  return (
+    <button
+      onClick={() => setPlaying(true)}
+      className="relative rounded-2xl overflow-hidden w-full"
+      style={{ aspectRatio: "9/16", border: "1.5px solid #E8E0D4", display: "block", padding: 0, cursor: "pointer" }}
+      aria-label="Reproducir video"
+    >
+      <img src={thumb} alt="" aria-hidden="true" className="w-full h-full object-cover" />
+      <div className="absolute inset-0 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.3)" }}>
+        <div className="flex items-center justify-center rounded-full" style={{ width: 56, height: 56, background: "rgba(255,255,255,0.95)" }}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="#FF0000"><polygon points="5,3 19,12 5,21" /></svg>
+        </div>
+      </div>
+    </button>
+  );
+}
+
 // ─── Nav ─────────────────────────────────────────────────────────────────────
 
 function Nav() {
@@ -563,21 +601,9 @@ function Equipo() {
             ))}
           </div>
 
-          {/* Video */}
+          {/* Video — facade: carga iframe solo al hacer clic */}
           <div className="shrink-0 mx-auto lg:mx-0" style={{ width: "min(280px, 100%)", maxWidth: 320 }}>
-            <div
-              className="rounded-2xl overflow-hidden"
-              style={{ aspectRatio: "9/16", border: "1.5px solid #E8E0D4" }}
-            >
-              <iframe
-                src="https://www.youtube.com/embed/FiPqYSDY5sM"
-                width="100%"
-                height="100%"
-                style={{ display: "block" }}
-                allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              />
-            </div>
+            <YouTubeFacade videoId="FiPqYSDY5sM" />
           </div>
         </div>
       </div>
