@@ -19,7 +19,7 @@ const securityHeaders = [
   {
     key: "Content-Security-Policy",
     value:
-      "default-src 'self'; script-src 'self' 'unsafe-inline' https://connect.facebook.net https://challenges.cloudflare.com https://www.googletagmanager.com https://www.google-analytics.com https://t.contentsquare.net https://edge.fullstory.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; frame-src https://challenges.cloudflare.com https://www.youtube.com; connect-src 'self' https://api.airtable.com https://www.facebook.com https://challenges.cloudflare.com https://www.google-analytics.com https://analytics.google.com https://t.contentsquare.net https://rs.fullstory.com; frame-ancestors 'none'",
+      "default-src 'self'; script-src 'self' 'unsafe-inline' https://connect.facebook.net https://challenges.cloudflare.com https://www.googletagmanager.com https://www.google-analytics.com https://t.contentsquare.net https://edge.fullstory.com https://www.clarity.ms; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; frame-src https://challenges.cloudflare.com https://www.youtube.com; connect-src 'self' https://api.airtable.com https://www.facebook.com https://challenges.cloudflare.com https://www.google-analytics.com https://analytics.google.com https://t.contentsquare.net https://rs.fullstory.com https://www.clarity.ms; frame-ancestors 'none'",
   },
 ];
 
