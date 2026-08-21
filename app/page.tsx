@@ -75,6 +75,11 @@ function Nav() {
 
 function Hero({ onSelectRol }: { onSelectRol: (rol: string) => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  useEffect(() => {
+    setIsDesktop(window.matchMedia("(min-width: 768px)").matches);
+  }, []);
 
   function irAFormulario(rol: string) {
     onSelectRol(rol);
@@ -83,19 +88,32 @@ function Hero({ onSelectRol }: { onSelectRol: (rol: string) => void }) {
 
   return (
     <section className="relative w-full h-screen overflow-hidden flex items-center justify-center">
-      {/* Video con poster del primer frame exacto — sin flash de imagen ajena */}
-      <video
-        ref={videoRef}
-        src="/video-hero.mp4"
-        autoPlay
-        muted
-        playsInline
-        poster="/images/hero-poster.jpg"
-        className="absolute inset-0 w-full h-full object-cover"
-        onEnded={() => {
-          if (videoRef.current) videoRef.current.pause();
-        }}
-      />
+      {/* Imagen de fondo siempre visible (último frame del video) */}
+      <picture>
+        <source srcSet="/images/hero-poster.webp" type="image/webp" />
+        <img
+          src="/images/hero-poster.jpg"
+          alt=""
+          aria-hidden="true"
+          fetchPriority="high"
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+      </picture>
+      {/* Video solo en desktop — en móvil ahorra 9 MB */}
+      {isDesktop && (
+        <video
+          ref={videoRef}
+          src="/video-hero.mp4"
+          autoPlay
+          muted
+          playsInline
+          poster="/images/hero-poster.webp"
+          className="absolute inset-0 w-full h-full object-cover"
+          onEnded={() => {
+            if (videoRef.current) videoRef.current.pause();
+          }}
+        />
+      )}
 
       {/* Overlay oscuro */}
       <div
