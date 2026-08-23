@@ -5,15 +5,10 @@
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
-[[headers]]
-  for = "/*"
-  [headers.values]
-    X-Frame-Options = "DENY"
-    X-Content-Type-Options = "nosniff"
-    Referrer-Policy = "strict-origin-when-cross-origin"
-    Strict-Transport-Security = "max-age=31536000; includeSubDomains"
-    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' https://connect.facebook.net https://challenges.cloudflare.com https://www.googletagmanager.com https://www.google-analytics.com https://www.clarity.ms https://*.clarity.ms; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; frame-src https://challenges.cloudflare.com https://www.youtube.com; connect-src 'self' https://api.airtable.com https://www.facebook.com https://challenges.cloudflare.com https://www.google-analytics.com https://analytics.google.com https://www.clarity.ms https://*.clarity.ms; frame-ancestors 'none'"
+# Los headers de seguridad (CSP, X-Frame-Options, etc.) se definen en
+# next.config.ts como fuente de verdad única. No duplicarlos aquí:
+# @netlify/plugin-nextjs aplica los [[headers]] de este archivo a TODAS
+# las respuestas, lo que resultaría en dos cabeceras CSP simultáneas.
 
 [[headers]]
   for = "/"

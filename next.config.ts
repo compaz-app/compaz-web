@@ -1,9 +1,9 @@
 import type { NextConfig } from "next";
 
-// Headers de seguridad. Se definen aquí (y no solo en netlify.toml) porque los
-// [[headers]] de netlify.toml NO se aplican a las páginas que renderiza Next.js
-// (solo a los archivos estáticos). Definidos aquí, el runtime de Next los pone
-// en TODAS las respuestas — incluida la home y /api/waitlist.
+// Headers de seguridad definidos aquí como fuente de verdad única.
+// Con @netlify/plugin-nextjs, los [[headers]] de netlify.toml se aplican
+// a TODAS las respuestas (incluidas páginas dinámicas), así que duplicarlos
+// ahí haría que el navegador recibiera dos cabeceras CSP. Solo se usan aquí.
 const securityHeaders = [
   { key: "X-Frame-Options", value: "DENY" },
   { key: "X-Content-Type-Options", value: "nosniff" },
@@ -19,7 +19,14 @@ const securityHeaders = [
   {
     key: "Content-Security-Policy",
     value:
-      "default-src 'self'; script-src 'self' 'unsafe-inline' https://connect.facebook.net https://challenges.cloudflare.com https://www.googletagmanager.com https://www.google-analytics.com https://www.clarity.ms https://*.clarity.ms; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; frame-src https://challenges.cloudflare.com https://www.youtube.com; connect-src 'self' https://api.airtable.com https://www.facebook.com https://challenges.cloudflare.com https://www.google-analytics.com https://analytics.google.com https://www.clarity.ms https://*.clarity.ms; frame-ancestors 'none'",
+      "default-src 'self'; " +
+      "script-src 'self' 'unsafe-inline' https://connect.facebook.net https://challenges.cloudflare.com https://www.googletagmanager.com https://www.google-analytics.com https://www.clarity.ms https://*.clarity.ms; " +
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+      "font-src 'self' https://fonts.gstatic.com; " +
+      "img-src 'self' data: https:; " +
+      "frame-src https://challenges.cloudflare.com https://www.youtube.com; " +
+      "connect-src 'self' https://api.airtable.com https://www.facebook.com https://challenges.cloudflare.com https://www.google-analytics.com https://analytics.google.com https://www.clarity.ms https://*.clarity.ms; " +
+      "frame-ancestors 'none'",
   },
 ];
 
