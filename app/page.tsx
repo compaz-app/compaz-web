@@ -6,9 +6,9 @@ import {
   ShoppingCart,
   Building2,
   Stethoscope,
-  Dumbbell,
-  Banknote,
-  Wrench,
+  UtensilsCrossed,
+  Gift,
+  Smile,
   Video,
   MessageCircle,
   ShieldCheck,
@@ -173,7 +173,7 @@ function Hero({ onSelectRol }: { onSelectRol: (rol: string) => void }) {
             className="text-base md:text-lg leading-relaxed max-w-xl"
             style={{ color: "rgba(255,255,255,0.85)", fontFamily: "var(--font-inter)" }}
           >
-            Nuestro equipo va a donde tú no puedes ir. Un <strong className="text-white">Compita verificado por nosotros</strong> acompaña a tu familiar, y tú recibes fotos y notas de cada visita, directo a tu WhatsApp.
+            Nuestro equipo va a donde tú no puedes ir. Un <strong className="text-white">Compita verificado por nosotros</strong> acompaña a tu familiar, y tú recibes fotos y notas directamente después de cada visita.
           </p>
         </div>
 
@@ -209,14 +209,14 @@ function Hero({ onSelectRol }: { onSelectRol: (rol: string) => void }) {
 // ─── Qué hace un Compa ────────────────────────────────────────────────────────
 
 const actividades = [
-  { Icon: ShoppingCart, label: "Supermercado" },
-  { Icon: Building2,   label: "Banco" },
-  { Icon: Stethoscope, label: "Acompañar al médico" },
-  { Icon: Dumbbell,    label: "Ejercicio" },
-  { Icon: Banknote,    label: "Cobrar pensión" },
-  { Icon: Wrench,      label: "Cambiar un bombillo" },
-  { Icon: Video,       label: "Videollamadas" },
-  { Icon: MessageCircle, label: "Simplemente conversar" },
+  { Icon: ShoppingCart,    label: "Supermercado" },
+  { Icon: Building2,       label: "Banco" },
+  { Icon: Stethoscope,     label: "Acompañar al médico" },
+  { Icon: UtensilsCrossed, label: "Salir a comer juntos" },
+  { Icon: Gift,            label: "Llevar un regalo de tu parte" },
+  { Icon: Smile,           label: "Celebrar su cumpleaños" },
+  { Icon: Video,           label: "Videollamadas" },
+  { Icon: MessageCircle,   label: "Simplemente conversar" },
 ];
 
 // ─── Sección de confianza ─────────────────────────────────────────────────────
@@ -225,12 +225,12 @@ const pilares = [
   {
     Icon: ShieldCheck,
     titulo: "Son nuestros, no de una app.",
-    desc: "Verificación de cédula, antecedentes penales y entrevista personal. Los seleccionamos y respondemos por ellos.",
+    desc: "Cada Compita pasa por un proceso de verificación riguroso. Antecedentes, identidad, redes sociales y entrevista personal con nuestro equipo.",
   },
   {
     Icon: Camera,
     titulo: "Sabes exactamente cómo estuvo.",
-    desc: "Fotos y resumen directo a tu WhatsApp después de cada visita. No solo «todo bien»: te contamos lo que pasó de verdad.",
+    desc: "Fotos y resumen directamente después de cada visita. No solo «todo bien»: te contamos lo que pasó de verdad.",
   },
   {
     Icon: MapPin,
@@ -279,11 +279,17 @@ function QueHaceUnCompa() {
     <section style={{ backgroundColor: "#FDFAF6" }} className="py-24 px-6">
       <div className="max-w-4xl mx-auto">
         <h2
-          className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-center mb-14 leading-tight"
+          className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-center mb-6 leading-tight"
           style={{ color: "#2D1464", fontFamily: "var(--font-display)", textWrap: "balance" }}
         >
-          Un Compita para todo lo que necesites.
+          ¿Qué hace un Compita?
         </h2>
+        <p
+          className="text-center text-base leading-relaxed mb-14 max-w-2xl mx-auto"
+          style={{ color: "#6B5C90", fontFamily: "var(--font-inter)" }}
+        >
+          Es como tener un amigo de confianza para tu familiar. Alguien que comparte tiempo con él, lo acompaña a donde necesite, y te cuenta cómo estuvo.
+        </p>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6">
           {actividades.map(({ Icon, label }) => (
@@ -328,8 +334,8 @@ const pasos = [
   },
   {
     num: "03",
-    titulo: "Recibes el reporte",
-    desc: "Después de cada visita, recibes fotos y notas directo a tu WhatsApp.",
+    titulo: "Recibes las actualizaciones",
+    desc: "Después de cada visita, recibes fotos y notas directamente.",
   },
 ];
 
@@ -377,16 +383,20 @@ function ComoFunciona() {
 
 const faqs = [
   {
+    q: "¿Compaz es un servicio de enfermería, limpieza o cuidado asistencial?",
+    a: "No. El Compita no es enfermero, ni asistente de higiene, ni servicio de limpieza del hogar. Es un acompañante: alguien que visita a tu familiar, comparte tiempo con él, lo lleva a donde necesite y te mantiene informado. Si tu familiar requiere atención médica o asistencia personal, Compaz no reemplaza eso. Puede ser un complemento, pero no un sustituto. Si tienes dudas sobre si Compaz es lo que necesitas, escríbenos y te orientamos.",
+  },
+  {
     q: "¿Cómo sé que el Compita es confiable?",
-    a: "Antes de su primera visita, cada Compita pasa por tres filtros: verificación de identidad con cédula, revisión de antecedentes penales, y una entrevista personal con nuestro equipo. No trabajamos con personas que no conocemos. Si en algún momento no te sientes cómodo con tu Compita asignado, lo cambiamos sin costo ni pregunta.",
+    a: "Antes de su primera visita, cada Compita pasa por tres filtros: verificación de identidad con cédula, revisión de antecedentes penales, y una entrevista personal con nuestro equipo. No trabajamos con personas que no conocemos. Si en algún momento no te sientes cómodo con tu Compita asignado, lo cambiamos sin costo.",
   },
   {
     q: "¿El Compita trabaja por su cuenta o trabaja con ustedes?",
-    a: "Con nosotros. No somos una aplicación que conecta a desconocidos — somos un equipo. Cada Compita fue seleccionado, entrenado y es supervisado por Compaz. Si algo sale mal, nosotros respondemos.",
+    a: "Con nosotros. No somos una aplicación que conecta a desconocidos. Somos un equipo. Cada Compita fue seleccionado, entrenado y es supervisado por Compaz.",
   },
   {
     q: "¿Qué pasa si algo sale mal durante una visita?",
-    a: "Tienes nuestro contacto directo en todo momento. Si ocurre cualquier situación durante una visita — un accidente, un problema de salud, lo que sea — tu Compita nos notifica de inmediato y nosotros te contactamos. No eres un ticket de soporte: somos personas reales al otro lado.",
+    a: "Tienes nuestro contacto directo durante cada visita. Si ocurre cualquier situación, activamos nuestro protocolo de seguimiento y te mantenemos informado en todo momento. No eres un ticket de soporte: somos personas reales al otro lado.",
   },
   {
     q: "¿Mi familiar tiene que dejar entrar al Compita solo?",
@@ -635,16 +645,13 @@ function Formulario({ rolInicial }: { rolInicial: string }) {
           className="text-center text-base font-medium mb-6"
           style={{ color: "#2D1464", fontFamily: "var(--font-inter)" }}
         >
-          Solo trabajamos con 10 familias en esta primera etapa. Queremos conocer cada caso personalmente.
+          Queremos conocer cada caso personalmente.
         </p>
         <p
           className="text-center text-lg font-semibold mb-2"
           style={{ color: "#2D1464", fontFamily: "var(--font-display)" }}
         >
           La primera hora del mes es nuestro regalo.
-        </p>
-        <p className="text-center mb-10 mt-6">
-          <span style={{ display: "block", textDecoration: "underline", fontSize: "1.6rem", fontFamily: "var(--font-display)", fontWeight: 800, color: "#1A0A3C" }}>Preinscripciones abiertas.</span>
         </p>
 
         {status === "ok" ? (
@@ -838,18 +845,6 @@ function Footer() {
 
 export default function Home() {
   const [rolSeleccionado, setRolSeleccionado] = useState("");
-
-  // Si llega desde el flyer de reclutamiento de enfermería (QR con UTM),
-  // preseleccionamos automáticamente el rol "Quiero ser Compita" para reducir fricción.
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (
-      params.get("utm_source") === "flyer" &&
-      params.get("utm_campaign") === "reclutamiento_enfermeria"
-    ) {
-      setRolSeleccionado("compa");
-    }
-  }, []);
 
   return (
     <>
