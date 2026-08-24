@@ -182,7 +182,7 @@ function Hero({ onSelectRol }: { onSelectRol: (rol: string) => void }) {
           <button
             onClick={() => irAFormulario("familia")}
             style={{ backgroundColor: "#FF6B2B", textDecoration: "none" }}
-            className="inline-flex items-center justify-center text-white font-bold text-sm sm:text-lg px-6 sm:px-8 py-4 rounded-full hover:opacity-90 transition-opacity whitespace-nowrap"
+            className="inline-flex items-center justify-center text-center text-white font-bold text-sm sm:text-lg px-6 sm:px-8 py-4 rounded-full hover:opacity-90 transition-opacity"
           >
             Quiero un Compita para mi familiar
           </button>
