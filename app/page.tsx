@@ -329,8 +329,8 @@ const pasos = [
   },
   {
     num: "02",
-    titulo: "Nosotros elegimos a tu Compita.",
-    desc: "Nuestro equipo selecciona al Compita más adecuado según la zona y las necesidades de tu familiar. Tú nos das el contexto; nosotros hacemos la selección.",
+    titulo: "Encuentra a tu Compita",
+    desc: "Cuéntanos qué necesita tu familiar y te mostramos las mejores opciones disponibles en su zona. Tú eliges.",
   },
   {
     num: "03",
