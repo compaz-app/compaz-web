@@ -13,7 +13,6 @@ import {
   MessageCircle,
   ShieldCheck,
   Camera,
-  MapPin,
 } from "lucide-react";
 
 // ─── Wave Divider ─────────────────────────────────────────────────────────────
@@ -167,7 +166,7 @@ function Hero({ onSelectRol }: { onSelectRol: (rol: string) => void }) {
             className="text-3xl md:text-5xl lg:text-6xl font-extrabold text-white leading-tight"
             style={{ fontFamily: "var(--font-display), system-ui, sans-serif", textWrap: "balance" }}
           >
-            ¿Tu mamá se quedó sin compañía para ir al médico, al banco, al mercado?
+            Para que tu familiar no esté solo, aunque tú estés lejos.
           </h1>
           <p
             className="text-base md:text-lg leading-relaxed max-w-xl"
@@ -233,9 +232,9 @@ const pilares = [
     desc: "Fotos y resumen directamente después de cada visita. No solo «todo bien»: te contamos lo que pasó de verdad.",
   },
   {
-    Icon: MapPin,
-    titulo: "Ves cada visita en tiempo real.",
-    desc: "Sigue la ubicación de tu familiar durante la visita. Presente, aunque estés lejos.",
+    Icon: MessageCircle,
+    titulo: "Hay un equipo que responde.",
+    desc: "Si algo no sale como esperabas, nos escribes directamente a nosotros. No a un bot, no a un formulario. Al equipo de Compaz.",
   },
 ];
 
@@ -618,6 +617,7 @@ function Formulario({ rolInicial }: { rolInicial: string }) {
       if (!res.ok) throw new Error("Error");
       setStatus("ok");
       setForm({ nombre: "", whatsapp: "", email: "", ciudad: "", rol: "", website: "" });
+      if (typeof gtag !== "undefined") gtag("event", "form_submit", { event_category: "waitlist" });
       // Meta Pixel: evento de conversión (no solo PageView)
       (window as typeof window & { fbq?: (...args: unknown[]) => void }).fbq?.(
         "track",
@@ -691,7 +691,7 @@ function Formulario({ rolInicial }: { rolInicial: string }) {
               placeholder="Tu nombre"
               value={form.nombre}
               onChange={(e) => setForm({ ...form, nombre: e.target.value })}
-              className="w-full rounded-xl px-5 py-4 text-base outline-none"
+              className="w-full rounded-xl px-5 py-4 text-base outline-none focus:ring-2 focus:ring-[#2D1464]"
               style={{ backgroundColor: "white", color: "#1A0A3C", fontFamily: "var(--font-inter)" }}
             />
             <input
@@ -700,7 +700,7 @@ function Formulario({ rolInicial }: { rolInicial: string }) {
               placeholder="Tu WhatsApp (con código de país)"
               value={form.whatsapp}
               onChange={(e) => setForm({ ...form, whatsapp: e.target.value })}
-              className="w-full rounded-xl px-5 py-4 text-base outline-none"
+              className="w-full rounded-xl px-5 py-4 text-base outline-none focus:ring-2 focus:ring-[#2D1464]"
               style={{ backgroundColor: "white", color: "#1A0A3C", fontFamily: "var(--font-inter)" }}
             />
             <input
@@ -709,7 +709,7 @@ function Formulario({ rolInicial }: { rolInicial: string }) {
               placeholder="Tu email"
               value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
-              className="w-full rounded-xl px-5 py-4 text-base outline-none"
+              className="w-full rounded-xl px-5 py-4 text-base outline-none focus:ring-2 focus:ring-[#2D1464]"
               style={{ backgroundColor: "white", color: "#1A0A3C", fontFamily: "var(--font-inter)" }}
             />
             <input
@@ -718,7 +718,7 @@ function Formulario({ rolInicial }: { rolInicial: string }) {
               placeholder="Ciudad donde vive tu familiar en Venezuela"
               value={form.ciudad}
               onChange={(e) => setForm({ ...form, ciudad: e.target.value })}
-              className="w-full rounded-xl px-5 py-4 text-base outline-none"
+              className="w-full rounded-xl px-5 py-4 text-base outline-none focus:ring-2 focus:ring-[#2D1464]"
               style={{ backgroundColor: "white", color: "#1A0A3C", fontFamily: "var(--font-inter)" }}
             />
 
@@ -751,7 +751,7 @@ function Formulario({ rolInicial }: { rolInicial: string }) {
                     required
                     checked={form.rol === value}
                     onChange={() => setForm({ ...form, rol: value })}
-                    className="accent-current"
+                    className="accent-current w-5 h-5 flex-shrink-0 cursor-pointer"
                     style={{ accentColor: form.rol === value ? "white" : "#2D1464" }}
                   />
                   {label}
@@ -857,10 +857,11 @@ export default function Home() {
         <ComoFunciona />
         <WaveDivider from="#2D1464" to="#FDFAF6" shape={3} />
         <Equipo />
-        <WaveDivider from="#FDFAF6" to="#FFD23F" shape={1} flip />
-        <Formulario rolInicial={rolSeleccionado} />
-        <WaveDivider from="#FFD23F" to="#2D1464" shape={2} />
+        <WaveDivider from="#FDFAF6" to="#2D1464" shape={1} flip />
         <FAQ />
+        <WaveDivider from="#2D1464" to="#FFD23F" shape={2} />
+        <Formulario rolInicial={rolSeleccionado} />
+        <WaveDivider from="#FFD23F" to="#1A0A3C" shape={3} />
       </main>
       <Footer />
     </>
