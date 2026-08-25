@@ -617,7 +617,7 @@ function Formulario({ rolInicial }: { rolInicial: string }) {
       if (!res.ok) throw new Error("Error");
       setStatus("ok");
       setForm({ nombre: "", whatsapp: "", email: "", ciudad: "", rol: "", website: "" });
-      if (typeof gtag !== "undefined") gtag("event", "form_submit", { event_category: "waitlist" });
+      (window as typeof window & { gtag?: (...args: unknown[]) => void }).gtag?.("event", "form_submit", { event_category: "waitlist" });
       // Meta Pixel: evento de conversión (no solo PageView)
       (window as typeof window & { fbq?: (...args: unknown[]) => void }).fbq?.(
         "track",
