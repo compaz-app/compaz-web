@@ -363,7 +363,7 @@
   <div class="hero-overlay"></div>
   <div class="hero-content">
     <div class="hero-text">
-      <h1>¿Tu mamá se quedó sin compañía para ir al médico, al banco, al mercado?</h1>
+      <h1>Para que tu familiar no esté solo, aunque tú estés lejos.</h1>
       <p>Nuestro equipo va a donde tú no puedes ir. Un <strong style="color:#fff">Compita verificado por nosotros</strong> acompaña a tu familiar, y tú recibes fotos y notas directamente después de cada visita.</p>
     </div>
     <div class="hero-buttons">
@@ -394,10 +394,10 @@
         <p>Fotos y resumen directamente después de cada visita. No solo «todo bien»: te contamos lo que pasó de verdad.</p>
       </div>
       <div class="pilar-item">
-        <!-- MapPin -->
-        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#FF6B2B" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 0116 0z"/><circle cx="12" cy="10" r="3"/></svg>
-        <h3>Ves cada visita en tiempo real.</h3>
-        <p>Sigue la ubicación de tu familiar durante la visita. Presente, aunque estés lejos.</p>
+        <!-- MessageCircle -->
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#FF6B2B" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+        <h3>Hay un equipo que responde.</h3>
+        <p>Si algo no sale como esperabas, nos escribes directamente a nosotros. No a un bot, no a un formulario. Al equipo de Compaz.</p>
       </div>
     </div>
   </div>
@@ -1006,10 +1006,35 @@
   </div>
 </section>
 
-<!-- WAVE: warm-white → yellow -->
+<!-- WAVE: warm-white → morado -->
 <div class="wave" style="background:#FDFAF6">
   <svg viewBox="0 0 1440 80" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" aria-hidden="true">
-    <path d="M0,60 C480,0 960,0 1440,60 L1440,80 L0,80 Z" fill="#FFD23F"/>
+    <path d="M0,60 C480,0 960,0 1440,60 L1440,80 L0,80 Z" fill="#2D1464"/>
+  </svg>
+</div>
+
+<!-- FAQ — fondo morado, tarjetas blancas -->
+<section id="faq">
+  <div class="section-inner">
+    <h2>¿Tienes dudas? Es normal.</h2>
+    <p class="faq-sub">Mandar a alguien a casa de tu familiar es una decisión seria. Acá respondemos lo que más nos preguntan.</p>
+    <div class="faq-list">
+      <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">¿Compaz es un servicio de enfermería, limpieza o cuidado asistencial? <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8l5 5 5-5"/></svg></button><div class="faq-a"><div class="faq-a-inner">No. El Compita no es enfermero, ni asistente de higiene, ni servicio de limpieza del hogar. Es un acompañante: alguien que visita a tu familiar, comparte tiempo con él, lo lleva a donde necesite y te mantiene informado. Si tu familiar requiere atención médica o asistencia personal, Compaz no reemplaza eso. Puede ser un complemento, pero no un sustituto. Si tienes dudas sobre si Compaz es lo que necesitas, escríbenos y te orientamos.</div></div></div>
+      <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">¿Cómo sé que el Compita es confiable? <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8l5 5 5-5"/></svg></button><div class="faq-a"><div class="faq-a-inner">Antes de su primera visita, cada Compita pasa por tres filtros: verificación de identidad con cédula, revisión de antecedentes penales, y una entrevista personal con nuestro equipo. Si en algún momento no te sientes cómodo con tu Compita asignado, lo cambiamos sin costo.</div></div></div>
+      <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">¿El Compita trabaja por su cuenta o trabaja con ustedes? <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8l5 5 5-5"/></svg></button><div class="faq-a"><div class="faq-a-inner">Con nosotros. No somos una aplicación que conecta a desconocidos. Somos un equipo. Cada Compita fue seleccionado, entrenado y es supervisado por Compaz.</div></div></div>
+      <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">¿Qué pasa si algo sale mal durante una visita? <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8l5 5 5-5"/></svg></button><div class="faq-a"><div class="faq-a-inner">Tienes nuestro contacto directo durante cada visita. Si ocurre cualquier situación, activamos nuestro protocolo de seguimiento y te mantenemos informado en todo momento. No eres un ticket de soporte: somos personas reales al otro lado.</div></div></div>
+      <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">¿Mi familiar tiene que dejar entrar al Compita solo? <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8l5 5 5-5"/></svg></button><div class="faq-a"><div class="faq-a-inner">No necesariamente. Las primeras visitas pueden hacerse con un familiar o vecino de confianza presente, hasta que tu familiar se sienta cómodo. La confianza se construye, no se exige.</div></div></div>
+      <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">¿Puedo hablar con ustedes antes de inscribirme? <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8l5 5 5-5"/></svg></button><div class="faq-a"><div class="faq-a-inner">Sí, y lo recomendamos. Escríbenos a hola@micompaz.com y cuéntanos la situación de tu familiar. Te respondemos personalmente.</div></div></div>
+      <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">¿El cuidado a domicilio está regulado en Venezuela? <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8l5 5 5-5"/></svg></button><div class="faq-a"><div class="faq-a-inner">Sí. La Ley Orgánica para la Atención y Desarrollo Integral de las Personas Adultas Mayores (Gaceta Oficial N° 6.641, 2021) reconoce el derecho de todo adulto mayor a recibir atención digna, incluyendo atención domiciliaria.</div></div></div>
+      <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">¿En qué ciudades de Venezuela operan? <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8l5 5 5-5"/></svg></button><div class="faq-a"><div class="faq-a-inner">Estamos comenzando en Caracas y Valencia. Si tu familiar está en otra ciudad, inscríbete igualmente — estamos expandiendo y queremos saber dónde hay más necesidad.</div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- WAVE: morado → yellow -->
+<div class="wave" style="background:#2D1464">
+  <svg viewBox="0 0 1440 80" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" aria-hidden="true">
+    <path d="M0,20 C480,80 960,80 1440,20 L1440,80 L0,80 Z" fill="#FFD23F"/>
   </svg>
 </div>
 
@@ -1031,30 +1056,12 @@
   </div>
 </section>
 
-<!-- WAVE: yellow → morado -->
+<!-- WAVE: yellow → warm-gray -->
 <div class="wave" style="background:#FFD23F">
   <svg viewBox="0 0 1440 80" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" aria-hidden="true">
-    <path d="M0,20 C480,80 960,80 1440,20 L1440,80 L0,80 Z" fill="#2D1464"/>
+    <path d="M0,60 C480,0 960,0 1440,60 L1440,80 L0,80 Z" fill="#F5EFE6"/>
   </svg>
 </div>
-
-<!-- FAQ — fondo morado, tarjetas blancas -->
-<section id="faq">
-  <div class="section-inner">
-    <h2>¿Tienes dudas? Es normal.</h2>
-    <p class="faq-sub">Mandar a alguien a casa de tu familiar es una decisión seria. Acá respondemos lo que más nos preguntan.</p>
-    <div class="faq-list">
-      <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">¿Compaz es un servicio de enfermería, limpieza o cuidado asistencial? <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8l5 5 5-5"/></svg></button><div class="faq-a"><div class="faq-a-inner">No. El Compita no es enfermero, ni asistente de higiene, ni servicio de limpieza del hogar. Es un acompañante: alguien que visita a tu familiar, comparte tiempo con él, lo lleva a donde necesite y te mantiene informado. Si tu familiar requiere atención médica o asistencia personal, Compaz no reemplaza eso. Puede ser un complemento, pero no un sustituto. Si tienes dudas sobre si Compaz es lo que necesitas, escríbenos y te orientamos.</div></div></div>
-      <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">¿Cómo sé que el Compita es confiable? <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8l5 5 5-5"/></svg></button><div class="faq-a"><div class="faq-a-inner">Antes de su primera visita, cada Compita pasa por tres filtros: verificación de identidad con cédula, revisión de antecedentes penales, y una entrevista personal con nuestro equipo. Si en algún momento no te sientes cómodo con tu Compita asignado, lo cambiamos sin costo.</div></div></div>
-      <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">¿El Compita trabaja por su cuenta o trabaja con ustedes? <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8l5 5 5-5"/></svg></button><div class="faq-a"><div class="faq-a-inner">Con nosotros. No somos una aplicación que conecta a desconocidos. Somos un equipo. Cada Compita fue seleccionado, entrenado y es supervisado por Compaz.</div></div></div>
-      <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">¿Qué pasa si algo sale mal durante una visita? <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8l5 5 5-5"/></svg></button><div class="faq-a"><div class="faq-a-inner">Tienes nuestro contacto directo durante cada visita. Si ocurre cualquier situación, activamos nuestro protocolo de seguimiento y te mantenemos informado en todo momento. No eres un ticket de soporte: somos personas reales al otro lado.</div></div></div>
-      <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">¿Mi familiar tiene que dejar entrar al Compita solo? <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8l5 5 5-5"/></svg></button><div class="faq-a"><div class="faq-a-inner">No necesariamente. Las primeras visitas pueden hacerse con un familiar o vecino de confianza presente, hasta que tu familiar se sienta cómodo. La confianza se construye, no se exige.</div></div></div>
-      <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">¿Puedo hablar con ustedes antes de inscribirme? <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8l5 5 5-5"/></svg></button><div class="faq-a"><div class="faq-a-inner">Sí, y lo recomendamos. Escríbenos a hola@micompaz.com y cuéntanos la situación de tu familiar. Te respondemos personalmente.</div></div></div>
-      <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">¿El cuidado a domicilio está regulado en Venezuela? <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8l5 5 5-5"/></svg></button><div class="faq-a"><div class="faq-a-inner">Sí. La Ley Orgánica para la Atención y Desarrollo Integral de las Personas Adultas Mayores (Gaceta Oficial N° 6.641, 2021) reconoce el derecho de todo adulto mayor a recibir atención digna, incluyendo atención domiciliaria.</div></div></div>
-      <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">¿En qué ciudades de Venezuela operan? <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8l5 5 5-5"/></svg></button><div class="faq-a"><div class="faq-a-inner">Estamos comenzando en Caracas y Valencia. Si tu familiar está en otra ciudad, inscríbete igualmente — estamos expandiendo y queremos saber dónde hay más necesidad.</div></div></div>
-    </div>
-  </div>
-</section>
 
 <!-- ALIANZAS -->
 <section id="alianzas" style="background:var(--warm-gray)">
