@@ -572,15 +572,37 @@ function Equipo() {
 
 // ─── Formulario ───────────────────────────────────────────────────────────────
 
+const COUNTRY_CODES = [
+  { code: "+58", label: "+58 Venezuela", digits: 10 },
+  { code: "+1", label: "+1 EE.UU. / Canadá", digits: 10 },
+  { code: "+34", label: "+34 España", digits: 9 },
+  { code: "+57", label: "+57 Colombia", digits: 10 },
+  { code: "+51", label: "+51 Perú", digits: 9 },
+  { code: "+56", label: "+56 Chile", digits: 9 },
+  { code: "+54", label: "+54 Argentina", digits: 10 },
+  { code: "+52", label: "+52 México", digits: 10 },
+  { code: "+55", label: "+55 Brasil", digits: 11 },
+  { code: "+593", label: "+593 Ecuador", digits: 9 },
+  { code: "+598", label: "+598 Uruguay", digits: 8 },
+  { code: "+507", label: "+507 Panamá", digits: 8 },
+  { code: "+44", label: "+44 Reino Unido", digits: 10 },
+  { code: "+39", label: "+39 Italia", digits: 10 },
+  { code: "+33", label: "+33 Francia", digits: 9 },
+  { code: "+49", label: "+49 Alemania", digits: 10 },
+  { code: "+351", label: "+351 Portugal", digits: 9 },
+];
+
 function Formulario({ rolInicial }: { rolInicial: string }) {
   const [form, setForm] = useState({
     nombre: "",
-    whatsapp: "",
+    countryCode: "+58",
+    phone: "",
     email: "",
     ciudad: "",
     rol: rolInicial,
     website: "",
   });
+  const [phoneError, setPhoneError] = useState("");
 
   // Sincronizar cuando rolInicial cambia desde el hero
   const prevRolInicial = useRef(rolInicial);
@@ -592,7 +614,16 @@ function Formulario({ rolInicial }: { rolInicial: string }) {
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    // Validar longitud del número
+    const country = COUNTRY_CODES.find((c) => c.code === form.countryCode);
+    const digits = form.phone.replace(/\D/g, "").length;
+    if (country && digits < country.digits) {
+      setPhoneError(`El número debe tener ${country.digits} dígitos para ${form.countryCode}.`);
+      return;
+    }
+    setPhoneError("");
     setStatus("loading");
+    const whatsapp = `${form.countryCode}${form.phone.replace(/\D/g, "")}`;
     const turnstileToken =
       (e.currentTarget.querySelector('[name="cf-turnstile-response"]') as HTMLInputElement | null)
         ?.value ?? "";
@@ -603,8 +634,8 @@ function Formulario({ rolInicial }: { rolInicial: string }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           nombre: form.nombre,
-          contacto: `WA: ${form.whatsapp} | Email: ${form.email} | Rol: ${form.rol}`,
-          whatsapp: form.whatsapp,
+          contacto: `WA: ${whatsapp} | Email: ${form.email} | Rol: ${form.rol}`,
+          whatsapp,
           email: form.email,
           ciudad: form.ciudad,
           website: form.website,
@@ -616,7 +647,7 @@ function Formulario({ rolInicial }: { rolInicial: string }) {
       });
       if (!res.ok) throw new Error("Error");
       setStatus("ok");
-      setForm({ nombre: "", whatsapp: "", email: "", ciudad: "", rol: "", website: "" });
+      setForm({ nombre: "", countryCode: "+58", phone: "", email: "", ciudad: "", rol: "", website: "" });
       (window as typeof window & { gtag?: (...args: unknown[]) => void }).gtag?.("event", "form_submit", { event_category: "waitlist" });
       // Meta Pixel: evento de conversión (no solo PageView)
       (window as typeof window & { fbq?: (...args: unknown[]) => void }).fbq?.(
@@ -694,15 +725,30 @@ function Formulario({ rolInicial }: { rolInicial: string }) {
               className="w-full rounded-xl px-5 py-4 text-base outline-none focus:ring-2 focus:ring-[#2D1464]"
               style={{ backgroundColor: "white", color: "#1A0A3C", fontFamily: "var(--font-inter)" }}
             />
-            <input
-              type="tel"
-              required
-              placeholder="Tu WhatsApp (con código de país)"
-              value={form.whatsapp}
-              onChange={(e) => setForm({ ...form, whatsapp: e.target.value })}
-              className="w-full rounded-xl px-5 py-4 text-base outline-none focus:ring-2 focus:ring-[#2D1464]"
-              style={{ backgroundColor: "white", color: "#1A0A3C", fontFamily: "var(--font-inter)" }}
-            />
+            <div className="flex gap-2">
+              <select
+                value={form.countryCode}
+                onChange={(e) => { setForm({ ...form, countryCode: e.target.value }); setPhoneError(""); }}
+                className="rounded-xl px-3 py-4 text-sm outline-none focus:ring-2 focus:ring-[#2D1464] flex-shrink-0"
+                style={{ backgroundColor: "white", color: "#1A0A3C", fontFamily: "var(--font-inter)", width: "180px" }}
+              >
+                {COUNTRY_CODES.map((c) => (
+                  <option key={c.code} value={c.code}>{c.label}</option>
+                ))}
+              </select>
+              <input
+                type="tel"
+                required
+                placeholder="Número de WhatsApp"
+                value={form.phone}
+                onChange={(e) => { setForm({ ...form, phone: e.target.value.replace(/[^\d\s\-]/g, "") }); setPhoneError(""); }}
+                className="flex-1 rounded-xl px-5 py-4 text-base outline-none focus:ring-2 focus:ring-[#2D1464]"
+                style={{ backgroundColor: "white", color: "#1A0A3C", fontFamily: "var(--font-inter)" }}
+              />
+            </div>
+            {phoneError && (
+              <p className="text-sm font-medium -mt-2 px-1" style={{ color: "#7f1d1d" }}>{phoneError}</p>
+            )}
             <input
               type="email"
               required
