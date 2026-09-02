@@ -572,9 +572,11 @@ function Equipo() {
 
 // ─── Formulario ───────────────────────────────────────────────────────────────
 
-// Venezuela primero, luego todos los países del mundo ordenados alfabéticamente
+// Venezuela, EE.UU. y España primero, luego todos los países del mundo ordenados alfabéticamente
 const COUNTRY_CODES = [
   { code: "+58", label: "+58 🇻🇪 Venezuela", digits: 10 },
+  { code: "+1", label: "+1 🇺🇸 EE.UU. / Canadá", digits: 10 },
+  { code: "+34", label: "+34 🇪🇸 España", digits: 9 },
   { code: "+93", label: "+93 🇦🇫 Afganistán", digits: 9 },
   { code: "+355", label: "+355 🇦🇱 Albania", digits: 9 },
   { code: "+213", label: "+213 🇩🇿 Argelia", digits: 9 },
@@ -604,7 +606,7 @@ const COUNTRY_CODES = [
   { code: "+238", label: "+238 🇨🇻 Cabo Verde", digits: 7 },
   { code: "+855", label: "+855 🇰🇭 Camboya", digits: 9 },
   { code: "+237", label: "+237 🇨🇲 Camerún", digits: 9 },
-  { code: "+1", label: "+1 🇨🇦 Canadá / EE.UU.", digits: 10 },
+  { code: "+1-242", label: "+1-242 🇧🇸 Bahamas", digits: 10 },
   { code: "+236", label: "+236 🇨🇫 Rep. Centroafricana", digits: 8 },
   { code: "+235", label: "+235 🇹🇩 Chad", digits: 8 },
   { code: "+56", label: "+56 🇨🇱 Chile", digits: 9 },
@@ -627,7 +629,6 @@ const COUNTRY_CODES = [
   { code: "+291", label: "+291 🇪🇷 Eritrea", digits: 7 },
   { code: "+421", label: "+421 🇸🇰 Eslovaquia", digits: 9 },
   { code: "+386", label: "+386 🇸🇮 Eslovenia", digits: 8 },
-  { code: "+34", label: "+34 🇪🇸 España", digits: 9 },
   { code: "+251", label: "+251 🇪🇹 Etiopía", digits: 9 },
   { code: "+63", label: "+63 🇵🇭 Filipinas", digits: 10 },
   { code: "+358", label: "+358 🇫🇮 Finlandia", digits: 9 },
