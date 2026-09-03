@@ -570,6 +570,35 @@ function Equipo() {
   );
 }
 
+// ─── Estados y ciudades de Venezuela ─────────────────────────────────────────
+const VENEZUELA_ESTADOS: Record<string, string[]> = {
+  "Amazonas": ["Puerto Ayacucho", "San Fernando de Atabapo", "San Juan de Manapiare"],
+  "Anzoátegui": ["Barcelona", "Puerto La Cruz", "El Tigre", "Anaco", "Lechería", "Guanta", "Cantaura", "Clarines"],
+  "Apure": ["San Fernando de Apure", "Guasdualito", "Achaguas", "Biruaca"],
+  "Aragua": ["Maracay", "La Victoria", "Turmero", "Cagua", "Villa de Cura", "El Limón", "Palo Negro"],
+  "Barinas": ["Barinas", "Barinitas", "Socopó", "Ciudad Bolivia", "Santa Bárbara"],
+  "Bolívar": ["Ciudad Bolívar", "Ciudad Guayana (Puerto Ordaz)", "San Félix", "Upata", "Caicara del Orinoco"],
+  "Carabobo": ["Valencia", "Puerto Cabello", "Guacara", "San Diego", "Los Guayos", "Naguanagua", "Mariara"],
+  "Cojedes": ["San Carlos", "Tinaquillo", "El Pao", "Tinaco"],
+  "Delta Amacuro": ["Tucupita", "Pedernales"],
+  "Dependencias Federales": ["Los Roques", "La Orchila"],
+  "Distrito Capital": ["Caracas"],
+  "Falcón": ["Coro", "Punto Fijo", "La Vela de Coro", "Chichiriviche", "Tucacas"],
+  "Guárico": ["San Juan de los Morros", "Calabozo", "Valle de la Pascua", "Zaraza", "Altagracia de Orituco"],
+  "Lara": ["Barquisimeto", "Carora", "El Tocuyo", "Quíbor", "Chivacoa"],
+  "Mérida": ["Mérida", "El Vigía", "Ejido", "Tovar", "Valera (sector Mérida)"],
+  "Miranda": ["Los Teques", "Guarenas", "Guatire", "Ocumare del Tuy", "Santa Teresa del Tuy", "Charallave", "Petare", "Caucagua"],
+  "Monagas": ["Maturín", "Caripito", "Punta de Mata", "Temblador"],
+  "Nueva Esparta": ["Porlamar", "La Asunción", "Pampatar", "Juan Griego"],
+  "Portuguesa": ["Guanare", "Acarigua", "Araure", "Biscucuy", "Turén"],
+  "Sucre": ["Cumaná", "Carúpano", "Güiria", "Cariaco"],
+  "Táchira": ["San Cristóbal", "Rubio", "Táriba", "La Fría", "San Antonio del Táchira", "Colón"],
+  "Trujillo": ["Trujillo", "Valera", "Boconó", "La Ceiba", "Pampán"],
+  "Vargas": ["La Guaira", "Maiquetía", "Catia La Mar", "Naiguatá"],
+  "Yaracuy": ["San Felipe", "Yaritagua", "Nirgua", "Chivacoa", "Yumare"],
+  "Zulia": ["Maracaibo", "Cabimas", "Ciudad Ojeda", "Machiques", "San Francisco", "Lagunillas", "Baralt"],
+};
+
 // ─── Formulario ───────────────────────────────────────────────────────────────
 
 // Venezuela, EE.UU. y España primero, luego todos los países del mundo ordenados alfabéticamente
@@ -743,11 +772,13 @@ function Formulario({ rolInicial }: { rolInicial: string }) {
     countryCode: "+58",
     phone: "",
     email: "",
+    estado: "",
     ciudad: "",
     rol: rolInicial,
     website: "",
   });
   const [phoneError, setPhoneError] = useState("");
+  const ciudadesDelEstado = form.estado ? VENEZUELA_ESTADOS[form.estado] ?? [] : [];
 
   // Sincronizar cuando rolInicial cambia desde el hero
   const prevRolInicial = useRef(rolInicial);
@@ -782,7 +813,7 @@ function Formulario({ rolInicial }: { rolInicial: string }) {
           contacto: `WA: ${whatsapp} | Email: ${form.email} | Rol: ${form.rol}`,
           whatsapp,
           email: form.email,
-          ciudad: form.ciudad,
+          ciudad: form.estado ? `${form.ciudad}, ${form.estado}` : form.ciudad,
           website: form.website,
           turnstileToken,
           utmSource: params.get("utm_source") ?? "",
@@ -792,7 +823,7 @@ function Formulario({ rolInicial }: { rolInicial: string }) {
       });
       if (!res.ok) throw new Error("Error");
       setStatus("ok");
-      setForm({ nombre: "", countryCode: "+58", phone: "", email: "", ciudad: "", rol: "", website: "" });
+      setForm({ nombre: "", countryCode: "+58", phone: "", email: "", estado: "", ciudad: "", rol: "", website: "" });
       (window as typeof window & { gtag?: (...args: unknown[]) => void }).gtag?.("event", "form_submit", { event_category: "waitlist" });
       // Meta Pixel: evento de conversión (no solo PageView)
       (window as typeof window & { fbq?: (...args: unknown[]) => void }).fbq?.(
@@ -903,15 +934,32 @@ function Formulario({ rolInicial }: { rolInicial: string }) {
               className="w-full rounded-xl px-5 py-4 text-base outline-none focus:ring-2 focus:ring-[#2D1464]"
               style={{ backgroundColor: "white", color: "#1A0A3C", fontFamily: "var(--font-inter)" }}
             />
-            <input
-              type="text"
+            <select
               required
-              placeholder="Ciudad donde vive tu familiar en Venezuela"
-              value={form.ciudad}
-              onChange={(e) => setForm({ ...form, ciudad: e.target.value })}
+              value={form.estado}
+              onChange={(e) => setForm({ ...form, estado: e.target.value, ciudad: "" })}
               className="w-full rounded-xl px-5 py-4 text-base outline-none focus:ring-2 focus:ring-[#2D1464]"
-              style={{ backgroundColor: "white", color: "#1A0A3C", fontFamily: "var(--font-inter)" }}
-            />
+              style={{ backgroundColor: "white", color: form.estado ? "#1A0A3C" : "#9ca3af", fontFamily: "var(--font-inter)" }}
+            >
+              <option value="" disabled>Estado donde vive tu familiar</option>
+              {Object.keys(VENEZUELA_ESTADOS).sort().map((e) => (
+                <option key={e} value={e}>{e}</option>
+              ))}
+            </select>
+            {form.estado && (
+              <select
+                required
+                value={form.ciudad}
+                onChange={(e) => setForm({ ...form, ciudad: e.target.value })}
+                className="w-full rounded-xl px-5 py-4 text-base outline-none focus:ring-2 focus:ring-[#2D1464]"
+                style={{ backgroundColor: "white", color: form.ciudad ? "#1A0A3C" : "#9ca3af", fontFamily: "var(--font-inter)" }}
+              >
+                <option value="" disabled>Ciudad o municipio</option>
+                {ciudadesDelEstado.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            )}
 
             {/* Selector de rol */}
             <div className="flex flex-col gap-2">
