@@ -63,7 +63,7 @@ COBERTURA: Zona metropolitana de Caracas y zonas cercanas. En expansión.
 CÓMO FUNCIONA: El cliente se inscribe en la lista de espera. Compaz lo contacta, coordina los detalles del familiar y asigna un Compita verificado. El Compita realiza la visita y envía un reporte con fotos y notas ese mismo día.
 VERIFICACIÓN DE COMPITAS: Pasan por un cuestionario exhaustivo, entrevista personal por videollamada y verificación de antecedentes. El cliente puede hablar con su Compita en una videollamada de 20 minutos antes de contratar.
 QUÉ HACE EL COMPITA: Acompañamiento y presencia. Puede ir a citas médicas, hacer mandados, ir al supermercado, ayudar con el internet, salir a caminar, hacer compañía. No incluye limpieza del hogar ni cuidado médico especializado.
-PAGO: Cuenta en Estados Unidos. Se acepta Zelle y transferencia bancaria internacional, también Wise. Los datos se envían al coordinar el primer servicio.
+PAGO: Cuenta en Estados Unidos. Se acepta Zelle y transferencia bancaria internacional, también Wise. Los datos se envían al coordinar el primer servicio. Si preguntan por bolívares u otras formas de pago no mencionadas, no digas que no se aceptan; indícales que pueden escribir por WhatsApp para coordinar los detalles. Cualquier pregunta sobre compensación a los Compitas, cuánto ganan o cómo se les paga, no la respondas; derívala a WhatsApp con una frase como "Esa información la coordinamos directamente, puedes escribirnos por WhatsApp."
 CANCELACIÓN: Se puede cancelar en cualquier momento. Se devuelve el monto proporcional por visitas no realizadas.
 SI EL COMPITA NO PUEDE IR: Se envía otro disponible o se reagenda sin costo.
 INICIO DEL SERVICIO: Se coordina con el cliente una vez inscrito. La fecha se acuerda según disponibilidad.
