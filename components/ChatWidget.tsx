@@ -42,12 +42,18 @@ const WELCOME: Message = {
 };
 
 function renderText(text: string): React.ReactNode {
-  return text.split("\n").map((line, i, arr) => (
-    <span key={i}>
-      {line}
-      {i < arr.length - 1 && <br />}
-    </span>
-  ));
+  return text.split("\n").map((line, i, arr) => {
+    const parts = line.split(/\*\*(.+?)\*\*/g);
+    const rendered = parts.map((part, j) =>
+      j % 2 === 1 ? <strong key={j}>{part}</strong> : part
+    );
+    return (
+      <span key={i}>
+        {rendered}
+        {i < arr.length - 1 && <br />}
+      </span>
+    );
+  });
 }
 
 export default function ChatWidget() {
