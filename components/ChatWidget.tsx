@@ -105,6 +105,11 @@ const KB: KBEntry[] = [
       "cuidado",
       "incluye",
       "visita",
+      "cuidar",
+      "cuida",
+      "cuidan",
+      "qué pueden hacer",
+      "qué hace el compita",
     ],
     answer:
       "El Compita es un amigo de confianza. Puede acompañar a tu familiar a una cita médica, hacer mandados, ir al supermercado, ayudar con el internet, salir a caminar o simplemente hacer compañía. El servicio es acompañamiento y presencia. No incluye limpieza del hogar ni cuidado médico especializado.",
@@ -251,6 +256,17 @@ const KB: KBEntry[] = [
       "aplica para",
       "condición",
       "solo mayores",
+      "enfermo",
+      "enferma",
+      "enfermos",
+      "cuidar",
+      "cuida",
+      "cuidan",
+      "salud",
+      "dolencia",
+      "limitación",
+      "no está bien",
+      "mal de salud",
     ],
     answer:
       "Compaz está pensado principalmente para adultos mayores, pero el servicio es para cualquier familiar que necesite compañía y acompañamiento, incluyendo personas con discapacidad o alguna condición de salud. La única condición es que no requiera atención médica especializada ni cuidados que estén fuera del alcance del Compita. Si tienes dudas sobre si el caso de tu familiar aplica, escríbenos y lo evaluamos juntos.",
@@ -279,8 +295,25 @@ function normalize(text: string): string {
     .replace(/[̀-ͯ]/g, "");
 }
 
+function levenshtein(a: string, b: string): number {
+  const m = a.length, n = b.length;
+  const dp: number[][] = Array.from({ length: m + 1 }, (_, i) =>
+    Array.from({ length: n + 1 }, (_, j) => (i === 0 ? j : j === 0 ? i : 0))
+  );
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] = a[i - 1] === b[j - 1]
+        ? dp[i - 1][j - 1]
+        : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+    }
+  }
+  return dp[m][n];
+}
+
 function getAnswer(input: string): KBEntry | null {
   const normalized = normalize(input);
+
+  // Exact substring match first
   for (const entry of KB) {
     for (const kw of entry.keywords) {
       if (normalized.includes(normalize(kw))) {
@@ -288,6 +321,23 @@ function getAnswer(input: string): KBEntry | null {
       }
     }
   }
+
+  // Fuzzy match: compare each word in input against each single-word keyword
+  const inputWords = normalized.split(/\s+/).filter((w) => w.length > 3);
+  for (const entry of KB) {
+    for (const kw of entry.keywords) {
+      const normKw = normalize(kw);
+      // Only apply fuzzy to single-word keywords to avoid false positives
+      if (normKw.includes(" ")) continue;
+      if (normKw.length <= 3) continue;
+      for (const word of inputWords) {
+        if (levenshtein(word, normKw) <= 2) {
+          return entry;
+        }
+      }
+    }
+  }
+
   return null;
 }
 
