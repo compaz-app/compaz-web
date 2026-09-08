@@ -106,7 +106,10 @@ function isAllowedOrigin(req: NextRequest): boolean {
 const hourlyLog = new Map<string, number[]>();
 const dailyLog = new Map<string, number[]>();
 
+const RATE_LIMIT_WHITELIST = ["186.104.22.197"];
+
 function isRateLimited(ip: string): boolean {
+  if (RATE_LIMIT_WHITELIST.includes(ip)) return false;
   const now = Date.now();
   const oneHour = 60 * 60 * 1000;
   const oneDay = 24 * oneHour;
