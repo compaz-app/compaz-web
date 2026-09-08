@@ -14,7 +14,7 @@ const QUICK_REPLIES = [
 ];
 
 // Keywords in the user's message that trigger the WA button
-const WA_TRIGGERS = ["precio", "costo", "cuánto", "cuanto", "plan", "suscripción", "promoción", "promocion", "pagar", "vale"];
+const WA_TRIGGERS = ["precio", "costo", "cuánto", "cuanto", "plan", "suscripción", "promoción", "promocion", "pagar", "vale", "whatsapp", "wasap", "wsp", "hablar", "escribir", "contactar", "comunicar", "mensaje", "chat"];
 // Keywords in the bot reply that trigger the scroll-to-form button
 const COMPITA_TRIGGERS = ["formulario", "aplicar", "al final de la página", "al final de la pagina"];
 
