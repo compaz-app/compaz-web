@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import ChatWidget from "@/components/ChatWidget";
 import { useEffect, useRef, useState } from "react";
 import {
   ShoppingCart,
@@ -1099,9 +1100,11 @@ export default function Home() {
         <WaveDivider from="#FDFAF6" to="#2D1464" shape={1} flip />
         <FAQ />
         <WaveDivider from="#2D1464" to="#FFD23F" shape={2} />
+        <div id="ser-compita" style={{ scrollMarginTop: 0 }} />
         <Formulario rolInicial={rolSeleccionado} />
         <WaveDivider from="#FFD23F" to="#1A0A3C" shape={3} />
       </main>
+      <ChatWidget />
       <Footer />
     </>
   );
