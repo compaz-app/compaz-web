@@ -13,353 +13,27 @@ const QUICK_REPLIES = [
   "Quiero ser Compita",
 ];
 
-type Action = "whatsapp" | "scroll-compita" | undefined;
+// Keywords in the user's message that trigger the WA button
+const WA_TRIGGERS = ["precio", "costo", "cuánto", "cuanto", "plan", "suscripción", "promoción", "promocion", "pagar", "vale"];
+// Keywords in the bot reply that trigger the scroll-to-form button
+const COMPITA_TRIGGERS = ["formulario", "aplicar", "al final de la página", "al final de la pagina"];
 
-interface KBEntry {
-  id: string;
-  keywords: string[];
-  answer: string;
-  action?: Action;
+function shouldShowWA(userMessage: string): boolean {
+  const lower = userMessage.toLowerCase();
+  return WA_TRIGGERS.some((kw) => lower.includes(kw));
 }
 
-const KB: KBEntry[] = [
-  {
-    id: "que-es",
-    keywords: ["qué es", "compaz", "de qué trata", "en qué consiste", "trata"],
-    answer:
-      "Compaz conecta a familias venezolanas en el exterior con personas locales verificadas, los Compitas, que visitan y acompañan a tus familiares en Venezuela. Después de cada visita te mandamos un reporte con fotos y notas para que sepas cómo están.",
-  },
-  {
-    id: "precio",
-    keywords: [
-      "precio",
-      "costo",
-      "cuánto",
-      "vale",
-      "cobran",
-      "planes",
-      "suscripción",
-      "básico",
-      "compañía",
-      "pagan",
-    ],
-    answer:
-      "Tenemos dos planes de lanzamiento:\n\n**Plan Básico:** $50 al mes. Una visita mensual de 2 horas.\n\n**Plan Compañía:** $149 al mes. Dos visitas por semana de 2 horas cada una, 16 horas al mes en total.\n\nPor el lanzamiento tenemos una promoción especial. Escríbenos por WhatsApp para conocer los detalles.",
-    action: "whatsapp",
-  },
-  {
-    id: "donde",
-    keywords: [
-      "dónde",
-      "ciudad",
-      "caracas",
-      "zona",
-      "área",
-      "cobertura",
-      "venezuela",
-      "trabajan",
-      "disponible",
-    ],
-    answer:
-      "Por ahora operamos en la zona metropolitana de Caracas y zonas cercanas. Si tu familiar vive fuera de esa área, inscríbete igual, estamos expandiendo.",
-  },
-  {
-    id: "como-funciona",
-    keywords: [
-      "cómo funciona",
-      "cómo me inscribo",
-      "inscribir",
-      "lista de espera",
-      "proceso",
-      "pasos",
-      "empezar",
-      "inscribo",
-    ],
-    answer:
-      "Te inscribes en la lista de espera desde nuestra página. Nos ponemos en contacto contigo, coordinamos los detalles de tu familiar y te asignamos un Compita verificado. El Compita realiza la visita y te mandamos el reporte ese mismo día.",
-  },
-  {
-    id: "verificacion",
-    keywords: [
-      "verifican",
-      "verificación",
-      "confianza",
-      "seguro",
-      "quiénes son",
-      "antecedentes",
-      "entrevista",
-      "verificado",
-    ],
-    answer:
-      "Todos los Compitas pasan por un proceso de selección exhaustivo: un cuestionario de filtro inicial, una entrevista personal por videollamada y verificación de antecedentes antes de poder hacer visitas. Además, antes de contratar el servicio puedes hablar con tu Compita en una videollamada de 20 minutos para asegurarte de que es la persona correcta para tu familiar.",
-  },
-  {
-    id: "que-hace",
-    keywords: [
-      "qué hace",
-      "actividades",
-      "acompañar",
-      "mandados",
-      "cita médica",
-      "limpieza",
-      "cuidado",
-      "incluye",
-      "visita",
-      "cuidar",
-      "cuida",
-      "cuidan",
-      "qué pueden hacer",
-      "qué hace el compita",
-    ],
-    answer:
-      "El Compita es un amigo de confianza. Puede acompañar a tu familiar a una cita médica, hacer mandados, ir al supermercado, ayudar con el internet, salir a caminar o simplemente hacer compañía. El servicio es acompañamiento y presencia. No incluye limpieza del hogar ni cuidado médico especializado.",
-  },
-  {
-    id: "pago",
-    keywords: [
-      "pago",
-      "pagar",
-      "zelle",
-      "wise",
-      "transferencia",
-      "dólares",
-      "cuenta",
-    ],
-    answer:
-      "Aceptamos pagos a nuestra cuenta en Estados Unidos por Zelle o transferencia bancaria internacional, también por Wise desde cualquier país. Te enviamos los datos cuando coordinamos tu primer servicio.",
-  },
-  {
-    id: "cancelar",
-    keywords: [
-      "cancelar",
-      "cancelo",
-      "permanencia",
-      "contrato",
-      "devuelven",
-      "reembolso",
-      "salir",
-    ],
-    answer:
-      "Sí, puedes cancelar cuando quieras. Si no has utilizado todas las visitas del mes, te devolvemos el monto proporcional por las visitas no realizadas.",
-  },
-  {
-    id: "compita-no-puede",
-    keywords: [
-      "no puede ir",
-      "cancela",
-      "falta",
-      "otro compita",
-      "reagenda",
-      "reemplaza",
-      "no viene",
-    ],
-    answer:
-      "Si tu Compita no puede ir el día que le toca, enviamos a otro disponible o reagendamos la visita sin costo adicional.",
-  },
-  {
-    id: "cuando-empieza",
-    keywords: [
-      "cuándo empieza",
-      "inicio",
-      "primera visita",
-      "disponibilidad",
-      "cuánto tiempo",
-      "cuando",
-    ],
-    answer:
-      "Una vez que te inscribes, nos ponemos en contacto contigo para coordinar los detalles. La fecha de inicio la acordamos juntos según tu disponibilidad y la de tu familiar.",
-  },
-  {
-    id: "emergencia",
-    keywords: [
-      "emergencia",
-      "algo malo",
-      "problema",
-      "seguridad",
-      "protocolo",
-      "accidente",
-      "eventualidad",
-    ],
-    answer:
-      "Contamos con un protocolo de emergencia y seguridad para atender cualquier eventualidad. Nuestro equipo los acompaña durante todo el proceso.",
-  },
-  {
-    id: "consentimiento",
-    keywords: [
-      "consentimiento",
-      "aceptar",
-      "quiere",
-      "no quiere",
-      "familiar de acuerdo",
-      "autorización",
-    ],
-    answer:
-      "Sí, es indispensable. Las visitas requieren el consentimiento de tu familiar. Compaz no realiza visitas sin que la persona que las recibe esté de acuerdo. Esto es una condición no negociable, tanto por el bienestar de tu familiar como por la seguridad del Compita.",
-  },
-  {
-    id: "cambiar-compita",
-    keywords: [
-      "cambiar",
-      "cambio",
-      "otro compita",
-      "no me gusta",
-      "no funciona",
-      "diferente",
-    ],
-    answer:
-      "Por supuesto. Si la relación con tu Compita no funciona por cualquier motivo, te asignamos otro sin complicaciones. Queremos que la conexión sea genuina.",
-  },
-  {
-    id: "frecuencia-reporte",
-    keywords: [
-      "reporte",
-      "frecuencia",
-      "cada cuánto",
-      "actualizaciones",
-      "seguimiento",
-      "noticias",
-    ],
-    answer:
-      "Durante la visita recibes una actualización cada 30 minutos para que puedas hacer seguimiento en tiempo real y saber que todo va bien.",
-  },
-  {
-    id: "contenido-reporte",
-    keywords: [
-      "qué dice el reporte",
-      "información",
-      "fotos",
-      "novedades",
-      "contenido reporte",
-      "qué incluye el reporte",
-    ],
-    answer:
-      "Cada actualización te dice qué están haciendo, que todo está bien, y cualquier novedad que valga la pena mencionar.",
-  },
-  {
-    id: "compita-solo",
-    keywords: [
-      "va solo",
-      "acompañado",
-      "otras personas",
-      "quién entra",
-      "quién va",
-    ],
-    answer: "El único autorizado a realizar la visita es el Compita asignado.",
-  },
-  {
-    id: "para-quien",
-    keywords: [
-      "adulto mayor",
-      "discapacidad",
-      "enfermedad",
-      "cualquier persona",
-      "aplica para",
-      "condición",
-      "solo mayores",
-      "enfermo",
-      "enferma",
-      "enfermos",
-      "cuidar",
-      "cuida",
-      "cuidan",
-      "salud",
-      "dolencia",
-      "limitación",
-      "no está bien",
-      "mal de salud",
-    ],
-    answer:
-      "Compaz está pensado principalmente para adultos mayores, pero el servicio es para cualquier familiar que necesite compañía y acompañamiento, incluyendo personas con discapacidad o alguna condición de salud. La única condición es que no requiera atención médica especializada ni cuidados que estén fuera del alcance del Compita. Si tienes dudas sobre si el caso de tu familiar aplica, escríbenos y lo evaluamos juntos.",
-  },
-  {
-    id: "ser-compita",
-    keywords: [
-      "ser compita",
-      "aplicar",
-      "unirme",
-      "trabajo",
-      "compita",
-      "formulario compita",
-      "quiero ser",
-    ],
-    answer:
-      "Nos alegra que quieras unirte. Puedes aplicar directamente desde el formulario al final de nuestra página.",
-    action: "scroll-compita",
-  },
-];
-
-function normalize(text: string): string {
-  return text
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "");
-}
-
-function levenshtein(a: string, b: string): number {
-  const m = a.length, n = b.length;
-  const dp: number[][] = Array.from({ length: m + 1 }, (_, i) =>
-    Array.from({ length: n + 1 }, (_, j) => (i === 0 ? j : j === 0 ? i : 0))
-  );
-  for (let i = 1; i <= m; i++) {
-    for (let j = 1; j <= n; j++) {
-      dp[i][j] = a[i - 1] === b[j - 1]
-        ? dp[i - 1][j - 1]
-        : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
-    }
-  }
-  return dp[m][n];
-}
-
-function getAnswer(input: string): KBEntry | null {
-  const normalized = normalize(input);
-
-  // Exact substring match first
-  for (const entry of KB) {
-    for (const kw of entry.keywords) {
-      if (normalized.includes(normalize(kw))) {
-        return entry;
-      }
-    }
-  }
-
-  // Fuzzy match: compare each word in input against each single-word keyword
-  const inputWords = normalized.split(/\s+/).filter((w) => w.length > 3);
-  for (const entry of KB) {
-    for (const kw of entry.keywords) {
-      const normKw = normalize(kw);
-      // Only apply fuzzy to single-word keywords to avoid false positives
-      if (normKw.includes(" ")) continue;
-      if (normKw.length <= 3) continue;
-      for (const word of inputWords) {
-        if (levenshtein(word, normKw) <= 2) {
-          return entry;
-        }
-      }
-    }
-  }
-
-  return null;
-}
-
-function renderAnswer(text: string): React.ReactNode {
-  return text.split("\n").map((line, i) => {
-    const parts = line.split(/\*\*(.+?)\*\*/g);
-    return (
-      <span key={i}>
-        {parts.map((part, j) =>
-          j % 2 === 1 ? <strong key={j}>{part}</strong> : part
-        )}
-        {i < text.split("\n").length - 1 && <br />}
-      </span>
-    );
-  });
+function shouldShowCompita(botReply: string): boolean {
+  const lower = botReply.toLowerCase();
+  return COMPITA_TRIGGERS.some((kw) => lower.includes(kw));
 }
 
 interface Message {
   role: "bot" | "user";
   text: string;
-  action?: Action;
-  isFallback?: boolean;
+  showWA?: boolean;
+  showCompita?: boolean;
+  isError?: boolean;
 }
 
 const WELCOME: Message = {
@@ -367,20 +41,30 @@ const WELCOME: Message = {
   text: "Hola, soy el asistente de Compaz. Puedo responder tus preguntas sobre el servicio. ¿Qué quieres saber?",
 };
 
+function renderText(text: string): React.ReactNode {
+  return text.split("\n").map((line, i, arr) => (
+    <span key={i}>
+      {line}
+      {i < arr.length - 1 && <br />}
+    </span>
+  ));
+}
+
 export default function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([WELCOME]);
   const [input, setInput] = useState("");
   const [showQuickReplies, setShowQuickReplies] = useState(true);
+  const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (isOpen) {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-      inputRef.current?.focus();
+      setTimeout(() => inputRef.current?.focus(), 50);
     }
-  }, [isOpen, messages]);
+  }, [isOpen, messages, isTyping]);
 
   function trackEvent(name: string, params: Record<string, string | boolean>) {
     if (typeof window !== "undefined" && typeof (window as any).gtag === "function") {
@@ -388,42 +72,56 @@ export default function ChatWidget() {
     }
   }
 
-  function handleSend(text: string) {
+  async function handleSend(text: string) {
     const trimmed = text.trim();
-    if (!trimmed) return;
+    if (!trimmed || isTyping) return;
 
     const userMsg: Message = { role: "user", text: trimmed };
-    const entry = getAnswer(trimmed);
-
-    let botMsg: Message;
-    if (entry) {
-      botMsg = { role: "bot", text: entry.answer, action: entry.action };
-      trackEvent("chat_message", { message_text: trimmed.slice(0, 100), matched_topic: entry.id, is_fallback: false });
-    } else {
-      botMsg = {
-        role: "bot",
-        text: "No tengo esa respuesta. Escríbenos a hola@micompaz.com y te respondemos a la brevedad.",
-        isFallback: true,
-      };
-      trackEvent("chat_message", { message_text: trimmed.slice(0, 100), matched_topic: "none", is_fallback: true });
-    }
-
-    setMessages((prev) => [...prev, userMsg, botMsg]);
+    setMessages((prev) => [...prev, userMsg]);
     setShowQuickReplies(false);
     setInput("");
+    setIsTyping(true);
 
-    if (entry?.action === "scroll-compita") {
-      setTimeout(() => {
-        document
-          .getElementById("ser-compita")
-          ?.scrollIntoView({ behavior: "smooth" });
-        setIsOpen(false);
-      }, 800);
+    trackEvent("chat_message", { message_text: trimmed.slice(0, 100) });
+
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: trimmed }),
+      });
+
+      const data = (await res.json()) as { reply?: string; error?: string };
+      const replyText =
+        data.reply ??
+        "No pude procesar tu pregunta. Escríbenos a hola@micompaz.com";
+
+      const showWA = shouldShowWA(trimmed);
+      const showCompita = shouldShowCompita(replyText);
+
+      const botMsg: Message = { role: "bot", text: replyText, showWA, showCompita };
+      setMessages((prev) => [...prev, botMsg]);
+
+      if (showCompita) {
+        setTimeout(() => {
+          document
+            .getElementById("ser-compita")
+            ?.scrollIntoView({ behavior: "smooth" });
+          setIsOpen(false);
+        }, 1200);
+      }
+    } catch {
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "bot",
+          text: "No pude procesar tu pregunta. Escríbenos a hola@micompaz.com",
+          isError: true,
+        },
+      ]);
+    } finally {
+      setIsTyping(false);
     }
-  }
-
-  function handleQuickReply(label: string) {
-    handleSend(label);
   }
 
   return (
@@ -446,19 +144,27 @@ export default function ChatWidget() {
           background: #2D1464 !important;
           color: white !important;
         }
-        .send-btn:hover {
-          opacity: 0.88;
-        }
-        .wa-btn:hover {
-          opacity: 0.88;
-        }
-        .scroll-btn:hover {
-          opacity: 0.88;
-        }
+        .send-btn:hover { opacity: 0.88; }
+        .wa-btn:hover { opacity: 0.88; }
+        .scroll-btn:hover { opacity: 0.88; }
         .messages-area {
           scrollbar-width: thin;
           scrollbar-color: rgba(45,20,100,0.15) transparent;
         }
+        @keyframes blink {
+          0%, 80%, 100% { opacity: 0.2; }
+          40% { opacity: 1; }
+        }
+        .typing-dot {
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          background: #2D1464;
+          display: inline-block;
+          animation: blink 1.2s infinite;
+        }
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
       `}</style>
 
       {/* Floating button */}
@@ -585,31 +291,29 @@ export default function ChatWidget() {
                     borderRadius: 16,
                     fontSize: 14,
                     lineHeight: 1.5,
-                    backgroundColor:
-                      msg.role === "user" ? "#2D1464" : "#F5F0E8",
+                    backgroundColor: msg.role === "user" ? "#2D1464" : "#F5F0E8",
                     color: msg.role === "user" ? "white" : "#1A0A3C",
                   }}
                 >
-                  {msg.isFallback ? (
+                  {msg.isError ? (
                     <span>
-                      No tengo esa respuesta. Escríbenos a{" "}
+                      No pude procesar tu pregunta. Escríbenos a{" "}
                       <a
                         href="mailto:hola@micompaz.com"
                         style={{ color: "#FF6B2B", textDecoration: "underline" }}
                       >
                         hola@micompaz.com
-                      </a>{" "}
-                      y te respondemos a la brevedad.
+                      </a>
                     </span>
                   ) : (
-                    renderAnswer(msg.text)
+                    renderText(msg.text)
                   )}
                 </div>
               </div>
 
-              {/* Action buttons below bot message */}
-              {msg.role === "bot" && msg.action === "whatsapp" && (
-                <div style={{ marginTop: 8, paddingLeft: 0 }}>
+              {/* WhatsApp button */}
+              {msg.role === "bot" && msg.showWA && (
+                <div style={{ marginTop: 8 }}>
                   <a
                     href={WA_URL}
                     target="_blank"
@@ -637,7 +341,8 @@ export default function ChatWidget() {
                 </div>
               )}
 
-              {msg.role === "bot" && msg.action === "scroll-compita" && (
+              {/* Scroll to form button */}
+              {msg.role === "bot" && msg.showCompita && (
                 <div style={{ marginTop: 8 }}>
                   <button
                     className="scroll-btn"
@@ -665,6 +370,26 @@ export default function ChatWidget() {
             </div>
           ))}
 
+          {/* Typing indicator */}
+          {isTyping && (
+            <div style={{ display: "flex", justifyContent: "flex-start" }}>
+              <div
+                style={{
+                  padding: "10px 16px",
+                  borderRadius: 16,
+                  backgroundColor: "#F5F0E8",
+                  display: "flex",
+                  gap: 4,
+                  alignItems: "center",
+                }}
+              >
+                <span className="typing-dot" />
+                <span className="typing-dot" />
+                <span className="typing-dot" />
+              </div>
+            </div>
+          )}
+
           {/* Quick reply buttons */}
           {showQuickReplies && (
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 4 }}>
@@ -672,7 +397,7 @@ export default function ChatWidget() {
                 <button
                   key={label}
                   className="quick-reply-btn"
-                  onClick={() => handleQuickReply(label)}
+                  onClick={() => handleSend(label)}
                   style={{
                     padding: "7px 12px",
                     borderRadius: 12,
@@ -707,58 +432,68 @@ export default function ChatWidget() {
           }}
         >
           <div style={{ display: "flex", gap: 8 }}>
-          <input
-            ref={inputRef}
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") handleSend(input);
-            }}
-            maxLength={100}
-            placeholder="Escribe tu pregunta..."
+            <input
+              ref={inputRef}
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleSend(input);
+              }}
+              maxLength={100}
+              disabled={isTyping}
+              placeholder="Escribe tu pregunta..."
+              style={{
+                flex: 1,
+                padding: "10px 14px",
+                borderRadius: 12,
+                border: "2px solid rgba(45,20,100,0.2)",
+                backgroundColor: "white",
+                color: "#1A0A3C",
+                fontSize: 14,
+                outline: "none",
+                fontFamily: "inherit",
+                opacity: isTyping ? 0.6 : 1,
+              }}
+            />
+            <button
+              className="send-btn"
+              onClick={() => handleSend(input)}
+              disabled={isTyping}
+              aria-label="Enviar"
+              style={{
+                width: 42,
+                height: 42,
+                borderRadius: 12,
+                backgroundColor: "#FF6B2B",
+                border: "none",
+                cursor: isTyping ? "not-allowed" : "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+                transition: "opacity 150ms ease",
+                opacity: isTyping ? 0.5 : 1,
+              }}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M22 2L11 13M22 2L15 22L11 13M22 2L2 9L11 13"
+                  stroke="white"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+          </div>
+          <div
             style={{
-              flex: 1,
-              padding: "10px 14px",
-              borderRadius: 12,
-              border: "2px solid rgba(45,20,100,0.2)",
-              backgroundColor: "white",
-              color: "#1A0A3C",
-              fontSize: 14,
-              outline: "none",
-              fontFamily: "inherit",
-            }}
-          />
-          <button
-            className="send-btn"
-            onClick={() => handleSend(input)}
-            aria-label="Enviar"
-            style={{
-              width: 42,
-              height: 42,
-              borderRadius: 12,
-              backgroundColor: "#FF6B2B",
-              border: "none",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              flexShrink: 0,
-              transition: "opacity 150ms ease",
+              textAlign: "right",
+              fontSize: 11,
+              color: input.length >= 90 ? "#FF6B2B" : "rgba(26,10,60,0.35)",
             }}
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M22 2L11 13M22 2L15 22L11 13M22 2L2 9L11 13"
-                stroke="white"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </button>
-          </div>
-          <div style={{ textAlign: "right", fontSize: 11, color: input.length >= 90 ? "#FF6B2B" : "rgba(26,10,60,0.35)" }}>
             {100 - input.length} caracteres restantes
           </div>
         </div>
