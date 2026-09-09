@@ -97,6 +97,9 @@ const ALLOWED_ORIGINS = [
 function isAllowedOrigin(req: NextRequest): boolean {
   const origin = req.headers.get("origin") ?? "";
   const referer = req.headers.get("referer") ?? "";
+  // Same-origin browser requests omit the Origin header — allow them.
+  // Only block when Origin is explicitly set to an unknown domain.
+  if (!origin && !referer) return true;
   return ALLOWED_ORIGINS.some(
     (o) => origin.startsWith(o) || referer.startsWith(o)
   );
