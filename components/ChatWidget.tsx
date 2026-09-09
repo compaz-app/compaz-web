@@ -62,6 +62,7 @@ export default function ChatWidget() {
   const [input, setInput] = useState("");
   const [showQuickReplies, setShowQuickReplies] = useState(true);
   const [isTyping, setIsTyping] = useState(false);
+  const [showBubble, setShowBubble] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -71,6 +72,24 @@ export default function ChatWidget() {
       setTimeout(() => inputRef.current?.focus(), 50);
     }
   }, [isOpen, messages, isTyping]);
+
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem("chat_bubble_seen")) return;
+    } catch { /* ignore */ }
+    const timer = setTimeout(() => setShowBubble(true), 4500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  function dismissBubble() {
+    setShowBubble(false);
+    try { sessionStorage.setItem("chat_bubble_seen", "1"); } catch { /* ignore */ }
+  }
+
+  function openChat() {
+    dismissBubble();
+    setIsOpen(true);
+  }
 
   function trackEvent(name: string, params: Record<string, string | boolean>) {
     if (typeof window !== "undefined" && typeof (window as any).gtag === "function") {
@@ -171,11 +190,82 @@ export default function ChatWidget() {
         }
         .typing-dot:nth-child(2) { animation-delay: 0.2s; }
         .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes ping {
+          0% { transform: scale(1); opacity: 0.7; }
+          100% { transform: scale(2); opacity: 0; }
+        }
+        .ping-ring {
+          position: absolute;
+          inset: 0;
+          border-radius: 9999px;
+          background: #FF6B2B;
+          animation: ping 1.4s ease-out infinite;
+        }
+        @keyframes bubble-in {
+          0% { opacity: 0; transform: translateY(8px) scale(0.95); }
+          100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .chat-bubble-hint {
+          animation: bubble-in 0.3s ease forwards;
+        }
       `}</style>
+
+      {/* Attention bubble */}
+      {showBubble && !isOpen && (
+        <div
+          className="chat-bubble-hint"
+          style={{
+            position: "fixed",
+            bottom: 92,
+            right: 24,
+            zIndex: 9999,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "flex-end",
+            gap: 6,
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: "white",
+              borderRadius: "16px 16px 4px 16px",
+              padding: "12px 16px",
+              boxShadow: "0 4px 20px rgba(26,10,60,0.18)",
+              maxWidth: 220,
+              fontSize: 14,
+              lineHeight: 1.4,
+              color: "#1A0A3C",
+              cursor: "pointer",
+              position: "relative",
+            }}
+            onClick={openChat}
+          >
+            ¿Tienes dudas sobre Compaz? Puedo ayudarte 👋
+            <button
+              onClick={(e) => { e.stopPropagation(); dismissBubble(); }}
+              aria-label="Cerrar"
+              style={{
+                position: "absolute",
+                top: 6,
+                right: 8,
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                color: "rgba(26,10,60,0.35)",
+                fontSize: 14,
+                lineHeight: 1,
+                padding: 0,
+              }}
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Floating button */}
       <button
-        onClick={() => setIsOpen((v) => !v)}
+        onClick={() => isOpen ? setIsOpen(false) : openChat()}
         aria-label="Abrir chat"
         style={{
           position: "fixed",
@@ -194,6 +284,7 @@ export default function ChatWidget() {
           zIndex: 9999,
         }}
       >
+        {showBubble && !isOpen && <span className="ping-ring" />}
         {isOpen ? (
           <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
             <line x1="3" y1="3" x2="19" y2="19" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
