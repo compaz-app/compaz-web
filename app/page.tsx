@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import ChatWidget from "@/components/ChatWidget";
+import DashboardMockup from "@/components/DashboardMockup";
 import { useEffect, useRef, useState } from "react";
 import {
   ShoppingCart,
@@ -1095,6 +1096,7 @@ export default function Home() {
         <QueHaceUnCompa />
         <WaveDivider from="#FDFAF6" to="#2D1464" shape={2} />
         <ComoFunciona />
+        <DashboardMockup />
         <WaveDivider from="#2D1464" to="#FDFAF6" shape={3} />
         <Equipo />
         <WaveDivider from="#FDFAF6" to="#2D1464" shape={1} flip />
