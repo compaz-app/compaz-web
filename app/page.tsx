@@ -603,6 +603,63 @@ const VENEZUELA_ESTADOS: Record<string, string[]> = {
 
 // ─── Formulario ───────────────────────────────────────────────────────────────
 
+const VE_PREFIJOS = [
+  { group: "Móviles", options: [
+    { code: "0412", label: "0412 · Movistar" },
+    { code: "0414", label: "0414 · Movistar" },
+    { code: "0416", label: "0416 · Digitel" },
+    { code: "0424", label: "0424 · Movilnet" },
+    { code: "0426", label: "0426 · Movilnet" },
+  ]},
+  { group: "Fijos por estado", options: [
+    { code: "0212", label: "0212 · Caracas (Distrito Capital)" },
+    { code: "0234", label: "0234 · Cagua / Turmero (Aragua)" },
+    { code: "0243", label: "0243 · Maracay (Aragua)" },
+    { code: "0244", label: "0244 · La Victoria (Aragua)" },
+    { code: "0245", label: "0245 · Villa de Cura (Aragua)" },
+    { code: "0247", label: "0247 · Barinas" },
+    { code: "0248", label: "0248 · Apure" },
+    { code: "0249", label: "0249 · Portuguesa" },
+    { code: "0251", label: "0251 · Barquisimeto (Lara)" },
+    { code: "0252", label: "0252 · Carora (Lara)" },
+    { code: "0253", label: "0253 · Quíbor (Lara)" },
+    { code: "0255", label: "0255 · Yaracuy" },
+    { code: "0257", label: "0257 · Trujillo" },
+    { code: "0258", label: "0258 · Mérida" },
+    { code: "0261", label: "0261 · Maracaibo (Zulia)" },
+    { code: "0263", label: "0263 · Cabimas (Zulia)" },
+    { code: "0264", label: "0264 · Ciudad Ojeda (Zulia)" },
+    { code: "0265", label: "0265 · Machiques (Zulia)" },
+    { code: "0268", label: "0268 · Falcón" },
+    { code: "0269", label: "0269 · Punto Fijo (Falcón)" },
+    { code: "0271", label: "0271 · Cumaná (Sucre)" },
+    { code: "0272", label: "0272 · Carúpano (Sucre)" },
+    { code: "0273", label: "0273 · Güiria (Sucre)" },
+    { code: "0274", label: "0274 · Mérida ciudad" },
+    { code: "0275", label: "0275 · El Vigía (Mérida)" },
+    { code: "0276", label: "0276 · Táchira (San Cristóbal)" },
+    { code: "0277", label: "0277 · La Fría / Colón (Táchira)" },
+    { code: "0278", label: "0278 · Maturín (Monagas)" },
+    { code: "0281", label: "0281 · Barcelona / Pto. La Cruz (Anzoátegui)" },
+    { code: "0282", label: "0282 · El Tigre (Anzoátegui)" },
+    { code: "0283", label: "0283 · Anaco (Anzoátegui)" },
+    { code: "0285", label: "0285 · Ciudad Bolívar (Bolívar)" },
+    { code: "0286", label: "0286 · Puerto Ordaz / San Félix (Bolívar)" },
+    { code: "0287", label: "0287 · Upata (Bolívar)" },
+    { code: "0288", label: "0288 · Amazonas" },
+    { code: "0289", label: "0289 · Delta Amacuro" },
+    { code: "0291", label: "0291 · Porlamar (Nueva Esparta)" },
+    { code: "0293", label: "0293 · La Guaira / Vargas" },
+    { code: "0295", label: "0295 · Coro (Falcón)" },
+    { code: "0241", label: "0241 · Valencia (Carabobo)" },
+    { code: "0242", label: "0242 · Puerto Cabello (Carabobo)" },
+    { code: "0246", label: "0246 · Guárico" },
+    { code: "0239", label: "0239 · Los Teques / Guarenas (Miranda)" },
+    { code: "0232", label: "0232 · Cojedes" },
+    { code: "0233", label: "0233 · Portuguesa (Acarigua)" },
+  ]},
+];
+
 // Venezuela, EE.UU. y España primero, luego todos los países del mundo ordenados alfabéticamente
 const COUNTRY_CODES = [
   { code: "+58", label: "+58 🇻🇪 Venezuela", digits: 10 },
@@ -772,6 +829,7 @@ function Formulario({ rolInicial }: { rolInicial: string }) {
   const [form, setForm] = useState({
     nombre: "",
     countryCode: "+58",
+    vePrefijo: "0412",
     phone: "",
     email: "",
     estado: "",
@@ -793,15 +851,24 @@ function Formulario({ rolInicial }: { rolInicial: string }) {
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     // Validar longitud del número
-    const country = COUNTRY_CODES.find((c) => c.code === form.countryCode);
     const digits = form.phone.replace(/\D/g, "").length;
-    if (country && digits < country.digits) {
-      setPhoneError(`El número debe tener ${country.digits} dígitos para ${form.countryCode}.`);
-      return;
+    if (form.countryCode === "+58") {
+      if (digits !== 7) {
+        setPhoneError("El número debe tener exactamente 7 dígitos después del prefijo.");
+        return;
+      }
+    } else {
+      const country = COUNTRY_CODES.find((c) => c.code === form.countryCode);
+      if (country && digits < country.digits) {
+        setPhoneError(`El número debe tener ${country.digits} dígitos para ${form.countryCode}.`);
+        return;
+      }
     }
     setPhoneError("");
     setStatus("loading");
-    const whatsapp = `${form.countryCode}${form.phone.replace(/\D/g, "")}`;
+    const whatsapp = form.countryCode === "+58"
+      ? `+58${form.vePrefijo.replace(/^0/, "")}${form.phone.replace(/\D/g, "")}`
+      : `${form.countryCode}${form.phone.replace(/\D/g, "")}`;
     const turnstileToken =
       (e.currentTarget.querySelector('[name="cf-turnstile-response"]') as HTMLInputElement | null)
         ?.value ?? "";
@@ -825,7 +892,7 @@ function Formulario({ rolInicial }: { rolInicial: string }) {
       });
       if (!res.ok) throw new Error("Error");
       setStatus("ok");
-      setForm({ nombre: "", countryCode: "+58", phone: "", email: "", estado: "", ciudad: "", rol: "", website: "" });
+      setForm({ nombre: "", countryCode: "+58", vePrefijo: "0412", phone: "", email: "", estado: "", ciudad: "", rol: "", website: "" });
       (window as typeof window & { gtag?: (...args: unknown[]) => void }).gtag?.("event", "form_submit", { event_category: "waitlist" });
       // Meta Pixel: evento de conversión (no solo PageView)
       (window as typeof window & { fbq?: (...args: unknown[]) => void }).fbq?.(
@@ -906,7 +973,7 @@ function Formulario({ rolInicial }: { rolInicial: string }) {
             <div className="flex gap-2">
               <select
                 value={form.countryCode}
-                onChange={(e) => { setForm({ ...form, countryCode: e.target.value }); setPhoneError(""); }}
+                onChange={(e) => { setForm({ ...form, countryCode: e.target.value, phone: "" }); setPhoneError(""); }}
                 className="rounded-xl px-3 py-4 text-sm outline-none focus:ring-2 focus:ring-[#2D1464] flex-shrink-0"
                 style={{ backgroundColor: "white", color: "#1A0A3C", fontFamily: "var(--font-inter)", width: "180px" }}
               >
@@ -914,12 +981,33 @@ function Formulario({ rolInicial }: { rolInicial: string }) {
                   <option key={c.code} value={c.code}>{c.label}</option>
                 ))}
               </select>
+              {form.countryCode === "+58" && (
+                <select
+                  value={form.vePrefijo}
+                  onChange={(e) => { setForm({ ...form, vePrefijo: e.target.value, phone: "" }); setPhoneError(""); }}
+                  className="rounded-xl px-3 py-4 text-sm outline-none focus:ring-2 focus:ring-[#2D1464] flex-shrink-0"
+                  style={{ backgroundColor: "white", color: "#1A0A3C", fontFamily: "var(--font-inter)", width: "200px" }}
+                >
+                  {VE_PREFIJOS.map((group) => (
+                    <optgroup key={group.group} label={group.group}>
+                      {group.options.map((o) => (
+                        <option key={o.code} value={o.code}>{o.label}</option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
+              )}
               <input
                 type="tel"
                 required
-                placeholder="Número de WhatsApp"
+                placeholder={form.countryCode === "+58" ? "7 dígitos" : "Número de WhatsApp"}
                 value={form.phone}
-                onChange={(e) => { setForm({ ...form, phone: e.target.value.replace(/[^\d\s\-]/g, "") }); setPhoneError(""); }}
+                maxLength={form.countryCode === "+58" ? 7 : 15}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/\D/g, "");
+                  setForm({ ...form, phone: val });
+                  setPhoneError("");
+                }}
                 className="flex-1 rounded-xl px-5 py-4 text-base outline-none focus:ring-2 focus:ring-[#2D1464]"
                 style={{ backgroundColor: "white", color: "#1A0A3C", fontFamily: "var(--font-inter)" }}
               />
