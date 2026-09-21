@@ -218,16 +218,20 @@ async function logToSheets(ip: string, message: string, reply: string): Promise<
     if (!token || !sheetId) return;
 
     const fecha = new Date().toLocaleString("es-VE", { timeZone: "America/Caracas" });
-    await fetch(
-      `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/A:D:append?valueInputOption=USER_ENTERED`,
+    const res = await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Sheet1%21A1:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`,
       {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify({ values: [[fecha, ip, message, reply]] }),
       }
     );
-  } catch {
-    // Silent — never affect chat response
+    if (!res.ok) {
+      const err = await res.text();
+      console.error("[Sheets] append failed:", res.status, err);
+    }
+  } catch (e) {
+    console.error("[Sheets] exception:", e);
   }
 }
 
