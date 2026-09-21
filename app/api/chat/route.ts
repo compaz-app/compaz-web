@@ -178,8 +178,16 @@ function sanitize(text: string): string {
 async function getGoogleAccessToken(): Promise<string | null> {
   try {
     const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
-    const privateKey = (process.env.GOOGLE_PRIVATE_KEY ?? "").replace(/\\n/g, "\n");
-    if (!email || !privateKey) return null;
+    const rawKey = process.env.GOOGLE_PRIVATE_KEY ?? "";
+    if (!email || !rawKey) {
+      console.error("[Sheets] missing env vars — email:", !!email, "key:", !!rawKey);
+      return null;
+    }
+
+    // Netlify puede guardar la clave con comillas envolventes — quitarlas
+    const strippedKey = rawKey.replace(/^["']|["']$/g, "");
+    const privateKey = strippedKey.replace(/\\n/g, "\n");
+    console.error("[Sheets] key starts with:", privateKey.slice(0, 30));
 
     const now = Math.floor(Date.now() / 1000);
     const header = Buffer.from(JSON.stringify({ alg: "RS256", typ: "JWT" })).toString("base64url");
@@ -204,9 +212,11 @@ async function getGoogleAccessToken(): Promise<string | null> {
         assertion: `${toSign}.${signature}`,
       }),
     });
-    const data = (await res.json()) as { access_token?: string };
+    const data = (await res.json()) as { access_token?: string; error?: string };
+    if (!data.access_token) console.error("[Sheets] token error:", data.error);
     return data.access_token ?? null;
-  } catch {
+  } catch (e) {
+    console.error("[Sheets] getToken exception:", e);
     return null;
   }
 }
