@@ -5,7 +5,7 @@
 [build.environment]
   # ANTHROPIC_API_KEY aparece en caché de Turbopack (server-side), no en el bundle del cliente.
   # Es un falso positivo del secrets scanner de Netlify.
-  SECRETS_SCAN_OMIT_KEYS = "ANTHROPIC_API_KEY"
+  SECRETS_SCAN_OMIT_KEYS = "ANTHROPIC_API_KEY,GOOGLE_SHEET_ID"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
