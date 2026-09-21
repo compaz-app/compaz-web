@@ -1,6 +1,19 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
+
+function getSessionId(): string {
+  try {
+    let id = sessionStorage.getItem("chat_session_id");
+    if (!id) {
+      id = Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+      sessionStorage.setItem("chat_session_id", id);
+    }
+    return id;
+  } catch {
+    return "unknown";
+  }
+}
 
 const WA_URL =
   "https://wa.me/584241696472?text=Hola%2C%20me%20interesa%20conocer%20la%20promoci%C3%B3n%20de%20lanzamiento%20de%20Compaz.";
@@ -113,7 +126,7 @@ export default function ChatWidget() {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: trimmed }),
+        body: JSON.stringify({ message: trimmed, sessionId: getSessionId() }),
       });
 
       const data = (await res.json()) as { reply?: string; error?: string };

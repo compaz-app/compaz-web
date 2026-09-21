@@ -221,7 +221,7 @@ async function getGoogleAccessToken(): Promise<string | null> {
   }
 }
 
-async function logToSheets(ip: string, message: string, reply: string): Promise<void> {
+async function logToSheets(sessionId: string, ip: string, message: string, reply: string): Promise<void> {
   try {
     const sheetId = process.env.GOOGLE_SHEET_ID;
     const token = await getGoogleAccessToken();
@@ -233,7 +233,7 @@ async function logToSheets(ip: string, message: string, reply: string): Promise<
       {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ values: [[fecha, ip, message, reply]] }),
+        body: JSON.stringify({ values: [[fecha, sessionId, ip, message, reply]] }),
       }
     );
     if (!res.ok) {
@@ -290,6 +290,9 @@ export async function POST(req: NextRequest) {
       { status: 400, headers: SECURITY_HEADERS }
     );
   }
+
+  // Session ID from client (generated per-tab in sessionStorage)
+  const sessionId = typeof body.sessionId === "string" ? body.sessionId.slice(0, 32) : "unknown";
 
   // Validate message
   const raw = typeof body.message === "string" ? body.message : "";
@@ -351,7 +354,7 @@ export async function POST(req: NextRequest) {
     const reply = data.content?.find((b) => b.type === "text")?.text ?? "";
 
     // Await logging before responding — Lambda kills fire-and-forget before completion
-    await logToSheets(ip, message, reply);
+    await logToSheets(sessionId, ip, message, reply);
 
     return NextResponse.json({ reply }, { status: 200, headers: SECURITY_HEADERS });
   } catch {
