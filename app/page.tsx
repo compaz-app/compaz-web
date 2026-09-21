@@ -607,6 +607,7 @@ const VE_PREFIJOS = [
   { code: "0412", label: "0412" },
   { code: "0414", label: "0414" },
   { code: "0416", label: "0416" },
+  { code: "0422", label: "0422" },
   { code: "0424", label: "0424" },
   { code: "0426", label: "0426" },
 ];
