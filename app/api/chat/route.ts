@@ -350,8 +350,8 @@ export async function POST(req: NextRequest) {
     };
     const reply = data.content?.find((b) => b.type === "text")?.text ?? "";
 
-    // Fire-and-forget — never blocks the chat response
-    logToSheets(ip, message, reply).catch(() => {});
+    // Await logging before responding — Lambda kills fire-and-forget before completion
+    await logToSheets(ip, message, reply);
 
     return NextResponse.json({ reply }, { status: 200, headers: SECURITY_HEADERS });
   } catch {
