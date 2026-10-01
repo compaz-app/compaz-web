@@ -7,6 +7,12 @@
   # Es un falso positivo del secrets scanner de Netlify.
   SECRETS_SCAN_OMIT_KEYS = "ANTHROPIC_API_KEY,GOOGLE_SHEET_ID"
 
+[functions]
+  directory = "netlify/functions"
+
+# Función programada: envía recordatorios de llamada 30 min antes
+# Requiere env var CRON_SECRET (cadena aleatoria) en Netlify y en .env.local
+
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 

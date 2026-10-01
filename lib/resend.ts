@@ -5,6 +5,22 @@ const resend = new Resend(process.env.RESEND_API_KEY)
 
 const FROM = 'Compaz <visitas@micompaz.com>'
 
+export async function sendCodigoTelegram(email: string, nombre: string, codigo: string): Promise<void> {
+  await resend.emails.send({
+    from: FROM,
+    to: email,
+    subject: `Tu código de verificación Compaz: ${codigo}`,
+    html: `
+      <div style="font-family: Inter, sans-serif; max-width: 600px; margin: 0 auto; padding: 32px;">
+        <p style="font-size: 16px; color: #1A0A3C;">Hola <strong>${nombre}</strong>,</p>
+        <p style="font-size: 16px; color: #1A0A3C;">Tu código para activar tu cuenta en el bot de Telegram es:</p>
+        <div style="font-size: 40px; font-weight: bold; letter-spacing: 8px; color: #FF6B2B; text-align: center; padding: 24px 0;">${codigo}</div>
+        <p style="font-size: 14px; color: #6B5C90;">Expira en 15 minutos. Ingrésalo en el chat de Telegram con el bot de Compaz.</p>
+      </div>
+    `,
+  })
+}
+
 export async function sendVisitaInicio(
   usuario: Usuario,
   compita: Compita,
@@ -37,7 +53,7 @@ export async function sendVisitaInicio(
           Ver visita en vivo
         </a>
         <p style="color: #6B5C90; font-size: 14px; margin-top: 32px;">
-          Compaz — Cuidado con compañía
+          Compaz — <em>Cerca aunque estés lejos</em>
         </p>
       </div>
     `,
@@ -105,7 +121,7 @@ export async function sendVisitaResumen(
           Ver historial completo
         </a>
         <p style="color: #6B5C90; font-size: 14px; margin-top: 32px;">
-          Compaz — Cuidado con compañía
+          Compaz — <em>Cerca aunque estés lejos</em>
         </p>
       </div>
     `,

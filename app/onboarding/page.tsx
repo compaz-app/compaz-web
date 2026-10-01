@@ -85,6 +85,7 @@ function OnboardingForm() {
   const [step, setStep] = useState<'form' | 'telegram'>('form')
   const [tokenValido, setTokenValido] = useState<boolean | null>(null)
   const [loading, setLoading] = useState(false)
+  const [errorForm, setErrorForm] = useState<string | null>(null)
   const [fotoPreview, setFotoPreview] = useState<string | null>(null)
   const fotoRef = useRef<HTMLInputElement>(null)
 
@@ -93,11 +94,60 @@ function OnboardingForm() {
   const [zonas, setZonas] = useState<string[]>([])
   const [form, setForm] = useState({
     nombre: '',
+    email: '',
     descripcion: '',
     servicios: [] as string[],
     habilidades: '',
     youtube_url: '',
   })
+
+  // Disponibilidad horaria: día + rango en bloques de 20 min hasta 20:00 VE
+  type HorarioItem = { dia: string; inicio: string; fin: string }
+  const DIAS_SEMANA = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo']
+  const BLOQUES_HORA = Array.from({ length: 43 }, (_, i) => {
+    const totalMin = 6 * 60 + i * 20  // empieza a las 06:00
+    const h = Math.floor(totalMin / 60)
+    const m = totalMin % 60
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+  }) // 06:00 … 20:00
+
+  const [horarios, setHorarios] = useState<HorarioItem[]>([])
+  const [horarioDia, setHorarioDia] = useState('')
+  const [horarioInicio, setHorarioInicio] = useState('09:00')
+  const [horarioFin, setHorarioFin] = useState('17:00')
+
+  const ORDEN_DIAS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo']
+
+  function agregarHorario() {
+    if (!horarioDia || horarioInicio >= horarioFin) return
+    setHorarios((prev) => {
+      const nuevo = [...prev, { dia: horarioDia, inicio: horarioInicio, fin: horarioFin }]
+      return nuevo.sort((a, b) => {
+        const di = ORDEN_DIAS.indexOf(a.dia) - ORDEN_DIAS.indexOf(b.dia)
+        return di !== 0 ? di : a.inicio.localeCompare(b.inicio)
+      })
+    })
+    setHorarioDia('')
+  }
+
+  function aplicarATodos() {
+    if (horarioInicio >= horarioFin) return
+    setHorarios((prev) => {
+      const nuevos = ORDEN_DIAS.filter((dia) =>
+        !prev.some((h) => h.dia === dia && h.inicio === horarioInicio && h.fin === horarioFin)
+      ).map((dia) => ({ dia, inicio: horarioInicio, fin: horarioFin }))
+      const combinado = [...prev, ...nuevos]
+      return combinado.sort((a, b) => {
+        const di = ORDEN_DIAS.indexOf(a.dia) - ORDEN_DIAS.indexOf(b.dia)
+        return di !== 0 ? di : a.inicio.localeCompare(b.inicio)
+      })
+    })
+    setHorarioDia('')
+  }
+
+  function quitarHorario(idx: number) {
+    setHorarios((prev) => prev.filter((_, i) => i !== idx))
+  }
 
   function agregarZona() {
     if (!estado || !municipio) return
@@ -130,7 +180,17 @@ function OnboardingForm() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!form.nombre || zonas.length === 0 || !form.descripcion || form.servicios.length === 0) return
+    const faltantes: string[] = []
+    if (!form.nombre) faltantes.push('nombre completo')
+    if (!form.email) faltantes.push('correo electrónico')
+    if (zonas.length === 0) faltantes.push('zona de cobertura')
+    if (!form.descripcion) faltantes.push('descripción')
+    if (form.servicios.length === 0) faltantes.push('al menos un servicio')
+    if (faltantes.length > 0) {
+      setErrorForm(`Faltan campos: ${faltantes.join(', ')}`)
+      return
+    }
+    setErrorForm(null)
     setLoading(true)
 
     try {
@@ -151,14 +211,14 @@ function OnboardingForm() {
       const res = await fetch('/api/onboarding/registrar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nombre: form.nombre, descripcion: form.descripcion, servicios: form.servicios, habilidades: form.habilidades, youtube_url: form.youtube_url, zona, foto_url, token }),
+        body: JSON.stringify({ nombre: form.nombre, email: form.email, descripcion: form.descripcion, servicios: form.servicios, habilidades: form.habilidades, youtube_url: form.youtube_url, zona, foto_url, token, horarios_disponibles: horarios }),
       })
 
       if (res.ok) {
         setStep('telegram')
       } else {
         const d = await res.json()
-        alert(d.error ?? 'Error al registrar')
+        setErrorForm(d.error ?? 'Error al registrar')
       }
     } finally {
       setLoading(false)
@@ -185,9 +245,17 @@ function OnboardingForm() {
       <div style={s.center}>
         <div style={{ ...s.card, maxWidth: '520px' }}>
           <h2 style={s.h2}>¡Ya eres parte de Compaz!</h2>
-          <p style={{ color: '#6B5C90', marginTop: '8px', marginBottom: '24px', lineHeight: '1.7' }}>
-            Tu perfil fue creado exitosamente. El último paso es conectarte al bot de Telegram — es por ahí que recibirás los avisos cuando tengas una visita programada.
+          <p style={{ color: '#6B5C90', marginTop: '8px', marginBottom: '16px', lineHeight: '1.7' }}>
+            Tu perfil fue creado exitosamente. Falta un paso importante:
           </p>
+          <div style={{ background: '#FFF3E8', border: '2px solid #FF6B2B', borderRadius: '14px', padding: '16px 20px', marginBottom: '24px' }}>
+            <p style={{ color: '#C84B0E', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif', fontSize: '15px', margin: '0 0 6px' }}>
+              ⚠️ Tu perfil no aparece para los clientes todavía
+            </p>
+            <p style={{ color: '#7A3A0A', fontSize: '14px', lineHeight: '1.6', margin: 0 }}>
+              Para que los clientes puedan encontrarte y contactarte, debes conectar Telegram. Sin eso, tu perfil permanece invisible en el sistema.
+            </p>
+          </div>
 
           <div style={{ ...s.infoBox, marginBottom: '16px' }}>
             <p style={{ fontWeight: 700, color: '#1A0A3C', marginBottom: '16px', fontFamily: 'Bricolage Grotesque, sans-serif', fontSize: '15px' }}>Paso 1 — Descarga Telegram (si aún no lo tienes)</p>
@@ -251,6 +319,13 @@ function OnboardingForm() {
           <div>
             <label style={s.label}>Nombre completo *</label>
             <input required value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} style={s.input} placeholder="Tu nombre y apellido" />
+          </div>
+
+          {/* Email */}
+          <div>
+            <label style={s.label}>Correo electrónico *</label>
+            <input required type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} style={s.input} placeholder="tu@correo.com" />
+            <p style={s.hint}>Lo usaremos para enviarte el código de verificación al activar tu cuenta en Telegram.</p>
           </div>
 
           {/* Zonas — múltiples */}
@@ -414,6 +489,65 @@ function OnboardingForm() {
             />
           </div>
 
+          {/* Disponibilidad horaria */}
+          <div>
+            <label style={s.label}>¿Cuándo puedes recibir llamadas de presentación? *</label>
+            <p style={s.hint}>Los clientes elegirán una hora dentro de tu disponibilidad para coordinar una llamada de 20 minutos. Horario Venezuela (hora local). Bloques de 20 min, hasta las 8:00 PM.</p>
+
+            {horarios.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
+                {horarios.map((h, idx) => (
+                  <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '10px', background: '#EDE8FF', borderRadius: '10px', padding: '10px 14px' }}>
+                    <span style={{ flex: 1, color: '#2D1464', fontWeight: 700, textTransform: 'capitalize', fontSize: '14px' }}>{h.dia}</span>
+                    <span style={{ color: '#4A3B6B', fontSize: '13px' }}>{h.inicio} – {h.fin}</span>
+                    <button type="button" onClick={() => quitarHorario(idx)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6B5C90', fontSize: '18px', lineHeight: 1, padding: 0 }}>×</button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: '8px', alignItems: 'end' }}>
+              <div>
+                <label style={{ ...s.label, fontSize: '12px', marginBottom: '4px' }}>Día</label>
+                <select value={horarioDia} onChange={(e) => setHorarioDia(e.target.value)} style={s.input}>
+                  <option value="">Seleccionar…</option>
+                  {DIAS_SEMANA.map((d) => (
+                    <option key={d} value={d} style={{ textTransform: 'capitalize' }}>{d}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label style={{ ...s.label, fontSize: '12px', marginBottom: '4px' }}>Desde</label>
+                <select value={horarioInicio} onChange={(e) => setHorarioInicio(e.target.value)} style={s.input}>
+                  {BLOQUES_HORA.slice(0, -1).map((h) => <option key={h} value={h}>{h}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={{ ...s.label, fontSize: '12px', marginBottom: '4px' }}>Hasta</label>
+                <select value={horarioFin} onChange={(e) => setHorarioFin(e.target.value)} style={s.input}>
+                  {BLOQUES_HORA.filter((h) => h > horarioInicio).map((h) => <option key={h} value={h}>{h}</option>)}
+                </select>
+              </div>
+              <button
+                type="button"
+                onClick={agregarHorario}
+                disabled={!horarioDia || horarioInicio >= horarioFin}
+                style={{ background: '#FF6B2B', color: 'white', border: 'none', borderRadius: '12px', padding: '12px 14px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '14px', cursor: horarioDia ? 'pointer' : 'not-allowed', opacity: horarioDia ? 1 : 0.4, whiteSpace: 'nowrap' }}
+              >
+                + Agregar
+              </button>
+            </div>
+            {horarioInicio < horarioFin && (
+              <button
+                type="button"
+                onClick={aplicarATodos}
+                style={{ marginTop: '8px', background: 'none', border: '2px solid rgba(45,20,100,0.25)', borderRadius: '10px', padding: '8px 14px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 600, fontSize: '13px', color: '#4A3B6B', cursor: 'pointer' }}
+              >
+                Aplicar este horario a todos los días
+              </button>
+            )}
+          </div>
+
           {/* YouTube */}
           <div style={{ background: '#F5F0FF', border: '2px solid rgba(45,20,100,0.12)', borderRadius: '16px', padding: '20px' }}>
             <label style={{ ...s.label, marginBottom: '4px' }}>Video de presentación en YouTube <span style={{ fontWeight: 400, color: '#6B5C90' }}>(opcional pero muy recomendado)</span></label>
@@ -473,6 +607,11 @@ function OnboardingForm() {
                 {zonas.length === 0 && <li>Agregar al menos una <strong>zona de trabajo</strong></li>}
                 {form.servicios.length === 0 && <li>Seleccionar al menos un <strong>servicio</strong></li>}
               </ul>
+            </div>
+          )}
+          {errorForm && (
+            <div style={{ background: '#FEF2F2', border: '2px solid #FCA5A5', borderRadius: '12px', padding: '12px 16px', color: '#B91C1C', fontSize: '14px', fontWeight: 600, fontFamily: 'Inter, sans-serif' }}>
+              ⚠️ {errorForm}
             </div>
           )}
           <button

@@ -77,9 +77,15 @@ export default function LoginPage() {
                 Entrar
               </h2>
               <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
-                <button onClick={() => setModo('magiclink')} style={{ flex: 1, padding: '8px', borderRadius: '8px', border: '2px solid', borderColor: modo === 'magiclink' ? '#FF6B2B' : '#E8E0D4', background: modo === 'magiclink' ? '#FFF5F0' : 'white', color: '#2D1464', fontFamily: 'Inter, sans-serif', fontSize: '13px', cursor: 'pointer' }}>Link mágico</button>
+                <button onClick={() => setModo('magiclink')} style={{ flex: 1, padding: '8px', borderRadius: '8px', border: '2px solid', borderColor: modo === 'magiclink' ? '#FF6B2B' : '#E8E0D4', background: modo === 'magiclink' ? '#FFF5F0' : 'white', color: '#2D1464', fontFamily: 'Inter, sans-serif', fontSize: '13px', cursor: 'pointer' }}>Sin contraseña</button>
                 <button onClick={() => setModo('password')} style={{ flex: 1, padding: '8px', borderRadius: '8px', border: '2px solid', borderColor: modo === 'password' ? '#FF6B2B' : '#E8E0D4', background: modo === 'password' ? '#FFF5F0' : 'white', color: '#2D1464', fontFamily: 'Inter, sans-serif', fontSize: '13px', cursor: 'pointer' }}>Contraseña</button>
               </div>
+
+              {modo === 'magiclink' && (
+                <p style={{ background: '#F5F0FF', border: '2px solid rgba(45,20,100,0.12)', borderRadius: '12px', padding: '12px 16px', fontSize: '14px', color: '#4A3B6B', lineHeight: '1.6', marginBottom: '20px' }}>
+                  Escribe tu correo y te enviaremos un enlace. Solo haz clic en ese enlace desde tu correo y entrarás directamente, sin necesidad de recordar ninguna contraseña.
+                </p>
+              )}
 
               <form onSubmit={handleSubmit}>
                 <label style={{ display: 'block', color: '#2D1464', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>

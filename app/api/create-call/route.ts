@@ -1,18 +1,15 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { createServerSupabase, createAdminSupabase } from '@/lib/supabase-server'
 import { getOrCreateDailyRoom } from '@/lib/daily'
 import { sendTelegramMessage } from '@/lib/telegram'
+import { ok, err, unauthorized, serverError } from '@/lib/api'
 import type { Visita, Compita, Usuario } from '@/types'
 
 export async function POST(req: NextRequest) {
   const supabase = await createServerSupabase()
   const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return unauthorized()
 
-  if (!user) {
-    return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-  }
-
-  // Verificar que el usuario tiene visita en curso
   const admin = createAdminSupabase()
   const { data: visita } = await admin
     .from('visitas')
@@ -21,40 +18,26 @@ export async function POST(req: NextRequest) {
     .eq('estado', 'en_curso')
     .single() as { data: (Visita & { compita: Compita; usuario: Usuario }) | null }
 
-  if (!visita) {
-    return NextResponse.json({ error: 'No hay visita activa' }, { status: 400 })
-  }
+  if (!visita) return err('No hay visita activa')
 
   const body = await req.json().catch(() => ({})) as { solo_audio?: boolean }
   const soloAudio = body.solo_audio ?? false
 
-  // Reusar sala existente si ya hay una; crear nueva solo si no hay (evita creación ilimitada)
-  const roomUrlExistente = visita.room_url ?? null
   let room
   try {
-    room = await getOrCreateDailyRoom(visita.id, roomUrlExistente, soloAudio)
+    room = await getOrCreateDailyRoom(visita.id, visita.room_url ?? null, soloAudio)
   } catch (e) {
-    console.error('Daily.co error:', e)
-    return NextResponse.json({ error: 'Error creando sala de llamada' }, { status: 500 })
+    return serverError(e)
   }
 
-  // Guardar room_url en la visita para que el admin pueda unirse
   await admin.from('visitas').update({ room_url: room.url }).eq('id', visita.id)
 
-  // Enviar link al Compita por Telegram
   if (visita.compita.telegram_chat_id) {
-    const tipoLlamada = soloAudio ? '📞 El cliente quiere hacer una llamada de voz' : '📹 El cliente quiere hacer una videollamada'
-    try {
-      await sendTelegramMessage(
-        visita.compita.telegram_chat_id,
-        `${tipoLlamada}.\n\nEntra aquí: ${room.url}`
-      )
-    } catch (e) {
-      console.error('Error enviando link por Telegram:', e)
-    }
+    const tipo = soloAudio ? '📞 El cliente quiere hacer una llamada de voz' : '📹 El cliente quiere hacer una videollamada'
+    try { await sendTelegramMessage(visita.compita.telegram_chat_id, `${tipo}.\n\nEntra aquí: ${room.url}`) }
+    catch (e) { console.error('Error Telegram create-call:', e) }
   }
 
-  // Notificar al admin por Telegram
   const adminChatId = process.env.TELEGRAM_ADMIN_CHAT_ID
   if (adminChatId) {
     const tipo = soloAudio ? '📞 llamada de voz' : '📹 videollamada'
@@ -62,12 +45,10 @@ export async function POST(req: NextRequest) {
     try {
       await sendTelegramMessage(
         adminChatId,
-        `${soloAudio ? '📞' : '📹'} <b>${clienteNombre}</b> inició una ${tipo} con <b>${visita.compita.nombre}</b>.\n\n<a href="${room.url}">Unirse a la llamada →</a>`,
+        `${soloAudio ? '📞' : '📹'} <b>${clienteNombre}</b> inició una ${tipo} con <b>${visita.compita.nombre}</b>.\n\n<a href="${room.url}">Unirse →</a>`,
       )
-    } catch (e) {
-      console.error('Error notificando admin llamada:', e)
-    }
+    } catch (e) { console.error('Error Telegram admin llamada:', e) }
   }
 
-  return NextResponse.json({ url: room.url, room_name: room.name })
+  return ok({ url: room.url, room_name: room.name })
 }

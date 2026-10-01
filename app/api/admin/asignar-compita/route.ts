@@ -1,22 +1,21 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { createServerSupabase, createAdminSupabase } from '@/lib/supabase-server'
+import { NextRequest } from 'next/server'
+import { createServerSupabase } from '@/lib/supabase-server'
 import { isAdminEmail } from '@/lib/auth'
+import { actualizarUsuario } from '@/lib/usuarios'
+import { ok, err, unauthorized, serverError } from '@/lib/api'
 
 export async function POST(req: NextRequest) {
   const supabase = await createServerSupabase()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user || !isAdminEmail(user.email ?? '')) {
-    return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-  }
+  if (!user || !isAdminEmail(user.email ?? '')) return unauthorized()
 
   const { usuario_id, compita_id } = await req.json() as { usuario_id: string; compita_id: string }
+  if (!usuario_id) return err('Falta usuario_id')
 
-  const admin = createAdminSupabase()
-  const { error } = await admin
-    .from('usuarios')
-    .update({ compita_id: compita_id || null })
-    .eq('id', usuario_id)
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ ok: true })
+  try {
+    await actualizarUsuario(usuario_id, { compita_id: compita_id || null })
+    return ok({ usuario_id, compita_id: compita_id || null })
+  } catch (e) {
+    return serverError(e)
+  }
 }

@@ -55,6 +55,43 @@ export async function createDailyRoom(visitId: string): Promise<DailyRoom> {
   return getOrCreateDailyRoom(visitId)
 }
 
+/**
+ * Sala de entrevista de presentación: 3 participantes, expira a los 23 min del slot confirmado.
+ * El campo `nbf` (not before) permite entrar 5 min antes del slot.
+ */
+export async function createEntrevistaRoom(solicitudId: string, slotConfirmado: Date): Promise<DailyRoom> {
+  const name = `ent-${solicitudId.slice(0, 8)}-${Date.now()}`
+  const nbf = Math.floor(slotConfirmado.getTime() / 1000) - 5 * 60   // 5 min antes
+  const exp = Math.floor(slotConfirmado.getTime() / 1000) + 23 * 60  // 23 min después
+
+  const res = await fetch(`${DAILY_API}/rooms`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${process.env.DAILY_API_KEY}`,
+    },
+    body: JSON.stringify({
+      name,
+      properties: {
+        enable_chat: false,
+        enable_screenshare: false,
+        nbf,
+        exp,
+        max_participants: 3, // cliente + compita + admin supervisor
+        start_video_off: false,
+        eject_at_room_exp: true, // expulsa automáticamente al llegar a los 23 min
+      },
+    }),
+  })
+
+  if (!res.ok) {
+    const errText = await res.text()
+    throw new Error(`Daily.co createEntrevistaRoom error: ${errText}`)
+  }
+
+  return res.json() as Promise<DailyRoom>
+}
+
 export async function deleteDailyRoom(roomName: string): Promise<void> {
   const res = await fetch(`${DAILY_API}/rooms/${roomName}`, {
     method: 'DELETE',

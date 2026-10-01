@@ -26,7 +26,7 @@ export default async function AdminPage() {
       .order('created_at', { ascending: false }),
     supabase
       .from('compitas')
-      .select('id, nombre, zona, estado, verificado, foto_url, descripcion, servicios, youtube_url, visitas_realizadas, fecha_ingreso, codigo, created_at')
+      .select('id, nombre, zona, estado, verificado, telegram_chat_id, foto_url, descripcion, servicios, youtube_url, visitas_realizadas, fecha_ingreso, codigo, created_at')
       .order('nombre', { ascending: true }),
     supabase
       .from('visitas')

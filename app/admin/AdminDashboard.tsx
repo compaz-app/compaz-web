@@ -16,7 +16,7 @@ interface Props {
   visitasPasadas: Visita[]
 }
 
-type Tab = 'visitas' | 'clientes' | 'compitas' | 'desactivadas' | 'historial' | 'cliente' | 'accesos'
+type Tab = 'visitas' | 'clientes' | 'compitas' | 'desactivadas' | 'historial' | 'cliente' | 'accesos' | 'perfil'
 
 export default function AdminDashboard({ visitasActivas: inicial, usuarios, compitas: todasCompitas, visitasPasadas }: Props) {
   const router = useRouter()
@@ -39,10 +39,16 @@ export default function AdminDashboard({ visitasActivas: inicial, usuarios, comp
   const [generandoInvite, setGenerandoInvite] = useState(false)
   const [compitas, setCompitas] = useState(todasCompitas)
   const [busqueda, setBusqueda] = useState('')
+  const [filtroDesactivadas, setFiltroDesactivadas] = useState<'todas' | 'inactivo' | 'bloqueado'>('todas')
   const [clientePreviewId, setClientePreviewId] = useState<string | null>(null)
+  const [compitaPerfilId, setCompitaPerfilId] = useState<string | null>(null)
 
-  const compitasActivas = compitas.filter((c) => c.estado === 'activo')
+  const compitasPendientes = compitas.filter((c) => c.estado === 'activo' && !c.verificado)
+  const compitasEnMapa = compitas.filter((c) => c.estado === 'activo' && c.verificado && !!c.telegram_chat_id)
+  const compitasSinTelegram = compitas.filter((c) => c.estado === 'activo' && c.verificado && !c.telegram_chat_id)
+  const compitasVerificadas = compitas.filter((c) => c.estado === 'activo' && c.verificado)
   const compitasInactivas = compitas.filter((c) => c.estado === 'inactivo')
+  const compitasBloqueadas = compitas.filter((c) => c.estado === 'bloqueado')
 
   function filtrar(lista: Compita[]) {
     const q = busqueda.toLowerCase().trim()
@@ -131,10 +137,50 @@ export default function AdminDashboard({ visitasActivas: inicial, usuarios, comp
     try {
       const res = await fetch('/api/admin/generar-invite', { method: 'POST' })
       const d = await res.json()
-      if (d.url) setInviteUrl(d.url)
+      if (d.data?.url) setInviteUrl(d.data.url)
       else alert(d.error ?? 'Error generando invite')
     } finally {
       setGenerandoInvite(false)
+    }
+  }
+
+  async function toggleBloqueado(compitaId: string, bloqueado: boolean) {
+    const res = await fetch('/api/admin/bloquear-compita', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ compita_id: compitaId, bloquear: !bloqueado }),
+    })
+    const d = await res.json()
+    if (res.ok && d.ok) {
+      setCompitas((prev) => prev.map((c) =>
+        c.id === compitaId ? { ...c, estado: bloqueado ? 'inactivo' : 'bloqueado' as const, verificado: false } : c
+      ))
+    } else {
+      alert(d.error ?? `Error al ${bloqueado ? 'desbloquear' : 'bloquear'}: status ${res.status}`)
+    }
+  }
+
+  const [usuariosState, setUsuariosState] = useState(usuarios)
+
+  async function eliminarCliente(usuarioId: string) {
+    const res = await fetch('/api/admin/eliminar-cliente', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ usuario_id: usuarioId }),
+    })
+    if (res.ok) {
+      setUsuariosState((prev) => prev.filter((u) => u.id !== usuarioId))
+    }
+  }
+
+  async function eliminarCompita(compitaId: string) {
+    const res = await fetch('/api/admin/eliminar-compita', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ compita_id: compitaId }),
+    })
+    if (res.ok) {
+      setCompitas((prev) => prev.filter((c) => c.id !== compitaId))
     }
   }
 
@@ -179,13 +225,23 @@ export default function AdminDashboard({ visitasActivas: inicial, usuarios, comp
       <div style={{ background: 'white', borderBottom: '2px solid #E8E0D4', display: 'flex', padding: '0 24px' }}>
         <button style={tabStyle('visitas')} onClick={() => setTab('visitas')}>Visitas activas</button>
         <button style={tabStyle('clientes')} onClick={() => setTab('clientes')}>Clientes ({usuarios.length})</button>
-        <button style={tabStyle('compitas')} onClick={() => setTab('compitas')}>Compitas ({compitasActivas.length})</button>
-        <button style={tabStyle('desactivadas')} onClick={() => setTab('desactivadas')}>Desactivadas ({compitasInactivas.length})</button>
+        <button style={tabStyle('compitas')} onClick={() => setTab('compitas')}>
+          Compitas {compitasPendientes.length > 0 && <span style={{ background: '#FF6B2B', color: 'white', borderRadius: '9999px', padding: '1px 7px', fontSize: '11px', fontWeight: 800, marginLeft: '4px' }}>{compitasPendientes.length}</span>}
+        </button>
+        <button style={tabStyle('desactivadas')} onClick={() => setTab('desactivadas')}>
+          Desactivadas ({compitasInactivas.length + compitasBloqueadas.length})
+          {compitasBloqueadas.length > 0 && <span style={{ background: '#dc2626', color: 'white', borderRadius: '9999px', padding: '1px 7px', fontSize: '11px', fontWeight: 800, marginLeft: '4px' }}>{compitasBloqueadas.length}</span>}
+        </button>
         <button style={tabStyle('historial')} onClick={() => setTab('historial')}>Historial</button>
         <button style={tabStyle('accesos')} onClick={() => setTab('accesos')}>Accesos rápidos</button>
         {clientePreviewId && (
           <button style={{ ...tabStyle('cliente'), borderBottom: tab === 'cliente' ? '3px solid #22c55e' : '3px solid transparent', color: tab === 'cliente' ? '#16a34a' : '#6B5C90' }} onClick={() => setTab('cliente')}>
             👁 Ver cliente
+          </button>
+        )}
+        {compitaPerfilId && (
+          <button style={{ ...tabStyle('perfil'), borderBottom: tab === 'perfil' ? '3px solid #8B5CF6' : '3px solid transparent', color: tab === 'perfil' ? '#7C3AED' : '#6B5C90' }} onClick={() => setTab('perfil')}>
+            ✏️ Perfil compita
           </button>
         )}
       </div>
@@ -272,40 +328,12 @@ export default function AdminDashboard({ visitasActivas: inicial, usuarios, comp
 
         {/* ── Clientes ─────────────────────────────────────────────────────── */}
         {tab === 'clientes' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <InvitarCliente />
-            {usuarios.map((u) => (
-              <div key={u.id} style={{ background: 'white', border: '2px solid #E8E0D4', borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
-                <div>
-                  <div style={{ color: '#1A0A3C', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700 }}>{u.nombre}</div>
-                  <div style={{ color: '#6B5C90', fontSize: '13px' }}>{u.email} · {u.zona ?? 'Sin zona'} · {u.plan ?? 'Sin plan'}</div>
-                  <div style={{ color: '#4A3B6B', fontSize: '13px', marginTop: '4px' }}>
-                    Compita: {u.compita ? `${u.compita.nombre} (${u.compita.zona})` : <em>Sin asignar</em>}
-                  </div>
-                </div>
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-                  <a
-                    href={`/dashboard?preview=${u.id}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    style={{ background: 'white', color: '#16a34a', border: '2px solid #22c55e', borderRadius: '9999px', padding: '8px 14px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap', textDecoration: 'none', display: 'inline-block' }}
-                  >
-                    👁 Ver como cliente
-                  </a>
-                  <select
-                    defaultValue={u.compita_id ?? ''}
-                    onChange={(e) => asignarCompita(u.id, e.target.value)}
-                    style={{ border: '2px solid rgba(45,20,100,0.2)', borderRadius: '12px', padding: '8px 12px', fontFamily: 'Inter, sans-serif', color: '#1A0A3C', background: 'white', cursor: 'pointer' }}
-                  >
-                    <option value="">Sin Compita</option>
-                    {compitas.map((c) => (
-                      <option key={c.id} value={c.id}>{c.nombre} — {c.zona}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            ))}
-          </div>
+          <ClientesTab
+            usuarios={usuariosState}
+            compitas={compitas}
+            onAsignar={asignarCompita}
+            onEliminar={eliminarCliente}
+          />
         )}
 
         {/* ── Compitas activas ──────────────────────────────────────────────── */}
@@ -315,13 +343,16 @@ export default function AdminDashboard({ visitasActivas: inicial, usuarios, comp
             {/* Barra de herramientas */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
               {tab === 'compitas' && (
-                <button
-                  onClick={generarInvite}
-                  disabled={generandoInvite}
-                  style={{ background: '#2D1464', color: 'white', border: 'none', borderRadius: '9999px', padding: '10px 20px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '14px', cursor: generandoInvite ? 'not-allowed' : 'pointer', opacity: generandoInvite ? 0.6 : 1, whiteSpace: 'nowrap' }}
-                >
-                  {generandoInvite ? 'Generando…' : '+ Invitar Compita'}
-                </button>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  <button
+                    onClick={generarInvite}
+                    disabled={generandoInvite}
+                    style={{ background: '#2D1464', color: 'white', border: 'none', borderRadius: '9999px', padding: '10px 20px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '14px', cursor: generandoInvite ? 'not-allowed' : 'pointer', opacity: generandoInvite ? 0.6 : 1, whiteSpace: 'nowrap' }}
+                  >
+                    {generandoInvite ? 'Generando…' : '+ Invitar Compita'}
+                  </button>
+                  <RegistrarCompitaDirecto onRegistrada={(c) => setCompitas((prev) => [c, ...prev])} />
+                </div>
               )}
               <input
                 value={busqueda}
@@ -344,40 +375,112 @@ export default function AdminDashboard({ visitasActivas: inicial, usuarios, comp
               </div>
             )}
 
-            {/* Lista */}
-            {filtrar(tab === 'compitas' ? compitasActivas : compitasInactivas).map((c) => (
-              <div key={c.id} style={{ background: 'white', border: '2px solid #E8E0D4', borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                    <span style={{ color: '#1A0A3C', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700 }}>{c.nombre}</span>
-                    {c.codigo && <span style={{ fontSize: '11px', background: '#F5F0E8', color: '#4A3B6B', borderRadius: '6px', padding: '2px 8px', fontFamily: 'monospace' }}>{c.codigo}</span>}
+            {/* Lista compitas activas */}
+            {tab === 'compitas' && (() => {
+              const pendientes = filtrar(compitasPendientes)
+              const enMapa = filtrar(compitasEnMapa)
+              const sinTelegram = filtrar(compitasSinTelegram)
+              const totalActivas = enMapa.length + sinTelegram.length + pendientes.length
+              return (
+                <>
+                  {/* Sección pendientes — siempre visible */}
+                  <div style={{ marginBottom: '20px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                      <span style={{ background: pendientes.length > 0 ? '#FFF3E8' : '#F5F0E8', border: `2px solid ${pendientes.length > 0 ? '#FF6B2B' : '#D4C9E8'}`, color: pendientes.length > 0 ? '#C84B0E' : '#9B8AB8', borderRadius: '9999px', padding: '3px 12px', fontSize: '12px', fontWeight: 800, fontFamily: 'Bricolage Grotesque, sans-serif' }}>
+                        ⏳ Pendientes — {pendientes.length}
+                      </span>
+                      <span style={{ fontSize: '12px', color: '#9B8AB8' }}>No aparecen en el mapa ni en la lista de clientes</span>
+                    </div>
+                    {pendientes.length > 0 ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {pendientes.map((c) => (
+                          <CompitaCard key={c.id} c={c} onToggleVerificado={toggleVerificado} onToggleEstado={toggleEstado} onVerPerfil={(id) => { setCompitaPerfilId(id); setTab('perfil') }} onToggleBloqueado={toggleBloqueado} onEliminar={eliminarCompita} />
+                        ))}
+                      </div>
+                    ) : (
+                      <div style={{ border: '2px dashed #E8E0D4', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
+                        <p style={{ color: '#9B8AB8', fontSize: '13px', margin: 0 }}>Ningún compita pendiente de verificación</p>
+                      </div>
+                    )}
                   </div>
-                  <div style={{ color: '#6B5C90', fontSize: '13px', marginTop: '2px' }}>
-                    {c.zona} · {c.visitas_realizadas} visitas · Chat ID: {c.telegram_chat_id ?? 'sin registrar'}
-                  </div>
-                </div>
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                  <button
-                    onClick={() => toggleVerificado(c.id, c.verificado)}
-                    style={{ background: c.verificado ? '#2D1464' : 'white', color: c.verificado ? 'white' : '#2D1464', border: '2px solid #2D1464', borderRadius: '9999px', padding: '8px 16px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', cursor: 'pointer' }}
-                  >
-                    {c.verificado ? '✓ Verificada' : 'Verificar'}
-                  </button>
-                  <button
-                    onClick={() => toggleEstado(c.id, c.estado)}
-                    style={{ background: 'white', color: c.estado === 'activo' ? '#dc2626' : '#22c55e', border: `2px solid ${c.estado === 'activo' ? '#dc2626' : '#22c55e'}`, borderRadius: '9999px', padding: '8px 16px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', cursor: 'pointer' }}
-                  >
-                    {c.estado === 'activo' ? 'Desactivar' : 'Reactivar'}
-                  </button>
-                </div>
-              </div>
-            ))}
 
-            {filtrar(tab === 'compitas' ? compitasActivas : compitasInactivas).length === 0 && (
-              <div style={{ background: 'white', border: '2px solid #E8E0D4', borderRadius: '16px', padding: '40px', textAlign: 'center' }}>
-                <p style={{ color: '#6B5C90' }}>{busqueda ? 'No hay resultados para esa búsqueda.' : tab === 'desactivadas' ? 'No hay Compitas desactivadas.' : 'No hay Compitas activas.'}</p>
-              </div>
-            )}
+                  {/* Sección sin Telegram — siempre visible */}
+                  <div style={{ marginBottom: '20px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                      <span style={{ background: sinTelegram.length > 0 ? '#FFFBEB' : '#F5F0E8', border: `2px solid ${sinTelegram.length > 0 ? '#f59e0b' : '#D4C9E8'}`, color: sinTelegram.length > 0 ? '#B45309' : '#9B8AB8', borderRadius: '9999px', padding: '3px 12px', fontSize: '12px', fontWeight: 800, fontFamily: 'Bricolage Grotesque, sans-serif' }}>
+                        ⚠️ Verificadas — {sinTelegram.length}
+                      </span>
+                      <span style={{ fontSize: '12px', color: '#9B8AB8' }}>Verificadas pero aún no visibles para los clientes</span>
+                    </div>
+                    {sinTelegram.length > 0 ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {sinTelegram.map((c) => (
+                          <CompitaCard key={c.id} c={c} onToggleVerificado={toggleVerificado} onToggleEstado={toggleEstado} onVerPerfil={(id) => { setCompitaPerfilId(id); setTab('perfil') }} onToggleBloqueado={toggleBloqueado} onEliminar={eliminarCompita} />
+                        ))}
+                      </div>
+                    ) : (
+                      <div style={{ border: '2px dashed #E8E0D4', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
+                        <p style={{ color: '#9B8AB8', fontSize: '13px', margin: 0 }}>Todos los verificados tienen Telegram activo</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Sección en el mapa — siempre visible */}
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                      <span style={{ background: enMapa.length > 0 ? '#F0FDF4' : '#F5F0E8', border: `2px solid ${enMapa.length > 0 ? '#22c55e' : '#D4C9E8'}`, color: enMapa.length > 0 ? '#15803d' : '#9B8AB8', borderRadius: '9999px', padding: '3px 12px', fontSize: '12px', fontWeight: 800, fontFamily: 'Bricolage Grotesque, sans-serif' }}>
+                        ✓ En el mapa — {enMapa.length}
+                      </span>
+                      <span style={{ fontSize: '12px', color: '#9B8AB8' }}>Visibles para los clientes</span>
+                    </div>
+                    {enMapa.length > 0 ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {enMapa.map((c) => (
+                          <CompitaCard key={c.id} c={c} onToggleVerificado={toggleVerificado} onToggleEstado={toggleEstado} onVerPerfil={(id) => { setCompitaPerfilId(id); setTab('perfil') }} onToggleBloqueado={toggleBloqueado} onEliminar={eliminarCompita} />
+                        ))}
+                      </div>
+                    ) : (
+                      <div style={{ border: '2px dashed #E8E0D4', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
+                        <p style={{ color: '#9B8AB8', fontSize: '13px', margin: 0 }}>Ningún compita visible en el mapa aún</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {totalActivas === 0 && !busqueda && null}
+                </>
+              )
+            })()}
+
+            {/* Lista desactivadas */}
+            {tab === 'desactivadas' && (() => {
+              const pool = filtroDesactivadas === 'bloqueado' ? compitasBloqueadas
+                : filtroDesactivadas === 'inactivo' ? compitasInactivas
+                : [...compitasBloqueadas, ...compitasInactivas]
+              const lista = filtrar(pool)
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {/* Barra de búsqueda + filtro */}
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                    <input
+                      value={busqueda}
+                      onChange={(e) => setBusqueda(e.target.value)}
+                      placeholder="Buscar por nombre, código o zona…"
+                      style={{ flex: 1, minWidth: '200px', border: '2px solid rgba(45,20,100,0.2)', borderRadius: '12px', padding: '9px 14px', fontFamily: 'Inter, sans-serif', fontSize: '14px', color: '#1A0A3C', background: 'white', outline: 'none' }}
+                    />
+                    {(['todas', 'inactivo', 'bloqueado'] as const).map((f) => (
+                      <button key={f} onClick={() => setFiltroDesactivadas(f)}
+                        style={{ background: filtroDesactivadas === f ? (f === 'bloqueado' ? '#B91C1C' : '#2D1464') : 'white', color: filtroDesactivadas === f ? 'white' : '#4A3B6B', border: `2px solid ${filtroDesactivadas === f ? (f === 'bloqueado' ? '#B91C1C' : '#2D1464') : 'rgba(45,20,100,0.2)'}`, borderRadius: '9999px', padding: '8px 16px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                        {f === 'todas' ? `Todas (${compitasInactivas.length + compitasBloqueadas.length})` : f === 'bloqueado' ? `🚫 Bloqueadas (${compitasBloqueadas.length})` : `Desactivadas (${compitasInactivas.length})`}
+                      </button>
+                    ))}
+                  </div>
+                  {lista.length === 0
+                    ? <div style={{ background: 'white', border: '2px solid #E8E0D4', borderRadius: '16px', padding: '40px', textAlign: 'center' }}><p style={{ color: '#6B5C90' }}>No hay resultados.</p></div>
+                    : lista.map((c) => <CompitaCard key={c.id} c={c} onToggleVerificado={toggleVerificado} onToggleEstado={toggleEstado} onVerPerfil={(id) => { setCompitaPerfilId(id); setTab('perfil') }} onToggleBloqueado={toggleBloqueado} onEliminar={eliminarCompita} />)
+                  }
+                </div>
+              )
+            })()}
           </div>
         )}
 
@@ -400,7 +503,7 @@ export default function AdminDashboard({ visitasActivas: inicial, usuarios, comp
 
             <Section title="Flujos del Compita">
               <AccessLink href="/onboarding?preview=1" label="Formulario de registro" desc="El formulario que llena una Compita al inscribirse" external />
-              <AccessLink href="https://t.me/CompazVisitasBot" label="Bot de Telegram" desc="@CompazVisitasBot — lo que ve la Compita al vincularse" external />
+              <AccessLink href="https://t.me/CompazVisitasBot" label="Bot de Telegram" desc="@CompazVisitasBot — lo que ve el compita al vincularse" external />
             </Section>
 
             <Section title="Páginas públicas">
@@ -414,6 +517,16 @@ export default function AdminDashboard({ visitasActivas: inicial, usuarios, comp
         {/* ── Preview cliente ───────────────────────────────────────────────── */}
         {tab === 'cliente' && clientePreviewId && (
           <ClientePreview usuarioId={clientePreviewId} />
+        )}
+
+        {/* ── Perfil compita (edición admin) ────────────────────────────────── */}
+        {tab === 'perfil' && compitaPerfilId && (
+          <CompitaPerfilAdmin
+            compita={compitas.find((c) => c.id === compitaPerfilId)!}
+            onGuardado={(actualizada) => {
+              setCompitas((prev) => prev.map((c) => c.id === actualizada.id ? actualizada : c))
+            }}
+          />
         )}
 
         {/* ── Historial ─────────────────────────────────────────────────────── */}
@@ -447,6 +560,132 @@ type ClientePreviewData = {
   visitaActiva: { id: string; inicio: string | null; compita: { nombre: string } } | null
   mensajes: { id: string; created_at: string; origen: string; tipo: string; contenido: string | null }[]
   visitasPasadas: { id: string; created_at: string; fin: string | null; inicio: string | null; compita: { nombre: string } }[]
+}
+
+function ClientesTab({ usuarios, compitas, onAsignar, onEliminar }: {
+  usuarios: UsuarioConCompita[]
+  compitas: Compita[]
+  onAsignar: (usuarioId: string, compitaId: string) => void
+  onEliminar: (usuarioId: string) => void
+}) {
+  const [busqueda, setBusqueda] = useState('')
+  const [filtro, setFiltro] = useState<'todos' | 'activos' | 'bloqueados'>('todos')
+
+  const activos = usuarios.filter((u) => u.plan !== 'bloqueado')
+  const bloqueados = usuarios.filter((u) => u.plan === 'bloqueado')
+
+  const base = filtro === 'bloqueados' ? bloqueados : filtro === 'activos' ? activos : usuarios
+  const lista = busqueda.trim()
+    ? base.filter((u) =>
+        u.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
+        u.email.toLowerCase().includes(busqueda.toLowerCase()) ||
+        (u.zona ?? '').toLowerCase().includes(busqueda.toLowerCase())
+      )
+    : base
+
+  const btnFiltro = (f: typeof filtro, label: string, count: number) => (
+    <button
+      onClick={() => setFiltro(f)}
+      style={{ background: filtro === f ? '#2D1464' : 'white', color: filtro === f ? 'white' : '#4A3B6B', border: '2px solid', borderColor: filtro === f ? '#2D1464' : '#D1C8E0', borderRadius: '9999px', padding: '7px 16px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap' }}
+    >
+      {label} ({count})
+    </button>
+  )
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      <InvitarCliente />
+
+      {/* Barra de búsqueda + filtros */}
+      <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+        <div style={{ flex: 1, minWidth: '200px', position: 'relative' }}>
+          <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9B8AB8', fontSize: '16px', pointerEvents: 'none' }}>🔍</span>
+          <input
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            placeholder="Buscar por nombre, correo o zona…"
+            style={{ width: '100%', boxSizing: 'border-box', border: '2px solid rgba(45,20,100,0.2)', borderRadius: '12px', padding: '9px 14px 9px 36px', fontFamily: 'Inter, sans-serif', fontSize: '14px', color: '#1A0A3C', background: 'white', outline: 'none' }}
+          />
+        </div>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          {btnFiltro('todos', 'Todos', usuarios.length)}
+          {btnFiltro('activos', 'Activos', activos.length)}
+          {btnFiltro('bloqueados', '🚫 Bloqueados', bloqueados.length)}
+        </div>
+      </div>
+
+      {lista.length === 0 ? (
+        <div style={{ textAlign: 'center', color: '#9B8AB8', padding: '32px', fontFamily: 'Inter, sans-serif' }}>
+          {busqueda ? 'Sin resultados para esa búsqueda.' : 'Ningún cliente en esta categoría.'}
+        </div>
+      ) : (
+        lista.map((u) => (
+          <ClienteCard key={u.id} u={u} compitas={compitas} onAsignar={onAsignar} onEliminar={onEliminar} />
+        ))
+      )}
+    </div>
+  )
+}
+
+function ClienteCard({ u, compitas, onAsignar, onEliminar }: {
+  u: UsuarioConCompita
+  compitas: Compita[]
+  onAsignar: (usuarioId: string, compitaId: string) => void
+  onEliminar: (usuarioId: string) => void
+}) {
+  const [confirmEliminar, setConfirmEliminar] = useState(false)
+  const [bloqueado, setBloqueado] = useState((u as unknown as { plan: string | null }).plan === 'bloqueado')
+
+  async function toggleBloqueado() {
+    const res = await fetch('/api/admin/bloquear-cliente', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ usuario_id: u.id, bloquear: !bloqueado }),
+    })
+    if (res.ok) setBloqueado((b) => !b)
+  }
+
+  const borderColor = bloqueado ? '#dc2626' : '#E8E0D4'
+
+  return (
+    <div style={{ background: 'white', border: `2px solid ${borderColor}`, borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ color: '#1A0A3C', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700 }}>{u.nombre}</span>
+          {bloqueado && <span style={{ background: '#FEE2E2', color: '#B91C1C', border: '1px solid #FCA5A5', borderRadius: '9999px', padding: '2px 8px', fontSize: '11px', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif' }}>🚫 Bloqueado</span>}
+        </div>
+        <div style={{ color: '#6B5C90', fontSize: '13px' }}>{u.email} · {u.zona ?? 'Sin zona'} · {u.plan ?? 'Sin plan'}</div>
+        <div style={{ color: '#4A3B6B', fontSize: '13px', marginTop: '4px' }}>
+          Compita: {u.compita ? `${u.compita.nombre} (${u.compita.zona})` : <em>Sin asignar</em>}
+        </div>
+      </div>
+      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+        <a href={`/dashboard?preview=${u.id}`} target="_blank" rel="noreferrer"
+          style={{ background: 'white', color: '#16a34a', border: '2px solid #22c55e', borderRadius: '9999px', padding: '8px 14px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+          👁 Ver
+        </a>
+        <select defaultValue={u.compita_id ?? ''} onChange={(e) => onAsignar(u.id, e.target.value)}
+          style={{ border: '2px solid rgba(45,20,100,0.2)', borderRadius: '12px', padding: '8px 12px', fontFamily: 'Inter, sans-serif', color: '#1A0A3C', background: 'white', cursor: 'pointer' }}>
+          <option value="">Sin Compita</option>
+          {compitas.map((c) => <option key={c.id} value={c.id}>{c.nombre} — {c.zona}</option>)}
+        </select>
+        <button onClick={toggleBloqueado}
+          style={{ background: bloqueado ? '#16a34a' : '#FEF3C7', color: bloqueado ? 'white' : '#92400E', border: `2px solid ${bloqueado ? '#22c55e' : '#FCD34D'}`, borderRadius: '9999px', padding: '8px 14px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+          {bloqueado ? '✓ Desbloquear' : '🚫 Bloquear'}
+        </button>
+        {confirmEliminar ? (
+          <>
+            <button onClick={() => onEliminar(u.id)} style={{ background: '#B91C1C', color: 'white', border: 'none', borderRadius: '9999px', padding: '8px 14px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap' }}>Sí, eliminar</button>
+            <button onClick={() => setConfirmEliminar(false)} style={{ background: 'white', color: '#6B5C90', border: '2px solid #D1C8E0', borderRadius: '9999px', padding: '8px 12px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', cursor: 'pointer' }}>Cancelar</button>
+          </>
+        ) : (
+          <button onClick={() => setConfirmEliminar(true)} style={{ background: 'white', color: '#B91C1C', border: '2px solid #FCA5A5', borderRadius: '9999px', padding: '8px 14px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+            🗑 Eliminar
+          </button>
+        )}
+      </div>
+    </div>
+  )
 }
 
 function ClientePreview({ usuarioId }: { usuarioId: string }) {
@@ -508,7 +747,7 @@ function ClientePreview({ usuarioId }: { usuarioId: string }) {
           <div style={{ background: 'white', border: '2px solid #FF6B2B', borderRadius: '16px', padding: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
             <div>
               <h3 style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '18px', color: '#1A0A3C', margin: '0 0 6px' }}>¿Aún no tienes Compita?</h3>
-              <p style={{ color: '#6B5C90', fontSize: '14px', margin: 0 }}>Explora los perfiles disponibles y elige la que mejor se adapte a tu familiar.</p>
+              <p style={{ color: '#6B5C90', fontSize: '14px', margin: 0 }}>Explora los perfiles disponibles y elige el que mejor se adapte a tu familiar.</p>
             </div>
           </div>
         )}
@@ -545,7 +784,7 @@ function ClientePreview({ usuarioId }: { usuarioId: string }) {
           <div style={{ background: 'white', border: '2px solid #E8E0D4', borderRadius: '16px', padding: '40px', textAlign: 'center' }}>
             <p style={{ color: '#6B5C90', fontSize: '16px' }}>No hay visita activa en este momento.</p>
             <p style={{ color: '#4A3B6B', fontSize: '14px', marginTop: '8px' }}>
-              Cuando {compita?.nombre ?? 'la Compita'} inicie una visita, aparecerá aquí en tiempo real.
+              Cuando {compita?.nombre ?? 'el compita'} inicie una visita, aparecerá aquí en tiempo real.
             </p>
           </div>
         )}
@@ -569,6 +808,100 @@ function ClientePreview({ usuarioId }: { usuarioId: string }) {
               })}
             </div>
           </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function CompitaCard({ c, onToggleVerificado, onToggleEstado, onVerPerfil, onToggleBloqueado, onEliminar }: {
+  c: Compita
+  onToggleVerificado: (id: string, actual: boolean) => void
+  onToggleEstado: (id: string, estado: string) => void
+  onVerPerfil: (id: string) => void
+  onToggleBloqueado: (id: string, bloqueado: boolean) => void
+  onEliminar: (id: string) => void
+}) {
+  const [confirmEliminar, setConfirmEliminar] = useState(false)
+
+  const isPendiente = c.estado === 'activo' && !c.verificado
+  const isVerificada = c.estado === 'activo' && c.verificado && !!c.telegram_chat_id
+  const isVerificadaSinTelegram = c.estado === 'activo' && c.verificado && !c.telegram_chat_id
+  const isDesactivada = c.estado === 'inactivo'
+  const isBloqueada = c.estado === 'bloqueado'
+
+  const isVerificadaAny = isVerificada || isVerificadaSinTelegram
+  const borderColor = isBloqueada ? '#dc2626' : isPendiente ? '#FF6B2B' : isVerificadaAny ? '#22c55e' : '#E8E0D4'
+  const badgeBg = isBloqueada ? '#FEF2F2' : isPendiente ? '#FFF3E8' : isVerificadaAny ? '#F0FDF4' : '#F5F0E8'
+  const badgeColor = isBloqueada ? '#B91C1C' : isPendiente ? '#C84B0E' : isVerificadaAny ? '#15803d' : '#6B5C90'
+  const badgeText = isBloqueada ? '🚫 Bloqueada' : isPendiente ? '⏳ Pendiente' : (isVerificada || isVerificadaSinTelegram) ? '✓ Verificada' : '✗ Desactivada'
+
+  const cardBg = isBloqueada ? '#FEF2F2' : 'white'
+
+  return (
+    <div style={{ background: cardBg, border: `2px solid ${borderColor}`, borderRadius: '16px', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '6px' }}>
+          <span style={{ color: isBloqueada ? '#B91C1C' : '#1A0A3C', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700 }}>{c.nombre}</span>
+          {c.codigo && <span style={{ fontSize: '11px', background: '#F5F0E8', color: '#4A3B6B', borderRadius: '6px', padding: '2px 8px', fontFamily: 'monospace' }}>{c.codigo}</span>}
+          <span style={{ fontSize: '11px', background: badgeBg, color: badgeColor, borderRadius: '9999px', padding: '2px 10px', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif', whiteSpace: 'nowrap' }}>{badgeText}</span>
+        </div>
+        <div style={{ color: '#6B5C90', fontSize: '13px', marginBottom: '6px' }}>
+          {c.zona} · {c.visitas_realizadas} visitas
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <span style={{
+            fontSize: '12px', fontWeight: 700, borderRadius: '9999px', padding: '2px 10px',
+            background: c.telegram_chat_id ? '#DCFCE7' : '#FEF3C7',
+            color: c.telegram_chat_id ? '#15803d' : '#92400E',
+            border: `1px solid ${c.telegram_chat_id ? '#86EFAC' : '#FCD34D'}`,
+          }}>
+            {c.telegram_chat_id ? '✓ Telegram activo' : '✗ Telegram no vinculado'}
+          </span>
+        </div>
+      </div>
+      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', flexShrink: 0, alignItems: 'center' }}>
+        <button
+          onClick={() => onVerPerfil(c.id)}
+          style={{ background: 'white', color: '#7C3AED', border: '2px solid #8B5CF6', borderRadius: '9999px', padding: '8px 16px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap' }}
+        >
+          ✏️ Ver perfil
+        </button>
+        {!isBloqueada && !isDesactivada && (
+          <button
+            onClick={() => onToggleVerificado(c.id, c.verificado)}
+            style={{ background: (isVerificada || isVerificadaSinTelegram) ? '#F0FDF4' : '#2D1464', color: (isVerificada || isVerificadaSinTelegram) ? '#15803d' : 'white', border: `2px solid ${(isVerificada || isVerificadaSinTelegram) ? '#22c55e' : '#2D1464'}`, borderRadius: '9999px', padding: '8px 16px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap' }}
+          >
+            {isVerificada || isVerificadaSinTelegram ? '✓ Verificada — Quitar' : '✓ Verificar'}
+          </button>
+        )}
+        {!isBloqueada && (
+          <button
+            onClick={() => onToggleEstado(c.id, c.estado)}
+            style={{ background: 'white', color: isDesactivada ? '#22c55e' : '#6B5C90', border: `2px solid ${isDesactivada ? '#22c55e' : '#D1C8E0'}`, borderRadius: '9999px', padding: '8px 16px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap' }}
+          >
+            {isDesactivada ? 'Reactivar' : 'Desactivar'}
+          </button>
+        )}
+        <button
+          onClick={() => onToggleBloqueado(c.id, isBloqueada)}
+          style={{ background: isBloqueada ? '#FEF2F2' : 'white', color: isBloqueada ? '#15803d' : '#B91C1C', border: `2px solid ${isBloqueada ? '#22c55e' : '#FCA5A5'}`, borderRadius: '9999px', padding: '8px 16px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap' }}
+        >
+          {isBloqueada ? 'Desbloquear' : '🚫 Bloquear'}
+        </button>
+        {confirmEliminar ? (
+          <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+            <span style={{ fontSize: '12px', color: '#B91C1C', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif', whiteSpace: 'nowrap' }}>¿Confirmar?</span>
+            <button onClick={() => onEliminar(c.id)} style={{ background: '#B91C1C', color: 'white', border: 'none', borderRadius: '9999px', padding: '8px 14px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap' }}>Sí, eliminar</button>
+            <button onClick={() => setConfirmEliminar(false)} style={{ background: 'white', color: '#6B5C90', border: '2px solid #D1C8E0', borderRadius: '9999px', padding: '8px 12px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', cursor: 'pointer' }}>Cancelar</button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setConfirmEliminar(true)}
+            style={{ background: 'white', color: '#6B5C90', border: '2px solid #E8E0D4', borderRadius: '9999px', padding: '8px 14px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap' }}
+          >
+            🗑 Eliminar
+          </button>
         )}
       </div>
     </div>
@@ -663,6 +996,242 @@ function InvitarCliente() {
             style={{ background: estado === 'ok' ? '#22c55e' : '#FF6B2B', color: 'white', border: 'none', borderRadius: '9999px', padding: '10px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '14px', cursor: 'pointer', opacity: (!nombre || !email) ? 0.5 : 1 }}
           >
             {estado === 'enviando' ? 'Enviando…' : estado === 'ok' ? '✓ Invitación enviada' : 'Enviar invitación'}
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function CompitaPerfilAdmin({ compita, onGuardado }: { compita: Compita; onGuardado: (c: Compita) => void }) {
+  const [nombre, setNombre] = useState(compita.nombre)
+  const [zona, setZona] = useState(compita.zona)
+  const [descripcion, setDescripcion] = useState(compita.descripcion ?? '')
+  const [fotoUrl, setFotoUrl] = useState(compita.foto_url ?? '')
+  const [youtubeUrl, setYoutubeUrl] = useState(compita.youtube_url ?? '')
+  const [servicioInput, setServicioInput] = useState('')
+  const [servicios, setServicios] = useState<string[]>(compita.servicios ?? [])
+  const [guardando, setGuardando] = useState(false)
+  const [mensaje, setMensaje] = useState<{ tipo: 'ok' | 'error'; texto: string } | null>(null)
+
+  function agregarServicio() {
+    const s = servicioInput.trim()
+    if (!s || servicios.includes(s)) return
+    setServicios((prev) => [...prev, s])
+    setServicioInput('')
+  }
+
+  function quitarServicio(s: string) {
+    setServicios((prev) => prev.filter((x) => x !== s))
+  }
+
+  async function guardar() {
+    setGuardando(true)
+    setMensaje(null)
+    const res = await fetch('/api/admin/compita', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: compita.id, nombre, zona, descripcion: descripcion || null, foto_url: fotoUrl || null, youtube_url: youtubeUrl || null, servicios }),
+    })
+    const d = await res.json()
+    if (res.ok && d.ok) {
+      onGuardado(d.data)
+      setMensaje({ tipo: 'ok', texto: 'Cambios guardados' })
+    } else {
+      setMensaje({ tipo: 'error', texto: d.error ?? 'Error al guardar' })
+    }
+    setGuardando(false)
+  }
+
+  const input = (label: string, value: string, onChange: (v: string) => void, opts?: { placeholder?: string; multiline?: boolean }) => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+      <label style={{ fontSize: '12px', fontWeight: 700, color: '#4A3B6B', fontFamily: 'Bricolage Grotesque, sans-serif', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</label>
+      {opts?.multiline ? (
+        <textarea
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={opts?.placeholder}
+          rows={4}
+          style={{ border: '2px solid rgba(45,20,100,0.2)', borderRadius: '10px', padding: '10px 12px', fontFamily: 'Inter, sans-serif', fontSize: '14px', color: '#1A0A3C', background: 'white', outline: 'none', resize: 'vertical' }}
+        />
+      ) : (
+        <input
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={opts?.placeholder}
+          style={{ border: '2px solid rgba(45,20,100,0.2)', borderRadius: '10px', padding: '10px 12px', fontFamily: 'Inter, sans-serif', fontSize: '14px', color: '#1A0A3C', background: 'white', outline: 'none' }}
+        />
+      )}
+    </div>
+  )
+
+  return (
+    <div style={{ maxWidth: '700px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      {/* Cabecera */}
+      <div style={{ background: 'white', border: '2px solid #E8E0D4', borderRadius: '16px', padding: '20px 24px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+        {compita.foto_url && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={compita.foto_url} alt={compita.nombre} style={{ width: '64px', height: '64px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+        )}
+        <div>
+          <div style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '20px', color: '#1A0A3C' }}>{compita.nombre}</div>
+          <div style={{ fontSize: '13px', color: '#6B5C90', marginTop: '2px' }}>
+            {compita.zona} · {compita.visitas_realizadas} visitas · {compita.codigo ? <span style={{ fontFamily: 'monospace', background: '#F5F0E8', padding: '1px 6px', borderRadius: '4px' }}>{compita.codigo}</span> : 'sin código'}
+          </div>
+          <div style={{ fontSize: '13px', color: '#6B5C90', marginTop: '2px' }}>
+            Telegram: {compita.telegram_chat_id ?? <em>sin registrar</em>}
+          </div>
+        </div>
+      </div>
+
+      {/* Formulario */}
+      <div style={{ background: 'white', border: '2px solid #E8E0D4', borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        {input('Nombre', nombre, setNombre)}
+        {input('Zona de cobertura', zona, setZona, { placeholder: 'Ej: Caracas – Chacao' })}
+        {input('Descripción', descripcion, setDescripcion, { multiline: true, placeholder: 'Presentación breve del compita…' })}
+        {input('URL de foto', fotoUrl, setFotoUrl, { placeholder: 'https://…' })}
+        {input('URL de YouTube', youtubeUrl, setYoutubeUrl, { placeholder: 'https://youtube.com/…' })}
+
+        {/* Servicios */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <label style={{ fontSize: '12px', fontWeight: 700, color: '#4A3B6B', fontFamily: 'Bricolage Grotesque, sans-serif', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Servicios</label>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <input
+              value={servicioInput}
+              onChange={(e) => setServicioInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), agregarServicio())}
+              placeholder="Acompañamiento, Cocina, Enfermería…"
+              style={{ flex: 1, border: '2px solid rgba(45,20,100,0.2)', borderRadius: '10px', padding: '10px 12px', fontFamily: 'Inter, sans-serif', fontSize: '14px', color: '#1A0A3C', background: 'white', outline: 'none' }}
+            />
+            <button onClick={agregarServicio} style={{ background: '#2D1464', color: 'white', border: 'none', borderRadius: '10px', padding: '10px 16px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '14px', cursor: 'pointer' }}>+ Agregar</button>
+          </div>
+          {servicios.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+              {servicios.map((s) => (
+                <span key={s} style={{ background: '#EDE9F6', color: '#5A3FB5', borderRadius: '9999px', padding: '4px 12px', fontSize: '13px', fontWeight: 600, fontFamily: 'Bricolage Grotesque, sans-serif', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  {s}
+                  <button onClick={() => quitarServicio(s)} style={{ background: 'none', border: 'none', color: '#7C3AED', cursor: 'pointer', padding: 0, fontSize: '14px', lineHeight: 1 }}>×</button>
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Botón guardar + mensaje */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+          <button
+            onClick={guardar}
+            disabled={guardando}
+            style={{ background: '#FF6B2B', color: 'white', border: 'none', borderRadius: '9999px', padding: '12px 28px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '15px', cursor: guardando ? 'not-allowed' : 'pointer', opacity: guardando ? 0.6 : 1 }}
+          >
+            {guardando ? 'Guardando…' : 'Guardar cambios'}
+          </button>
+          {mensaje && (
+            <span style={{ fontSize: '14px', fontWeight: 700, color: mensaje.tipo === 'ok' ? '#15803d' : '#dc2626', fontFamily: 'Bricolage Grotesque, sans-serif' }}>
+              {mensaje.tipo === 'ok' ? '✓ ' : '✗ '}{mensaje.texto}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Horarios (solo lectura, para no sobrecomplicar) */}
+      {compita.horarios_disponibles && compita.horarios_disponibles.length > 0 && (
+        <div style={{ background: 'white', border: '2px solid #E8E0D4', borderRadius: '16px', padding: '24px' }}>
+          <div style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '12px', color: '#2D1464', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            Horarios de disponibilidad (los pone el compita en su perfil)
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            {compita.horarios_disponibles.map((h, i) => (
+              <div key={i} style={{ fontSize: '14px', color: '#4A3B6B' }}>
+                <span style={{ fontWeight: 700, textTransform: 'capitalize' }}>{h.dia}</span>: {h.inicio} – {h.fin}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+const SERVICIOS_OPCIONES = ['Acompañamiento', 'Cocina', 'Enfermería básica', 'Aseo del hogar', 'Movilidad', 'Medicamentos', 'Estimulación cognitiva', 'Compañía nocturna']
+
+function RegistrarCompitaDirecto({ onRegistrada }: { onRegistrada: (c: Compita) => void }) {
+  const [abierto, setAbierto] = useState(false)
+  const [nombre, setNombre] = useState('')
+  const [zona, setZona] = useState('')
+  const [descripcion, setDescripcion] = useState('')
+  const [servicios, setServicios] = useState<string[]>([])
+  const [fotoUrl, setFotoUrl] = useState('')
+  const [youtubeUrl, setYoutubeUrl] = useState('')
+  const [estado, setEstado] = useState<'idle' | 'enviando' | 'ok' | 'error'>('idle')
+  const [error, setError] = useState('')
+
+  function toggleServicio(s: string) {
+    setServicios((prev) => prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s])
+  }
+
+  async function registrar() {
+    setEstado('enviando')
+    setError('')
+    const res = await fetch('/api/admin/registrar-compita', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nombre, zona, descripcion, servicios, foto_url: fotoUrl || null, youtube_url: youtubeUrl || null }),
+    })
+    const d = await res.json()
+    if (res.ok && d.ok) {
+      onRegistrada(d.data)
+      setEstado('ok')
+      setTimeout(() => { setEstado('idle'); setAbierto(false); setNombre(''); setZona(''); setDescripcion(''); setServicios([]); setFotoUrl(''); setYoutubeUrl('') }, 2000)
+    } else {
+      setError(d.error ?? 'Error al registrar')
+      setEstado('error')
+    }
+  }
+
+  const inp = (v: string, onChange: (s: string) => void, placeholder: string, multiline?: boolean) =>
+    multiline ? (
+      <textarea value={v} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} rows={3}
+        style={{ border: '2px solid rgba(45,20,100,0.2)', borderRadius: '10px', padding: '9px 12px', fontFamily: 'Inter, sans-serif', fontSize: '14px', color: '#1A0A3C', background: 'white', outline: 'none', resize: 'vertical', width: '100%', boxSizing: 'border-box' as const }} />
+    ) : (
+      <input value={v} onChange={(e) => onChange(e.target.value)} placeholder={placeholder}
+        style={{ border: '2px solid rgba(45,20,100,0.2)', borderRadius: '10px', padding: '9px 12px', fontFamily: 'Inter, sans-serif', fontSize: '14px', color: '#1A0A3C', background: 'white', outline: 'none', width: '100%', boxSizing: 'border-box' as const }} />
+    )
+
+  return (
+    <div>
+      <button
+        onClick={() => setAbierto((v) => !v)}
+        style={{ background: 'white', color: '#2D1464', border: '2px solid #2D1464', borderRadius: '9999px', padding: '10px 20px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '14px', cursor: 'pointer', whiteSpace: 'nowrap' }}
+      >
+        + Registrar directamente
+      </button>
+      {abierto && (
+        <div style={{ background: 'white', border: '2px solid #E8E0D4', borderRadius: '16px', padding: '24px', marginTop: '12px', display: 'flex', flexDirection: 'column' as const, gap: '14px', maxWidth: '560px' }}>
+          <p style={{ margin: 0, fontSize: '13px', color: '#4A3B6B' }}>El perfil queda como <strong>inactivo, sin verificar</strong>. Luego lo verificás desde esta misma pantalla.</p>
+          {inp(nombre, setNombre, 'Nombre completo')}
+          {inp(zona, setZona, 'Zona de cobertura — Ej: Caracas, Chacao')}
+          {inp(descripcion, setDescripcion, 'Descripción breve…', true)}
+          <div>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: '#4A3B6B', fontFamily: 'Bricolage Grotesque, sans-serif', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>Servicios</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+              {SERVICIOS_OPCIONES.map((s) => (
+                <button key={s} type="button" onClick={() => toggleServicio(s)}
+                  style={{ background: servicios.includes(s) ? '#2D1464' : 'white', color: servicios.includes(s) ? 'white' : '#4A3B6B', border: '2px solid ' + (servicios.includes(s) ? '#2D1464' : 'rgba(45,20,100,0.25)'), borderRadius: '9999px', padding: '5px 12px', fontSize: '13px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 600, cursor: 'pointer' }}>
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+          {inp(fotoUrl, setFotoUrl, 'URL de foto (opcional)')}
+          {inp(youtubeUrl, setYoutubeUrl, 'URL de YouTube (opcional)')}
+          {estado === 'error' && <p style={{ margin: 0, color: '#B91C1C', fontSize: '13px', fontWeight: 600 }}>⚠️ {error}</p>}
+          <button
+            onClick={registrar}
+            disabled={estado === 'enviando' || !nombre || !zona || !descripcion || servicios.length === 0}
+            style={{ background: estado === 'ok' ? '#22c55e' : '#FF6B2B', color: 'white', border: 'none', borderRadius: '9999px', padding: '11px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '14px', cursor: 'pointer', opacity: (!nombre || !zona || !descripcion || servicios.length === 0) ? 0.5 : 1 }}
+          >
+            {estado === 'enviando' ? 'Registrando…' : estado === 'ok' ? '✓ Compita registrada' : 'Registrar Compita'}
           </button>
         </div>
       )}

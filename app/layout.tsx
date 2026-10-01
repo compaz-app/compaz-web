@@ -3,6 +3,7 @@ import { Bricolage_Grotesque, Inter } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import JsonLd from "@/components/JsonLd";
+import ScrollRestoration from "@/components/ScrollRestoration";
 
 const GA_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
 
@@ -199,6 +200,7 @@ export default function RootLayout({
         <JsonLd data={schemaService} />
       </head>
       <body className={`${bricolage.variable} ${inter.variable}`}>
+        <ScrollRestoration />
         {children}
         {/* Microsoft Clarity — strategy afterInteractive evita conflicto con hidratación de React */}
         <Script id="clarity-init" strategy="afterInteractive">

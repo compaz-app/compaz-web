@@ -1,17 +1,15 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { createServerSupabase, createAdminSupabase } from '@/lib/supabase-server'
-
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? '').split(',').map((e) => e.trim())
+import { isAdminEmail } from '@/lib/auth'
+import { ok, err, unauthorized, serverError } from '@/lib/api'
 
 export async function POST(req: NextRequest) {
-  const supabaseAuth = await createServerSupabase()
-  const { data: { user } } = await supabaseAuth.auth.getUser()
-  if (!user || !ADMIN_EMAILS.includes(user.email ?? '')) {
-    return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-  }
+  const supabase = await createServerSupabase()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user || !isAdminEmail(user.email ?? '')) return unauthorized()
 
-  const { nombre, email } = await req.json()
-  if (!nombre || !email) return NextResponse.json({ error: 'Faltan datos' }, { status: 400 })
+  const { nombre, email } = await req.json() as { nombre: string; email: string }
+  if (!nombre || !email) return err('Faltan datos')
 
   const admin = createAdminSupabase()
 
@@ -20,10 +18,11 @@ export async function POST(req: NextRequest) {
     redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/dashboard`,
   })
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return serverError(error)
 
-  // Crear registro en usuarios si no existe
-  await admin.from('usuarios').upsert({ id: data.user.id, email, nombre }, { onConflict: 'id', ignoreDuplicates: true })
+  await admin
+    .from('usuarios')
+    .upsert({ id: data.user.id, email, nombre }, { onConflict: 'id', ignoreDuplicates: true })
 
-  return NextResponse.json({ ok: true })
+  return ok({ email, nombre })
 }

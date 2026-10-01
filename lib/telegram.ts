@@ -2,11 +2,13 @@ const TELEGRAM_API = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOK
 
 type ReplyKeyboard = { keyboard: { text: string }[][]; resize_keyboard: boolean; one_time_keyboard?: boolean }
 type RemoveKeyboard = { remove_keyboard: true }
+type InlineButton = { text: string; url?: string; callback_data?: string }
+type InlineKeyboard = { inline_keyboard: InlineButton[][] }
 
 export async function sendTelegramMessage(
   chatId: string,
   text: string,
-  replyMarkup?: ReplyKeyboard | RemoveKeyboard,
+  replyMarkup?: ReplyKeyboard | RemoveKeyboard | InlineKeyboard,
 ): Promise<void> {
   const res = await fetch(`${TELEGRAM_API}/sendMessage`, {
     method: 'POST',
@@ -23,6 +25,39 @@ export async function sendTelegramMessage(
     throw new Error(`Telegram sendMessage error: ${err}`)
   }
 }
+
+export function makeInlineKeyboard(buttons: InlineButton[][]): InlineKeyboard {
+  return { inline_keyboard: buttons }
+}
+
+export async function answerCallbackQuery(callbackQueryId: string, text?: string): Promise<void> {
+  await fetch(`${TELEGRAM_API}/answerCallbackQuery`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ callback_query_id: callbackQueryId, text }),
+  })
+}
+
+export async function editMessageReplyMarkup(chatId: string, messageId: number, markup: InlineKeyboard | null): Promise<void> {
+  await fetch(`${TELEGRAM_API}/editMessageReplyMarkup`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ chat_id: chatId, message_id: messageId, reply_markup: markup ?? {} }),
+  })
+}
+
+// Teclados inline para visitas
+export const INLINE_INICIO = makeInlineKeyboard([[{ text: '▶️ Iniciar visita', callback_data: '▶️ Iniciar visita' }]])
+export const INLINE_DURANTE = makeInlineKeyboard([[{ text: '🔴 Terminar visita', callback_data: '🔴 Terminar visita' }]])
+export const INLINE_CONFIRMAR_INICIO = makeInlineKeyboard([[
+  { text: '✅ Sí, iniciar', callback_data: '✅ Sí, iniciar' },
+  { text: '❌ Cancelar', callback_data: '❌ Cancelar' },
+]])
+export const INLINE_CONFIRMAR_FIN = makeInlineKeyboard([[
+  { text: '✅ Sí, terminar', callback_data: '✅ Sí, terminar' },
+  { text: '❌ Cancelar', callback_data: '❌ Cancelar' },
+]])
+export const INLINE_START = makeInlineKeyboard([[{ text: '▶️ Comenzar', callback_data: '/start' }]])
 
 // Teclados reutilizables
 export const TECLADO_INICIO = {
@@ -48,6 +83,12 @@ export const TECLADO_CONFIRMAR_FIN = {
 } satisfies ReplyKeyboard
 
 export const QUITAR_TECLADO: RemoveKeyboard = { remove_keyboard: true }
+
+export const TECLADO_START = {
+  keyboard: [[{ text: '▶️ Comenzar' }]],
+  resize_keyboard: true,
+  one_time_keyboard: true,
+} satisfies ReplyKeyboard
 
 export async function sendTelegramPhoto(chatId: string, photoUrl: string, caption?: string): Promise<void> {
   const res = await fetch(`${TELEGRAM_API}/sendPhoto`, {
@@ -83,7 +124,7 @@ export async function registerWebhook(webhookUrl: string): Promise<void> {
     body: JSON.stringify({
       url: webhookUrl,
       secret_token: secret,
-      allowed_updates: ['message'],
+      allowed_updates: ['message', 'callback_query'],
     }),
   })
   if (!res.ok) {

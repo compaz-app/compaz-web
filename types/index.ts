@@ -2,7 +2,14 @@
 // Compaz Platform — Tipos TypeScript
 // ══════════════════════════════════════════════════════════════════════════════
 
-export type ZonaEstado = 'activo' | 'inactivo'
+export type ZonaEstado = 'activo' | 'inactivo' | 'bloqueado'
+export type DiaSemana = 'lunes' | 'martes' | 'miércoles' | 'jueves' | 'viernes' | 'sábado' | 'domingo'
+
+export interface HorarioDisponible {
+  dia: DiaSemana
+  inicio: string // "09:00" en hora Venezuela (UTC-4)
+  fin: string    // "17:00" — bloques de 20 min, máximo 20:00
+}
 export type VisitaEstado = 'programada' | 'en_curso' | 'terminada'
 export type MensajeOrigen = 'compita' | 'cliente' | 'admin'
 export type MensajeTipo = 'texto' | 'foto'
@@ -17,6 +24,7 @@ export interface Zona {
 export interface Compita {
   id: string
   nombre: string
+  email: string | null
   telegram_chat_id: string | null
   zona: string
   estado: ZonaEstado
@@ -28,6 +36,7 @@ export interface Compita {
   servicios: string[] | null
   youtube_url: string | null
   codigo: string | null
+  horarios_disponibles: HorarioDisponible[] | null
   created_at: string
 }
 
@@ -70,6 +79,14 @@ export interface Mensaje {
 export interface TelegramUpdate {
   update_id: number
   message?: TelegramMessage
+  callback_query?: TelegramCallbackQuery
+}
+
+export interface TelegramCallbackQuery {
+  id: string
+  from: TelegramUser
+  message?: TelegramMessage
+  data?: string
 }
 
 export interface TelegramMessage {
@@ -108,6 +125,30 @@ export interface DailyRoom {
   name: string
   url: string
   created_at: string
+}
+
+// ── Solicitudes de entrevista ─────────────────────────────────────────────────
+
+export type SolicitudEstado = 'pendiente' | 'aceptada' | 'rechazada' | 'completada'
+
+export interface Solicitud {
+  id: string
+  cliente_id: string
+  compita_id: string
+  compita_nombre?: string
+  compita_foto?: string | null
+  compita_zona?: string
+  mensaje: string
+  estado: SolicitudEstado
+  franja_horaria?: string | null
+  token_respuesta: string
+  slots_propuestos: string[]      // ISO datetimes propuestos por el cliente (hasta 3)
+  slot_confirmado?: string | null // ISO datetime confirmado por el compita
+  room_url?: string | null        // URL Daily.co (se crea al confirmar el slot)
+  recordatorio_enviado: boolean
+  seguimiento_enviado: boolean
+  created_at: string
+  respondido_at?: string | null
 }
 
 // ── API responses ─────────────────────────────────────────────────────────────
