@@ -24,7 +24,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
   const { data: usuario } = await db
     .from('usuarios')
-    .select('*, compita:compitas(*)')
+    .select('*, compita:compitas(id, nombre, zona, estado, verificado, foto_url, descripcion, servicios, youtube_url, visitas_realizadas, created_at)')
     .eq('id', targetUid)
     .single() as { data: Usuario | null }
 
@@ -33,7 +33,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   // Visita activa
   const { data: visitaActiva } = await db
     .from('visitas')
-    .select('*, compita:compitas(*)')
+    .select('*, compita:compitas(id, nombre, zona, estado, verificado, foto_url, descripcion, servicios, youtube_url, visitas_realizadas, created_at)')
     .eq('usuario_id', targetUid)
     .eq('estado', 'en_curso')
     .maybeSingle() as { data: (Visita & { compita: Compita }) | null }

@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { createBrowserSupabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
-const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '').split(',').map((e) => e.trim())
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -28,8 +27,7 @@ export default function LoginPage() {
         setError('Credenciales incorrectas.')
       } else if (data.session) {
         await supabase.auth.setSession(data.session)
-        const destino = ADMIN_EMAILS.includes(data.session.user.email ?? '') ? '/admin' : '/dashboard'
-        window.location.href = destino
+        window.location.href = '/dashboard'
       }
       setLoading(false)
       return

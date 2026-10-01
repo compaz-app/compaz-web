@@ -11,7 +11,7 @@ export default async function CompitasPage() {
   const supabase = createAdminSupabase()
   const { data: compitas } = await supabase
     .from('compitas')
-    .select('*')
+    .select('id, nombre, zona, estado, verificado, foto_url, descripcion, servicios, youtube_url, visitas_realizadas, created_at')
     .eq('estado', 'activo')
     .eq('verificado', true)
     .order('visitas_realizadas', { ascending: false }) as { data: Compita[] | null }
