@@ -199,6 +199,7 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
           slot_confirmado: null,
           room_url: null,
           recordatorio_enviado: false,
+          seguimiento_enviado: false,
           token_respuesta: '',
           created_at: new Date().toISOString(),
           respondido_at: null,

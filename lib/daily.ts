@@ -9,7 +9,7 @@ export async function getOrCreateDailyRoom(visitId: string, existingRoom?: strin
       headers: { Authorization: `Bearer ${process.env.DAILY_API_KEY}` },
     })
     if (res.ok) {
-      const room = await res.json() as DailyRoom
+      const room = await res.json() as DailyRoom & { config?: { exp?: number } }
       // Extender expiración si está próxima a vencer
       const now = Math.floor(Date.now() / 1000)
       if (!room.config?.exp || room.config.exp - now < 600) {

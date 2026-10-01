@@ -69,7 +69,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     slots_propuestos: string[]
     compitas: { nombre: string; foto_url: string | null; zona: string } | null
   }
-  const solicitudes = (solicitudesRaw ?? []) as SolicitudRow[]
+  const solicitudes = ((solicitudesRaw ?? []) as unknown[]).map((r) => r as SolicitudRow)
   const solicitudesPendientes = solicitudes.filter((s) => s.estado === 'pendiente')
   const entrevistasConfirmadas = solicitudes.filter((s) => s.estado === 'aceptada' && s.slot_confirmado)
   const solicitudesHistorial = solicitudes.filter((s) => s.estado === 'rechazada' || s.estado === 'completada')
