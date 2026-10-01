@@ -2,6 +2,140 @@ import type { Metadata } from "next";
 import { Bricolage_Grotesque, Inter } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
+import JsonLd from "@/components/JsonLd";
+
+const GA_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
+
+// ─── Schema: LocalBusiness ────────────────────────────────────────────────────
+const schemaLocalBusiness = {
+  "@context": "https://schema.org",
+  "@type": "LocalBusiness",
+  name: "Compaz",
+  description:
+    "Servicio de visitas verificadas y compañía para adultos mayores en Venezuela, para familias venezolanas en el exterior",
+  url: "https://micompaz.com",
+  logo: "https://micompaz.com/logo-nav.webp",
+  email: "hola@micompaz.com",
+  areaServed: {
+    "@type": "Country",
+    name: "Venezuela",
+  },
+  serviceType: "Compañía y visitas a domicilio para adultos mayores",
+  contactPoint: {
+    "@type": "ContactPoint",
+    contactType: "customer service",
+    email: "hola@micompaz.com",
+    availableLanguage: "Spanish",
+  },
+  sameAs: ["https://www.instagram.com/elcompaz"],
+};
+
+// ─── Schema: Organization ─────────────────────────────────────────────────────
+const schemaOrganization = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "Compaz",
+  url: "https://micompaz.com",
+  logo: "https://micompaz.com/logo-nav.webp",
+  foundingDate: "2025",
+  founders: [
+    { "@type": "Person", name: "Juan Tenreiro" },
+    { "@type": "Person", name: "Luis Mendoza" },
+  ],
+  sameAs: ["https://www.instagram.com/elcompaz"],
+};
+
+// ─── Schema: FAQPage (preguntas de la sección "¿Tienes dudas?") ───────────────
+const schemaFAQ = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: [
+    {
+      "@type": "Question",
+      name: "¿Compaz es un servicio de enfermería, limpieza o cuidado asistencial?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "No. El Compita no es enfermero, ni asistente de higiene, ni servicio de limpieza del hogar. Es un acompañante: alguien que visita a tu familiar, comparte tiempo con él, lo lleva a donde necesite y te mantiene informado. Si tu familiar requiere atención médica o asistencia personal, Compaz no reemplaza eso. Puede ser un complemento, pero no un sustituto. Si tienes dudas sobre si Compaz es lo que necesitas, escríbenos y te orientamos.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "¿Cómo sé que el Compita es confiable?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Antes de su primera visita, cada Compita pasa por tres filtros: verificación de identidad con cédula, revisión de antecedentes penales, y una entrevista personal con nuestro equipo. No trabajamos con personas que no conocemos. Si en algún momento no te sientes cómodo con tu Compita asignado, lo cambiamos sin costo.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "¿El Compita trabaja por su cuenta o trabaja con ustedes?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Con nosotros. No somos una aplicación que conecta a desconocidos. Somos un equipo. Cada Compita fue seleccionado, entrenado y es supervisado por Compaz.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "¿Qué pasa si algo sale mal durante una visita?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Tienes nuestro contacto directo durante cada visita. Si ocurre cualquier situación, activamos nuestro protocolo de seguimiento y te mantenemos informado en todo momento. No eres un ticket de soporte: somos personas reales al otro lado.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "¿Mi familiar tiene que dejar entrar al Compita solo?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "No necesariamente. Las primeras visitas pueden hacerse con un familiar o vecino de confianza presente, hasta que tu familiar se sienta cómodo. Nosotros acompañamos ese proceso. La confianza se construye, no se exige.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "¿Puedo hablar con ustedes antes de inscribirme?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Sí, y lo recomendamos. Escríbenos a hola@micompaz.com y cuéntanos la situación de tu familiar. Te respondemos personalmente.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "¿El cuidado a domicilio está regulado en Venezuela?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Sí. La Ley Orgánica para la Atención y Desarrollo Integral de las Personas Adultas Mayores (Gaceta Oficial N° 6.641, 2021) reconoce el derecho de todo adulto mayor a recibir atención digna, incluyendo atención domiciliaria. Compaz opera dentro de ese marco: los Compitas son acompañantes verificados que respetan la autonomía y dignidad de la persona que visitan.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "¿En qué ciudades de Venezuela operan?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Estamos comenzando en Caracas. Si tu familiar está en otra ciudad, inscríbete igualmente — estamos expandiendo y queremos saber dónde hay más necesidad.",
+      },
+    },
+  ],
+};
+
+// ─── Schema: Service ──────────────────────────────────────────────────────────
+const schemaService = {
+  "@context": "https://schema.org",
+  "@type": "Service",
+  name: "Visitas verificadas a adultos mayores en Venezuela",
+  serviceType: "Compañía a domicilio",
+  description:
+    "Un Compita verificado visita a tu familiar en Venezuela, lo acompaña, y tú recibes fotos y notas directamente después de cada visita.",
+  provider: {
+    "@type": "LocalBusiness",
+    name: "Compaz",
+    url: "https://micompaz.com",
+  },
+  areaServed: {
+    "@type": "Country",
+    name: "Venezuela",
+  },
+  url: "https://micompaz.com",
+};
 
 const bricolage = Bricolage_Grotesque({
   subsets: ["latin"],
@@ -55,6 +189,15 @@ export default function RootLayout({
 
   return (
     <html lang="es">
+      <head>
+        {process.env.NEXT_PUBLIC_GSC_VERIFICATION && (
+          <meta name="google-site-verification" content={process.env.NEXT_PUBLIC_GSC_VERIFICATION} />
+        )}
+        <JsonLd data={schemaLocalBusiness} />
+        <JsonLd data={schemaOrganization} />
+        <JsonLd data={schemaFAQ} />
+        <JsonLd data={schemaService} />
+      </head>
       <body className={`${bricolage.variable} ${inter.variable}`}>
         {children}
         {/* Microsoft Clarity — strategy afterInteractive evita conflicto con hidratación de React */}
@@ -67,15 +210,19 @@ export default function RootLayout({
           strategy="lazyOnload"
         />
         {/* Google Analytics */}
-        <Script src="https://www.googletagmanager.com/gtag/js?id=G-FRP8LD7M8K" strategy="afterInteractive" />
-        <Script id="google-analytics" strategy="afterInteractive">
-          {`
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-            gtag('config', 'G-FRP8LD7M8K');
-          `}
-        </Script>
+        {GA_ID && (
+          <>
+            <Script src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`} strategy="afterInteractive" />
+            <Script id="google-analytics" strategy="afterInteractive">
+              {`
+                window.dataLayer = window.dataLayer || [];
+                function gtag(){dataLayer.push(arguments);}
+                gtag('js', new Date());
+                gtag('config', '${GA_ID}');
+              `}
+            </Script>
+          </>
+        )}
         {/* Meta Pixel — solo se activa si hay un Pixel ID configurado */}
         {metaPixelId && (
           <>
