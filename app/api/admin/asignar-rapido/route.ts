@@ -3,29 +3,31 @@ import { createAdminSupabase } from '@/lib/supabase-server'
 import { Resend } from 'resend'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
-const TOKEN = process.env.ADMIN_ACTION_TOKEN ?? ''
 
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl
   const token = searchParams.get('token')
-  const clienteId = searchParams.get('cliente')
-  const compitaId = searchParams.get('compita')
 
-  if (!token || token !== TOKEN) {
-    return new NextResponse('No autorizado', { status: 401 })
-  }
-  if (!clienteId || !compitaId) {
-    return new NextResponse('Faltan parámetros', { status: 400 })
-  }
+  if (!token) return new NextResponse('No autorizado', { status: 401 })
 
   const admin = createAdminSupabase()
 
-  // Validar que existan
-  const [{ data: clienteCheck }, { data: compitaCheck }] = await Promise.all([
-    admin.from('usuarios').select('id').eq('id', clienteId).single(),
-    admin.from('compitas').select('id').eq('id', compitaId).single(),
-  ])
-  if (!clienteCheck || !compitaCheck) return new NextResponse('Cliente o Compita no encontrada', { status: 404 })
+  // Validar token de un solo uso
+  const { data: actionToken } = await admin
+    .from('action_tokens')
+    .select('*')
+    .eq('token', token)
+    .single()
+
+  if (!actionToken) return new NextResponse('Token inválido', { status: 401 })
+  if (actionToken.usado) return new NextResponse('Este enlace ya fue usado', { status: 410 })
+  if (new Date(actionToken.expires_at) < new Date()) return new NextResponse('Enlace expirado', { status: 410 })
+
+  const clienteId = actionToken.cliente_id
+  const compitaId = actionToken.compita_id
+
+  // Marcar token como usado antes de ejecutar la acción (evita doble uso en race condition)
+  await admin.from('action_tokens').update({ usado: true }).eq('id', actionToken.id)
 
   // Asignar compita al cliente
   const { error } = await admin.from('usuarios').update({ compita_id: compitaId }).eq('id', clienteId)
@@ -35,7 +37,6 @@ export async function GET(req: NextRequest) {
   const { data: cliente } = await admin.from('usuarios').select('nombre, email').eq('id', clienteId).single()
   const { data: compita } = await admin.from('compitas').select('nombre, foto_url, zona, descripcion').eq('id', compitaId).single()
 
-  // Email de bienvenida al cliente
   if (cliente && compita) {
     try {
       await resend.emails.send({
@@ -61,6 +62,5 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // Redirigir al admin al panel
   return NextResponse.redirect(new URL('/admin?tab=clientes', req.url))
 }

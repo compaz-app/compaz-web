@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerSupabase } from '@/lib/supabase-server'
+import { createServerSupabase, createAdminSupabase } from '@/lib/supabase-server'
 import { sendTelegramMessage } from '@/lib/telegram'
 import { Resend } from 'resend'
+import { randomBytes } from 'crypto'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -11,7 +12,7 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
   const { compita_nombre, compita_id } = await req.json()
-  if (!compita_nombre) return NextResponse.json({ error: 'Falta compita_nombre' }, { status: 400 })
+  if (!compita_nombre || !compita_id) return NextResponse.json({ error: 'Faltan parámetros' }, { status: 400 })
 
   const { data: perfil } = await supabase.from('usuarios').select('nombre, compita_id').eq('id', user.id).single()
   const clienteNombre = perfil?.nombre ?? user.email ?? 'Cliente'
@@ -20,14 +21,29 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Ya tienes esta Compita asignada' }, { status: 400 })
   }
 
+  // Generar token de un solo uso para la asignación
+  const admin = createAdminSupabase()
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? ''
+  let asignarUrl: string | null = null
+
+  try {
+    const token = randomBytes(24).toString('hex')
+    const expires_at = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 días
+    const { error: tokenError } = await admin.from('action_tokens').insert({
+      token,
+      cliente_id: user.id,
+      compita_id,
+      expires_at,
+    })
+    if (!tokenError) {
+      asignarUrl = `${siteUrl}/api/admin/asignar-rapido?token=${token}`
+    }
+  } catch (e) {
+    console.error('Error generando action token:', e)
+  }
+
   const adminEmails = (process.env.ADMIN_EMAILS ?? '').split(',').map((e) => e.trim())
   const adminTelegramId = process.env.TELEGRAM_ADMIN_CHAT_ID
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? ''
-  const actionToken = process.env.ADMIN_ACTION_TOKEN ?? ''
-
-  const asignarUrl = compita_id && actionToken
-    ? `${siteUrl}/api/admin/asignar-rapido?token=${actionToken}&cliente=${user.id}&compita=${compita_id}`
-    : null
 
   const mensajeTelegram = [
     `🔔 <b>Interés en Compita</b>`,

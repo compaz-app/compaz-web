@@ -1,18 +1,45 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminSupabase } from '@/lib/supabase-server'
 
+const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+const MAX_SIZE_BYTES = 5 * 1024 * 1024 // 5 MB
+
 export async function POST(req: NextRequest) {
   const formData = await req.formData()
   const foto = formData.get('foto') as File | null
   const nombre = (formData.get('nombre') as string) ?? 'compita'
+  const token = (formData.get('token') as string) ?? ''
 
   if (!foto) return NextResponse.json({ error: 'Sin archivo' }, { status: 400 })
 
-  const ext = foto.name.split('.').pop() ?? 'jpg'
+  // Validar token de onboarding antes de permitir la subida
+  if (!token) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  const admin = createAdminSupabase()
+  const { data: tkn } = await admin
+    .from('onboarding_tokens')
+    .select('id, expires_at, usado')
+    .eq('token', token)
+    .single()
+  if (!tkn || tkn.usado || new Date(tkn.expires_at) < new Date()) {
+    return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
+  }
+
+  // Validar tipo de archivo (allowlist estricta — bloquea SVG, HTML, etc.)
+  if (!ALLOWED_TYPES.includes(foto.type)) {
+    return NextResponse.json({ error: 'Tipo de archivo no permitido. Solo JPG, PNG o WEBP.' }, { status: 400 })
+  }
+
+  // Validar tamaño
+  if (foto.size > MAX_SIZE_BYTES) {
+    return NextResponse.json({ error: 'La foto no puede superar 5 MB' }, { status: 400 })
+  }
+
+  // Forzar extensión desde el tipo MIME (no confiar en el nombre del archivo)
+  const EXT_MAP: Record<string, string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' }
+  const ext = EXT_MAP[foto.type]
   const slug = nombre.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
   const path = `compitas/${slug}-${Date.now()}.${ext}`
 
-  const admin = createAdminSupabase()
   const { error } = await admin.storage
     .from('fotos')
     .upload(path, foto, { contentType: foto.type, upsert: false })

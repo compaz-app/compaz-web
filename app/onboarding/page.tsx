@@ -142,6 +142,7 @@ function OnboardingForm() {
         const fd = new FormData()
         fd.append('foto', fotoFile)
         fd.append('nombre', form.nombre)
+        fd.append('token', token)
         const uploadRes = await fetch('/api/onboarding/upload-foto', { method: 'POST', body: fd })
         const uploadData = await uploadRes.json()
         if (uploadData.url) foto_url = uploadData.url

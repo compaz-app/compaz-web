@@ -106,33 +106,38 @@ function isAllowedOrigin(req: NextRequest): boolean {
   );
 }
 
-// ── Rate limiting ─────────────────────────────────────────────────────────────
-const hourlyLog = new Map<string, number[]>();
-const dailyLog = new Map<string, number[]>();
+// ── Rate limiting persistente en Supabase (sobrevive cold starts serverless) ──
+import { createClient } from "@supabase/supabase-js";
 
-const RATE_LIMIT_WHITELIST = ["186.104.22.197"];
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  );
+}
 
-function isRateLimited(ip: string): boolean {
-  if (RATE_LIMIT_WHITELIST.includes(ip)) return false;
-  const now = Date.now();
-  const oneHour = 60 * 60 * 1000;
-  const oneDay = 24 * oneHour;
+async function isRateLimited(ip: string): Promise<boolean> {
+  // IPs whitelisted via env var (comma-separated), nunca en código fuente
+  const whitelist = (process.env.CHAT_RATE_LIMIT_WHITELIST ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+  if (whitelist.includes(ip)) return false;
 
-  const hourly = (hourlyLog.get(ip) ?? []).filter((t) => now - t < oneHour);
-  if (hourly.length >= 10) {
-    hourlyLog.set(ip, hourly);
-    return true;
-  }
-  hourly.push(now);
-  hourlyLog.set(ip, hourly);
+  const supabase = getSupabase();
+  const now = new Date();
+  const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000).toISOString();
+  const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
 
-  const daily = (dailyLog.get(ip) ?? []).filter((t) => now - t < oneDay);
-  if (daily.length >= 50) {
-    dailyLog.set(ip, daily);
-    return true;
-  }
-  daily.push(now);
-  dailyLog.set(ip, daily);
+  const [{ count: hourly }, { count: daily }] = await Promise.all([
+    supabase.from("chat_requests").select("id", { count: "exact", head: true }).eq("ip", ip).gte("created_at", oneHourAgo),
+    supabase.from("chat_requests").select("id", { count: "exact", head: true }).eq("ip", ip).gte("created_at", oneDayAgo),
+  ]);
+
+  if ((hourly ?? 0) >= 10 || (daily ?? 0) >= 50) return true;
+
+  // Registrar el request y limpiar registros viejos (fire and forget)
+  Promise.all([
+    supabase.from("chat_requests").insert({ ip }),
+    supabase.from("chat_requests").delete().lt("created_at", oneDayAgo).eq("ip", ip),
+  ]).catch(() => {});
 
   return false;
 }
@@ -273,7 +278,7 @@ export async function POST(req: NextRequest) {
 
   // Rate limiting per IP
   const ip = getClientIp(req);
-  if (isRateLimited(ip)) {
+  if (await isRateLimited(ip)) {
     return NextResponse.json(
       { reply: "Has alcanzado el límite de mensajes. Escríbenos a hola@micompaz.com" },
       { status: 429, headers: SECURITY_HEADERS }
