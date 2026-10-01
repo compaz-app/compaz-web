@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
 
   // Asignar compita al cliente
   const { error } = await admin.from('usuarios').update({ compita_id: compitaId }).eq('id', clienteId)
-  if (error) return new NextResponse(`Error: ${error.message}`, { status: 500 })
+  if (error) return new NextResponse('Error interno', { status: 500 })
 
   // Traer datos para el email
   const { data: cliente } = await admin.from('usuarios').select('nombre, email').eq('id', clienteId).single()

@@ -21,8 +21,23 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Ya tienes esta Compita asignada' }, { status: 400 })
   }
 
-  // Generar token de un solo uso para la asignación
+  // Rate limit: máximo 1 solicitud por usuario por compita en las últimas 24h
   const admin = createAdminSupabase()
+  const hace24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+  const { data: tokenReciente } = await admin
+    .from('action_tokens')
+    .select('id')
+    .eq('cliente_id', user.id)
+    .eq('compita_id', compita_id)
+    .gte('created_at', hace24h)
+    .limit(1)
+    .maybeSingle()
+
+  if (tokenReciente) {
+    return NextResponse.json({ error: 'Ya enviaste una solicitud para esta Compita recientemente' }, { status: 429 })
+  }
+
+  // Generar token de un solo uso para la asignación
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? ''
   let asignarUrl: string | null = null
 

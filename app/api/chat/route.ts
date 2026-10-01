@@ -192,7 +192,6 @@ async function getGoogleAccessToken(): Promise<string | null> {
     // Netlify puede guardar la clave con comillas envolventes — quitarlas
     const strippedKey = rawKey.replace(/^["']|["']$/g, "");
     const privateKey = strippedKey.replace(/\\n/g, "\n");
-    console.error("[Sheets] key starts with:", privateKey.slice(0, 30));
 
     const now = Math.floor(Date.now() / 1000);
     const header = Buffer.from(JSON.stringify({ alg: "RS256", typ: "JWT" })).toString("base64url");

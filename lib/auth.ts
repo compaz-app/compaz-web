@@ -31,14 +31,14 @@ export function isAdminEmail(email: string): boolean {
 }
 
 export async function getUsuario(): Promise<Usuario | null> {
-  const session = await getSession()
-  if (!session) return null
-
   const supabase = await createServerSupabase()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+
   const { data } = await supabase
     .from('usuarios')
     .select('*, compita:compitas(*)')
-    .eq('id', session.user.id)
+    .eq('id', user.id)
     .single()
 
   return data as Usuario | null

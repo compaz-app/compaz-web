@@ -28,10 +28,11 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({})) as { solo_audio?: boolean }
   const soloAudio = body.solo_audio ?? false
 
-  // Crear sala nueva cada vez (permite reconectar si se cae)
+  // Reusar sala existente si ya hay una; crear nueva solo si no hay (evita creación ilimitada)
+  const roomUrlExistente = visita.room_url ?? null
   let room
   try {
-    room = await getOrCreateDailyRoom(visita.id, null, soloAudio)
+    room = await getOrCreateDailyRoom(visita.id, roomUrlExistente, soloAudio)
   } catch (e) {
     console.error('Daily.co error:', e)
     return NextResponse.json({ error: 'Error creando sala de llamada' }, { status: 500 })

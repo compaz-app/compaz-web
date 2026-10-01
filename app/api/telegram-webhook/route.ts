@@ -86,41 +86,83 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true })
   }
 
-  // ── Vinculación por nombre ───────────────────────────────────────────────────
+  // ── Vinculación por nombre + código de verificación ─────────────────────────
   const estado = !compita ? await getEstado(supabase, chatId) : null
+
+  // Paso 2: compita ingresó el código de 6 dígitos
+  if (estado?.pendiente_accion?.startsWith('verificar:') && !compita) {
+    const [, codigo, compitaId] = estado.pendiente_accion.split(':')
+    const expirado = estado.pendiente_expira ? new Date(estado.pendiente_expira) < new Date() : true
+    if (expirado) {
+      await clearPendiente(supabase, chatId)
+      await setRegistroPendiente(supabase, chatId, true)
+      await sendTelegramMessage(chatId, `El código expiró. Escribe tu nombre de nuevo para obtener uno nuevo:`)
+      return NextResponse.json({ ok: true })
+    }
+    if (text.trim() !== codigo) {
+      await sendTelegramMessage(chatId, `Código incorrecto. Inténtalo de nuevo o escribe /start para reiniciar.`)
+      return NextResponse.json({ ok: true })
+    }
+    // Código correcto — vincular
+    await clearPendiente(supabase, chatId)
+    const { data: encontrada } = await supabase.from('compitas').select('nombre').eq('id', compitaId).single() as { data: Compita | null }
+    await supabase.from('compitas').update({ telegram_chat_id: chatId }).eq('id', compitaId).is('telegram_chat_id', null)
+    const nombre = encontrada?.nombre ?? 'Compita'
+    await sendTelegramMessage(
+      chatId,
+      `✅ <b>¡Listo, ${nombre}!</b> Tu cuenta ya está activa en Compaz.\n\n📌 <b>¿Cómo funciona esto?</b>\n\nCuando llegues a la casa de tu cliente y vayas a comenzar la visita, toca el botón <b>▶️ Iniciar visita</b> que ves abajo.\n\nCuando termines y te vayas, toca <b>🔴 Terminar visita</b>.\n\nEso es todo. Puedes cerrar esta app ahora — el botón te estará esperando aquí cada vez que lo necesites. 😊`,
+      TECLADO_INICIO,
+    )
+    const adminChatId = process.env.TELEGRAM_ADMIN_CHAT_ID
+    if (adminChatId) {
+      try {
+        await sendTelegramMessage(adminChatId, `🟢 <b>Nueva Compita vinculada</b>\n\n<b>${nombre}</b> activó su cuenta en Telegram.\n\nRevisa su perfil en el panel admin y veríficala cuando esté lista.`)
+      } catch (e) { console.error('Error notificando admin:', e) }
+    }
+    return NextResponse.json({ ok: true })
+  }
+
+  // Paso 1: compita ingresó su nombre → buscar y enviar código al email
   if (estado?.registro_pendiente && !compita) {
     await setRegistroPendiente(supabase, chatId, false)
     const { data: encontrada } = await supabase
       .from('compitas')
-      .select('*')
+      .select('id, nombre, codigo')
       .ilike('nombre', text)
       .is('telegram_chat_id', null)
       .single() as { data: Compita | null }
 
     if (!encontrada) {
-      await setRegistroPendiente(supabase, chatId, true) // dejar que intente de nuevo
+      await setRegistroPendiente(supabase, chatId, true)
       await sendTelegramMessage(
         chatId,
         `No encontré ninguna cuenta con ese nombre. 🤔\n\nVerifica que lo escribiste <b>exactamente igual</b> a como lo pusiste en el formulario de registro, incluyendo mayúsculas y tildes.\n\nIntenta de nuevo:`,
       )
     } else {
-      await supabase.from('compitas').update({ telegram_chat_id: chatId }).eq('id', encontrada.id)
-      await sendTelegramMessage(
-        chatId,
-        `✅ <b>¡Listo, ${encontrada.nombre}!</b> Tu cuenta ya está activa en Compaz.\n\n📌 <b>¿Cómo funciona esto?</b>\n\nCuando llegues a la casa de tu cliente y vayas a comenzar la visita, toca el botón <b>▶️ Iniciar visita</b> que ves abajo.\n\nCuando termines y te vayas, toca <b>🔴 Terminar visita</b>.\n\nEso es todo. Puedes cerrar esta app ahora — el botón te estará esperando aquí cada vez que lo necesites. 😊`,
-        TECLADO_INICIO,
+      // Generar código de 6 dígitos y guardarlo en estado pendiente (expira en 15 min)
+      const codigo = String(Math.floor(100000 + Math.random() * 900000))
+      const expira = new Date(Date.now() + 15 * 60 * 1000).toISOString()
+      await supabase.from('telegram_estados').upsert(
+        { chat_id: chatId, pendiente_accion: `verificar:${codigo}:${encontrada.id}`, pendiente_expira: expira },
+        { onConflict: 'chat_id' },
       )
 
-      // Notificar al admin
+      // Enviar código al admin para que se lo dé a la compita (no tenemos email de compita directamente)
       const adminChatId = process.env.TELEGRAM_ADMIN_CHAT_ID
       if (adminChatId) {
         try {
           await sendTelegramMessage(
             adminChatId,
-            `🟢 <b>Nueva Compita vinculada</b>\n\n<b>${encontrada.nombre}</b> activó su cuenta en Telegram.\n\nRevisa su perfil en el panel admin y veríficala cuando esté lista.`,
+            `🔐 <b>Verificación de Compita</b>\n\n<b>${encontrada.nombre}</b> quiere activar su cuenta en Telegram.\n\nCódigo de verificación: <code>${codigo}</code>\n\nComparte este código con ella. Expira en 15 minutos.`,
           )
-        } catch (e) { console.error('Error notificando admin:', e) }
+        } catch (e) { console.error('Error enviando código admin:', e) }
       }
+
+      await sendTelegramMessage(
+        chatId,
+        `Encontré tu cuenta 👀\n\nPor seguridad, te enviamos un <b>código de 6 dígitos</b> a través del admin de Compaz.\n\nEscríbelo aquí cuando lo recibas:`,
+        QUITAR_TECLADO,
+      )
     }
     return NextResponse.json({ ok: true })
   }

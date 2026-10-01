@@ -21,6 +21,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Token inválido o expirado' }, { status: 400 })
   }
 
+  // Marcar token como usado atómicamente antes de insertar (evita race condition TOCTOU)
+  const { data: claimed } = await admin
+    .from('onboarding_tokens')
+    .update({ usado: true })
+    .eq('id', tkn.id)
+    .eq('usado', false)
+    .select('id')
+    .single()
+
+  if (!claimed) return NextResponse.json({ error: 'Token inválido o expirado' }, { status: 400 })
+
   // Crear la compita
   const { error: insertError } = await admin
     .from('compitas')
@@ -36,13 +47,7 @@ export async function POST(req: NextRequest) {
       visitas_realizadas: 0,
     })
 
-  if (insertError) return NextResponse.json({ error: insertError.message }, { status: 500 })
-
-  // Marcar token como usado
-  await admin
-    .from('onboarding_tokens')
-    .update({ usado: true })
-    .eq('id', tkn.id)
+  if (insertError) return NextResponse.json({ error: 'Error al registrar' }, { status: 500 })
 
   return NextResponse.json({ ok: true })
 }
