@@ -116,12 +116,29 @@ export async function desbloquearCompita(id: string): Promise<void> {
 
 export async function eliminarCompita(id: string): Promise<void> {
   const supabase = createAdminSupabase()
-  // Eliminar solicitudes primero para evitar FK violation
+  // Desasignar compita de clientes que la tengan asignada
+  await supabase.from('usuarios').update({ compita_id: null }).eq('compita_id', id)
+  // Eliminar mensajes de visitas del compita
+  const { data: visitas } = await supabase.from('visitas').select('id').eq('compita_id', id)
+  if (visitas?.length) {
+    const visitaIds = visitas.map((v) => v.id)
+    await supabase.from('mensajes').delete().in('visit_id', visitaIds)
+  }
+  // Eliminar visitas del compita
+  await supabase.from('visitas').delete().eq('compita_id', id)
+  // Eliminar solicitudes del compita
   await supabase.from('solicitudes').delete().eq('compita_id', id)
-  const { error } = await supabase
-    .from('compitas')
-    .delete()
-    .eq('id', id)
+  // Eliminar action_tokens relacionados
+  await supabase.from('action_tokens').delete().eq('compita_id', id)
+  // Eliminar tokens de edición de perfil
+  await supabase.from('compita_edit_tokens').delete().eq('compita_id', id)
+  // Eliminar estado de Telegram si existe
+  // telegram_estados usa chat_id como PK, no compita_id — limpiar por telegram_chat_id
+  const { data: compita } = await supabase.from('compitas').select('telegram_chat_id').eq('id', id).single()
+  if (compita?.telegram_chat_id) {
+    await supabase.from('telegram_estados').delete().eq('chat_id', compita.telegram_chat_id)
+  }
+  const { error } = await supabase.from('compitas').delete().eq('id', id)
   if (error) throw new Error(error.message)
 }
 
