@@ -504,7 +504,7 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
                       onChange={(e) => setFormMensaje(e.target.value)}
                       placeholder="Edad, condición de salud, qué tipo de acompañamiento necesita y en qué zona vive…"
                       rows={4}
-                      style={{ width: '100%', border: '2px solid rgba(45,20,100,0.2)', borderRadius: '12px', padding: '12px', fontFamily: 'Inter, sans-serif', fontSize: '14px', color: '#1A0A3C', resize: 'vertical', boxSizing: 'border-box' }}
+                      style={{ width: '100%', border: '2px solid rgba(45,20,100,0.2)', borderRadius: '12px', padding: '12px', fontFamily: 'Inter, sans-serif', fontSize: '16px', color: '#1A0A3C', resize: 'vertical', boxSizing: 'border-box' }}
                     />
                   </div>
 
@@ -592,8 +592,8 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
 
 const s = {
   label: { display: 'block', fontWeight: 600, fontSize: '13px', color: '#1A0A3C', marginBottom: '6px' } as React.CSSProperties,
-  select: { width: '100%', border: '2px solid rgba(45,20,100,0.2)', borderRadius: '12px', padding: '10px 12px', fontFamily: 'Inter, sans-serif', fontSize: '14px', color: '#1A0A3C', background: 'white', boxSizing: 'border-box' as const },
-  selectCompact: { border: '1.5px solid #D4C9E8', borderRadius: '9999px', padding: '7px 14px', fontFamily: 'Inter, sans-serif', fontSize: '13px', color: '#1A0A3C', background: 'white', cursor: 'pointer' } as React.CSSProperties,
+  select: { width: '100%', border: '2px solid rgba(45,20,100,0.2)', borderRadius: '12px', padding: '10px 12px', fontFamily: 'Inter, sans-serif', fontSize: '16px', color: '#1A0A3C', background: 'white', boxSizing: 'border-box' as const },
+  selectCompact: { border: '1.5px solid #D4C9E8', borderRadius: '9999px', padding: '7px 14px', fontFamily: 'Inter, sans-serif', fontSize: '16px', color: '#1A0A3C', background: 'white', cursor: 'pointer' } as React.CSSProperties,
   badge: { background: 'white', border: '2px solid #E8E0D4', borderRadius: '9999px', padding: '2px 8px', fontSize: '11px', color: '#2D1464', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, whiteSpace: 'nowrap' as const, display: 'inline-flex', alignItems: 'center', gap: '3px' },
   chip: { background: '#F5F0E8', color: '#4A3B6B', borderRadius: '9999px', padding: '4px 10px', fontSize: '12px', fontFamily: 'Bricolage Grotesque, sans-serif' } as React.CSSProperties,
 }

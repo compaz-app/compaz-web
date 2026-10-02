@@ -20,14 +20,22 @@ export async function GET(req: NextRequest) {
     .single()
 
   if (!actionToken) return new NextResponse('Token inválido', { status: 401 })
-  if (actionToken.usado) return new NextResponse('Este enlace ya fue usado', { status: 410 })
   if (new Date(actionToken.expires_at) < new Date()) return new NextResponse('Enlace expirado', { status: 410 })
 
   const clienteId = actionToken.cliente_id
   const compitaId = actionToken.compita_id
 
-  // Marcar token como usado antes de ejecutar la acción (evita doble uso en race condition)
-  await admin.from('action_tokens').update({ usado: true }).eq('id', actionToken.id)
+  // Marcar como usado de forma atómica (WHERE usado = false) — elimina race condition TOCTOU.
+  // Si dos requests llegan en paralelo, solo uno obtiene filas afectadas; el otro recibe 410.
+  const { data: claimed } = await admin
+    .from('action_tokens')
+    .update({ usado: true })
+    .eq('id', actionToken.id)
+    .eq('usado', false)
+    .select('id')
+    .single()
+
+  if (!claimed) return new NextResponse('Este enlace ya fue usado', { status: 410 })
 
   // Asignar compita al cliente
   const { error } = await admin.from('usuarios').update({ compita_id: compitaId }).eq('id', clienteId)

@@ -137,7 +137,7 @@ export default function Chat({ visita, mensajesIniciales, compitaNombre }: ChatP
             border: '2px solid rgba(45,20,100,0.2)',
             borderRadius: '12px',
             padding: '12px 16px',
-            fontSize: '15px',
+            fontSize: '16px',
             fontFamily: 'Inter, sans-serif',
             color: '#1A0A3C',
             outline: 'none',

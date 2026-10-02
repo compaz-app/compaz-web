@@ -147,6 +147,7 @@ export interface Solicitud {
   room_url?: string | null        // URL Daily.co (se crea al confirmar el slot)
   recordatorio_enviado: boolean
   seguimiento_enviado: boolean
+  seguimiento2_enviado: boolean
   created_at: string
   respondido_at?: string | null
 }

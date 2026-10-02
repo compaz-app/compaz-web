@@ -11,8 +11,18 @@ export async function GET(req: NextRequest) {
     const supabase = await createServerSupabase()
     const { data, error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error && data.user) {
-      const destination = isAdminEmail(data.user.email ?? '') ? '/admin' : redirectTo
-      return NextResponse.redirect(new URL(destination, origin))
+      if (isAdminEmail(data.user.email ?? '')) {
+        return NextResponse.redirect(new URL('/admin', origin))
+      }
+      // Verificar que el usuario existe en la tabla usuarios (fue invitado)
+      const { createAdminSupabase } = await import('@/lib/supabase-server')
+      const admin = createAdminSupabase()
+      const { data: usuario } = await admin.from('usuarios').select('id').eq('id', data.user.id).maybeSingle()
+      if (!usuario) {
+        await supabase.auth.signOut()
+        return NextResponse.redirect(new URL('/login?error=no-invitado', origin))
+      }
+      return NextResponse.redirect(new URL(redirectTo, origin))
     }
   }
 

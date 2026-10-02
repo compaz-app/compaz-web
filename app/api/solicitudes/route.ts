@@ -44,10 +44,14 @@ export async function POST(req: NextRequest) {
   const admin = createAdminSupabase()
   const [{ data: cliente }, { data: compita }] = await Promise.all([
     admin.from('usuarios').select('nombre, email').eq('id', user.id).single(),
-    admin.from('compitas').select('nombre, telegram_chat_id').eq('id', compita_id).single(),
+    admin.from('compitas').select('nombre, telegram_chat_id, estado, verificado').eq('id', compita_id).single(),
   ])
 
   if (!compita) return err('Compita no encontrada', 404)
+  if (!cliente) return err('Tu cuenta no está registrada como cliente. Contacta al administrador.')
+  if ((compita as { estado: string; verificado: boolean }).estado !== 'activo' || !(compita as { estado: string; verificado: boolean }).verificado) {
+    return err('Este compita no está disponible', 400)
+  }
 
   let solicitud
   try {

@@ -25,6 +25,7 @@ function mapRow(row: Record<string, unknown>): Solicitud {
     room_url: (row.room_url as string | null) ?? null,
     recordatorio_enviado: (row.recordatorio_enviado as boolean) ?? false,
     seguimiento_enviado: (row.seguimiento_enviado as boolean) ?? false,
+    seguimiento2_enviado: (row.seguimiento2_enviado as boolean) ?? false,
     token_respuesta: row.token_respuesta as string,
     created_at: row.created_at as string,
     respondido_at: (row.respondido_at as string | null) ?? null,
@@ -36,8 +37,8 @@ function mapRow(row: Record<string, unknown>): Solicitud {
 
 const SELECT_FIELDS = `
   id, cliente_id, compita_id, mensaje, estado, franja_horaria,
-  slots_propuestos, slot_confirmado, room_url, recordatorio_enviado,
-  token_respuesta, created_at, respondido_at,
+  slots_propuestos, slot_confirmado, room_url, recordatorio_enviado, seguimiento_enviado,
+  seguimiento2_enviado, token_respuesta, created_at, respondido_at,
   compitas ( nombre, foto_url, zona )
 `
 
@@ -77,22 +78,22 @@ export async function getSolicitudesAdmin(): Promise<Solicitud[]> {
 }
 
 /**
- * Solicitudes con slot confirmado en los próximos 25-35 minutos sin recordatorio enviado.
- * Usado por el cron de recordatorios.
+ * Solicitudes con slot confirmado en los próximos 55-65 minutos sin recordatorio enviado.
+ * Usado por el cron de recordatorios (se ejecuta cada 5 min).
  */
 export async function getSolicitudesParaRecordatorio(): Promise<Solicitud[]> {
   const supabase = createAdminSupabase()
   const ahora = new Date()
-  const en25min = new Date(ahora.getTime() + 25 * 60 * 1000).toISOString()
-  const en35min = new Date(ahora.getTime() + 35 * 60 * 1000).toISOString()
+  const en55min = new Date(ahora.getTime() + 55 * 60 * 1000).toISOString()
+  const en65min = new Date(ahora.getTime() + 65 * 60 * 1000).toISOString()
 
   const { data, error } = await supabase
     .from('solicitudes')
     .select(SELECT_FIELDS)
     .eq('estado', 'aceptada')
     .eq('recordatorio_enviado', false)
-    .gte('slot_confirmado', en25min)
-    .lte('slot_confirmado', en35min)
+    .gte('slot_confirmado', en55min)
+    .lte('slot_confirmado', en65min)
 
   if (error) throw new Error(error.message)
   return (data ?? []).map(mapRow)
@@ -227,6 +228,37 @@ export async function getSolicitudesParaSeguimiento(): Promise<Solicitud[]> {
 export async function marcarSeguimientoEnviado(solicitudId: string): Promise<void> {
   const supabase = createAdminSupabase()
   await supabase.from('solicitudes').update({ seguimiento_enviado: true }).eq('id', solicitudId)
+}
+
+/**
+ * Solicitudes con seguimiento enviado, sin respuesta, 24h después del slot.
+ * Usado para el reenvío del email de seguimiento.
+ */
+export async function getSolicitudesParaSegundoSeguimiento(): Promise<Solicitud[]> {
+  const supabase = createAdminSupabase()
+  const hace24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+  const hace48h = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
+
+  const { data, error } = await supabase
+    .from('solicitudes')
+    .select(SELECT_FIELDS)
+    .eq('estado', 'aceptada')
+    .eq('seguimiento_enviado', true)
+    .eq('seguimiento2_enviado', false)
+    .is('respondido_at', null)
+    .lte('slot_confirmado', hace24h)
+    .gte('slot_confirmado', hace48h)
+
+  if (error) throw new Error(error.message)
+  return (data ?? []).map(mapRow)
+}
+
+/**
+ * Marca el segundo seguimiento como enviado.
+ */
+export async function marcarSeguimiento2Enviado(solicitudId: string): Promise<void> {
+  const supabase = createAdminSupabase()
+  await supabase.from('solicitudes').update({ seguimiento2_enviado: true }).eq('id', solicitudId)
 }
 
 /**

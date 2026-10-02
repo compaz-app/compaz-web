@@ -560,7 +560,7 @@ export default function ChatWidget() {
                 border: "2px solid rgba(45,20,100,0.2)",
                 backgroundColor: "white",
                 color: "#1A0A3C",
-                fontSize: 14,
+                fontSize: 16,
                 outline: "none",
                 fontFamily: "inherit",
                 opacity: isTyping ? 0.6 : 1,

@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
 
   const { data, error } = await admin.auth.admin.inviteUserByEmail(email, {
     data: { nombre },
-    redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/dashboard`,
+    redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
   })
 
   if (error) return serverError(error)

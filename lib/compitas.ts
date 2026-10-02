@@ -116,6 +116,8 @@ export async function desbloquearCompita(id: string): Promise<void> {
 
 export async function eliminarCompita(id: string): Promise<void> {
   const supabase = createAdminSupabase()
+  // Eliminar solicitudes primero para evitar FK violation
+  await supabase.from('solicitudes').delete().eq('compita_id', id)
   const { error } = await supabase
     .from('compitas')
     .delete()
@@ -128,8 +130,10 @@ export type CamposEditablesCompita = {
   zona?: string
   descripcion?: string
   servicios?: string[]
-  youtube_url?: string
-  foto_url?: string
+  habilidades?: string | null
+  youtube_url?: string | null
+  foto_url?: string | null
+  horarios_disponibles?: { dia: string; inicio: string; fin: string }[]
 }
 
 /**

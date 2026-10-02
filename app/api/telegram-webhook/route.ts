@@ -14,12 +14,50 @@ import {
   QUITAR_TECLADO,
   makeInlineKeyboard,
 } from '@/lib/telegram'
+import { generarTokenPerfil } from '@/lib/compita-tokens'
 import { sendVisitaInicio, sendVisitaResumen, sendCodigoTelegram } from '@/lib/resend'
-import { confirmarSlot, guardarRoomUrl } from '@/lib/solicitudes'
-import { createEntrevistaRoom } from '@/lib/daily'
+import { confirmarSlot } from '@/lib/solicitudes'
 import { Resend } from 'resend'
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? ''
+
+const GUIA_COMPITA = `📖 <b>Todo lo que puedes hacer desde este chat</b>
+
+Hola 👋 Este es tu asistente de Compaz. Desde aquí manejas todo tu trabajo. Te explico cómo funciona, paso a paso:
+
+━━━━━━━━━━━━━━━━━━━
+
+<b>1. Cuando llegues donde tu cliente</b>
+Toca el botón que dice <b>▶️ Iniciar visita</b>.
+Así la familia sabe que ya llegaste. Si no tocas ese botón, la familia no se entera de que estás ahí.
+
+<b>2. Durante la visita</b>
+Puedes <b>mandar fotos</b> o <b>escribir mensajes</b> en este mismo chat. La familia los ve en tiempo real en su celular o computadora. Por ejemplo: una foto del almuerzo que preparaste, o un mensaje diciéndole cómo está el adulto mayor.
+
+<b>3. Cuando te vayas</b>
+Toca el botón que dice <b>🔴 Terminar visita</b>. La familia recibe automáticamente un resumen de la visita por correo.
+
+━━━━━━━━━━━━━━━━━━━
+
+<b>4. Cuando un cliente quiere conocerte</b>
+Recibirás un mensaje aquí con la solicitud. Te propondrán unos horarios para hacer una llamada de video. Tú eliges el que te funcione o dices que ninguno sirve y propones otros. Nosotros le avisamos al cliente.
+
+━━━━━━━━━━━━━━━━━━━
+
+<b>5. Para actualizar tu perfil</b>
+Escribe <b>/perfil</b> (así, con la barra adelante).
+Te llegará un enlace. Ábrelo en tu celular y podrás:
+• Cambiar tu foto
+• Escribir una descripción tuya
+• Elegir qué servicios ofreces
+• Poner tus horarios disponibles
+• Agregar un video de YouTube donde te presentes
+
+━━━━━━━━━━━━━━━━━━━
+
+<b>¿Tienes dudas?</b>
+Escribe <b>/menu</b> para volver a ver estas instrucciones.
+O contacta al equipo de Compaz directamente.`
 
 function formatSlotVE(iso: string): string {
   return new Date(iso).toLocaleString('es-VE', {
@@ -102,6 +140,37 @@ export async function POST(req: NextRequest) {
     .eq('telegram_chat_id', chatId)
     .single() as { data: Compita | null }
 
+  // ── /menu — guía de funcionalidades ─────────────────────────────────────────
+  if (text === '/menu' || text === '/ayuda' || text === 'cmd_menu') {
+    if (!compita) {
+      await sendTelegramMessage(chatId, `Tu cuenta no está vinculada. Toca el botón para comenzar. 👇`, INLINE_START)
+      return NextResponse.json({ ok: true })
+    }
+    await sendTelegramMessage(chatId, GUIA_COMPITA, INLINE_INICIO)
+    return NextResponse.json({ ok: true })
+  }
+
+  // ── /perfil — editar perfil ───────────────────────────────────────────────
+  if (text === '/perfil') {
+    if (!compita) {
+      await sendTelegramMessage(chatId, `Tu cuenta no está vinculada. Toca el botón para comenzar. 👇`, INLINE_START)
+      return NextResponse.json({ ok: true })
+    }
+    try {
+      const token = await generarTokenPerfil(compita.id)
+      const url = `${SITE_URL}/compita/perfil?token=${token}`
+      await sendTelegramMessage(
+        chatId,
+        `✏️ <b>Edita tu perfil</b>\n\nAquí tienes tu enlace personal:\n\n<a href="${url}">${url}</a>\n\n⏳ El enlace es válido por <b>24 horas</b> y se puede usar <b>una sola vez</b>. Si necesitas uno nuevo, escribe /perfil de nuevo.`,
+        INLINE_INICIO,
+      )
+    } catch (e) {
+      console.error('Error generando token de perfil:', e)
+      await sendTelegramMessage(chatId, `Hubo un error al generar tu enlace. Intenta de nuevo en un momento.`, INLINE_INICIO)
+    }
+    return NextResponse.json({ ok: true })
+  }
+
   // ── /reset — solo admin ──────────────────────────────────────────────────────
   if (text === '/reset') {
     const adminChatId = process.env.TELEGRAM_ADMIN_CHAT_ID
@@ -157,9 +226,10 @@ export async function POST(req: NextRequest) {
     const nombre = encontrada?.nombre ?? 'Compita'
     await sendTelegramMessage(
       chatId,
-      `✅ <b>¡Listo, ${nombre}!</b> Tu cuenta ya está activa en Compaz.\n\n📌 <b>¿Cómo funciona esto?</b>\n\nCuando llegues a la casa de tu cliente, toca el botón <b>▶️ Iniciar visita</b>. Cuando termines y te vayas, toca <b>🔴 Terminar visita</b>.\n\nEso es todo. 😊`,
-      INLINE_INICIO,
+      `✅ <b>¡Listo, ${nombre}!</b> Tu cuenta ya está activa en Compaz. Bienvenida al equipo. 🎉\n\nAhora te explico todo lo que puedes hacer desde este chat:`,
+      QUITAR_TECLADO,
     )
+    await sendTelegramMessage(chatId, GUIA_COMPITA, INLINE_INICIO)
     const adminChatId = process.env.TELEGRAM_ADMIN_CHAT_ID
     if (adminChatId) {
       try {
@@ -243,6 +313,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true })
     }
 
+    // Solo permitir iniciar visita si hay al menos una solicitud completada para este compita
+    const { data: solicitudCompletada } = await supabase
+      .from('solicitudes')
+      .select('id, cliente_id')
+      .eq('compita_id', compita.id)
+      .eq('estado', 'completada')
+      .limit(1)
+      .maybeSingle()
+
+    if (!solicitudCompletada) {
+      await sendTelegramMessage(
+        chatId,
+        `Todavía no tienes ningún cliente activo. 😊\n\nCuando un cliente confirme que quiere trabajar contigo, podrás iniciar visitas desde aquí.`,
+        INLINE_INICIO,
+      )
+      return NextResponse.json({ ok: true })
+    }
+
     const { data: usuarioCheck } = await supabase
       .from('usuarios')
       .select('nombre')
@@ -311,19 +399,11 @@ export async function POST(req: NextRequest) {
     const resend = new Resend(process.env.RESEND_API_KEY)
     const adminSupa = createAdminSupabase()
 
-    // Crear sala Daily
-    let roomUrl = ''
-    try {
-      const room = await createEntrevistaRoom(solicitud.id, new Date(solicitud.slot_confirmado!))
-      roomUrl = room.url
-      await guardarRoomUrl(solicitud.id, roomUrl)
-    } catch (e) { console.error('Error creando sala Daily:', e) }
-
     // Traer datos del cliente
     const { data: cliente } = await adminSupa
       .from('usuarios').select('nombre, email').eq('id', solicitud.cliente_id).single()
 
-    // Email al cliente
+    // Email al cliente — sin link, llega 1h antes por el cron de recordatorios
     if (cliente?.email) {
       try {
         await resend.emails.send({
@@ -337,10 +417,9 @@ export async function POST(req: NextRequest) {
                 <strong>${compita.nombre}</strong> confirmó la llamada para el:<br>
                 <strong>${slotLabel}</strong>
               </p>
-              <p style="color:#C84B0E;background:#FFF3E8;border:2px solid #FF6B2B;border-radius:12px;padding:14px;font-size:14px">
-                ⏱️ Recuerda: la llamada tiene un límite de <strong>20 minutos</strong>. La sala se cierra automáticamente a los 23 min.
+              <p style="color:#4A3B6B;background:#F5F0E8;border:2px solid #D4C9E8;border-radius:12px;padding:14px;font-size:14px">
+                📩 Te enviaremos el link de acceso a la llamada <strong>1 hora antes</strong>.
               </p>
-              ${roomUrl ? `<a href="${roomUrl}" style="display:inline-block;background:#FF6B2B;color:white;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:16px;margin-top:8px">Entrar a la llamada →</a>` : ''}
               <p style="color:#6B5C90;font-size:13px;margin-top:24px">Compaz — <em>Cerca aunque estés lejos</em></p>
             </div>
           `,
@@ -354,14 +433,14 @@ export async function POST(req: NextRequest) {
       try {
         await sendTelegramMessage(
           adminTg,
-          [`📞 <b>Entrevista confirmada</b>`, ``, `<b>Cliente:</b> ${cliente?.nombre ?? ''} (${cliente?.email ?? ''})`, `<b>Compita:</b> ${compita.nombre}`, `<b>Fecha:</b> ${slotLabel}`, roomUrl ? `<a href="${roomUrl}">Entrar →</a>` : ''].join('\n'),
+          [`📞 <b>Entrevista confirmada</b>`, ``, `<b>Cliente:</b> ${cliente?.nombre ?? ''} (${cliente?.email ?? ''})`, `<b>Compita:</b> ${compita.nombre}`, `<b>Fecha:</b> ${slotLabel}`, ``, `🔗 El link de sala se generará y enviará 1 hora antes.`].join('\n'),
         )
       } catch (e) { console.error('Telegram admin confirmación:', e) }
     }
 
     await sendTelegramMessage(
       chatId,
-      `✅ <b>Llamada confirmada</b>\n\n<b>Cliente:</b> ${cliente?.nombre ?? 'Cliente'}\n<b>Fecha y hora:</b> ${slotLabel}\n\n⏱️ La llamada es de 20 minutos.${roomUrl ? `\n\n<a href="${roomUrl}">Entrar a la llamada →</a>` : ''}`,
+      `✅ <b>Llamada confirmada</b>\n\n<b>Cliente:</b> ${cliente?.nombre ?? 'Cliente'}\n<b>Fecha y hora:</b> ${slotLabel}\n\n📩 Te enviaremos el link de acceso <b>1 hora antes</b> de la llamada.`,
       INLINE_INICIO,
     )
     return NextResponse.json({ ok: true })
@@ -561,9 +640,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true })
     }
 
-    // Texto — ignorar comandos desconocidos
+    // Texto — ignorar comandos desconocidos (excepto /perfil y /menu)
     if (text.startsWith('/')) {
-      await sendTelegramMessage(chatId, `No reconozco ese comando. Usa los botones de abajo. 👇`, INLINE_DURANTE)
+      if (text === '/menu' || text === '/ayuda' || text === 'cmd_menu') {
+        await sendTelegramMessage(chatId, GUIA_COMPITA, INLINE_DURANTE)
+      } else if (text === '/perfil') {
+        try {
+          const token = await generarTokenPerfil(compita.id)
+          const url = `${SITE_URL}/compita/perfil?token=${token}`
+          await sendTelegramMessage(chatId, `✏️ <a href="${url}">Editar mi perfil</a> — válido 24 h, un solo uso.`, INLINE_DURANTE)
+        } catch { await sendTelegramMessage(chatId, `Error generando enlace. Intenta de nuevo.`, INLINE_DURANTE) }
+      } else {
+        await sendTelegramMessage(chatId, `No reconozco ese comando. Usa los botones de abajo. 👇`, INLINE_DURANTE)
+      }
       return NextResponse.json({ ok: true })
     }
 

@@ -2,7 +2,9 @@ import { createServerSupabase } from '@/lib/supabase-server'
 import { redirect } from 'next/navigation'
 import type { Usuario } from '@/types'
 
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? '').split(',').map((e) => e.trim())
+function getAdminEmails(): string[] {
+  return (process.env.ADMIN_EMAILS ?? '').split(',').map((e) => e.trim().toLowerCase())
+}
 
 export async function getSession() {
   const supabase = await createServerSupabase()
@@ -22,12 +24,12 @@ export async function requireAuth() {
 
 export async function requireAdmin() {
   const session = await requireAuth()
-  if (!ADMIN_EMAILS.includes(session.user.email ?? '')) redirect('/dashboard')
+  if (!getAdminEmails().includes((session.user.email ?? '').toLowerCase())) redirect('/dashboard')
   return session
 }
 
 export function isAdminEmail(email: string): boolean {
-  return ADMIN_EMAILS.includes(email)
+  return getAdminEmails().includes(email.toLowerCase())
 }
 
 export async function getUsuario(): Promise<Usuario | null> {

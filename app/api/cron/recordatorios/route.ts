@@ -1,9 +1,10 @@
 // POST /api/cron/recordatorios — enviado por Netlify Scheduled Function cada 5 min
-// Busca llamadas en los próximos 30 min y envía recordatorios a cliente, compita y admin
+// Busca llamadas en la próxima 1 hora, crea la sala Daily y envía el link a todos
 import { NextRequest } from 'next/server'
 import { createAdminSupabase } from '@/lib/supabase-server'
-import { getSolicitudesParaRecordatorio, marcarRecordatorioEnviado } from '@/lib/solicitudes'
+import { getSolicitudesParaRecordatorio, marcarRecordatorioEnviado, guardarRoomUrl } from '@/lib/solicitudes'
 import { sendTelegramMessage } from '@/lib/telegram'
+import { createEntrevistaRoom } from '@/lib/daily'
 import { Resend } from 'resend'
 import { ok, err } from '@/lib/api'
 
@@ -32,8 +33,17 @@ export async function POST(req: NextRequest) {
 
   for (const solicitud of solicitudes) {
     const slotLabel = formatSlotVE(solicitud.slot_confirmado!)
-    const roomUrl = solicitud.room_url ?? ''
     const recordatorio20 = '⏱️ Recuerda: la llamada tiene un límite de 20 minutos. La sala se cierra automáticamente a los 23 min.'
+
+    // Crear sala Daily si aún no existe
+    let roomUrl = solicitud.room_url ?? ''
+    if (!roomUrl) {
+      try {
+        const room = await createEntrevistaRoom(solicitud.id, new Date(solicitud.slot_confirmado!))
+        roomUrl = room.url
+        await guardarRoomUrl(solicitud.id, roomUrl)
+      } catch (e) { console.error('Error creando sala Daily en recordatorio:', e) }
+    }
 
     // Traer datos del cliente
     const { data: cliente } = await admin
@@ -48,10 +58,10 @@ export async function POST(req: NextRequest) {
         await resend.emails.send({
           from: 'Compaz <visitas@micompaz.com>',
           to: cliente.email,
-          subject: `⏰ En 30 minutos: tu llamada con ${solicitud.compita_nombre}`,
+          subject: `⏰ En 1 hora: tu llamada con ${solicitud.compita_nombre}`,
           html: `
             <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px">
-              <h2 style="color:#2D1464;font-size:22px">Tu llamada empieza en 30 minutos</h2>
+              <h2 style="color:#2D1464;font-size:22px">Tu llamada empieza en 1 hora</h2>
               <p style="color:#4A3B6B;font-size:16px;line-height:1.6">
                 Tienes una llamada con <strong>${solicitud.compita_nombre}</strong> hoy a las <strong>${slotLabel}</strong>.
               </p>
@@ -82,7 +92,7 @@ export async function POST(req: NextRequest) {
         await sendTelegramMessage(
           compita.telegram_chat_id,
           [
-            `⏰ <b>Tu llamada empieza en 30 minutos</b>`,
+            `⏰ <b>Tu llamada empieza en 1 hora</b>`,
             ``,
             `Con <b>${cliente?.nombre ?? 'el cliente'}</b> a las <b>${slotLabel}</b>.`,
             ``,
@@ -100,7 +110,7 @@ export async function POST(req: NextRequest) {
         await sendTelegramMessage(
           adminTg,
           [
-            `⏰ <b>Llamada en 30 minutos</b>`,
+            `⏰ <b>Llamada en 1 hora</b>`,
             ``,
             `<b>Cliente:</b> ${cliente?.nombre ?? ''} (${cliente?.email ?? ''})`,
             `<b>Compita:</b> ${solicitud.compita_nombre}`,

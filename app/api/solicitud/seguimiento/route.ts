@@ -3,7 +3,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { getSolicitudPorToken } from '@/lib/solicitudes'
-import { sendTelegramMessage } from '@/lib/telegram'
+import { sendTelegramMessage, makeInlineKeyboard } from '@/lib/telegram'
+import { generarTokenPerfil } from '@/lib/compita-tokens'
 import { Resend } from 'resend'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
@@ -43,6 +44,19 @@ export async function GET(req: NextRequest) {
     return html('Enlace inválido', 'No encontramos esta solicitud.')
   }
 
+  // Idempotencia: si ya respondió (si=completada, no=respondido_at seteado), no reprocesar
+  if (solicitud.estado === 'completada' || solicitud.respondido_at) {
+    return html('Ya registramos tu respuesta', 'Ya habías respondido a esta encuesta. ¡Gracias!')
+  }
+
+  // TTL: el link expira 72 horas después del slot confirmado
+  if (solicitud.slot_confirmado) {
+    const expira = new Date(new Date(solicitud.slot_confirmado).getTime() + 72 * 60 * 60 * 1000)
+    if (new Date() > expira) {
+      return html('Enlace expirado', 'Este enlace ya no está activo. Si tienes dudas, escríbenos directamente.')
+    }
+  }
+
   const admin = createAdminSupabase()
   const { data: cliente } = await admin
     .from('usuarios').select('nombre, email').eq('id', solicitud.cliente_id).single()
@@ -57,7 +71,7 @@ export async function GET(req: NextRequest) {
     try {
       await resend.emails.send({
         from: 'Compaz <visitas@micompaz.com>',
-        to: 'juantenreiro@gmail.com',
+        to: 'soycompaz@gmail.com',
         subject: `🎉 ${cliente?.nombre ?? 'Un cliente'} quiere contratar a ${solicitud.compita_nombre}`,
         html: `
           <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px">
@@ -100,14 +114,50 @@ export async function GET(req: NextRequest) {
   }
 
   // respuesta === 'no'
+  // Marcar respondido_at para evitar que el link se reutilice con 'si' después
+  await admin.from('solicitudes').update({ respondido_at: new Date().toISOString() }).eq('id', solicitud.id)
+
   // Notificar al compita con mensaje empático
   const { data: compitaNo } = await admin
-    .from('compitas').select('telegram_chat_id').eq('id', solicitud.compita_id).single()
+    .from('compitas').select('id, telegram_chat_id').eq('id', solicitud.compita_id).single()
   if (compitaNo?.telegram_chat_id) {
     try {
+      // Generar link de perfil personalizado
+      let perfilUrl = `${SITE_URL}/compita/perfil`
+      try {
+        const token = await generarTokenPerfil(compitaNo.id)
+        perfilUrl = `${SITE_URL}/compita/perfil?token=${token}`
+      } catch (e) { console.error('Error generando token perfil:', e) }
+
+      const teclado = makeInlineKeyboard([
+        [{ text: '✏️ Mejorar mi perfil', url: perfilUrl }],
+        [{ text: '📋 Ver mis opciones', callback_data: 'cmd_menu' }],
+      ])
+
       await sendTelegramMessage(
         compitaNo.telegram_chat_id,
-        `Hola 💙\n\nEsta vez el cliente decidió no continuar. No pasa nada — a veces simplemente no es el momento o no era la persona indicada, y eso no tiene nada que ver con tu talento ni tu valor como compita.\n\nSigue adelante con la misma actitud. Tu próxima oportunidad está más cerca de lo que crees. 🌟\n\n<i>Si quieres, puedes mejorar tu perfil para que más familias te conozcan.</i>`,
+        [
+          `Hola 💙`,
+          ``,
+          `Esta vez el cliente decidió no continuar. No pasa nada — a veces simplemente no es el momento o no era la persona indicada, y eso no tiene nada que ver con tu talento ni tu valor como compita.`,
+          ``,
+          `Sigue adelante con la misma actitud. Tu próxima oportunidad está más cerca de lo que crees. 🌟`,
+          ``,
+          `━━━━━━━━━━━━━━━━━━━`,
+          ``,
+          `💡 <b>¿Sabías que puedes mejorar tu perfil?</b>`,
+          `Desde tu perfil puedes:`,
+          `• 📸 Cambiar tu foto`,
+          `• ✍️ Actualizar tu descripción`,
+          `• 🛎️ Agregar o quitar servicios que ofreces`,
+          `• 🕐 Poner tus horarios disponibles`,
+          `• 🎥 Subir un video de presentación`,
+          ``,
+          `Un perfil completo atrae más familias. Toca el botón aquí abajo para editarlo ahora. 👇`,
+          ``,
+          `<i>También puedes escribir /perfil en cualquier momento para obtener un nuevo enlace, o /menu para ver todo lo que puedes hacer desde aquí.</i>`,
+        ].join('\n'),
+        teclado,
       )
     } catch (e) { console.error('Telegram compita rechazo:', e) }
   }

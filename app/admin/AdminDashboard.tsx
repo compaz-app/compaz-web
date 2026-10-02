@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { createBrowserSupabase } from '@/lib/supabase'
 import type { Visita, Compita, Usuario, Mensaje } from '@/types'
+import type { SolicitudAdmin } from './page'
 import LogoutButton from '@/components/ui/LogoutButton'
 
 type VisitaConRelaciones = Visita & { compita: Compita; usuario: Usuario }
@@ -14,24 +15,23 @@ interface Props {
   usuarios: UsuarioConCompita[]
   compitas: Compita[]
   visitasPasadas: Visita[]
+  todasSolicitudes: SolicitudAdmin[]
+  visitasMes: number
+  defaultTab: string
 }
 
-type Tab = 'visitas' | 'clientes' | 'compitas' | 'desactivadas' | 'historial' | 'cliente' | 'accesos' | 'perfil'
+type Tab = 'visitas' | 'clientes' | 'compitas' | 'desactivadas' | 'historial' | 'solicitudes' | 'cliente' | 'accesos' | 'perfil'
 
-export default function AdminDashboard({ visitasActivas: inicial, usuarios, compitas: todasCompitas, visitasPasadas }: Props) {
+export default function AdminDashboard({ visitasActivas: inicial, usuarios, compitas: todasCompitas, visitasPasadas, todasSolicitudes, visitasMes, defaultTab }: Props) {
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const tabParam = (searchParams.get('tab') as Tab) ?? 'visitas'
-  const [tab, setTabState] = useState<Tab>(tabParam)
+  const [tab, setTabState] = useState<Tab>((defaultTab as Tab) ?? 'visitas')
 
   function setTab(t: Tab) {
     setTabState(t)
     router.replace(`/admin?tab=${t}`, { scroll: false })
   }
 
-  useEffect(() => {
-    history.scrollRestoration = 'auto'
-  }, [])
+  useEffect(() => { history.scrollRestoration = 'auto' }, [])
   const [visitasActivas, setVisitasActivas] = useState(inicial)
   const [visitaSeleccionada, setVisitaSeleccionada] = useState<string | null>(null)
   const [mensajes, setMensajes] = useState<Record<string, Mensaje[]>>({})
@@ -221,8 +221,24 @@ export default function AdminDashboard({ visitasActivas: inicial, usuarios, comp
         </div>
       </nav>
 
+      {/* Métricas */}
+      <div style={{ background: '#2D1464', padding: '12px 24px', display: 'flex', gap: '0', overflowX: 'auto' }}>
+        {[
+          { label: 'Clientes', valor: usuarios.length },
+          { label: 'Compitas activos', valor: compitasVerificadas.length },
+          { label: 'Visitas este mes', valor: visitasMes },
+          { label: 'Sol. pendientes', valor: todasSolicitudes.filter((s) => s.estado === 'pendiente').length },
+          { label: 'Entrevistas conf.', valor: todasSolicitudes.filter((s) => s.estado === 'aceptada' && s.slot_confirmado).length },
+        ].map((kpi, i, arr) => (
+          <div key={kpi.label} style={{ flex: '1 0 auto', minWidth: '100px', textAlign: 'center', padding: '4px 16px', borderRight: i < arr.length - 1 ? '1px solid rgba(255,255,255,0.15)' : 'none' }}>
+            <div style={{ color: 'white', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '22px' }}>{kpi.valor}</div>
+            <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>{kpi.label}</div>
+          </div>
+        ))}
+      </div>
+
       {/* Tabs */}
-      <div style={{ background: 'white', borderBottom: '2px solid #E8E0D4', display: 'flex', padding: '0 24px' }}>
+      <div style={{ background: 'white', borderBottom: '2px solid #E8E0D4', display: 'flex', padding: '0 24px', overflowX: 'auto' }}>
         <button style={tabStyle('visitas')} onClick={() => setTab('visitas')}>Visitas activas</button>
         <button style={tabStyle('clientes')} onClick={() => setTab('clientes')}>Clientes ({usuarios.length})</button>
         <button style={tabStyle('compitas')} onClick={() => setTab('compitas')}>
@@ -233,6 +249,13 @@ export default function AdminDashboard({ visitasActivas: inicial, usuarios, comp
           {compitasBloqueadas.length > 0 && <span style={{ background: '#dc2626', color: 'white', borderRadius: '9999px', padding: '1px 7px', fontSize: '11px', fontWeight: 800, marginLeft: '4px' }}>{compitasBloqueadas.length}</span>}
         </button>
         <button style={tabStyle('historial')} onClick={() => setTab('historial')}>Historial</button>
+        <button style={tabStyle('solicitudes')} onClick={() => setTab('solicitudes')}>
+          Solicitudes {todasSolicitudes.filter((s) => s.estado === 'pendiente').length > 0 && (
+            <span style={{ background: '#FF6B2B', color: 'white', borderRadius: '9999px', padding: '1px 7px', fontSize: '11px', fontWeight: 800, marginLeft: '4px' }}>
+              {todasSolicitudes.filter((s) => s.estado === 'pendiente').length}
+            </span>
+          )}
+        </button>
         <button style={tabStyle('accesos')} onClick={() => setTab('accesos')}>Accesos rápidos</button>
         {clientePreviewId && (
           <button style={{ ...tabStyle('cliente'), borderBottom: tab === 'cliente' ? '3px solid #22c55e' : '3px solid transparent', color: tab === 'cliente' ? '#16a34a' : '#6B5C90' }} onClick={() => setTab('cliente')}>
@@ -358,7 +381,7 @@ export default function AdminDashboard({ visitasActivas: inicial, usuarios, comp
                 value={busqueda}
                 onChange={(e) => setBusqueda(e.target.value)}
                 placeholder="Buscar por nombre, código o zona…"
-                style={{ flex: 1, minWidth: '200px', border: '2px solid rgba(45,20,100,0.2)', borderRadius: '12px', padding: '9px 14px', fontFamily: 'Inter, sans-serif', fontSize: '14px', color: '#1A0A3C', background: 'white', outline: 'none' }}
+                style={{ flex: 1, minWidth: '200px', border: '2px solid rgba(45,20,100,0.2)', borderRadius: '12px', padding: '9px 14px', fontFamily: 'Inter, sans-serif', fontSize: '16px', color: '#1A0A3C', background: 'white', outline: 'none' }}
               />
             </div>
 
@@ -465,7 +488,7 @@ export default function AdminDashboard({ visitasActivas: inicial, usuarios, comp
                       value={busqueda}
                       onChange={(e) => setBusqueda(e.target.value)}
                       placeholder="Buscar por nombre, código o zona…"
-                      style={{ flex: 1, minWidth: '200px', border: '2px solid rgba(45,20,100,0.2)', borderRadius: '12px', padding: '9px 14px', fontFamily: 'Inter, sans-serif', fontSize: '14px', color: '#1A0A3C', background: 'white', outline: 'none' }}
+                      style={{ flex: 1, minWidth: '200px', border: '2px solid rgba(45,20,100,0.2)', borderRadius: '12px', padding: '9px 14px', fontFamily: 'Inter, sans-serif', fontSize: '16px', color: '#1A0A3C', background: 'white', outline: 'none' }}
                     />
                     {(['todas', 'inactivo', 'bloqueado'] as const).map((f) => (
                       <button key={f} onClick={() => setFiltroDesactivadas(f)}
@@ -527,6 +550,11 @@ export default function AdminDashboard({ visitasActivas: inicial, usuarios, comp
               setCompitas((prev) => prev.map((c) => c.id === actualizada.id ? actualizada : c))
             }}
           />
+        )}
+
+        {/* ── Solicitudes ───────────────────────────────────────────────────── */}
+        {tab === 'solicitudes' && (
+          <SolicitudesTab solicitudes={todasSolicitudes} />
         )}
 
         {/* ── Historial ─────────────────────────────────────────────────────── */}
@@ -604,7 +632,7 @@ function ClientesTab({ usuarios, compitas, onAsignar, onEliminar }: {
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
             placeholder="Buscar por nombre, correo o zona…"
-            style={{ width: '100%', boxSizing: 'border-box', border: '2px solid rgba(45,20,100,0.2)', borderRadius: '12px', padding: '9px 14px 9px 36px', fontFamily: 'Inter, sans-serif', fontSize: '14px', color: '#1A0A3C', background: 'white', outline: 'none' }}
+            style={{ width: '100%', boxSizing: 'border-box', border: '2px solid rgba(45,20,100,0.2)', borderRadius: '12px', padding: '9px 14px 9px 36px', fontFamily: 'Inter, sans-serif', fontSize: '16px', color: '#1A0A3C', background: 'white', outline: 'none' }}
           />
         </div>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -650,12 +678,13 @@ function ClienteCard({ u, compitas, onAsignar, onEliminar }: {
   return (
     <div style={{ background: 'white', border: `2px solid ${borderColor}`, borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
       <div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           <span style={{ color: '#1A0A3C', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700 }}>{u.nombre}</span>
           {bloqueado && <span style={{ background: '#FEE2E2', color: '#B91C1C', border: '1px solid #FCA5A5', borderRadius: '9999px', padding: '2px 8px', fontSize: '11px', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif' }}>🚫 Bloqueado</span>}
         </div>
-        <div style={{ color: '#6B5C90', fontSize: '13px' }}>{u.email} · {u.zona ?? 'Sin zona'} · {u.plan ?? 'Sin plan'}</div>
-        <div style={{ color: '#4A3B6B', fontSize: '13px', marginTop: '4px' }}>
+        <div style={{ color: '#4A3B6B', fontSize: '13px', marginTop: '3px' }}>✉️ {u.email}</div>
+        <div style={{ color: '#6B5C90', fontSize: '13px', marginTop: '2px' }}>{u.zona ?? 'Sin zona'} · {u.plan ?? 'Sin plan'}</div>
+        <div style={{ color: '#4A3B6B', fontSize: '13px', marginTop: '2px' }}>
           Compita: {u.compita ? `${u.compita.nombre} (${u.compita.zona})` : <em>Sin asignar</em>}
         </div>
       </div>
@@ -846,9 +875,17 @@ function CompitaCard({ c, onToggleVerificado, onToggleEstado, onVerPerfil, onTog
           {c.codigo && <span style={{ fontSize: '11px', background: '#F5F0E8', color: '#4A3B6B', borderRadius: '6px', padding: '2px 8px', fontFamily: 'monospace' }}>{c.codigo}</span>}
           <span style={{ fontSize: '11px', background: badgeBg, color: badgeColor, borderRadius: '9999px', padding: '2px 10px', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif', whiteSpace: 'nowrap' }}>{badgeText}</span>
         </div>
-        <div style={{ color: '#6B5C90', fontSize: '13px', marginBottom: '6px' }}>
+        <div style={{ color: '#6B5C90', fontSize: '13px', marginBottom: '4px' }}>
           {c.zona} · {c.visitas_realizadas} visitas
         </div>
+        {c.email && (
+          <div style={{ color: '#4A3B6B', fontSize: '13px', marginBottom: '4px' }}>✉️ {c.email}</div>
+        )}
+        {c.telegram_chat_id && (
+          <div style={{ color: '#4A3B6B', fontSize: '13px', fontFamily: 'monospace', marginBottom: '4px' }}>
+            💬 {c.telegram_chat_id}
+          </div>
+        )}
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <span style={{
             fontSize: '12px', fontWeight: 700, borderRadius: '9999px', padding: '2px 10px',
@@ -980,14 +1017,14 @@ function InvitarCliente() {
             value={nombre}
             onChange={(e) => setNombre(e.target.value)}
             placeholder="Nombre completo"
-            style={{ border: '2px solid rgba(45,20,100,0.2)', borderRadius: '10px', padding: '9px 12px', fontFamily: 'Inter, sans-serif', fontSize: '14px', color: '#1A0A3C', outline: 'none' }}
+            style={{ border: '2px solid rgba(45,20,100,0.2)', borderRadius: '10px', padding: '9px 12px', fontFamily: 'Inter, sans-serif', fontSize: '16px', color: '#1A0A3C', outline: 'none' }}
           />
           <input
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Email"
             type="email"
-            style={{ border: '2px solid rgba(45,20,100,0.2)', borderRadius: '10px', padding: '9px 12px', fontFamily: 'Inter, sans-serif', fontSize: '14px', color: '#1A0A3C', outline: 'none' }}
+            style={{ border: '2px solid rgba(45,20,100,0.2)', borderRadius: '10px', padding: '9px 12px', fontFamily: 'Inter, sans-serif', fontSize: '16px', color: '#1A0A3C', outline: 'none' }}
           />
           {estado === 'error' && <p style={{ margin: 0, color: '#C62828', fontSize: '13px' }}>{error}</p>}
           <button
@@ -1052,14 +1089,14 @@ function CompitaPerfilAdmin({ compita, onGuardado }: { compita: Compita; onGuard
           onChange={(e) => onChange(e.target.value)}
           placeholder={opts?.placeholder}
           rows={4}
-          style={{ border: '2px solid rgba(45,20,100,0.2)', borderRadius: '10px', padding: '10px 12px', fontFamily: 'Inter, sans-serif', fontSize: '14px', color: '#1A0A3C', background: 'white', outline: 'none', resize: 'vertical' }}
+          style={{ border: '2px solid rgba(45,20,100,0.2)', borderRadius: '10px', padding: '10px 12px', fontFamily: 'Inter, sans-serif', fontSize: '16px', color: '#1A0A3C', background: 'white', outline: 'none', resize: 'vertical' }}
         />
       ) : (
         <input
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={opts?.placeholder}
-          style={{ border: '2px solid rgba(45,20,100,0.2)', borderRadius: '10px', padding: '10px 12px', fontFamily: 'Inter, sans-serif', fontSize: '14px', color: '#1A0A3C', background: 'white', outline: 'none' }}
+          style={{ border: '2px solid rgba(45,20,100,0.2)', borderRadius: '10px', padding: '10px 12px', fontFamily: 'Inter, sans-serif', fontSize: '16px', color: '#1A0A3C', background: 'white', outline: 'none' }}
         />
       )}
     </div>
@@ -1101,7 +1138,7 @@ function CompitaPerfilAdmin({ compita, onGuardado }: { compita: Compita; onGuard
               onChange={(e) => setServicioInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), agregarServicio())}
               placeholder="Acompañamiento, Cocina, Enfermería…"
-              style={{ flex: 1, border: '2px solid rgba(45,20,100,0.2)', borderRadius: '10px', padding: '10px 12px', fontFamily: 'Inter, sans-serif', fontSize: '14px', color: '#1A0A3C', background: 'white', outline: 'none' }}
+              style={{ flex: 1, border: '2px solid rgba(45,20,100,0.2)', borderRadius: '10px', padding: '10px 12px', fontFamily: 'Inter, sans-serif', fontSize: '16px', color: '#1A0A3C', background: 'white', outline: 'none' }}
             />
             <button onClick={agregarServicio} style={{ background: '#2D1464', color: 'white', border: 'none', borderRadius: '10px', padding: '10px 16px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '14px', cursor: 'pointer' }}>+ Agregar</button>
           </div>
@@ -1192,10 +1229,10 @@ function RegistrarCompitaDirecto({ onRegistrada }: { onRegistrada: (c: Compita) 
   const inp = (v: string, onChange: (s: string) => void, placeholder: string, multiline?: boolean) =>
     multiline ? (
       <textarea value={v} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} rows={3}
-        style={{ border: '2px solid rgba(45,20,100,0.2)', borderRadius: '10px', padding: '9px 12px', fontFamily: 'Inter, sans-serif', fontSize: '14px', color: '#1A0A3C', background: 'white', outline: 'none', resize: 'vertical', width: '100%', boxSizing: 'border-box' as const }} />
+        style={{ border: '2px solid rgba(45,20,100,0.2)', borderRadius: '10px', padding: '9px 12px', fontFamily: 'Inter, sans-serif', fontSize: '16px', color: '#1A0A3C', background: 'white', outline: 'none', resize: 'vertical', width: '100%', boxSizing: 'border-box' as const }} />
     ) : (
       <input value={v} onChange={(e) => onChange(e.target.value)} placeholder={placeholder}
-        style={{ border: '2px solid rgba(45,20,100,0.2)', borderRadius: '10px', padding: '9px 12px', fontFamily: 'Inter, sans-serif', fontSize: '14px', color: '#1A0A3C', background: 'white', outline: 'none', width: '100%', boxSizing: 'border-box' as const }} />
+        style={{ border: '2px solid rgba(45,20,100,0.2)', borderRadius: '10px', padding: '9px 12px', fontFamily: 'Inter, sans-serif', fontSize: '16px', color: '#1A0A3C', background: 'white', outline: 'none', width: '100%', boxSizing: 'border-box' as const }} />
     )
 
   return (
@@ -1235,6 +1272,119 @@ function RegistrarCompitaDirecto({ onRegistrada }: { onRegistrada: (c: Compita) 
           </button>
         </div>
       )}
+    </div>
+  )
+}
+
+function SolicitudesTab({ solicitudes }: { solicitudes: SolicitudAdmin[] }) {
+  const [filtro, setFiltro] = useState<'todas' | 'pendiente' | 'aceptada' | 'rechazada'>('todas')
+
+  const lista = filtro === 'todas' ? solicitudes : solicitudes.filter((s) => s.estado === filtro)
+
+  const FILTROS = [
+    { key: 'todas', label: 'Todas' },
+    { key: 'pendiente', label: '⏳ Pendientes' },
+    { key: 'aceptada', label: '✅ Aceptadas' },
+    { key: 'rechazada', label: '❌ Rechazadas' },
+  ] as const
+
+  function formatSlot(iso: string) {
+    return new Date(iso).toLocaleString('es-VE', {
+      timeZone: 'America/Caracas',
+      weekday: 'short', day: 'numeric', month: 'short',
+      hour: '2-digit', minute: '2-digit', hour12: true,
+    })
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+        {FILTROS.map(({ key, label }) => (
+          <button key={key} onClick={() => setFiltro(key)}
+            style={{ background: filtro === key ? '#2D1464' : 'white', color: filtro === key ? 'white' : '#4A3B6B', border: `2px solid ${filtro === key ? '#2D1464' : '#D1C8E0'}`, borderRadius: '9999px', padding: '7px 16px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', cursor: 'pointer' }}>
+            {label} ({key === 'todas' ? solicitudes.length : solicitudes.filter((s) => s.estado === key).length})
+          </button>
+        ))}
+      </div>
+
+      {lista.length === 0 ? (
+        <div style={{ background: 'white', border: '2px solid #E8E0D4', borderRadius: '16px', padding: '48px', textAlign: 'center' }}>
+          <p style={{ color: '#6B5C90' }}>No hay solicitudes en esta categoría.</p>
+        </div>
+      ) : lista.map((s) => {
+        const isPendiente = s.estado === 'pendiente'
+        const isAceptada = s.estado === 'aceptada'
+        const borderColor = isPendiente ? '#FF6B2B' : isAceptada ? '#22c55e' : '#E8E0D4'
+        return (
+          <div key={s.id} style={{ background: 'white', border: `2px solid ${borderColor}`, borderRadius: '16px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {/* Cabecera */}
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', flexWrap: 'wrap' }}>
+                  <span style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, color: '#1A0A3C', fontSize: '15px' }}>
+                    {s.usuarios?.nombre ?? '—'}
+                  </span>
+                  <span style={{ color: '#9B8AB8', fontSize: '13px' }}>→</span>
+                  <span style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, color: '#2D1464', fontSize: '15px' }}>
+                    {s.compitas?.nombre ?? '—'}
+                  </span>
+                  <span style={{
+                    borderRadius: '9999px', padding: '2px 10px', fontSize: '11px', fontWeight: 700,
+                    fontFamily: 'Bricolage Grotesque, sans-serif',
+                    background: isPendiente ? '#FFF3E8' : isAceptada ? '#F0FDF4' : '#F1F0F5',
+                    color: isPendiente ? '#C84B0E' : isAceptada ? '#15803d' : '#6B5C90',
+                    border: `1.5px solid ${isPendiente ? '#FF6B2B' : isAceptada ? '#22c55e' : '#D4CAE8'}`,
+                  }}>
+                    {isPendiente ? '⏳ Pendiente' : isAceptada ? '✅ Aceptada' : '❌ Rechazada'}
+                  </span>
+                </div>
+                <div style={{ fontSize: '12px', color: '#9B8AB8' }}>
+                  {s.usuarios?.email} · {s.compitas?.zona ?? ''} · {new Date(s.created_at).toLocaleDateString('es-VE', { day: 'numeric', month: 'short', year: 'numeric' })}
+                </div>
+              </div>
+              {s.room_url && isAceptada && (
+                <a href={s.room_url} target="_blank" rel="noreferrer"
+                  style={{ background: '#22c55e', color: 'white', borderRadius: '9999px', padding: '8px 16px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                  📹 Sala de llamada
+                </a>
+              )}
+            </div>
+
+            {/* Mensaje del cliente */}
+            {s.mensaje && (
+              <div style={{ background: '#FDFAF6', border: '1.5px solid #E8E0D4', borderRadius: '10px', padding: '12px 14px' }}>
+                <div style={{ fontSize: '11px', fontWeight: 700, color: '#9B8AB8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '4px' }}>Mensaje</div>
+                <p style={{ margin: 0, fontSize: '14px', color: '#4A3B6B' }}>{s.mensaje}</p>
+              </div>
+            )}
+
+            {/* Horarios propuestos */}
+            {s.slots_propuestos?.length > 0 && (
+              <div>
+                <div style={{ fontSize: '11px', fontWeight: 700, color: '#9B8AB8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>Horarios propuestos</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  {s.slots_propuestos.map((slot, i) => {
+                    const esConfirmado = s.slot_confirmado === slot
+                    return (
+                      <div key={i} style={{
+                        fontSize: '13px', padding: '6px 12px', borderRadius: '8px',
+                        background: esConfirmado ? '#F0FDF4' : '#F5F0E8',
+                        color: esConfirmado ? '#15803d' : '#4A3B6B',
+                        border: esConfirmado ? '1.5px solid #22c55e' : '1.5px solid transparent',
+                        fontWeight: esConfirmado ? 700 : 400,
+                        display: 'flex', alignItems: 'center', gap: '6px',
+                      }}>
+                        {esConfirmado && <span>✅</span>}
+                        {['1️⃣', '2️⃣', '3️⃣'][i]} {formatSlot(slot)}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        )
+      })}
     </div>
   )
 }

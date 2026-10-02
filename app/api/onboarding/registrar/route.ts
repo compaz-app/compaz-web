@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { createAdminSupabase, createServerSupabase } from '@/lib/supabase-server'
 import { isAdminEmail } from '@/lib/auth'
 import { ok, err, serverError } from '@/lib/api'
+import { sendBienvenidaCompita } from '@/lib/resend'
 
 export async function POST(req: NextRequest) {
   const { token, nombre, email, zona, descripcion, habilidades, servicios, foto_url, youtube_url, horarios_disponibles } = await req.json()
@@ -59,6 +60,14 @@ export async function POST(req: NextRequest) {
   })
 
   if (error) return serverError(error)
+
+  // Email de bienvenida con instrucciones de Telegram
+  if (email) {
+    const botUsername = process.env.TELEGRAM_BOT_USERNAME ?? 'CompazBot'
+    try {
+      await sendBienvenidaCompita(email, nombre, botUsername)
+    } catch (e) { console.error('Error enviando email bienvenida compita:', e) }
+  }
 
   return ok(null)
 }

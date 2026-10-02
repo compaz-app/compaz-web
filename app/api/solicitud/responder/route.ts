@@ -2,8 +2,7 @@
 // El compita toca este link desde Telegram para confirmar un slot o rechazar
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminSupabase } from '@/lib/supabase-server'
-import { confirmarSlot, guardarRoomUrl } from '@/lib/solicitudes'
-import { createEntrevistaRoom } from '@/lib/daily'
+import { confirmarSlot } from '@/lib/solicitudes'
 import { sendTelegramMessage } from '@/lib/telegram'
 import { Resend } from 'resend'
 
@@ -101,22 +100,9 @@ export async function GET(req: NextRequest) {
     return html('Respuesta registrada', 'Gracias. Te llegará un mensaje por Telegram para que puedas sugerir otros horarios.')
   }
 
-  // Solicitud aceptada — crear sala Daily.co
-  const slotDate = new Date(solicitud.slot_confirmado!)
-  let roomUrl = ''
-  try {
-    const room = await createEntrevistaRoom(solicitud.id, slotDate)
-    roomUrl = room.url
-    await guardarRoomUrl(solicitud.id, roomUrl)
-  } catch (e) {
-    console.error('Error creando sala Daily:', e)
-    return html('Error', 'Ocurrió un error al crear la sala. Contacta al equipo Compaz.')
-  }
-
   const slotLabel = formatSlotVE(solicitud.slot_confirmado!)
-  const recordatorio20min = '⏱️ Recuerda: la llamada tiene un límite de <strong>20 minutos</strong>. La sala se cierra automáticamente a los 23 min.'
 
-  // Traer datos del cliente para el email
+  // Traer datos del cliente para el email de confirmación
   const admin = createAdminSupabase()
   const { data: cliente } = await admin
     .from('usuarios')
@@ -126,7 +112,7 @@ export async function GET(req: NextRequest) {
 
   const adminTg = process.env.TELEGRAM_ADMIN_CHAT_ID
 
-  // ── Email al cliente ──────────────────────────────────────────────────────
+  // ── Email al cliente — confirmación sin link (llegará 1h antes) ───────────
   if (cliente) {
     try {
       await resend.emails.send({
@@ -140,14 +126,10 @@ export async function GET(req: NextRequest) {
               <strong>${solicitud.compita_nombre}</strong> confirmó la llamada para el:<br>
               <strong>${slotLabel}</strong>
             </p>
-            <p style="color:#C84B0E;background:#FFF3E8;border:2px solid #FF6B2B;border-radius:12px;padding:14px;font-size:14px">
-              ${recordatorio20min}
+            <p style="color:#4A3B6B;background:#F5F0E8;border:2px solid #D4C9E8;border-radius:12px;padding:14px;font-size:14px">
+              📩 Te enviaremos el link de acceso a la llamada <strong>1 hora antes</strong>.
             </p>
-            <a href="${roomUrl}" style="display:inline-block;background:#FF6B2B;color:white;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:16px;margin-top:8px">
-              Entrar a la llamada →
-            </a>
             <p style="color:#6B5C90;font-size:13px;margin-top:24px">
-              El link estará activo desde 5 minutos antes hasta 23 minutos después de la hora indicada.<br>
               Compaz — <em>Cerca aunque estés lejos</em>
             </p>
           </div>
@@ -156,7 +138,7 @@ export async function GET(req: NextRequest) {
     } catch (e) { console.error('Email cliente confirmación:', e) }
   }
 
-  // ── Telegram al compita ───────────────────────────────────────────────────
+  // ── Telegram al compita — confirmación sin link ───────────────────────────
   if (solicitud.compita_id) {
     const { data: compita } = await admin
       .from('compitas')
@@ -174,16 +156,14 @@ export async function GET(req: NextRequest) {
             `<b>Cliente:</b> ${cliente?.nombre ?? 'Cliente'}`,
             `<b>Fecha y hora:</b> ${slotLabel}`,
             ``,
-            `⏱️ <b>La llamada es de 20 minutos.</b> La sala se cierra automáticamente a los 23 min.`,
-            ``,
-            `<a href="${roomUrl}">Entrar a la llamada →</a>`,
+            `📩 Te enviaremos el link de acceso <b>1 hora antes</b> de la llamada.`,
           ].join('\n'),
         )
       } catch (e) { console.error('Telegram compita confirmación:', e) }
     }
   }
 
-  // ── Telegram al admin ─────────────────────────────────────────────────────
+  // ── Telegram al admin — confirmación sin link ─────────────────────────────
   if (adminTg) {
     try {
       await sendTelegramMessage(
@@ -195,8 +175,7 @@ export async function GET(req: NextRequest) {
           `<b>Compita:</b> ${solicitud.compita_nombre}`,
           `<b>Fecha y hora:</b> ${slotLabel}`,
           ``,
-          `⏱️ Llamada de 20 minutos. Puedes unirte como supervisor:`,
-          `<a href="${roomUrl}">Entrar a la sala →</a>`,
+          `🔗 El link de sala se generará y enviará 1 hora antes.`,
         ].join('\n'),
       )
     } catch (e) { console.error('Telegram admin confirmación:', e) }

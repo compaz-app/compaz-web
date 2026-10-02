@@ -21,6 +21,86 @@ export async function sendCodigoTelegram(email: string, nombre: string, codigo: 
   })
 }
 
+export async function sendBienvenidaCompita(
+  email: string,
+  nombre: string,
+  telegramBotUsername: string,
+): Promise<void> {
+  const botUrl = `https://t.me/${telegramBotUsername}`
+  await resend.emails.send({
+    from: FROM,
+    to: email,
+    subject: `¡Bienvenido a Compaz, ${nombre}! Así funciona todo`,
+    html: `
+      <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px;background:#FDFAF6">
+        <img src="https://micompaz.com/logo.png" alt="Compaz" style="height:40px;margin-bottom:24px" />
+
+        <h1 style="color:#2D1464;font-size:26px;margin-bottom:8px">¡Hola, ${nombre}! 👋</h1>
+        <p style="color:#4A3B6B;font-size:16px;line-height:1.6;margin-bottom:24px">
+          Ya eres parte de la familia Compaz. Aquí te explicamos todo lo que necesitas saber para comenzar.
+        </p>
+
+        <!-- Paso 1 -->
+        <div style="background:white;border:2px solid #E8E0D4;border-radius:16px;padding:24px;margin-bottom:16px">
+          <p style="color:#FF6B2B;font-weight:800;font-size:13px;margin:0 0 8px 0;text-transform:uppercase;letter-spacing:1px">Paso 1</p>
+          <h2 style="color:#2D1464;font-size:18px;margin:0 0 12px 0">Conecta tu Telegram 📱</h2>
+          <p style="color:#4A3B6B;font-size:15px;line-height:1.6;margin:0 0 16px 0">
+            Toda la comunicación con Compaz es a través de Telegram. Así recibirás solicitudes de clientes, confirmaciones de llamadas y mucho más.
+          </p>
+          <ol style="color:#4A3B6B;font-size:15px;line-height:2;padding-left:20px;margin:0 0 16px 0">
+            <li>Abre Telegram y busca <strong>@${telegramBotUsername}</strong></li>
+            <li>Pulsa <strong>Iniciar</strong> o escribe <strong>/start</strong></li>
+            <li>El bot te pedirá tu nombre completo. Escríbelo tal como apareces aquí.</li>
+            <li>Te enviará un código de 6 dígitos a este correo.</li>
+            <li>Ingresa ese código en el chat para activar tu cuenta.</li>
+          </ol>
+          <a href="${botUrl}" style="display:inline-block;background:#FF6B2B;color:white;padding:12px 24px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:15px">
+            Abrir bot de Telegram →
+          </a>
+        </div>
+
+        <!-- Paso 2 -->
+        <div style="background:white;border:2px solid #E8E0D4;border-radius:16px;padding:24px;margin-bottom:16px">
+          <p style="color:#FF6B2B;font-weight:800;font-size:13px;margin:0 0 8px 0;text-transform:uppercase;letter-spacing:1px">Paso 2</p>
+          <h2 style="color:#2D1464;font-size:18px;margin:0 0 12px 0">Completa tu perfil ✏️</h2>
+          <p style="color:#4A3B6B;font-size:15px;line-height:1.6;margin:0 0 12px 0">
+            Un perfil completo atrae más familias. Desde Telegram puedes escribir <strong>/perfil</strong> para obtener un enlace directo a tu página de edición.
+          </p>
+          <p style="color:#4A3B6B;font-size:15px;line-height:1.6;margin:0">
+            Desde ahí puedes actualizar tu foto 📸, tu descripción personal ✍️, los servicios que ofreces 🛎️, tus horarios disponibles 🕐 y agregar un video de presentación en YouTube 🎥. Mientras más completo esté tu perfil, más fácil será que las familias te escojan.
+          </p>
+        </div>
+
+        <!-- Paso 3 -->
+        <div style="background:white;border:2px solid #E8E0D4;border-radius:16px;padding:24px;margin-bottom:24px">
+          <p style="color:#FF6B2B;font-weight:800;font-size:13px;margin:0 0 8px 0;text-transform:uppercase;letter-spacing:1px">Paso 3</p>
+          <h2 style="color:#2D1464;font-size:18px;margin:0 0 12px 0">Espera a que lleguen clientes 🤝</h2>
+          <p style="color:#4A3B6B;font-size:15px;line-height:1.6;margin:0">
+            Cuando una familia quiera conocerte, recibirás un mensaje de Telegram con los detalles. Desde ahí puedes <strong>aceptar o rechazar</strong> la solicitud y escoger el horario de la videollamada.
+          </p>
+        </div>
+
+        <!-- Comandos útiles -->
+        <div style="background:#F5F0FF;border-radius:16px;padding:20px;margin-bottom:24px">
+          <h3 style="color:#2D1464;font-size:16px;margin:0 0 12px 0">Comandos útiles en Telegram</h3>
+          <table style="width:100%;border-collapse:collapse">
+            <tr><td style="color:#FF6B2B;font-weight:700;font-size:14px;padding:4px 8px;white-space:nowrap">/menu</td><td style="color:#4A3B6B;font-size:14px;padding:4px 8px">Ver todas las opciones disponibles</td></tr>
+            <tr><td style="color:#FF6B2B;font-weight:700;font-size:14px;padding:4px 8px;white-space:nowrap">/perfil</td><td style="color:#4A3B6B;font-size:14px;padding:4px 8px">Obtener tu enlace para editar tu perfil</td></tr>
+            <tr><td style="color:#FF6B2B;font-weight:700;font-size:14px;padding:4px 8px;white-space:nowrap">/visita</td><td style="color:#4A3B6B;font-size:14px;padding:4px 8px">Ver tu visita activa (si tienes una)</td></tr>
+            <tr><td style="color:#FF6B2B;font-weight:700;font-size:14px;padding:4px 8px;white-space:nowrap">/ayuda</td><td style="color:#4A3B6B;font-size:14px;padding:4px 8px">Contactar al equipo Compaz</td></tr>
+          </table>
+        </div>
+
+        <p style="color:#4A3B6B;font-size:15px;line-height:1.6;margin-bottom:8px">
+          Cualquier duda, escríbenos directamente en Telegram o responde a este correo. ¡Estamos para ayudarte!
+        </p>
+        <p style="color:#2D1464;font-size:15px;font-weight:700;margin-bottom:32px">El equipo Compaz 💙</p>
+        <p style="color:#9990A8;font-size:13px;margin:0">Compaz — <em>Cerca aunque estés lejos</em></p>
+      </div>
+    `,
+  })
+}
+
 export async function sendVisitaInicio(
   usuario: Usuario,
   compita: Compita,

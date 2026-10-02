@@ -651,7 +651,7 @@ const s = {
   h2: { fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '22px', color: '#1A0A3C' } as React.CSSProperties,
   label: { display: 'block', fontWeight: 600, fontSize: '14px', color: '#1A0A3C', marginBottom: '6px' } as React.CSSProperties,
   hint: { color: '#6B5C90', fontSize: '13px', marginBottom: '10px', lineHeight: '1.5', marginTop: '2px' } as React.CSSProperties,
-  input: { width: '100%', border: '2px solid rgba(45,20,100,0.2)', borderRadius: '12px', padding: '12px 14px', fontFamily: 'Inter, sans-serif', fontSize: '14px', color: '#1A0A3C', background: 'white', boxSizing: 'border-box' as const, outline: 'none' },
+  input: { width: '100%', border: '2px solid rgba(45,20,100,0.2)', borderRadius: '12px', padding: '12px 14px', fontFamily: 'Inter, sans-serif', fontSize: '16px', color: '#1A0A3C', background: 'white', boxSizing: 'border-box' as const, outline: 'none' },
   btnPrimary: { display: 'block', width: '100%', background: '#FF6B2B', color: 'white', border: 'none', borderRadius: '9999px', padding: '16px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '16px', cursor: 'pointer', textDecoration: 'none', textAlign: 'center' as const } as React.CSSProperties,
   infoBox: { background: '#F5F0FF', border: '2px solid rgba(45,20,100,0.15)', borderRadius: '16px', padding: '20px', marginBottom: '24px', textAlign: 'left' as const } as React.CSSProperties,
   code: { background: '#1A0A3C', color: 'white', borderRadius: '6px', padding: '2px 8px', fontFamily: 'monospace', fontSize: '14px' } as React.CSSProperties,

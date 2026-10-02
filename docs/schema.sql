@@ -105,14 +105,24 @@ create table solicitudes (
   franja_horaria   text,                    -- Horario preferido del cliente (texto libre)
   token_respuesta  uuid not null unique default uuid_generate_v4(), -- Para link de respuesta en Telegram
   created_at       timestamptz not null default now(),
-  respondido_at    timestamptz             -- Cuando el compita respondió
+  respondido_at        timestamptz,            -- Cuando el compita respondió
+  slot_confirmado      timestamptz,            -- Slot de entrevista aceptado
+  room_url             text,                   -- URL de sala Daily.co
+  seguimiento_enviado  boolean not null default false -- Email de seguimiento post-llamada enviado
 );
 
 -- Flujo:
 -- 1. Cliente crea solicitud (estado=pendiente)
 -- 2. Bot envía mensaje a Telegram del compita con link de aceptar/rechazar
 -- 3. Compita responde → estado=aceptada|rechazada, respondido_at=now()
--- 4. Admin coordina llamada de 20 minutos → estado=completada
+-- 4. Compita acepta slot → slot_confirmado=<timestamp>, room_url=<url>
+-- 5. 23 min después del slot → cron envía email de seguimiento, seguimiento_enviado=true
+-- 6. Cliente confirma → estado=completada
+
+-- Columnas añadidas por ALTER (no en CREATE inicial):
+-- alter table solicitudes add column if not exists slot_confirmado timestamptz;
+-- alter table solicitudes add column if not exists room_url text;
+-- alter table solicitudes add column if not exists seguimiento_enviado boolean default false;
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- RLS (Row Level Security)
@@ -134,9 +144,14 @@ create policy "compitas_public_read" on compitas
 create policy "usuarios_self" on usuarios
   for all using (auth.uid() = id);
 
--- visitas: cliente ve las suyas, compita ve las suyas
+-- visitas: cliente ve las suyas; escritura solo por service_role (las API routes usan createAdminSupabase)
 create policy "visitas_cliente" on visitas
   for select using (auth.uid() = usuario_id);
+
+-- Negar explícitamente INSERT/UPDATE/DELETE a roles autenticados (fail-closed)
+create policy "visitas_no_insert" on visitas for insert to authenticated with check (false);
+create policy "visitas_no_update" on visitas for update to authenticated using (false);
+create policy "visitas_no_delete" on visitas for delete to authenticated using (false);
 
 -- mensajes: acceso por visita (el cliente ve mensajes de sus visitas)
 create policy "mensajes_via_visita" on mensajes
