@@ -55,6 +55,11 @@ Te llegará un enlace. Ábrelo en tu celular y podrás:
 
 ━━━━━━━━━━━━━━━━━━━
 
+<b>6. Si hay una emergencia durante la visita</b>
+Toca el botón <b>🚨 Emergencia</b>. El equipo de Compaz recibe una alerta inmediata con tus datos y los del cliente, y te contactamos enseguida. Para peligro inmediato, llama al <b>171</b>.
+
+━━━━━━━━━━━━━━━━━━━
+
 <b>¿Tienes dudas?</b>
 Escribe <b>/menu</b> para volver a ver estas instrucciones.
 O escríbenos a <b>hola@micompaz.com</b> y te ayudamos.`
@@ -549,6 +554,53 @@ export async function POST(req: NextRequest) {
       chatId,
       `Cancelado. No se hizo ningún cambio.`,
       visitaActiva ? INLINE_DURANTE : INLINE_INICIO,
+    )
+    return NextResponse.json({ ok: true })
+  }
+
+  // ── Botón: Emergencia ────────────────────────────────────────────────────────
+  if (isCallback && text === 'emergencia') {
+    const adminTg = process.env.TELEGRAM_ADMIN_CHAT_ID
+
+    // Buscar visita en curso para obtener datos del cliente
+    const { data: visitaEmergencia } = await supabase
+      .from('visitas')
+      .select('id, usuario:usuarios(nombre, email, zona, familiar_nombre, familiar_condicion)')
+      .eq('compita_id', compita.id)
+      .eq('estado', 'en_curso')
+      .maybeSingle() as { data: { id: string; usuario: { nombre: string; email: string; zona: string | null; familiar_nombre: string | null; familiar_condicion: string | null } | null } | null }
+
+    const u = visitaEmergencia?.usuario
+    const infoCliente = u
+      ? [
+          `<b>Cliente:</b> ${u.nombre} (${u.email})`,
+          u.zona ? `<b>Zona:</b> ${u.zona}` : null,
+          u.familiar_nombre ? `<b>Familiar:</b> ${u.familiar_nombre}` : null,
+          u.familiar_condicion ? `<b>Condición:</b> ${u.familiar_condicion}` : null,
+        ].filter(Boolean).join('\n')
+      : 'No hay visita activa registrada.'
+
+    if (adminTg) {
+      try {
+        await sendTelegramMessage(
+          adminTg,
+          [
+            `🚨 <b>EMERGENCIA</b>`,
+            ``,
+            `<b>${compita.nombre}</b> activó el botón de emergencia durante una visita.`,
+            ``,
+            infoCliente,
+            ``,
+            `Contáctalos de inmediato.`,
+          ].join('\n'),
+        )
+      } catch (e) { console.error('Telegram emergencia admin:', e) }
+    }
+
+    await sendTelegramMessage(
+      chatId,
+      `🚨 <b>Alerta enviada.</b>\n\nEl equipo de Compaz fue notificado ahora mismo y te contactará de inmediato.\n\nSi hay peligro inmediato, llama al <b>171</b> (emergencias) o al <b>0800-COMPAZ</b> si está disponible.`,
+      INLINE_DURANTE,
     )
     return NextResponse.json({ ok: true })
   }

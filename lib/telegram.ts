@@ -48,7 +48,10 @@ export async function editMessageReplyMarkup(chatId: string, messageId: number, 
 
 // Teclados inline para visitas
 export const INLINE_INICIO = makeInlineKeyboard([[{ text: '▶️ Iniciar visita', callback_data: '▶️ Iniciar visita' }]])
-export const INLINE_DURANTE = makeInlineKeyboard([[{ text: '🔴 Terminar visita', callback_data: '🔴 Terminar visita' }]])
+export const INLINE_DURANTE = makeInlineKeyboard([
+  [{ text: '🔴 Terminar visita', callback_data: '🔴 Terminar visita' }],
+  [{ text: '🚨 Emergencia', callback_data: 'emergencia' }],
+])
 export const INLINE_CONFIRMAR_INICIO = makeInlineKeyboard([[
   { text: '✅ Sí, iniciar', callback_data: '✅ Sí, iniciar' },
   { text: '❌ Cancelar', callback_data: '❌ Cancelar' },
