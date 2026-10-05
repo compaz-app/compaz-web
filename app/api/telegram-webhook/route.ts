@@ -57,7 +57,7 @@ Te llegará un enlace. Ábrelo en tu celular y podrás:
 
 <b>¿Tienes dudas?</b>
 Escribe <b>/menu</b> para volver a ver estas instrucciones.
-O contacta al equipo de Compaz directamente.`
+O escríbenos a <b>hola@micompaz.com</b> y te ayudamos.`
 
 const PREGUNTAS_REPORTE = [
   { emoji: '😊', label: 'Ánimo', texto: '¿Cómo estaba el <b>ánimo</b> de la persona durante la visita?' },
@@ -157,13 +157,6 @@ async function guardarReporteYEnviarEmail(
     await sendTelegramMessage(chatId, `Gracias. El cuestionario fue registrado. ¡Hasta la próxima! 😊`, INLINE_INICIO)
     return
   }
-
-  // Obtener historial previo para análisis comparativo
-  const { data: historialRaw } = await supabase
-    .from('reportes_visita')
-    .select('animo, fisico, participacion, entorno, created_at')
-    .eq('visita_id', visitaId)
-    .neq('visita_id', visitaId) // solo otros reportes del mismo usuario
 
   // Reportes anteriores del mismo cliente (vía sus visitas)
   const { data: visitasCliente } = await supabase
@@ -508,7 +501,7 @@ export async function POST(req: NextRequest) {
     await setPendiente(supabase, chatId, 'terminar')
     await sendTelegramMessage(
       chatId,
-      `¿Segura que quieres terminar la visita?\n\nToca <b>✅ Sí, terminar</b> para confirmar. Se le enviará un resumen a la familia.`,
+      `¿Confirmas que quieres terminar la visita?\n\nToca <b>✅ Sí, terminar</b> para confirmar. Se le enviará un resumen a la familia.`,
       INLINE_CONFIRMAR_FIN,
     )
     return NextResponse.json({ ok: true })

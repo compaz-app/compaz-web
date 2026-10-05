@@ -84,15 +84,17 @@ export async function getSolicitudesAdmin(): Promise<Solicitud[]> {
 export async function getSolicitudesParaRecordatorio(): Promise<Solicitud[]> {
   const supabase = createAdminSupabase()
   const ahora = new Date()
-  const en55min = new Date(ahora.getTime() + 55 * 60 * 1000).toISOString()
   const en65min = new Date(ahora.getTime() + 65 * 60 * 1000).toISOString()
 
+  // Captura cualquier llamada en los próximos 65 min sin recordatorio enviado.
+  // La ventana arranca desde ahora (no desde 55 min) para cubrir llamadas
+  // agendadas a último momento que el compita aceptó con poca antelación.
   const { data, error } = await supabase
     .from('solicitudes')
     .select(SELECT_FIELDS)
     .eq('estado', 'aceptada')
     .eq('recordatorio_enviado', false)
-    .gte('slot_confirmado', en55min)
+    .gte('slot_confirmado', ahora.toISOString())
     .lte('slot_confirmado', en65min)
 
   if (error) throw new Error(error.message)

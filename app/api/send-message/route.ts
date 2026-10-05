@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabase, createAdminSupabase } from '@/lib/supabase-server'
 import { sendTelegramMessage } from '@/lib/telegram'
-import type { Visita, Compita } from '@/types'
+import type { Visita, Compita, Usuario } from '@/types'
 
 export async function POST(req: NextRequest) {
   const supabase = await createServerSupabase()
@@ -25,13 +25,15 @@ export async function POST(req: NextRequest) {
 
   const admin = createAdminSupabase()
 
-  // Verificar visita activa del usuario
+  // Verificar visita activa o en coordinación del usuario
   const { data: visita } = await admin
     .from('visitas')
-    .select('*, compita:compitas(*)')
+    .select('*, compita:compitas(*), usuario:usuarios(*)')
     .eq('usuario_id', user.id)
-    .eq('estado', 'en_curso')
-    .single() as { data: (Visita & { compita: Compita }) | null }
+    .in('estado', ['en_curso', 'pre_visita'])
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle() as { data: (Visita & { compita: Compita; usuario: Usuario }) | null }
 
   if (!visita) {
     return NextResponse.json({ error: 'No hay visita activa' }, { status: 400 })
@@ -55,10 +57,11 @@ export async function POST(req: NextRequest) {
 
   // Reenviar al Compita por Telegram
   if (visita.compita.telegram_chat_id) {
+    const nombreCliente = visita.usuario?.nombre ?? 'El cliente'
     try {
       await sendTelegramMessage(
         visita.compita.telegram_chat_id,
-        `💬 Mensaje del cliente:\n\n${contenido}`
+        `💬 <b>${nombreCliente}:</b>\n\n${contenido}`
       )
     } catch (e) {
       console.error('Error reenviando a Telegram:', e)
