@@ -102,15 +102,12 @@ export async function GET(req: NextRequest) {
       try {
         await sendTelegramMessage(
           compita.telegram_chat_id,
-          `🎉 <b>¡Buenas noticias!</b>\n\n<b>${cliente?.nombre ?? 'El cliente'}</b> quiere contratarte. El equipo Compaz te contactará pronto para coordinar todo.\n\n¡Sigue así! 🤝`,
+          `🎉 <b>¡Buenas noticias!</b>\n\n<b>${cliente?.nombre ?? 'El cliente'}</b> quiere contratarte. Ahora está completando el pago — cuando confirme, recibirás otro mensaje aquí con todos los detalles para arrancar.\n\n¡Sigue así! 🤝`,
         )
       } catch (e) { console.error('Telegram compita contratación:', e) }
     }
 
-    return html(
-      '¡Perfecto!',
-      `El equipo Compaz te contactará pronto para coordinar todo con <strong>${solicitud.compita_nombre}</strong>. ¡Gracias por confiar en nosotros! 🤝`,
-    )
+    return NextResponse.redirect(`${SITE_URL}/pago?solicitud=${solicitud.id}`, 303)
   }
 
   // respuesta === 'no'

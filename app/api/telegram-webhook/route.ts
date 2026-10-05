@@ -79,6 +79,15 @@ function makeReporteKeyboard() {
   ])
 }
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
 function formatSlotVE(iso: string): string {
   return new Date(iso).toLocaleString('es-VE', {
     timeZone: 'America/Caracas',
@@ -343,8 +352,11 @@ export async function POST(req: NextRequest) {
   const estado = !compita ? await getEstado(supabase, chatId) : null
 
   // Paso 2: compita ingresó el código de 6 dígitos
+  // formato estado: verificar:{codigo}:{compitaId}:{intentos_fallidos}
   if (estado?.pendiente_accion?.startsWith('verificar:') && !compita) {
-    const [, codigo, compitaId] = estado.pendiente_accion.split(':')
+    const partesCodigo = estado.pendiente_accion.split(':')
+    const [, codigo, compitaId] = partesCodigo
+    const intentosFallidos = parseInt(partesCodigo[3] ?? '0', 10)
     const expirado = estado.pendiente_expira ? new Date(estado.pendiente_expira) < new Date() : true
     if (expirado) {
       await clearPendiente(supabase, chatId)
@@ -353,7 +365,28 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true })
     }
     if (text.trim() !== codigo) {
-      await sendTelegramMessage(chatId, `Código incorrecto ❌\n\nRevisa el correo e inténtalo de nuevo. Si quieres empezar de cero, toca el botón. 👇`, INLINE_START)
+      const nuevosIntentos = intentosFallidos + 1
+      if (nuevosIntentos >= 5) {
+        // Bloquear: invalidar el código y pedir que empiece de nuevo
+        await clearPendiente(supabase, chatId)
+        await setRegistroPendiente(supabase, chatId, true)
+        await sendTelegramMessage(
+          chatId,
+          `Demasiados intentos incorrectos ❌\n\nPor seguridad, el código fue invalidado. ✍️ Escribe tu nombre de nuevo para recibir uno nuevo:`,
+          QUITAR_TECLADO,
+        )
+      } else {
+        // Registrar intento fallido en el estado
+        await setEstado(supabase, chatId, {
+          pendiente_accion: `verificar:${codigo}:${compitaId}:${nuevosIntentos}`,
+        })
+        const restantes = 5 - nuevosIntentos
+        await sendTelegramMessage(
+          chatId,
+          `Código incorrecto ❌\n\nRevisa el correo e inténtalo de nuevo. Te quedan <b>${restantes}</b> intento${restantes !== 1 ? 's' : ''}.`,
+          QUITAR_TECLADO,
+        )
+      }
       return NextResponse.json({ ok: true })
     }
     // Código correcto — vincular
@@ -783,7 +816,7 @@ export async function POST(req: NextRequest) {
                 <strong>${compita.nombre}</strong> no pudo en los horarios que propusiste, pero sugiere lo siguiente:
               </p>
               <blockquote style="background:#F5F0FF;border-left:4px solid #7C4DFF;border-radius:8px;padding:16px 20px;color:#1A0A3C;font-size:16px;line-height:1.6;margin:16px 0">
-                ${text.replace(/\n/g, '<br>')}
+                ${escapeHtml(text).replace(/\n/g, '<br>')}
               </blockquote>
               <p style="color:#4A3B6B;font-size:15px;line-height:1.6">
                 Si alguno te funciona, haz clic aquí para enviar una nueva solicitud directamente con ${compita.nombre}:
