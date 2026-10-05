@@ -56,7 +56,7 @@ Te llegará un enlace. Ábrelo en tu celular y podrás:
 ━━━━━━━━━━━━━━━━━━━
 
 <b>6. Si hay una emergencia durante la visita</b>
-Toca el botón <b>🚨 Emergencia</b>. El equipo de Compaz recibe una alerta inmediata con tus datos y los del cliente, y te contactamos enseguida. Para peligro inmediato, llama al <b>171</b>.
+Toca el botón <b>🚨 Emergencia</b>. El equipo de Compaz recibe una alerta inmediata con tus datos y los del cliente, y te contactamos enseguida. Para peligro inmediato, llama al <b>911</b>.
 
 ━━━━━━━━━━━━━━━━━━━
 
@@ -599,7 +599,7 @@ export async function POST(req: NextRequest) {
 
     await sendTelegramMessage(
       chatId,
-      `🚨 <b>Alerta enviada.</b>\n\nEl equipo de Compaz fue notificado ahora mismo y te contactará de inmediato.\n\nSi hay peligro inmediato, llama al <b>171</b> (emergencias) o al <b>0800-COMPAZ</b> si está disponible.`,
+      `🚨 <b>Alerta enviada.</b>\n\nEl equipo de Compaz fue notificado ahora mismo y te contactará de inmediato.\n\nSi hay peligro inmediato, llama al <b>911</b>.`,
       INLINE_DURANTE,
     )
     return NextResponse.json({ ok: true })
