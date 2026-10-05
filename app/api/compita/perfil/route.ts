@@ -4,6 +4,8 @@ import { NextRequest } from 'next/server'
 import { ok, err, unauthorized, notFound, serverError } from '@/lib/api'
 import { validarTokenPerfil, consumirTokenPerfil } from '@/lib/compita-tokens'
 import { getCompitaAdminById, actualizarCompita } from '@/lib/compitas'
+import { sendTelegramMessage } from '@/lib/telegram'
+import { createAdminSupabase } from '@/lib/supabase-server'
 
 export async function GET(req: NextRequest) {
   const token = req.nextUrl.searchParams.get('token')
@@ -47,6 +49,23 @@ export async function PUT(req: NextRequest) {
 
   try {
     await actualizarCompita(compitaId, campos)
+
+    // Confirmar por Telegram si el compita está vinculado
+    const admin = createAdminSupabase()
+    const { data: compita } = await admin
+      .from('compitas')
+      .select('nombre, telegram_chat_id')
+      .eq('id', compitaId)
+      .single()
+    if (compita?.telegram_chat_id) {
+      try {
+        await sendTelegramMessage(
+          compita.telegram_chat_id,
+          `✅ <b>¡Tu perfil fue actualizado!</b>\n\nLos cambios ya son visibles para las familias en la plataforma.\n\nEscribe /perfil cuando quieras editarlo de nuevo.`,
+        )
+      } catch (e) { console.error('Telegram confirmación perfil:', e) }
+    }
+
     return ok({ guardado: true })
   } catch (e) {
     return serverError(e)

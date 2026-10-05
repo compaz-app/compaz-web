@@ -15,7 +15,7 @@ import {
   makeInlineKeyboard,
 } from '@/lib/telegram'
 import { generarTokenPerfil } from '@/lib/compita-tokens'
-import { sendVisitaInicio, sendVisitaResumen, sendCodigoTelegram } from '@/lib/resend'
+import { sendVisitaInicio, sendVisitaResumen, sendResumenConReporte, sendCodigoTelegram } from '@/lib/resend'
 import { confirmarSlot } from '@/lib/solicitudes'
 import { Resend } from 'resend'
 
@@ -59,6 +59,26 @@ Te llegará un enlace. Ábrelo en tu celular y podrás:
 Escribe <b>/menu</b> para volver a ver estas instrucciones.
 O contacta al equipo de Compaz directamente.`
 
+const PREGUNTAS_REPORTE = [
+  { emoji: '😊', label: 'Ánimo', texto: '¿Cómo estaba el <b>ánimo</b> de la persona durante la visita?' },
+  { emoji: '💪', label: 'Condición física', texto: '¿Cómo notaste su <b>condición física</b>?' },
+  { emoji: '🤝', label: 'Participación', texto: '¿Qué tan <b>receptiva o activa</b> estuvo durante la visita?' },
+  { emoji: '🏠', label: 'Ambiente y entorno', texto: '¿Cómo estaba el <b>ambiente y entorno</b> donde se encontraba?' },
+]
+
+function makeReporteKeyboard() {
+  return makeInlineKeyboard([
+    [
+      { text: '1', callback_data: 'rr:1' },
+      { text: '2', callback_data: 'rr:2' },
+      { text: '3', callback_data: 'rr:3' },
+      { text: '4', callback_data: 'rr:4' },
+      { text: '5', callback_data: 'rr:5' },
+    ],
+    [{ text: 'N/A — No aplica', callback_data: 'rr:N' }],
+  ])
+}
+
 function formatSlotVE(iso: string): string {
   return new Date(iso).toLocaleString('es-VE', {
     timeZone: 'America/Caracas',
@@ -91,11 +111,113 @@ async function setRegistroPendiente(supabase: ReturnType<typeof createAdminSupab
   await setEstado(supabase, chatId, { registro_pendiente: valor, pendiente_accion: null, pendiente_expira: null })
 }
 async function setPendiente(supabase: ReturnType<typeof createAdminSupabase>, chatId: string, accion: 'iniciar' | 'terminar') {
-  const expira = new Date(Date.now() + 60_000).toISOString()
+  const expira = new Date(Date.now() + 300_000).toISOString()
   await setEstado(supabase, chatId, { pendiente_accion: accion, pendiente_expira: expira })
 }
 async function clearPendiente(supabase: ReturnType<typeof createAdminSupabase>, chatId: string) {
   await setEstado(supabase, chatId, { pendiente_accion: null, pendiente_expira: null })
+}
+
+async function guardarReporteYEnviarEmail(
+  supabase: ReturnType<typeof createAdminSupabase>,
+  chatId: string,
+  compita: Compita,
+  accion: string,
+  novedad: string | null,
+) {
+  // formato: reporte_novedad:{visita_id}:{ans0},{ans1},{ans2},{ans3}
+  const partes = accion.split(':')
+  const visitaId = partes[1]
+  const answers = (partes[2] ?? '').split(',')
+
+  function parseAns(v: string | undefined): number | null {
+    if (!v || v === 'N') return null
+    const n = parseInt(v, 10)
+    return isNaN(n) ? null : n
+  }
+
+  const reporte = {
+    animo: parseAns(answers[0]),
+    fisico: parseAns(answers[1]),
+    participacion: parseAns(answers[2]),
+    entorno: parseAns(answers[3]),
+    novedad: novedad?.trim() || null,
+  }
+
+  // Obtener visita con usuario
+  const { data: visita } = await supabase
+    .from('visitas')
+    .select('*, usuario:usuarios(*)')
+    .eq('id', visitaId)
+    .single() as { data: (Visita & { usuario: Usuario }) | null }
+
+  await clearPendiente(supabase, chatId)
+
+  if (!visita || !visita.usuario) {
+    await sendTelegramMessage(chatId, `Gracias. El cuestionario fue registrado. ¡Hasta la próxima! 😊`, INLINE_INICIO)
+    return
+  }
+
+  // Obtener historial previo para análisis comparativo
+  const { data: historialRaw } = await supabase
+    .from('reportes_visita')
+    .select('animo, fisico, participacion, entorno, created_at')
+    .eq('visita_id', visitaId)
+    .neq('visita_id', visitaId) // solo otros reportes del mismo usuario
+
+  // Reportes anteriores del mismo cliente (vía sus visitas)
+  const { data: visitasCliente } = await supabase
+    .from('visitas')
+    .select('id')
+    .eq('usuario_id', visita.usuario_id)
+    .neq('id', visitaId)
+    .eq('estado', 'terminada')
+
+  type HistorialRow = { animo: number | null; fisico: number | null; participacion: number | null; entorno: number | null; created_at: string }
+  let historial: HistorialRow[] = []
+  if (visitasCliente && visitasCliente.length > 0) {
+    const visitaIds = visitasCliente.map((v) => v.id)
+    const { data: reportesPrevios } = await supabase
+      .from('reportes_visita')
+      .select('animo, fisico, participacion, entorno, created_at')
+      .in('visita_id', visitaIds)
+      .order('created_at', { ascending: true })
+    historial = (reportesPrevios ?? []) as HistorialRow[]
+  }
+
+  // Guardar reporte en BD
+  const { data: reporteGuardado } = await supabase
+    .from('reportes_visita')
+    .insert({ visita_id: visitaId, ...reporte })
+    .select('id')
+    .single()
+
+  // Enviar segundo email con indicadores de bienestar y resumen IA
+  try {
+    const { data: mensajes } = await supabase
+      .from('mensajes').select('*').eq('visit_id', visitaId).order('created_at', { ascending: true }) as { data: import('@/types').Mensaje[] | null }
+
+    const resumenIA = await sendResumenConReporte(
+      visita.usuario,
+      compita,
+      visita,
+      mensajes ?? [],
+      reporte,
+      historial,
+      true, // esActualizacion — el email básico ya fue enviado al terminar
+    )
+
+    // Guardar resumen IA en el reporte
+    if (reporteGuardado?.id && resumenIA) {
+      await supabase.from('reportes_visita').update({ resumen_ia: resumenIA }).eq('id', reporteGuardado.id)
+    }
+  } catch (e) { console.error('Error correo resumen con reporte:', e) }
+
+  await sendTelegramMessage(
+    chatId,
+    `✅ <b>¡Listo!</b> El cuestionario fue guardado y se le envió el resumen a la familia.\n\n¡Gracias por tu trabajo, ${compita.nombre}! 💙`,
+    INLINE_INICIO,
+  )
 }
 
 export async function POST(req: NextRequest) {
@@ -159,9 +281,15 @@ export async function POST(req: NextRequest) {
     try {
       const token = await generarTokenPerfil(compita.id)
       const url = `${SITE_URL}/compita/perfil?token=${token}`
+      const venceEn = new Date(Date.now() + 24 * 60 * 60_000)
+      const venceLabel = venceEn.toLocaleString('es-VE', {
+        timeZone: 'America/Caracas',
+        weekday: 'long', day: 'numeric', month: 'long',
+        hour: '2-digit', minute: '2-digit', hour12: true,
+      })
       await sendTelegramMessage(
         chatId,
-        `✏️ <b>Edita tu perfil</b>\n\nAquí tienes tu enlace personal:\n\n<a href="${url}">${url}</a>\n\n⏳ El enlace es válido por <b>24 horas</b> y se puede usar <b>una sola vez</b>. Si necesitas uno nuevo, escribe /perfil de nuevo.`,
+        `✏️ <b>Edita tu perfil</b>\n\nAquí tienes tu enlace personal:\n\n<a href="${url}">${url}</a>\n\n⏳ Este enlace vence el <b>${venceLabel}</b> y solo funciona una vez. Si lo abres y lo dejas a medias, vuelve a escribir /perfil para obtener uno nuevo.\n\nSi tienes algún problema, escríbenos a hola@micompaz.com.`,
         INLINE_INICIO,
       )
     } catch (e) {
@@ -186,16 +314,32 @@ export async function POST(req: NextRequest) {
   // ── /start — bienvenida y registro ──────────────────────────────────────────
   if (text === '/start' || text.startsWith('/start ')) {
     if (compita) {
-      await sendTelegramMessage(
-        chatId,
-        `¡Hola de nuevo, <b>${compita.nombre}</b>! 👋\n\nTodo está listo. Cuando llegues a casa de tu cliente y vayas a comenzar, toca el botón <b>▶️ Iniciar visita</b>. Cuando termines, toca <b>🔴 Terminar visita</b>.`,
-        INLINE_INICIO,
-      )
+      // Verificar si tiene cliente asignado
+      const { data: clienteAsignado } = await supabase
+        .from('usuarios')
+        .select('nombre')
+        .eq('compita_id', compita.id)
+        .limit(1)
+        .maybeSingle() as { data: { nombre: string } | null }
+
+      if (clienteAsignado) {
+        await sendTelegramMessage(
+          chatId,
+          `¡Hola de nuevo, <b>${compita.nombre}</b>! 👋\n\nTodo está listo. Cuando llegues a casa de tu cliente y vayas a comenzar, toca el botón <b>▶️ Iniciar visita</b>. Cuando termines, toca <b>🔴 Terminar visita</b>.`,
+          INLINE_INICIO,
+        )
+      } else {
+        await sendTelegramMessage(
+          chatId,
+          `¡Hola de nuevo, <b>${compita.nombre}</b>! 👋\n\nTu cuenta está activa. Todavía no tienes un cliente asignado, pero cuando eso cambie te avisaremos aquí.\n\nMientras tanto, puedes actualizar tu perfil con <b>/perfil</b> para que las familias te conozcan mejor.`,
+          INLINE_INICIO,
+        )
+      }
     } else {
       await setEstado(supabase, chatId, { registro_pendiente: true, pendiente_accion: null, pendiente_expira: null })
       await sendTelegramMessage(
         chatId,
-        `¡Bienvenido a Compaz! 👋\n\nSoy el asistente que te acompañará en cada visita.\n\nPrimero necesito verificar tu cuenta. ✍️ Escríbeme tu <b>nombre completo</b> tal como lo pusiste cuando te registraste.\n\n<i>Por ejemplo: María González</i>`,
+        `¡Bienvenido a Compaz! 👋\n\nSoy el asistente que te acompañará en cada visita.\n\nPrimero necesito verificar tu cuenta. ✍️ Escríbeme tu <b>nombre completo</b> tal como lo pusiste cuando te registraste. No importa si usas mayúsculas o no.\n\n<i>Por ejemplo: María González</i>`,
         QUITAR_TECLADO,
       )
     }
@@ -226,7 +370,7 @@ export async function POST(req: NextRequest) {
     const nombre = encontrada?.nombre ?? 'Compita'
     await sendTelegramMessage(
       chatId,
-      `✅ <b>¡Listo, ${nombre}!</b> Tu cuenta ya está activa en Compaz. Bienvenida al equipo. 🎉\n\nAhora te explico todo lo que puedes hacer desde este chat:`,
+      `✅ <b>¡Listo, ${nombre}!</b> Tu cuenta ya está activa en Compaz. ¡Ya eres parte del equipo! 🎉\n\nAhora te explico todo lo que puedes hacer desde este chat:`,
       QUITAR_TECLADO,
     )
     await sendTelegramMessage(chatId, GUIA_COMPITA, INLINE_INICIO)
@@ -253,7 +397,7 @@ export async function POST(req: NextRequest) {
       await setRegistroPendiente(supabase, chatId, true)
       await sendTelegramMessage(
         chatId,
-        `No encontré ninguna cuenta con ese nombre. 🤔\n\nVerifica que lo escribiste <b>exactamente igual</b> a como lo pusiste en el formulario de registro, incluyendo mayúsculas y tildes.\n\n✍️ Intenta de nuevo:`,
+        `No encontré ninguna cuenta con ese nombre. 🤔\n\nIntenta escribirlo de otra forma. Por ejemplo, si te registraste como "María" prueba con "Maria", o si pusiste solo el primer nombre prueba con el nombre completo.\n\nSi el problema continúa, escríbenos a hola@micompaz.com y te ayudamos.\n\n✍️ Intenta de nuevo:`,
         QUITAR_TECLADO,
       )
     } else {
@@ -313,19 +457,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true })
     }
 
-    // Solo permitir iniciar visita si hay al menos una solicitud completada para este compita
-    const { data: solicitudCompletada } = await supabase
+    // Solo permitir iniciar visita si hay al menos una solicitud completada o contratada para este compita
+    const { data: solicitudActiva } = await supabase
       .from('solicitudes')
       .select('id, cliente_id')
       .eq('compita_id', compita.id)
-      .eq('estado', 'completada')
+      .in('estado', ['completada', 'contratada'])
       .limit(1)
       .maybeSingle()
 
-    if (!solicitudCompletada) {
+    if (!solicitudActiva) {
       await sendTelegramMessage(
         chatId,
-        `Todavía no tienes ningún cliente activo. 😊\n\nCuando un cliente confirme que quiere trabajar contigo, podrás iniciar visitas desde aquí.`,
+        `No encontré ninguna visita programada para ti en este momento.\n\nEsto puede pasar si el cliente aún no ha confirmado la contratación, o si hubo un problema con tu cuenta.\n\nSi crees que es un error, escríbenos a hola@micompaz.com y te ayudamos a resolverlo.`,
         INLINE_INICIO,
       )
       return NextResponse.json({ ok: true })
@@ -498,7 +642,7 @@ export async function POST(req: NextRequest) {
     if (accionPendiente === 'iniciar') {
       const { data: usuario } = await supabase
         .from('usuarios')
-        .select('*')
+        .select('*, familiar_nombre, familiar_edad, familiar_condicion, familiar_notas')
         .eq('compita_id', compita.id)
         .limit(1)
         .maybeSingle() as { data: Usuario | null }
@@ -508,20 +652,59 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ ok: true })
       }
 
-      const { data: visita, error } = await supabase
+      // Intentar promover pre_visita existente; si no hay, crear nueva
+      const ahora = new Date().toISOString()
+      const { data: preVisita } = await supabase
         .from('visitas')
-        .insert({ compita_id: compita.id, usuario_id: usuario.id, estado: 'en_curso', inicio: new Date().toISOString() })
-        .select()
-        .single() as { data: Visita | null; error: unknown }
+        .select('id')
+        .eq('compita_id', compita.id)
+        .eq('usuario_id', usuario.id)
+        .eq('estado', 'pre_visita')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
 
-      if (error || !visita) {
+      let visita: Visita | null = null
+      let visitaError: unknown = null
+
+      if (preVisita) {
+        const { data: updated, error } = await supabase
+          .from('visitas')
+          .update({ estado: 'en_curso', inicio: ahora })
+          .eq('id', preVisita.id)
+          .select()
+          .single() as { data: Visita | null; error: unknown }
+        visita = updated
+        visitaError = error
+      } else {
+        const { data: inserted, error } = await supabase
+          .from('visitas')
+          .insert({ compita_id: compita.id, usuario_id: usuario.id, estado: 'en_curso', inicio: ahora })
+          .select()
+          .single() as { data: Visita | null; error: unknown }
+        visita = inserted
+        visitaError = error
+      }
+
+      if (visitaError || !visita) {
         await sendTelegramMessage(chatId, `Hubo un error al iniciar la visita. Intenta de nuevo en un momento.`, INLINE_INICIO)
         return NextResponse.json({ ok: true })
       }
 
+      // Construir perfil del familiar si existe
+      const perfilLineas: string[] = []
+      if (usuario.familiar_nombre) perfilLineas.push(`<b>Nombre:</b> ${usuario.familiar_nombre}`)
+      if (usuario.familiar_edad) perfilLineas.push(`<b>Edad:</b> ${usuario.familiar_edad} años`)
+      if (usuario.familiar_condicion) perfilLineas.push(`<b>Condición:</b> ${usuario.familiar_condicion}`)
+      if (usuario.familiar_notas) perfilLineas.push(`<b>Notas:</b> ${usuario.familiar_notas}`)
+
+      const perfilTexto = perfilLineas.length > 0
+        ? `\n\n👤 <b>Perfil del familiar:</b>\n${perfilLineas.join('\n')}`
+        : ''
+
       await sendTelegramMessage(
         chatId,
-        `✅ <b>¡Visita iniciada!</b>\n\nEstás con <b>${usuario.nombre}</b>. La familia ya sabe que llegaste.\n\n📸 <b>Puedes mandar fotos y mensajes</b> desde aquí durante la visita — la familia los verá en tiempo real.\n\nCuando termines, toca el botón rojo de abajo. 👇`,
+        `✅ <b>¡Visita iniciada!</b>\n\nEstás con <b>${usuario.nombre}</b>. La familia ya sabe que llegaste.${perfilTexto}\n\n📸 <b>Puedes mandar fotos y mensajes</b> desde aquí durante la visita — la familia los verá en tiempo real.\n\nCuando termines, toca el botón rojo de abajo. 👇`,
         INLINE_DURANTE,
       )
 
@@ -538,7 +721,7 @@ export async function POST(req: NextRequest) {
         .single() as { data: (Visita & { usuario: Usuario }) | null }
 
       if (!visita) {
-        await sendTelegramMessage(chatId, `No hay visita activa para terminar.`, INLINE_INICIO)
+        await sendTelegramMessage(chatId, `No hay ninguna visita en curso que puedas terminar ahora mismo.\n\nSi crees que es un error, escríbenos a hola@micompaz.com.`, INLINE_INICIO)
         return NextResponse.json({ ok: true })
       }
 
@@ -546,17 +729,28 @@ export async function POST(req: NextRequest) {
       await supabase.from('visitas').update({ estado: 'terminada', fin, room_url: null }).eq('id', visita.id)
       await supabase.from('compitas').update({ visitas_realizadas: (compita.visitas_realizadas ?? 0) + 1 }).eq('id', compita.id)
 
-      await sendTelegramMessage(
-        chatId,
-        `🔴 <b>Visita terminada.</b>\n\n¡Gracias por tu trabajo de hoy, ${compita.nombre}! 🤝\n\nSe le enviará un resumen a la familia.\n\nHasta la próxima. 😊`,
-        INLINE_INICIO,
-      )
-
+      // Enviar email básico inmediatamente (sin esperar el cuestionario)
       try {
         const { data: mensajes } = await supabase
-          .from('mensajes').select('*').eq('visit_id', visita.id).order('created_at', { ascending: true }) as { data: Mensaje[] | null }
+          .from('mensajes').select('*').eq('visit_id', visita.id).order('created_at', { ascending: true }) as { data: import('@/types').Mensaje[] | null }
         await sendVisitaResumen(visita.usuario, compita, { ...visita, fin }, mensajes ?? [])
-      } catch (e) { console.error('Error correo resumen:', e) }
+      } catch (e) { console.error('Error correo básico al terminar:', e) }
+
+      // Iniciar cuestionario de bienestar (enriquece con un segundo email si se completa)
+      await setEstado(supabase, chatId, {
+        pendiente_accion: `reporte:${visita.id}:0:`,
+        pendiente_expira: new Date(Date.now() + 30 * 60_000).toISOString(),
+      })
+
+      await sendTelegramMessage(
+        chatId,
+        `🔴 <b>Visita terminada.</b>\n\n¡Gracias por tu trabajo de hoy, ${compita.nombre}! 🤝\n\nYa le enviamos el resumen básico a la familia. Ahora tómate un minuto para registrar cómo estuvo el familiar — ellos lo verán como una actualización. 📋`,
+      )
+      await sendTelegramMessage(
+        chatId,
+        `1 de 4 — ${PREGUNTAS_REPORTE[0].emoji} <b>${PREGUNTAS_REPORTE[0].label}</b>\n\n${PREGUNTAS_REPORTE[0].texto}\n\n<i>1 = muy bajo, 5 = excelente</i>`,
+        makeReporteKeyboard(),
+      )
     }
 
     return NextResponse.json({ ok: true })
@@ -564,12 +758,15 @@ export async function POST(req: NextRequest) {
 
   // ── Sugerencia de horarios alternativos tras rechazo ────────────────────────
   const estadoActual = await getEstado(supabase, chatId)
-  if (estadoActual?.pendiente_accion?.startsWith('sugerir_horarios:') && !isCallback && text && !text.startsWith('/')) {
-    const partes = estadoActual.pendiente_accion.split(':')
-    // formato: sugerir_horarios:<solicitud_id>:<email>:<nombre> (nombre puede tener espacios pero fue el último segmento)
-    const [, , clienteEmail, ...nombrePartes] = partes
+  const accionSugerir = estadoActual?.pendiente_accion
+  const esSugerir = accionSugerir?.startsWith('sugerir_horarios:') || accionSugerir?.startsWith('sugerir_r:')
+  if (esSugerir && !isCallback && text && !text.startsWith('/')) {
+    const prefijo = accionSugerir!.startsWith('sugerir_r:') ? 'sugerir_r:' : 'sugerir_horarios:'
+    const partes = accionSugerir!.slice(prefijo.length).split(':')
+    // formato: <solicitud_id>:<email>:<nombre> (nombre puede tener espacios pero fue el último segmento)
+    const [solicitudId, clienteEmail, ...nombrePartes] = partes
     const clienteNombre = nombrePartes.join(':')
-    const expirado = estadoActual.pendiente_expira ? new Date(estadoActual.pendiente_expira) < new Date() : true
+    const expirado = estadoActual?.pendiente_expira ? new Date(estadoActual.pendiente_expira) < new Date() : true
 
     await clearPendiente(supabase, chatId)
 
@@ -598,7 +795,7 @@ export async function POST(req: NextRequest) {
               <p style="color:#4A3B6B;font-size:15px;line-height:1.6">
                 Si alguno te funciona, haz clic aquí para enviar una nueva solicitud directamente con ${compita.nombre}:
               </p>
-              <a href="${SITE_URL}/compitas?compita=${compita.id}" style="display:inline-block;background:#FF6B2B;color:white;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:16px;margin-top:4px">
+              <a href="${SITE_URL}/compitas?compita=${compita.id}&reagendar=${solicitudId}" style="display:inline-block;background:#FF6B2B;color:white;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:16px;margin-top:4px">
                 Agendar con ${compita.nombre} →
               </a>
               <p style="color:#6B5C90;font-size:13px;margin-top:24px">Compaz — <em>Cerca aunque estés lejos</em></p>
@@ -615,11 +812,84 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true })
   }
 
-  // ── Mensajes y fotos durante visita activa ───────────────────────────────────
+  // ── Respuesta a cuestionario de bienestar (callback rr:value) ───────────────
+  if (isCallback && text.startsWith('rr:')) {
+    const estadoActualRR = await getEstado(supabase, chatId)
+    const accion = estadoActualRR?.pendiente_accion ?? ''
+    if (!accion.startsWith('reporte:')) {
+      await sendTelegramMessage(chatId, `Ya no hay un cuestionario activo.`, INLINE_INICIO)
+      return NextResponse.json({ ok: true })
+    }
+    const partes = accion.split(':')
+    // formato: reporte:{visita_id}:{step}:{answers_csv}
+    const visitaId = partes[1]
+    const step = parseInt(partes[2], 10)
+    const answersSoFar = partes[3] ?? ''
+    const valor = text.slice(3) // '1'..'5' or 'N'
+
+    const newAnswers = answersSoFar ? `${answersSoFar},${valor}` : valor
+    const nextStep = step + 1
+
+    if (nextStep < PREGUNTAS_REPORTE.length) {
+      // Siguiente pregunta
+      await setEstado(supabase, chatId, {
+        pendiente_accion: `reporte:${visitaId}:${nextStep}:${newAnswers}`,
+        pendiente_expira: new Date(Date.now() + 30 * 60_000).toISOString(),
+      })
+      const q = PREGUNTAS_REPORTE[nextStep]
+      await sendTelegramMessage(
+        chatId,
+        `${nextStep + 1} de 4 — ${q.emoji} <b>${q.label}</b>\n\n${q.texto}\n\n<i>1 = muy bajo, 5 = excelente</i>`,
+        makeReporteKeyboard(),
+      )
+    } else {
+      // Últimas respuesta (entorno) — pasar a novedad
+      await setEstado(supabase, chatId, {
+        pendiente_accion: `reporte_novedad:${visitaId}:${newAnswers}`,
+        pendiente_expira: new Date(Date.now() + 30 * 60_000).toISOString(),
+      })
+      await sendTelegramMessage(
+        chatId,
+        `✍️ <b>Por último:</b> ¿Hubo alguna novedad importante que la familia deba saber?\n\nEscríbela aquí, o toca el botón si no hay nada que reportar.`,
+        makeInlineKeyboard([[{ text: 'Sin novedad', callback_data: 'rn:skip' }]]),
+      )
+    }
+    return NextResponse.json({ ok: true })
+  }
+
+  // ── Sin novedad (callback rn:skip) ───────────────────────────────────────────
+  if (isCallback && text === 'rn:skip') {
+    const estadoRN = await getEstado(supabase, chatId)
+    const accion = estadoRN?.pendiente_accion ?? ''
+    if (accion.startsWith('reporte_novedad:')) {
+      await guardarReporteYEnviarEmail(supabase, chatId, compita, accion, null)
+    } else {
+      await sendTelegramMessage(chatId, `Ya no hay un cuestionario activo.`, INLINE_INICIO)
+    }
+    return NextResponse.json({ ok: true })
+  }
+
+  // ── Texto de novedad (estado reporte_novedad) ─────────────────────────────────
+  {
+    const estadoNov = await getEstado(supabase, chatId)
+    if (!isCallback && estadoNov?.pendiente_accion?.startsWith('reporte_novedad:') && text && !text.startsWith('/')) {
+      await guardarReporteYEnviarEmail(supabase, chatId, compita, estadoNov.pendiente_accion, text)
+      return NextResponse.json({ ok: true })
+    }
+  }
+
+  // ── Mensajes y fotos durante visita activa o coordinación pre-visita ──────────
   // Solo procesar si no es un callback (los callbacks no tienen contenido multimedia)
   if (!isCallback) {
+    // Buscar visita en_curso o pre_visita
     const { data: visitaActiva } = await supabase
-      .from('visitas').select('id').eq('compita_id', compita.id).eq('estado', 'en_curso').single() as { data: { id: string } | null }
+      .from('visitas')
+      .select('id, estado')
+      .eq('compita_id', compita.id)
+      .in('estado', ['en_curso', 'pre_visita'])
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle() as { data: { id: string; estado: string } | null }
 
     if (!visitaActiva) {
       await sendTelegramMessage(
@@ -658,6 +928,21 @@ export async function POST(req: NextRequest) {
 
     if (text) {
       await supabase.from('mensajes').insert({ visit_id: visitaActiva.id, origen: 'compita', tipo: 'texto', contenido: text })
+
+      // Recordatorio anti-fuga cada 5 mensajes durante pre_visita
+      if (visitaActiva.estado === 'pre_visita') {
+        const { count } = await supabase
+          .from('mensajes')
+          .select('id', { count: 'exact', head: true })
+          .eq('visit_id', visitaActiva.id)
+          .eq('origen', 'compita')
+        if (count && count % 5 === 0) {
+          await sendTelegramMessage(
+            chatId,
+            `💙 <i>Recuerda que toda la comunicación con tu cliente debe mantenerse dentro de Compaz. Coordinar servicios fuera de la plataforma va contra las condiciones de uso y puede resultar en la suspensión de tu cuenta. ¡Sabemos que estás haciendo un gran trabajo!</i>`,
+          )
+        }
+      }
     }
   }
 
