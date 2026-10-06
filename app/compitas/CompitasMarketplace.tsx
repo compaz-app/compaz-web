@@ -675,6 +675,22 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
                     )}
                   </div>
 
+                  {/* Validación visible */}
+                  {(() => {
+                    const falta = []
+                    if (!formMensaje.trim()) falta.push('la descripción de tu familiar')
+                    if (slotsElegidos.length === 0) falta.push('al menos un horario')
+                    if (falta.length === 0) return null
+                    return (
+                      <div style={{ background: '#FFF3E8', border: '2px solid #FF6B2B', borderRadius: '12px', padding: '10px 14px' }}>
+                        <p style={{ color: '#C84B0E', fontSize: '13px', fontWeight: 700, margin: '0 0 4px', fontFamily: 'Bricolage Grotesque, sans-serif' }}>Para enviar la solicitud falta:</p>
+                        <ul style={{ margin: 0, paddingLeft: '18px', color: '#C84B0E', fontSize: '13px', lineHeight: '1.8' }}>
+                          {falta.map((f) => <li key={f}>{f}</li>)}
+                        </ul>
+                      </div>
+                    )
+                  })()}
+
                   {/* Botones */}
                   <div style={{ display: 'flex', gap: '10px' }}>
                     <button
