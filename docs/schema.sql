@@ -53,7 +53,8 @@ create table visitas (
   compita_id  uuid not null references compitas(id),
   usuario_id  uuid not null references usuarios(id),
   estado      text not null default 'programada'
-              check (estado in ('programada', 'en_curso', 'terminada')),
+              check (estado in ('pre_visita', 'programada', 'en_curso', 'terminada')),
+  fecha_programada  date,                          -- Día agendado para la visita de cuidado
   inicio      timestamptz,
   fin         timestamptz,
   room_url    text,                          -- URL de la sala Daily.co para videollamada
@@ -101,7 +102,7 @@ create table solicitudes (
   compita_id       uuid not null references compitas(id),
   mensaje          text not null,           -- Descripción del familiar y necesidades
   estado           text not null default 'pendiente'
-                   check (estado in ('pendiente', 'aceptada', 'rechazada', 'completada')),
+                   check (estado in ('pendiente', 'aceptada', 'rechazada', 'completada', 'contratada')),
   franja_horaria   text,                    -- Horario preferido del cliente (texto libre)
   token_respuesta  uuid not null unique default uuid_generate_v4(), -- Para link de respuesta en Telegram
   created_at       timestamptz not null default now(),
@@ -123,6 +124,43 @@ create table solicitudes (
 -- alter table solicitudes add column if not exists slot_confirmado timestamptz;
 -- alter table solicitudes add column if not exists room_url text;
 -- alter table solicitudes add column if not exists seguimiento_enviado boolean default false;
+
+-- Migraciones para flujo de pago y coordinación de visita:
+-- alter table solicitudes drop constraint if exists solicitudes_estado_check;
+-- (ver más abajo)
+-- alter table solicitudes add constraint solicitudes_estado_check check (estado in ('pendiente', 'aceptada', 'rechazada', 'completada', 'contratada'));
+-- alter table visitas drop constraint if exists visitas_estado_check;
+-- alter table visitas add constraint visitas_estado_check check (estado in ('pre_visita', 'programada', 'en_curso', 'terminada'));
+-- alter table visitas add column if not exists fecha_programada date;
+
+-- ══════════════════════════════════════════════════════════════════════════════
+-- TABLA: reportes_visita
+-- Indicadores de bienestar registrados por la compita al terminar cada visita.
+-- ══════════════════════════════════════════════════════════════════════════════
+create table reportes_visita (
+  id             uuid primary key default uuid_generate_v4(),
+  visita_id      uuid not null references visitas(id) on delete cascade,
+  animo          smallint check (animo between 1 and 5),       -- null = N/A
+  fisico         smallint check (fisico between 1 and 5),
+  participacion  smallint check (participacion between 1 and 5),
+  entorno        smallint check (entorno between 1 and 5),
+  novedad        text,
+  resumen_ia     text,                                          -- generado por Claude API
+  created_at     timestamptz not null default now()
+);
+
+-- Migración (correr en Supabase SQL Editor antes del próximo deploy):
+-- create table if not exists reportes_visita (
+--   id             uuid primary key default uuid_generate_v4(),
+--   visita_id      uuid not null references visitas(id) on delete cascade,
+--   animo          smallint check (animo between 1 and 5),
+--   fisico         smallint check (fisico between 1 and 5),
+--   participacion  smallint check (participacion between 1 and 5),
+--   entorno        smallint check (entorno between 1 and 5),
+--   novedad        text,
+--   resumen_ia     text,
+--   created_at     timestamptz not null default now()
+-- );
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- RLS (Row Level Security)

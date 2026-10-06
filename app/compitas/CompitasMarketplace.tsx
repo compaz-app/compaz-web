@@ -54,15 +54,31 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
   const [solicitudes, setSolicitudes] = useState<Solicitud[]>([])
   const [mostrarFormulario, setMostrarFormulario] = useState(false)
   const [formMensaje, setFormMensaje] = useState('')
+  const [formSobreCliente, setFormSobreCliente] = useState('')
   const [slotsElegidos, setSlotsElegidos] = useState<string[]>([])
+  const reagendarId = searchParams.get('reagendar')
+  const [reagendando, setReagendando] = useState(false)
   const resultadosRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     fetch('/api/mis-solicitudes')
       .then((r) => r.json())
-      .then((d) => { if (d.solicitudes) setSolicitudes(d.solicitudes) })
+      .then((d) => {
+        if (d.solicitudes) {
+          setSolicitudes(d.solicitudes)
+          if (reagendarId) {
+            const sol = (d.solicitudes as Solicitud[]).find((s) => s.id === reagendarId)
+            if (sol) {
+              setFormMensaje(sol.mensaje)
+              setFormSobreCliente('')
+              setReagendando(true)
+              setMostrarFormulario(true)
+            }
+          }
+        }
+      })
       .catch(() => {})
-  }, [])
+  }, [reagendarId])
 
   useEffect(() => { history.scrollRestoration = 'auto' }, [])
 
@@ -116,6 +132,37 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
   const solicitudesActivas = solicitudes.filter((s) => s.estado === 'pendiente' || s.estado === 'aceptada')
   const idsYaSolicitados = new Set(solicitudesActivas.map((s) => s.compita_id))
   const MAX_SOLICITUDES = 3
+
+  // Genera todos los slots de 20 min en los próximos 14 días (8am-8pm VE) sin restricciones de disponibilidad
+  // Usado cuando el cliente reagenda tras una contrapropuesta del compita
+  function generarSlotsSinLimite(): { diaLabel: string; slots: { iso: string; hora: string }[] }[] {
+    const ahora = new Date()
+    const porDia: { diaLabel: string; slots: { iso: string; hora: string }[] }[] = []
+    for (let d = 0; d < 14; d++) {
+      const fecha = new Date(ahora)
+      fecha.setDate(ahora.getDate() + d)
+      const slotsDelDia: { iso: string; hora: string }[] = []
+      for (let hVE = 8; hVE < 20; hVE++) {
+        for (const m of [0, 20, 40]) {
+          const slotUTC = new Date(fecha)
+          slotUTC.setHours(hVE + 4, m, 0, 0)
+          if (slotUTC > ahora) {
+            const hora = slotUTC.toLocaleTimeString('es-VE', {
+              timeZone: 'America/Caracas', hour: '2-digit', minute: '2-digit', hour12: true,
+            })
+            slotsDelDia.push({ iso: slotUTC.toISOString(), hora })
+          }
+        }
+      }
+      if (slotsDelDia.length > 0) {
+        const diaLabel = fecha.toLocaleDateString('es-VE', {
+          timeZone: 'America/Caracas', weekday: 'long', day: 'numeric', month: 'short',
+        })
+        porDia.push({ diaLabel, slots: slotsDelDia })
+      }
+    }
+    return porDia
+  }
 
   // Genera slots de 20 min disponibles en los próximos 7 días según horarios del compita
   // Retorna agrupados por día para mostrar como chips
@@ -180,6 +227,7 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
         body: JSON.stringify({
           compita_id: compita.id,
           mensaje: formMensaje,
+          sobre_cliente: formSobreCliente.trim() || null,
           slots_propuestos: slotsElegidos,
         }),
       })
@@ -200,6 +248,7 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
           room_url: null,
           recordatorio_enviado: false,
           seguimiento_enviado: false,
+          seguimiento2_enviado: false,
           token_respuesta: '',
           created_at: new Date().toISOString(),
           respondido_at: null,
@@ -208,7 +257,9 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
         setSeleccionada(null)
         setMostrarFormulario(false)
         setFormMensaje('')
+        setFormSobreCliente('')
         setSlotsElegidos([])
+        setReagendando(false)
       } else {
         alert(data?.error ?? 'No se pudo enviar la solicitud. Intenta de nuevo.')
       }
@@ -366,8 +417,20 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
                     {compita.servicios.length > 4 && <span style={s.chip}>+{compita.servicios.length - 4} más</span>}
                   </div>
                 )}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#6B5C90', fontSize: '13px' }}>{compita.visitas_realizadas} visitas</span>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    <span style={{ color: '#6B5C90', fontSize: '13px' }}>{compita.visitas_realizadas} visitas</span>
+                    {compita.tasa_aceptacion != null && (
+                      <span style={{
+                        fontSize: '11px', fontWeight: 700, borderRadius: '9999px', padding: '2px 8px',
+                        fontFamily: 'Bricolage Grotesque, sans-serif',
+                        background: compita.tasa_aceptacion >= 80 ? '#DCFCE7' : compita.tasa_aceptacion >= 60 ? '#FEF9C3' : '#FEE2E2',
+                        color: compita.tasa_aceptacion >= 80 ? '#166534' : compita.tasa_aceptacion >= 60 ? '#854D0E' : '#991B1B',
+                      }}>
+                        {compita.tasa_aceptacion}% acepta
+                      </span>
+                    )}
+                  </div>
                   {idsYaSolicitados.has(compita.id)
                     ? <span style={{ color: '#FF6B2B', fontSize: '12px', fontWeight: 700, background: 'rgba(255,107,43,0.08)', borderRadius: '9999px', padding: '3px 10px' }}>⏳ En revisión</span>
                     : <span style={{ color: '#FF6B2B', fontSize: '13px', fontWeight: 700 }}>Ver perfil →</span>
@@ -383,10 +446,10 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
       {seleccionada && (
         <div
           style={{ position: 'fixed', inset: 0, background: 'rgba(26,10,60,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', zIndex: 2000 }}
-          onClick={(e) => { if (e.target === e.currentTarget) { setSeleccionada(null); setMostrarFormulario(false); setSlotsElegidos([]); setFormMensaje('') } }}
+          onClick={(e) => { if (e.target === e.currentTarget) { setSeleccionada(null); setMostrarFormulario(false); setSlotsElegidos([]); setFormMensaje(''); setFormSobreCliente(''); setReagendando(false) } }}
         >
           <div style={{ background: '#FDFAF6', borderRadius: '24px', maxWidth: '560px', width: '100%', maxHeight: '90vh', overflowY: 'auto', position: 'relative' }}>
-            <button onClick={() => { setSeleccionada(null); setMostrarFormulario(false); setSlotsElegidos([]); setFormMensaje('') }} style={{ position: 'absolute', top: '16px', right: '16px', background: 'white', border: '2px solid #E8E0D4', borderRadius: '9999px', width: '32px', height: '32px', cursor: 'pointer', fontSize: '16px', zIndex: 10 }}>×</button>
+            <button onClick={() => { setSeleccionada(null); setMostrarFormulario(false); setSlotsElegidos([]); setFormMensaje(''); setFormSobreCliente(''); setReagendando(false) }} style={{ position: 'absolute', top: '16px', right: '16px', background: 'white', border: '2px solid #E8E0D4', borderRadius: '9999px', width: '32px', height: '32px', cursor: 'pointer', fontSize: '16px', zIndex: 10 }}>×</button>
 
             {seleccionada.foto_url
               // eslint-disable-next-line @next/next/no-img-element
@@ -400,9 +463,19 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
                 {seleccionada.verificado && <span style={s.badge}>✓ Verificada</span>}
               </div>
 
-              <p style={{ color: '#6B5C90', fontSize: '13px', marginBottom: '20px' }}>
-                {seleccionada.visitas_realizadas} visitas realizadas
-              </p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' }}>
+                <span style={{ color: '#6B5C90', fontSize: '13px' }}>{seleccionada.visitas_realizadas} visitas realizadas</span>
+                {seleccionada.tasa_aceptacion != null && (
+                  <span style={{
+                    fontSize: '12px', fontWeight: 700, borderRadius: '9999px', padding: '3px 10px',
+                    fontFamily: 'Bricolage Grotesque, sans-serif',
+                    background: seleccionada.tasa_aceptacion >= 80 ? '#DCFCE7' : seleccionada.tasa_aceptacion >= 60 ? '#FEF9C3' : '#FEE2E2',
+                    color: seleccionada.tasa_aceptacion >= 80 ? '#166534' : seleccionada.tasa_aceptacion >= 60 ? '#854D0E' : '#991B1B',
+                  }}>
+                    {seleccionada.tasa_aceptacion}% de aceptación
+                  </span>
+                )}
+              </div>
 
               {seleccionada.descripcion && (
                 <div style={{ marginBottom: '20px' }}>
@@ -469,12 +542,12 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
                 </div>
               )}
 
-              {idsYaSolicitados.has(seleccionada.id) ? (
+              {!reagendando && idsYaSolicitados.has(seleccionada.id) ? (
                 <div style={{ background: '#FFF3E8', border: '2px solid #FF6B2B', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
                   <p style={{ color: '#C84B0E', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif', margin: '0 0 6px' }}>⏳ Solicitud enviada</p>
                   <p style={{ color: '#6B5C90', fontSize: '13px', margin: 0 }}>Ya solicitaste conocer a {seleccionada.nombre}. Te avisaremos cuando confirme un horario.</p>
                 </div>
-              ) : solicitudesActivas.length >= MAX_SOLICITUDES ? (
+              ) : !reagendando && solicitudesActivas.length >= MAX_SOLICITUDES ? (
                 <div style={{ background: '#F5F0E8', border: '2px solid #D4C9E8', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
                   <p style={{ color: '#4A3B6B', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif', margin: '0 0 6px' }}>Límite de solicitudes alcanzado</p>
                   <p style={{ color: '#6B5C90', fontSize: '13px', margin: 0 }}>Ya tienes {MAX_SOLICITUDES} solicitudes pendientes.</p>
@@ -488,27 +561,65 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
                 </button>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {/* Banner reagendando */}
+                  {reagendando && (
+                    <div style={{ background: '#F0FDF4', border: '2px solid #86EFAC', borderRadius: '12px', padding: '12px 16px' }}>
+                      <p style={{ color: '#15803d', fontWeight: 700, fontSize: '13px', margin: '0 0 4px', fontFamily: 'Bricolage Grotesque, sans-serif' }}>↩️ Reagendando con {seleccionada.nombre}</p>
+                      <p style={{ color: '#166534', fontSize: '12px', margin: 0 }}>Tu descripción ya está guardada. Solo elige nuevos horarios para proponer.</p>
+                    </div>
+                  )}
+
                   {/* Aviso llamada 20 min */}
-                  <div style={{ background: '#FFF3E8', border: '2px solid #FF6B2B', borderRadius: '12px', padding: '12px 16px' }}>
-                    <p style={{ color: '#C84B0E', fontWeight: 700, fontSize: '13px', margin: '0 0 4px', fontFamily: 'Bricolage Grotesque, sans-serif' }}>⏱️ La llamada de presentación es de 20 minutos</p>
-                    <p style={{ color: '#6B5C90', fontSize: '12px', margin: 0 }}>La sala se cierra automáticamente a los 23 min. Úsalos bien.</p>
-                  </div>
+                  {!reagendando && (
+                    <div style={{ background: '#FFF3E8', border: '2px solid #FF6B2B', borderRadius: '12px', padding: '12px 16px' }}>
+                      <p style={{ color: '#C84B0E', fontWeight: 700, fontSize: '13px', margin: '0 0 4px', fontFamily: 'Bricolage Grotesque, sans-serif' }}>⏱️ La llamada de presentación es de 20 minutos</p>
+                      <p style={{ color: '#6B5C90', fontSize: '12px', margin: 0 }}>La sala se cierra automáticamente a los 23 min. Úsalos bien.</p>
+                    </div>
+                  )}
+
+                  {/* Sobre el cliente */}
+                  {!reagendando && (
+                    <div>
+                      <label style={{ display: 'block', fontWeight: 600, fontSize: '13px', color: '#1A0A3C', marginBottom: '4px' }}>
+                        Cuéntanos sobre ti
+                      </label>
+                      <p style={{ color: '#6B5C90', fontSize: '12px', marginBottom: '8px' }}>
+                        Opcional — los compitas aceptan más cuando saben con quién están hablando.
+                      </p>
+                      <textarea
+                        value={formSobreCliente}
+                        onChange={(e) => setFormSobreCliente(e.target.value)}
+                        placeholder="Soy la hija de Rosa, vivo cerca y estoy buscando acompañamiento para ella…"
+                        rows={3}
+                        style={{ width: '100%', border: '2px solid rgba(45,20,100,0.2)', borderRadius: '12px', padding: '12px', fontFamily: 'Inter, sans-serif', fontSize: '16px', color: '#1A0A3C', resize: 'vertical', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                  )}
 
                   {/* Mensaje sobre el familiar */}
                   <div>
-                    <label style={{ display: 'block', fontWeight: 600, fontSize: '13px', color: '#1A0A3C', marginBottom: '6px' }}>
-                      Cuéntale a {seleccionada.nombre} sobre tu familiar *
-                    </label>
-                    <textarea
-                      value={formMensaje}
-                      onChange={(e) => setFormMensaje(e.target.value)}
-                      placeholder="Edad, condición de salud, qué tipo de acompañamiento necesita y en qué zona vive…"
-                      rows={4}
-                      style={{ width: '100%', border: '2px solid rgba(45,20,100,0.2)', borderRadius: '12px', padding: '12px', fontFamily: 'Inter, sans-serif', fontSize: '16px', color: '#1A0A3C', resize: 'vertical', boxSizing: 'border-box' }}
-                    />
+                    {reagendando ? (
+                      <div style={{ background: '#F5F0FF', border: '2px solid rgba(45,20,100,0.15)', borderRadius: '12px', padding: '14px 16px' }}>
+                        <p style={{ fontSize: '11px', fontWeight: 700, color: '#6B5C90', margin: '0 0 6px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Tu descripción original</p>
+                        <p style={{ fontSize: '14px', color: '#1A0A3C', margin: 0, lineHeight: '1.6' }}>{formMensaje}</p>
+                      </div>
+                    ) : (
+                      <>
+                        <label style={{ display: 'block', fontWeight: 600, fontSize: '13px', color: '#1A0A3C', marginBottom: '6px' }}>
+                          Cuéntale a {seleccionada.nombre} sobre tu familiar *
+                        </label>
+                        <textarea
+                          value={formMensaje}
+                          onChange={(e) => setFormMensaje(e.target.value)}
+                          placeholder="Edad, condición de salud, qué tipo de acompañamiento necesita y en qué zona vive…"
+                          rows={4}
+                          style={{ width: '100%', border: '2px solid rgba(45,20,100,0.2)', borderRadius: '12px', padding: '12px', fontFamily: 'Inter, sans-serif', fontSize: '16px', color: '#1A0A3C', resize: 'vertical', boxSizing: 'border-box' }}
+                        />
+                      </>
+                    )}
                   </div>
 
-                  {/* Slot picker */}
+                  {/* Slot picker — sin límite de disponibilidad del compita */}
                   <div>
                     <label style={{ display: 'block', fontWeight: 600, fontSize: '13px', color: '#1A0A3C', marginBottom: '4px' }}>
                       Elige hasta 3 horarios disponibles *
@@ -517,9 +628,9 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
                       {seleccionada.nombre} confirmará uno de los que propongas. La llamada es de 20 minutos.
                     </p>
                     {(() => {
-                      const diasConSlots = generarSlotsPorDia(seleccionada.horarios_disponibles ?? null)
+                      const diasConSlots = generarSlotsSinLimite()
                       if (diasConSlots.length === 0) {
-                        return <p style={{ color: '#9B8AB8', fontSize: '13px', textAlign: 'center', padding: '12px' }}>Esta compita aún no ha configurado su disponibilidad horaria.</p>
+                        return <p style={{ color: '#9B8AB8', fontSize: '13px', textAlign: 'center', padding: '12px' }}>No hay horarios disponibles.</p>
                       }
                       return (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '260px', overflowY: 'auto', paddingRight: '4px' }}>
@@ -567,7 +678,7 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
                   {/* Botones */}
                   <div style={{ display: 'flex', gap: '10px' }}>
                     <button
-                      onClick={() => { setMostrarFormulario(false); setSlotsElegidos([]); setFormMensaje('') }}
+                      onClick={() => { setMostrarFormulario(false); setSlotsElegidos([]); setFormMensaje(''); setFormSobreCliente(''); setReagendando(false) }}
                       style={{ flex: 1, background: 'white', color: '#4A3B6B', border: '2px solid #D4C9E8', borderRadius: '9999px', padding: '14px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '15px', cursor: 'pointer' }}
                     >
                       Cancelar

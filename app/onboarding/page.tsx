@@ -101,19 +101,17 @@ function OnboardingForm() {
     youtube_url: '',
   })
 
-  // Disponibilidad horaria: día + rango en bloques de 20 min hasta 20:00 VE
+  // Disponibilidad horaria: día + rango en bloques de 1 hora (8:00–20:00 VE)
   type HorarioItem = { dia: string; inicio: string; fin: string }
   const DIAS_SEMANA = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo']
-  const BLOQUES_HORA = Array.from({ length: 43 }, (_, i) => {
-    const totalMin = 6 * 60 + i * 20  // empieza a las 06:00
-    const h = Math.floor(totalMin / 60)
-    const m = totalMin % 60
-    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
-  }) // 06:00 … 20:00
+  const BLOQUES_HORA = Array.from({ length: 13 }, (_, i) => {
+    const h = 8 + i  // 08:00 … 20:00
+    return `${String(h).padStart(2, '0')}:00`
+  })
 
   const [horarios, setHorarios] = useState<HorarioItem[]>([])
   const [horarioDia, setHorarioDia] = useState('')
-  const [horarioInicio, setHorarioInicio] = useState('09:00')
+  const [horarioInicio, setHorarioInicio] = useState('08:00')
   const [horarioFin, setHorarioFin] = useState('17:00')
 
   const ORDEN_DIAS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo']

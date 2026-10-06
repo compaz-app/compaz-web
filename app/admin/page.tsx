@@ -33,6 +33,7 @@ export default async function AdminPage({
 
   const [
     { data: visitasActivas },
+    { data: visitasPreVisita },
     { data: todosUsuarios },
     { data: todosCompitas },
     { data: visitasPasadas },
@@ -44,6 +45,11 @@ export default async function AdminPage({
       .select('*, compita:compitas(*), usuario:usuarios(*)')
       .eq('estado', 'en_curso')
       .order('inicio', { ascending: false }),
+    supabase
+      .from('visitas')
+      .select('*, compita:compitas(*), usuario:usuarios(*)')
+      .eq('estado', 'pre_visita')
+      .order('created_at', { ascending: false }),
     supabase
       .from('usuarios')
       .select('*, compita:compitas(nombre, zona, verificado)')
@@ -73,10 +79,11 @@ export default async function AdminPage({
     <Suspense>
       <AdminDashboard
         visitasActivas={(visitasActivas ?? []) as (Visita & { compita: Compita; usuario: Usuario })[]}
+        visitasPreVisita={(visitasPreVisita ?? []) as (Visita & { compita: Compita; usuario: Usuario })[]}
         usuarios={(todosUsuarios ?? []) as (Usuario & { compita: { nombre: string; zona: string; verificado: boolean } | null })[]}
         compitas={(todosCompitas ?? []) as Compita[]}
         visitasPasadas={(visitasPasadas ?? []) as Visita[]}
-        todasSolicitudes={(todasSolicitudes ?? []) as SolicitudAdmin[]}
+        todasSolicitudes={(todasSolicitudes ?? []) as unknown as SolicitudAdmin[]}
         visitasMes={visitasMes ?? 0}
         defaultTab={defaultTab}
       />

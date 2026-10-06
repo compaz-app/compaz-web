@@ -13,16 +13,26 @@ export async function DELETE(req: NextRequest) {
 
   const admin = createAdminSupabase()
 
+  // Mensajes se eliminan en cascada al borrar las visitas (ON DELETE CASCADE)
   // Eliminar visitas del cliente
-  await admin.from('visitas').delete().eq('usuario_id', usuario_id)
-  // Eliminar action_tokens del cliente
-  await admin.from('action_tokens').delete().eq('cliente_id', usuario_id)
+  const { error: eVisitas } = await admin.from('visitas').delete().eq('usuario_id', usuario_id)
+  if (eVisitas) return serverError(eVisitas)
+
+  // Eliminar solicitudes del cliente (FK a usuarios — sin CASCADE)
+  const { error: eSolicitudes } = await admin.from('solicitudes').delete().eq('cliente_id', usuario_id)
+  if (eSolicitudes) return serverError(eSolicitudes)
+
+  // Eliminar action_tokens del cliente (FK a auth.users — sin CASCADE)
+  const { error: eTokens } = await admin.from('action_tokens').delete().eq('cliente_id', usuario_id)
+  if (eTokens) return serverError(eTokens)
+
   // Eliminar el registro de usuario
   const { error } = await admin.from('usuarios').delete().eq('id', usuario_id)
   if (error) return serverError(error)
 
-  // Eliminar el auth user de Supabase
-  await admin.auth.admin.deleteUser(usuario_id)
+  // Eliminar el auth user de Supabase (propaga a usuarios por CASCADE en auth.users)
+  const { error: eAuth } = await admin.auth.admin.deleteUser(usuario_id)
+  if (eAuth) return serverError(eAuth)
 
   return ok(null)
 }

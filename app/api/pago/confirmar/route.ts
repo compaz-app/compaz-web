@@ -1,9 +1,13 @@
 import { NextRequest } from 'next/server'
-import { createAdminSupabase } from '@/lib/supabase-server'
+import { createAdminSupabase, createServerSupabase } from '@/lib/supabase-server'
 import { sendTelegramMessage } from '@/lib/telegram'
-import { ok, err, notFound, serverError } from '@/lib/api'
+import { ok, err, notFound, serverError, unauthorized } from '@/lib/api'
 
 export async function POST(req: NextRequest) {
+  const supabase = await createServerSupabase()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return unauthorized()
+
   const { solicitud_id, plan } = await req.json()
   if (!solicitud_id || !plan) return err('Faltan parámetros', 400)
   if (plan !== 'unica' && plan !== 'mensual') return err('Plan inválido', 400)
@@ -26,6 +30,7 @@ export async function POST(req: NextRequest) {
     }
 
   if (!sol) return notFound()
+  if (sol.cliente_id !== user.id) return unauthorized()
   if (sol.estado !== 'completada') return err('Esta solicitud ya fue procesada', 400)
 
   // Marcar solicitud como contratada

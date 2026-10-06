@@ -79,11 +79,9 @@ const SERVICIOS_GRUPOS = [
 type HorarioItem = { dia: string; inicio: string; fin: string }
 
 const DIAS_SEMANA = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo']
-const BLOQUES_HORA = Array.from({ length: 43 }, (_, i) => {
-  const totalMin = 6 * 60 + i * 20
-  const h = Math.floor(totalMin / 60)
-  const m = totalMin % 60
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+const BLOQUES_HORA = Array.from({ length: 13 }, (_, i) => {
+  const h = 8 + i
+  return `${String(h).padStart(2, '0')}:00`
 })
 
 interface Props {
@@ -121,7 +119,7 @@ export default function EditarPerfil({ token, inicial }: Props) {
 
   const [horarios, setHorarios] = useState<HorarioItem[]>(inicial.horarios_disponibles)
   const [horarioDia, setHorarioDia] = useState('')
-  const [horarioInicio, setHorarioInicio] = useState('09:00')
+  const [horarioInicio, setHorarioInicio] = useState('08:00')
   const [horarioFin, setHorarioFin] = useState('17:00')
 
   const [subiendo, setSubiendo] = useState(false)

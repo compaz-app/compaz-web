@@ -193,11 +193,17 @@ async function guardarReporteYEnviarEmail(
   }
 
   // Guardar reporte en BD
-  const { data: reporteGuardado } = await supabase
+  const { data: reporteGuardado, error: reporteError } = await supabase
     .from('reportes_visita')
     .insert({ visita_id: visitaId, ...reporte })
     .select('id')
     .single()
+
+  if (reporteError || !reporteGuardado) {
+    console.error('Error guardando reporte_visita:', reporteError)
+    await sendTelegramMessage(chatId, `Hubo un problema guardando el cuestionario. Por favor escríbenos a hola@micompaz.com para que lo registremos manualmente.`, INLINE_INICIO)
+    return
+  }
 
   // Enviar segundo email con indicadores de bienestar y resumen IA
   try {
@@ -356,12 +362,55 @@ export async function POST(req: NextRequest) {
   // ── Vinculación por nombre + código de verificación ─────────────────────────
   const estado = !compita ? await getEstado(supabase, chatId) : null
 
+  // Paso 1b: desambiguación por email cuando hay múltiples cuentas con el mismo nombre
+  // formato estado: desambiguar:{id1},{id2},...
+  if (estado?.pendiente_accion?.startsWith('desambiguar:') && !compita) {
+    if (!text.trim()) return NextResponse.json({ ok: true })
+    const expirado = estado.pendiente_expira ? new Date(estado.pendiente_expira) < new Date() : true
+    if (expirado) {
+      await clearPendiente(supabase, chatId)
+      await setRegistroPendiente(supabase, chatId, true)
+      await sendTelegramMessage(chatId, `El tiempo expiró. ✍️ Escribe tu nombre de nuevo para intentarlo:`, QUITAR_TECLADO)
+      return NextResponse.json({ ok: true })
+    }
+    const ids = estado.pendiente_accion.slice('desambiguar:'.length).split(',').filter(Boolean)
+    const { data: candidatas } = await supabase
+      .from('compitas')
+      .select('id, nombre, email, codigo')
+      .in('id', ids)
+      .ilike('email', `${text.trim()}%`) as { data: Compita[] | null }
+
+    if (!candidatas || candidatas.length === 0) {
+      await setRegistroPendiente(supabase, chatId, true)
+      await clearPendiente(supabase, chatId)
+      await sendTelegramMessage(chatId, `No encontré ninguna cuenta con esas letras de correo. 🤔\n\nEscríbenos a hola@micompaz.com y te ayudamos a activar tu cuenta.\n\n✍️ O escribe tu nombre de nuevo para intentarlo:`, QUITAR_TECLADO)
+    } else if (candidatas.length > 1) {
+      await clearPendiente(supabase, chatId)
+      await sendTelegramMessage(chatId, `No pude identificarte con esa información. Por favor escríbenos a hola@micompaz.com y te activamos la cuenta manualmente.`, QUITAR_TECLADO)
+    } else {
+      const encontrada = candidatas[0]
+      const codigo = String(Math.floor(100000 + Math.random() * 900000))
+      const expira = new Date(Date.now() + 15 * 60 * 1000).toISOString()
+      await setEstado(supabase, chatId, { pendiente_accion: `verificar:${codigo}:${encontrada.id}`, pendiente_expira: expira })
+      if (encontrada.email) {
+        try { await sendCodigoTelegram(encontrada.email, encontrada.nombre, codigo) } catch (e) { console.error('Error enviando código:', e) }
+        await sendTelegramMessage(chatId, `Encontré tu cuenta 👀\n\nTe enviamos un <b>código de 6 dígitos</b> al correo <b>${encontrada.email}</b>.\n\n✍️ Escríbelo aquí cuando lo recibas:`, QUITAR_TECLADO)
+      } else {
+        const adminChatId = process.env.TELEGRAM_ADMIN_CHAT_ID
+        if (adminChatId) { try { await sendTelegramMessage(adminChatId, `🔐 <b>Verificación de Compita</b>\n\n<b>${encontrada.nombre}</b> quiere activar su cuenta.\n\nCódigo: <code>${codigo}</code>\n\nExpira en 15 minutos.`) } catch (e) { console.error(e) } }
+        await sendTelegramMessage(chatId, `Encontré tu cuenta 👀\n\nPor seguridad, te enviamos un <b>código de 6 dígitos</b> a través del admin de Compaz.\n\n✍️ Escríbelo aquí cuando lo recibas:`, QUITAR_TECLADO)
+      }
+    }
+    return NextResponse.json({ ok: true })
+  }
+
   // Paso 2: compita ingresó el código de 6 dígitos
   // formato estado: verificar:{codigo}:{compitaId}:{intentos_fallidos}
   if (estado?.pendiente_accion?.startsWith('verificar:') && !compita) {
     const partesCodigo = estado.pendiente_accion.split(':')
     const [, codigo, compitaId] = partesCodigo
     const intentosFallidos = parseInt(partesCodigo[3] ?? '0', 10)
+    if (!text.trim()) return NextResponse.json({ ok: true })
     const expirado = estado.pendiente_expira ? new Date(estado.pendiente_expira) < new Date() : true
     if (expirado) {
       await clearPendiente(supabase, chatId)
@@ -416,15 +465,28 @@ export async function POST(req: NextRequest) {
 
   // Paso 1: compita ingresó su nombre → buscar y enviar código al email
   if (estado?.registro_pendiente && !compita) {
+    if (!text.trim()) return NextResponse.json({ ok: true })
     await setRegistroPendiente(supabase, chatId, false)
-    const { data: encontrada } = await supabase
+    const { data: resultados } = await supabase
       .from('compitas')
       .select('id, nombre, email, codigo')
       .ilike('nombre', `%${text.trim()}%`)
       .is('telegram_chat_id', null)
-      .maybeSingle() as { data: Compita | null }
+      .limit(5) as { data: Compita[] | null }
 
-    if (!encontrada) {
+    const encontrada = resultados?.length === 1 ? resultados[0] : null
+    const ambiguo = (resultados?.length ?? 0) > 1
+
+    if (ambiguo) {
+      const ids = (resultados ?? []).map((r) => r.id).join(',')
+      const expira = new Date(Date.now() + 15 * 60 * 1000).toISOString()
+      await setEstado(supabase, chatId, { pendiente_accion: `desambiguar:${ids}`, pendiente_expira: expira })
+      await sendTelegramMessage(
+        chatId,
+        `Encontré más de una cuenta con ese nombre. Para identificarte, escribe las <b>primeras letras de tu correo</b>.\n\nPor ejemplo, si tu correo es <i>maria.garcia@gmail.com</i>, escribe <b>maria</b>.`,
+        QUITAR_TECLADO,
+      )
+    } else if (!encontrada) {
       await setRegistroPendiente(supabase, chatId, true)
       await sendTelegramMessage(
         chatId,
@@ -709,7 +771,7 @@ export async function POST(req: NextRequest) {
     const estadoPendiente = await getEstado(supabase, chatId)
     const accionPendiente = estadoPendiente?.pendiente_accion as 'iniciar' | 'terminar' | null
     const expiraPendiente = estadoPendiente?.pendiente_expira ? new Date(estadoPendiente.pendiente_expira).getTime() : 0
-    if (!accionPendiente || Date.now() > expiraPendiente) {
+    if (!accionPendiente || (accionPendiente !== 'iniciar' && accionPendiente !== 'terminar') || Date.now() > expiraPendiente) {
       await clearPendiente(supabase, chatId)
       await sendTelegramMessage(chatId, `El tiempo para confirmar expiró. Por favor intenta de nuevo.`, INLINE_INICIO)
       return NextResponse.json({ ok: true })
@@ -854,6 +916,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Enviar email al cliente con los horarios sugeridos
+    let emailHorarioEnviado = false
     if (clienteEmail) {
       const resend = new Resend(process.env.RESEND_API_KEY)
       try {
@@ -865,28 +928,67 @@ export async function POST(req: NextRequest) {
             <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px">
               <h2 style="color:#2D1464;font-size:22px">Nuevos horarios disponibles</h2>
               <p style="color:#4A3B6B;font-size:16px;line-height:1.6">
-                <strong>${compita.nombre}</strong> no pudo en los horarios que propusiste, pero sugiere lo siguiente:
+                <strong>${escapeHtml(compita.nombre)}</strong> no pudo en los horarios que propusiste, pero sugiere lo siguiente:
               </p>
               <blockquote style="background:#F5F0FF;border-left:4px solid #7C4DFF;border-radius:8px;padding:16px 20px;color:#1A0A3C;font-size:16px;line-height:1.6;margin:16px 0">
                 ${escapeHtml(text).replace(/\n/g, '<br>')}
               </blockquote>
               <p style="color:#4A3B6B;font-size:15px;line-height:1.6">
-                Si alguno te funciona, haz clic aquí para enviar una nueva solicitud directamente con ${compita.nombre}:
+                Si alguno te funciona, haz clic aquí para enviar una nueva solicitud directamente con ${escapeHtml(compita.nombre)}:
               </p>
               <a href="${SITE_URL}/compitas?compita=${compita.id}&reagendar=${solicitudId}" style="display:inline-block;background:#FF6B2B;color:white;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:16px;margin-top:4px">
-                Agendar con ${compita.nombre} →
+                Agendar con ${escapeHtml(compita.nombre)} →
               </a>
               <p style="color:#6B5C90;font-size:13px;margin-top:24px">Compaz — <em>Cerca aunque estés lejos</em></p>
             </div>
           `,
         })
+        emailHorarioEnviado = true
       } catch (e) { console.error('Email horarios alternativos:', e) }
     }
 
-    await sendTelegramMessage(
-      chatId,
-      `✅ Listo. Le enviamos tus horarios a ${clienteNombre || 'el cliente'} por email.\n\nSi acepta, te llegará una nueva solicitud por aquí.`,
-    )
+    if (emailHorarioEnviado) {
+      await sendTelegramMessage(
+        chatId,
+        `✅ Listo. Le enviamos tus horarios a ${clienteNombre || 'el cliente'} por email.\n\nSi acepta, te llegará una nueva solicitud por aquí.`,
+      )
+    } else {
+      await sendTelegramMessage(
+        chatId,
+        `⚠️ No pudimos enviarle tus horarios al cliente porque no tenemos su correo registrado. Por favor escríbenos a hola@micompaz.com y lo resolvemos manualmente.`,
+        INLINE_INICIO,
+      )
+    }
+    return NextResponse.json({ ok: true })
+  }
+
+  // ── Reanudar cuestionario desde recordatorio ────────────────────────────────
+  if (isCallback && text === 'reanudar_reporte') {
+    const estadoReanuda = await getEstado(supabase, chatId)
+    const accionReanuda = estadoReanuda?.pendiente_accion ?? ''
+    if (!accionReanuda.startsWith('reporte:') && !accionReanuda.startsWith('reporte_novedad:')) {
+      await sendTelegramMessage(chatId, `Ya no hay un cuestionario pendiente.`, INLINE_INICIO)
+      return NextResponse.json({ ok: true })
+    }
+    // Extender expiración otros 30 min y re-mostrar la pregunta actual
+    await supabase.from('telegram_estados').update({ pendiente_expira: new Date(Date.now() + 30 * 60_000).toISOString() }).eq('chat_id', chatId)
+    if (accionReanuda.startsWith('reporte_novedad:')) {
+      await sendTelegramMessage(chatId, `📝 <b>¿Hay algo que quieras contarle a la familia?</b>\n\nEscríbelo aquí — puede ser una anécdota, un avance que notaste, algo que le gustó especialmente, o cualquier detalle que creas que les daría paz o alegría.`, QUITAR_TECLADO)
+    } else {
+      const partes = accionReanuda.split(':')
+      const step = parseInt(partes[2] ?? '0', 10)
+      if (step < PREGUNTAS_REPORTE.length) {
+        const pregunta = PREGUNTAS_REPORTE[step]
+        await sendTelegramMessage(
+          chatId,
+          `${step + 1} de 4 — ${pregunta.emoji} <b>${pregunta.label}</b>\n\n${pregunta.texto}\n\n<i>1 = muy bajo, 5 = excelente</i>`,
+          makeReporteKeyboard(),
+        )
+      } else {
+        await clearPendiente(supabase, chatId)
+        await sendTelegramMessage(chatId, `Ya no hay un cuestionario pendiente.`, INLINE_INICIO)
+      }
+    }
     return NextResponse.json({ ok: true })
   }
 
@@ -951,6 +1053,12 @@ export async function POST(req: NextRequest) {
   {
     const estadoNov = await getEstado(supabase, chatId)
     if (!isCallback && estadoNov?.pendiente_accion?.startsWith('reporte_novedad:') && text && !text.startsWith('/')) {
+      const expiradoNov = estadoNov.pendiente_expira ? new Date(estadoNov.pendiente_expira) < new Date() : true
+      if (expiradoNov) {
+        await clearPendiente(supabase, chatId)
+        await sendTelegramMessage(chatId, `El tiempo para completar el cuestionario expiró. Si quieres registrarlo de todas formas, escríbenos a hola@micompaz.com.`, INLINE_INICIO)
+        return NextResponse.json({ ok: true })
+      }
       await guardarReporteYEnviarEmail(supabase, chatId, compita, estadoNov.pendiente_accion, text)
       return NextResponse.json({ ok: true })
     }

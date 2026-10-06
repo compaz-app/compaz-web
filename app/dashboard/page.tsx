@@ -5,7 +5,11 @@ import Chat from '@/components/ui/Chat'
 import VideoCall from '@/components/ui/VideoCall'
 import VisitaWatcher from '@/components/ui/VisitaWatcher'
 import LogoutButton from '@/components/ui/LogoutButton'
-import type { Visita, Compita, Mensaje, Usuario } from '@/types'
+import SeguimientoBienestar from '@/components/ui/SeguimientoBienestar'
+import PerfilFamiliar from '@/components/ui/PerfilFamiliar'
+import HistorialVisitas from '@/components/ui/HistorialVisitas'
+import FechaProgramada from '@/components/ui/FechaProgramada'
+import type { Visita, Compita, Mensaje, Usuario, ReporteVisita } from '@/types'
 
 export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ preview?: string }> }) {
   const session = await requireAuth()
@@ -24,13 +28,13 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
   const { data: usuario } = await db
     .from('usuarios')
-    .select('*, compita:compitas(id, nombre, zona, estado, verificado, foto_url, descripcion, servicios, youtube_url, visitas_realizadas, created_at)')
+    .select('*, compita:compitas(id, nombre, zona, estado, verificado, foto_url, descripcion, servicios, youtube_url, visitas_realizadas, created_at), familiar_nombre, familiar_edad, familiar_condicion, familiar_notas')
     .eq('id', targetUid)
     .single() as { data: Usuario | null }
 
   if (!usuario && !previewUid) redirect('/login')
 
-  // Visita activa
+  // Visita activa (en curso)
   const { data: visitaActiva } = await db
     .from('visitas')
     .select('*, compita:compitas(id, nombre, zona, estado, verificado, foto_url, descripcion, servicios, youtube_url, visitas_realizadas, created_at)')
@@ -38,13 +42,22 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     .eq('estado', 'en_curso')
     .maybeSingle() as { data: (Visita & { compita: Compita }) | null }
 
-  // Mensajes de la visita activa
+  // Visita en coordinación pre-visita (chat para agendar fecha)
+  const { data: visitaPreVisita } = await db
+    .from('visitas')
+    .select('*, compita:compitas(id, nombre, zona, estado, verificado, foto_url, descripcion, servicios, youtube_url, visitas_realizadas, created_at)')
+    .eq('usuario_id', targetUid)
+    .eq('estado', 'pre_visita')
+    .maybeSingle() as { data: (Visita & { compita: Compita }) | null }
+
+  // Mensajes de la visita activa o pre_visita
   let mensajes: Mensaje[] = []
-  if (visitaActiva) {
+  const visitaConChat = visitaActiva ?? visitaPreVisita
+  if (visitaConChat) {
     const { data } = await db
       .from('mensajes')
       .select('*')
-      .eq('visit_id', visitaActiva.id)
+      .eq('visit_id', visitaConChat.id)
       .order('created_at', { ascending: true })
     mensajes = (data ?? []) as Mensaje[]
   }
@@ -73,11 +86,33 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const solicitudesPendientes = solicitudes.filter((s) => s.estado === 'pendiente')
   const entrevistasConfirmadas = solicitudes.filter((s) => s.estado === 'aceptada' && s.slot_confirmado)
   const solicitudesHistorial = solicitudes.filter((s) => s.estado === 'rechazada' || s.estado === 'completada')
+  const todasRechazadas = solicitudes.length > 0
+    && solicitudesPendientes.length === 0
+    && entrevistasConfirmadas.length === 0
+    && solicitudes.every((s) => s.estado === 'rechazada')
 
-  // Visitas pasadas
-  const { data: visitasPasadas } = await db
+  // Reportes de bienestar de visitas pasadas de este cliente
+  const { data: reportesBienestar } = await adminDb
     .from('visitas')
-    .select('*, compita:compitas(nombre)')
+    .select('reportes_visita(id, visita_id, animo, fisico, participacion, entorno, novedad, resumen_ia, created_at)')
+    .eq('usuario_id', targetUid)
+    .eq('estado', 'terminada')
+    .order('created_at', { ascending: true })
+
+  type ReporteRow = { id: string; visita_id: string; animo: number | null; fisico: number | null; participacion: number | null; entorno: number | null; novedad: string | null; resumen_ia: string | null; created_at: string }
+  const reportes: ReporteVisita[] = (reportesBienestar ?? [])
+    .flatMap((v) => {
+      const r = v as unknown as { reportes_visita: ReporteRow[] | ReporteRow | null }
+      if (!r.reportes_visita) return []
+      const arr = Array.isArray(r.reportes_visita) ? r.reportes_visita : [r.reportes_visita]
+      return arr as ReporteVisita[]
+    })
+    .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+
+  // Visitas pasadas con fotos y reportes
+  const { data: visitasPasadas } = await adminDb
+    .from('visitas')
+    .select('*, compita:compitas(nombre), mensajes(*), reportes_visita(*)')
     .eq('usuario_id', targetUid)
     .eq('estado', 'terminada')
     .order('created_at', { ascending: false })
@@ -303,6 +338,51 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           </div>
         )}
 
+        {/* CTA si todas las solicitudes fueron rechazadas */}
+        {todasRechazadas && !compita && (
+          <div style={{ background: 'white', border: '2px solid #FF6B2B', borderRadius: '16px', padding: '24px', marginBottom: '24px' }}>
+            <p style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '17px', color: '#1A0A3C', margin: '0 0 8px' }}>
+              Ningún compita pudo atenderte esta vez
+            </p>
+            <p style={{ color: '#6B5C90', fontSize: '14px', margin: '0 0 16px', lineHeight: '1.6' }}>
+              No te preocupes. Hay más compitas disponibles en tu zona. Intenta con otros perfiles que se adapten mejor a lo que necesitas.
+            </p>
+            <a href="/compitas" style={{ display: 'inline-block', background: '#FF6B2B', color: 'white', borderRadius: '9999px', padding: '12px 24px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '14px', textDecoration: 'none' }}>
+              Ver otros compitas →
+            </a>
+          </div>
+        )}
+
+        {/* Chat pre-visita: coordinar fecha con compita */}
+        {!visitaActiva && visitaPreVisita && (
+          <div style={{ marginBottom: '24px' }}>
+            {!previewUid && (
+              <FechaProgramada
+                visitaId={visitaPreVisita.id}
+                fechaActual={visitaPreVisita.fecha_programada ?? null}
+                compitaNombre={visitaPreVisita.compita.nombre}
+              />
+            )}
+            <div style={{ background: '#F0FDF4', border: '2px solid #86EFAC', borderRadius: '16px', padding: '16px 20px', marginBottom: '12px', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+              <span style={{ fontSize: '20px', flexShrink: 0 }}>🗓️</span>
+              <div>
+                <p style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, color: '#15803d', fontSize: '15px', margin: '0 0 4px' }}>
+                  ¡Contratación confirmada! Coordina la primera visita
+                </p>
+                <p style={{ color: '#166534', fontSize: '13px', margin: '0 0 8px', lineHeight: '1.5' }}>
+                  Usa este chat para ponerte de acuerdo con <strong>{visitaPreVisita.compita.nombre}</strong> en la fecha y hora de la primera visita.
+                </p>
+                <p style={{ color: '#15803d', fontSize: '12px', margin: 0, background: 'rgba(34,197,94,0.1)', borderRadius: '8px', padding: '8px 12px', lineHeight: '1.5' }}>
+                  🛡️ <strong>Mantén la conversación aquí.</strong> Las comunicaciones dentro de Compaz están protegidas y garantizamos el servicio. Acuerdos fuera de la plataforma quedan fuera de nuestra cobertura.
+                </p>
+              </div>
+            </div>
+            <div style={{ background: 'white', border: '2px solid #86EFAC', borderRadius: '16px', overflow: 'hidden', height: '400px', display: 'flex', flexDirection: 'column' }}>
+              <Chat visita={visitaPreVisita} mensajesIniciales={mensajes} compitaNombre={visitaPreVisita.compita.nombre} />
+            </div>
+          </div>
+        )}
+
         {/* Videollamada + chat */}
         {visitaActiva ? (
           <>
@@ -364,28 +444,72 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           </div>
         )}
 
-        {/* Historial */}
-        {visitasPasadas && visitasPasadas.length > 0 && (
-          <div>
-            <h3 style={{ color: '#2D1464', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, marginBottom: '16px' }}>
-              Visitas anteriores
-            </h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {visitasPasadas.map((v) => {
-                const fecha = new Date(v.created_at).toLocaleDateString('es-VE', { day: 'numeric', month: 'long', year: 'numeric' })
-                const duracion = v.inicio && v.fin
-                  ? `${Math.round((new Date(v.fin).getTime() - new Date(v.inicio).getTime()) / 60000)} min`
-                  : '—'
-                return (
-                  <div key={v.id} style={{ background: 'white', border: '2px solid #E8E0D4', borderRadius: '12px', padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ color: '#4A3B6B', fontSize: '15px' }}>{fecha}</span>
-                    <span style={{ color: '#6B5C90', fontSize: '14px' }}>{duracion}</span>
-                  </div>
-                )
-              })}
+        {/* Perfil del familiar */}
+        {usuario && !previewUid && (
+          <PerfilFamiliar usuario={usuario} />
+        )}
+        {usuario && previewUid && (
+          <PerfilFamiliar usuario={usuario} readonly />
+        )}
+
+        {/* Próxima visita programada */}
+        {visitaPreVisita?.fecha_programada && !visitaActiva && (
+          <div style={{ background: '#EFF6FF', border: '2px solid #60A5FA', borderRadius: '16px', padding: '16px 20px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <span style={{ fontSize: '22px', flexShrink: 0 }}>📅</span>
+            <div>
+              <p style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, color: '#1d4ed8', fontSize: '15px', margin: '0 0 2px' }}>Próxima visita programada</p>
+              <p style={{ color: '#1d4ed8', fontSize: '14px', margin: 0 }}>
+                {new Date(visitaPreVisita.fecha_programada + 'T00:00:00').toLocaleDateString('es-VE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+              </p>
             </div>
           </div>
         )}
+
+        {/* Seguimiento de bienestar */}
+        {compita && (
+          <SeguimientoBienestar reportes={reportes} compitaNombre={compita.nombre} />
+        )}
+
+        {/* Log de novedades */}
+        {(() => {
+          const novedades = reportes.filter((r) => r.novedad)
+          if (novedades.length === 0) return null
+          return (
+            <div style={{ background: 'white', border: '2px solid #E8E0D4', borderRadius: '16px', padding: '24px', marginBottom: '24px' }}>
+              <h3 style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '16px', color: '#1A0A3C', margin: '0 0 16px' }}>
+                📋 Registro de novedades
+              </h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {[...novedades].reverse().map((r) => {
+                  const fecha = new Date(r.created_at).toLocaleDateString('es-VE', { weekday: 'long', day: 'numeric', month: 'long' })
+                  return (
+                    <div key={r.id} style={{ display: 'flex', gap: '14px', padding: '12px 16px', background: '#FFF3E8', border: '1.5px solid #FF6B2B', borderRadius: '10px' }}>
+                      <span style={{ color: '#C84B0E', fontSize: '12px', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif', whiteSpace: 'nowrap', marginTop: '2px', minWidth: '110px', textTransform: 'capitalize' }}>{fecha}</span>
+                      <p style={{ color: '#1A0A3C', fontSize: '14px', margin: 0, lineHeight: '1.5' }}>{r.novedad}</p>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )
+        })()}
+
+        {/* Historial expandible */}
+        {(() => {
+          type RawVisita = Visita & { compita?: { nombre: string }; mensajes?: Mensaje[]; reportes_visita?: ReporteVisita[] }
+          const visitasConDatos = ((visitasPasadas ?? []) as unknown as RawVisita[]).map((v) => ({
+            ...v,
+            mensajes: (v.mensajes ?? []) as Mensaje[],
+            reporte: Array.isArray(v.reportes_visita) ? (v.reportes_visita[0] ?? null) : null,
+          }))
+          return (
+            <HistorialVisitas
+              visitas={visitasConDatos}
+              compitaId={compita?.id ?? null}
+              compitaNombre={compita?.nombre ?? null}
+            />
+          )
+        })()}
       </div>
 
       {/* Actualiza la página cuando cambia el estado de la visita */}

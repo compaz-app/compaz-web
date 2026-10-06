@@ -114,32 +114,62 @@ export async function desbloquearCompita(id: string): Promise<void> {
   if (error) throw new Error(error.message)
 }
 
-export async function eliminarCompita(id: string): Promise<void> {
+export async function contarVisitasCompita(id: string): Promise<number> {
   const supabase = createAdminSupabase()
-  // Desasignar compita de clientes que la tengan asignada
-  await supabase.from('usuarios').update({ compita_id: null }).eq('compita_id', id)
-  // Eliminar mensajes de visitas del compita
-  const { data: visitas } = await supabase.from('visitas').select('id').eq('compita_id', id)
-  if (visitas?.length) {
-    const visitaIds = visitas.map((v) => v.id)
-    await supabase.from('mensajes').delete().in('visit_id', visitaIds)
+  const { count } = await supabase.from('visitas').select('id', { count: 'exact', head: true }).eq('compita_id', id)
+  return count ?? 0
+}
+
+export async function eliminarCompita(id: string, force = false): Promise<void> {
+  const supabase = createAdminSupabase()
+
+  // Si no es force, bloquear si tiene visitas
+  if (!force) {
+    const visitas = await contarVisitasCompita(id)
+    if (visitas > 0) {
+      const err = new Error(`TIENE_VISITAS:${visitas}`) as Error & { visitas: number }
+      err.visitas = visitas
+      throw err
+    }
   }
+
+  // Desasignar compita de clientes que la tengan asignada
+  const { error: eUsuarios } = await supabase.from('usuarios').update({ compita_id: null }).eq('compita_id', id)
+  if (eUsuarios) throw new Error(`usuarios: ${eUsuarios.message}`)
+
+  // Eliminar mensajes de visitas del compita
+  const { data: visitasData } = await supabase.from('visitas').select('id').eq('compita_id', id)
+  if (visitasData?.length) {
+    const visitaIds = visitasData.map((v) => v.id)
+    const { error: eMensajes } = await supabase.from('mensajes').delete().in('visit_id', visitaIds)
+    if (eMensajes) throw new Error(`mensajes: ${eMensajes.message}`)
+  }
+
   // Eliminar visitas del compita
-  await supabase.from('visitas').delete().eq('compita_id', id)
+  const { error: eVisitas } = await supabase.from('visitas').delete().eq('compita_id', id)
+  if (eVisitas) throw new Error(`visitas: ${eVisitas.message}`)
+
   // Eliminar solicitudes del compita
-  await supabase.from('solicitudes').delete().eq('compita_id', id)
+  const { error: eSolicitudes } = await supabase.from('solicitudes').delete().eq('compita_id', id)
+  if (eSolicitudes) throw new Error(`solicitudes: ${eSolicitudes.message}`)
+
   // Eliminar action_tokens relacionados
-  await supabase.from('action_tokens').delete().eq('compita_id', id)
+  const { error: eTokens } = await supabase.from('action_tokens').delete().eq('compita_id', id)
+  if (eTokens) throw new Error(`action_tokens: ${eTokens.message}`)
+
   // Eliminar tokens de edición de perfil
-  await supabase.from('compita_edit_tokens').delete().eq('compita_id', id)
+  const { error: eEditTokens } = await supabase.from('compita_edit_tokens').delete().eq('compita_id', id)
+  if (eEditTokens) throw new Error(`compita_edit_tokens: ${eEditTokens.message}`)
+
   // Eliminar estado de Telegram si existe
   // telegram_estados usa chat_id como PK, no compita_id — limpiar por telegram_chat_id
   const { data: compita } = await supabase.from('compitas').select('telegram_chat_id').eq('id', id).single()
   if (compita?.telegram_chat_id) {
     await supabase.from('telegram_estados').delete().eq('chat_id', compita.telegram_chat_id)
   }
+
   const { error } = await supabase.from('compitas').delete().eq('id', id)
-  if (error) throw new Error(error.message)
+  if (error) throw new Error(`compitas: ${error.message}`)
 }
 
 export type CamposEditablesCompita = {
