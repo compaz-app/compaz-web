@@ -381,7 +381,7 @@ function OnboardingForm() {
               value={form.descripcion}
               onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
               style={{ ...s.input, minHeight: '110px', resize: 'vertical' }}
-              placeholder="Cuéntanos quién eres: a qué te dedicas, qué has hecho, qué te mueve, qué disfrutas hacer…"
+              placeholder="Por ejemplo: fisioterapeuta, maestra, músico, cocinera, hablas otro idioma, conoces artes marciales… Lo que te hace especial."
             />
           </div>
 
@@ -550,7 +550,7 @@ function OnboardingForm() {
           <div style={{ background: '#F5F0FF', border: '2px solid rgba(45,20,100,0.12)', borderRadius: '16px', padding: '20px' }}>
             <label style={{ ...s.label, marginBottom: '4px' }}>Video de presentación en YouTube <span style={{ fontWeight: 400, color: '#6B5C90' }}>(opcional pero muy recomendado)</span></label>
             <p style={{ color: '#4A3B6B', fontSize: '13px', lineHeight: '1.6', marginBottom: '12px' }}>
-              Este video es lo primero que ve el cliente antes de elegirte. Preséntate, cuenta quién eres y muestra tu personalidad. Entre <strong>1 y 1:30 minutos</strong> es suficiente — máximo 2:30. Un buen video puede <strong>triplicar</strong> las probabilidades de que una familia te elija.
+              Este video es lo primero que ve el cliente antes de elegirte. Preséntate, cuenta quién eres y muestra tu personalidad. Entre <strong>1 y 1:30 minutos</strong> — no más de eso. Un buen video puede <strong>triplicar</strong> las probabilidades de que una familia te elija.
             </p>
             {/* Ejemplo visual video */}
             <div style={{ display: 'flex', gap: '12px', marginBottom: '14px' }}>
