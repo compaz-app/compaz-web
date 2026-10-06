@@ -741,12 +741,30 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
                                 {f.reportado_por} · {new Date(f.created_at).toLocaleDateString('es-VE', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
                               </div>
                             </div>
-                            <button
-                              onClick={() => resolverFlag(f.id)}
-                              style={{ background: '#F0FDF4', border: '1.5px solid #22c55e', color: '#15803d', borderRadius: '9999px', padding: '5px 14px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Bricolage Grotesque, sans-serif', whiteSpace: 'nowrap' }}
-                            >
-                              ✓ Resolver
-                            </button>
+                            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                              <button
+                                onClick={() => {
+                                  if (f.entidad_tipo === 'compita') {
+                                    setCompitaPerfilId(f.entidad_id)
+                                    setTab('perfil')
+                                  } else if (f.entidad_tipo === 'cliente') {
+                                    setTab('clientes')
+                                  } else {
+                                    setVisitaSeleccionada(f.entidad_id)
+                                    setTab('visitas')
+                                  }
+                                }}
+                                style={{ background: '#F5F0FF', border: '1.5px solid #D4C9E8', color: '#4A3B6B', borderRadius: '9999px', padding: '5px 14px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Bricolage Grotesque, sans-serif', whiteSpace: 'nowrap' }}
+                              >
+                                Ver →
+                              </button>
+                              <button
+                                onClick={() => resolverFlag(f.id)}
+                                style={{ background: '#F0FDF4', border: '1.5px solid #22c55e', color: '#15803d', borderRadius: '9999px', padding: '5px 14px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Bricolage Grotesque, sans-serif', whiteSpace: 'nowrap' }}
+                              >
+                                ✓ Resolver
+                              </button>
+                            </div>
                           </div>
                         ))}
                       </div>
