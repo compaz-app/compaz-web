@@ -12,6 +12,7 @@ export default function LoginPage() {
   const [enviado, setEnviado] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [cooldown, setCooldown] = useState(0)
   const router = useRouter()
 
   async function handleSubmit(e: React.FormEvent) {
@@ -32,8 +33,17 @@ export default function LoginPage() {
       setError('Error enviando el correo. Intenta de nuevo.')
     } else {
       setEnviado(true)
+      setCooldown(30)
+      const interval = setInterval(() => {
+        setCooldown((s) => { if (s <= 1) { clearInterval(interval); return 0 } return s - 1 })
+      }, 1000)
     }
     setLoading(false)
+  }
+
+  async function reenviar() {
+    if (cooldown > 0) return
+    await handleSubmit({ preventDefault: () => {} } as React.FormEvent)
   }
 
   return (
@@ -55,8 +65,21 @@ export default function LoginPage() {
               <h2 style={{ color: '#2D1464', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, marginBottom: '12px' }}>
                 Revisa tu correo
               </h2>
-              <p style={{ color: '#4A3B6B', fontFamily: 'Inter, sans-serif', lineHeight: '1.6' }}>
+              <p style={{ color: '#4A3B6B', fontFamily: 'Inter, sans-serif', lineHeight: '1.6', marginBottom: '20px' }}>
                 Te enviamos un link a <strong>{email}</strong>. Haz clic en él para entrar.
+              </p>
+              <button
+                onClick={reenviar}
+                disabled={cooldown > 0}
+                style={{ background: 'none', border: '2px solid #D4C9E8', color: cooldown > 0 ? '#9B8AB8' : '#4A3B6B', borderRadius: '9999px', padding: '8px 20px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '14px', cursor: cooldown > 0 ? 'not-allowed' : 'pointer', marginBottom: '16px' }}
+              >
+                {cooldown > 0 ? `Reenviar en ${cooldown}s` : 'Reenviar correo'}
+              </button>
+              <p style={{ color: '#9B8AB8', fontSize: '13px', lineHeight: '1.6' }}>
+                Si el correo no llega, revisa tu carpeta de spam. Si sigue sin aparecer, puedes{' '}
+                <button onClick={() => setEnviado(false)} style={{ background: 'none', border: 'none', color: '#FF6B2B', fontWeight: 700, cursor: 'pointer', fontSize: '13px', padding: 0, fontFamily: 'Inter, sans-serif' }}>
+                  intentarlo con otro correo
+                </button>.
               </p>
             </div>
           ) : (
