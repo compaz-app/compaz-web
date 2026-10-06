@@ -58,6 +58,7 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
   const [slotsElegidos, setSlotsElegidos] = useState<string[]>([])
   const reagendarId = searchParams.get('reagendar')
   const [reagendando, setReagendando] = useState(false)
+  const [diasAbiertos, setDiasAbiertos] = useState<Record<string, boolean>>({})
   const resultadosRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -633,38 +634,51 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
                         return <p style={{ color: '#9B8AB8', fontSize: '13px', textAlign: 'center', padding: '12px' }}>No hay horarios disponibles.</p>
                       }
                       return (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '260px', overflowY: 'auto', paddingRight: '4px' }}>
-                          {diasConSlots.map(({ diaLabel, slots }) => (
-                            <div key={diaLabel}>
-                              <p style={{ fontSize: '12px', fontWeight: 700, color: '#6B5C90', textTransform: 'capitalize', marginBottom: '6px', letterSpacing: '0.04em' }}>
-                                {diaLabel}
-                              </p>
-                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                                {slots.map((slot) => {
-                                  const elegido = slotsElegidos.includes(slot.iso)
-                                  return (
-                                    <button
-                                      key={slot.iso}
-                                      type="button"
-                                      onClick={() => toggleSlot(slot.iso)}
-                                      disabled={!elegido && slotsElegidos.length >= 3}
-                                      style={{
-                                        background: elegido ? '#FF6B2B' : 'white',
-                                        color: elegido ? 'white' : '#1A0A3C',
-                                        border: `2px solid ${elegido ? '#FF6B2B' : 'rgba(45,20,100,0.2)'}`,
-                                        borderRadius: '9999px', padding: '6px 12px', cursor: (!elegido && slotsElegidos.length >= 3) ? 'not-allowed' : 'pointer',
-                                        fontFamily: 'Inter, sans-serif', fontSize: '13px', fontWeight: elegido ? 700 : 400,
-                                        opacity: (!elegido && slotsElegidos.length >= 3) ? 0.35 : 1,
-                                        transition: 'all 0.15s',
-                                      }}
-                                    >
-                                      {elegido ? '✓ ' : ''}{slot.hora}
-                                    </button>
-                                  )
-                                })}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          {diasConSlots.map(({ diaLabel, slots }) => {
+                            const tieneElegido = slots.some((s) => slotsElegidos.includes(s.iso))
+                            const abierto = diasAbiertos[diaLabel] ?? tieneElegido
+                            return (
+                              <div key={diaLabel} style={{ border: '2px solid rgba(45,20,100,0.12)', borderRadius: '12px', overflow: 'hidden' }}>
+                                <button
+                                  type="button"
+                                  onClick={() => setDiasAbiertos((prev) => ({ ...prev, [diaLabel]: !abierto }))}
+                                  style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: tieneElegido ? '#FFF3E8' : 'white', border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}
+                                >
+                                  <span style={{ fontSize: '13px', fontWeight: 700, color: tieneElegido ? '#C84B0E' : '#1A0A3C', textTransform: 'capitalize' }}>
+                                    {tieneElegido ? '✓ ' : ''}{diaLabel}
+                                  </span>
+                                  <span style={{ fontSize: '12px', color: '#6B5C90' }}>{abierto ? '▲' : '▼'}</span>
+                                </button>
+                                {abierto && (
+                                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', padding: '10px 14px', borderTop: '1px solid rgba(45,20,100,0.08)' }}>
+                                    {slots.map((slot) => {
+                                      const elegido = slotsElegidos.includes(slot.iso)
+                                      return (
+                                        <button
+                                          key={slot.iso}
+                                          type="button"
+                                          onClick={() => toggleSlot(slot.iso)}
+                                          disabled={!elegido && slotsElegidos.length >= 3}
+                                          style={{
+                                            background: elegido ? '#FF6B2B' : 'white',
+                                            color: elegido ? 'white' : '#1A0A3C',
+                                            border: `2px solid ${elegido ? '#FF6B2B' : 'rgba(45,20,100,0.2)'}`,
+                                            borderRadius: '9999px', padding: '6px 12px', cursor: (!elegido && slotsElegidos.length >= 3) ? 'not-allowed' : 'pointer',
+                                            fontFamily: 'Inter, sans-serif', fontSize: '13px', fontWeight: elegido ? 700 : 400,
+                                            opacity: (!elegido && slotsElegidos.length >= 3) ? 0.35 : 1,
+                                            transition: 'all 0.15s',
+                                          }}
+                                        >
+                                          {elegido ? '✓ ' : ''}{slot.hora}
+                                        </button>
+                                      )
+                                    })}
+                                  </div>
+                                )}
                               </div>
-                            </div>
-                          ))}
+                            )
+                          })}
                         </div>
                       )
                     })()}
