@@ -33,6 +33,8 @@ export async function POST(req: NextRequest) {
 
   for (const solicitud of solicitudes) {
     const slotLabel = formatSlotVE(solicitud.slot_confirmado!)
+    const minutosRestantes = Math.max(1, Math.round((new Date(solicitud.slot_confirmado!).getTime() - Date.now()) / 60000))
+    const tiempoLabel = minutosRestantes <= 1 ? 'en menos de 1 minuto' : `en ${minutosRestantes} minutos`
     const recordatorio20 = '⏱️ Recuerda: la llamada tiene un límite de 20 minutos. La sala se cierra automáticamente a los 23 min.'
 
     // Crear sala Daily si aún no existe
@@ -67,10 +69,10 @@ export async function POST(req: NextRequest) {
         await resend.emails.send({
           from: 'Compaz <visitas@micompaz.com>',
           to: cliente.email,
-          subject: `⏰ En 1 hora: tu llamada con ${solicitud.compita_nombre}`,
+          subject: `⏰ Tu llamada con ${solicitud.compita_nombre} empieza ${tiempoLabel}`,
           html: `
             <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px">
-              <h2 style="color:#2D1464;font-size:22px">Tu llamada empieza en 1 hora</h2>
+              <h2 style="color:#2D1464;font-size:22px">Tu llamada empieza ${tiempoLabel}</h2>
               <p style="color:#4A3B6B;font-size:16px;line-height:1.6">
                 Tienes una llamada con <strong>${solicitud.compita_nombre}</strong> hoy a las <strong>${slotLabel}</strong>.
               </p>
@@ -102,7 +104,7 @@ export async function POST(req: NextRequest) {
         await sendTelegramMessage(
           compita.telegram_chat_id,
           [
-            `⏰ <b>Tu llamada empieza en 1 hora</b>`,
+            `⏰ <b>Tu llamada empieza ${tiempoLabel}</b>`,
             ``,
             `Con <b>${cliente?.nombre ?? 'el cliente'}</b> a las <b>${slotLabel}</b>.`,
             ``,
@@ -120,7 +122,7 @@ export async function POST(req: NextRequest) {
         await sendTelegramMessage(
           adminTg,
           [
-            `⏰ <b>Llamada en 1 hora</b>`,
+            `⏰ <b>Llamada ${tiempoLabel}</b>`,
             ``,
             `<b>Cliente:</b> ${cliente?.nombre ?? ''} (${cliente?.email ?? ''})`,
             `<b>Compita:</b> ${solicitud.compita_nombre}`,
