@@ -157,9 +157,8 @@ export async function eliminarCompita(id: string, force = false): Promise<void> 
   const { error: eTokens } = await supabase.from('action_tokens').delete().eq('compita_id', id)
   if (eTokens) throw new Error(`action_tokens: ${eTokens.message}`)
 
-  // Eliminar tokens de edición de perfil
-  const { error: eEditTokens } = await supabase.from('compita_edit_tokens').delete().eq('compita_id', id)
-  if (eEditTokens) throw new Error(`compita_edit_tokens: ${eEditTokens.message}`)
+  // Eliminar tokens de edición de perfil (tabla puede no existir aún — ignorar error)
+  await supabase.from('compita_edit_tokens').delete().eq('compita_id', id)
 
   // Eliminar estado de Telegram si existe
   // telegram_estados usa chat_id como PK, no compita_id — limpiar por telegram_chat_id
