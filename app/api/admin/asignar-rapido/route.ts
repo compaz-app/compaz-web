@@ -4,6 +4,9 @@ import { Resend } from 'resend'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
+const escapeHtml = (s: string) =>
+  s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl
   const token = searchParams.get('token')
@@ -53,12 +56,12 @@ export async function GET(req: NextRequest) {
         subject: `Tu Compita está lista: ${compita.nombre}`,
         html: `
           <div style="font-family: Inter, sans-serif; max-width: 600px; margin: 0 auto; padding: 32px;">
-            <h2 style="color: #2D1464; font-size: 24px; margin-bottom: 16px;">¡Hola, ${cliente.nombre}!</h2>
+            <h2 style="color: #2D1464; font-size: 24px; margin-bottom: 16px;">¡Hola, ${escapeHtml(cliente.nombre)}!</h2>
             <p style="color: #4A3B6B; font-size: 16px; line-height: 1.6;">
-              Te asignamos a <strong>${compita.nombre}</strong> como tu Compita.
-              ${compita.zona ? `Cubre la zona de <strong>${compita.zona}</strong>.` : ''}
+              Te asignamos a <strong>${escapeHtml(compita.nombre)}</strong> como tu Compita.
+              ${compita.zona ? `Cubre la zona de <strong>${escapeHtml(compita.zona)}</strong>.` : ''}
             </p>
-            ${compita.descripcion ? `<p style="color: #6B5C90; font-size: 15px; line-height: 1.7;">${compita.descripcion}</p>` : ''}
+            ${compita.descripcion ? `<p style="color: #6B5C90; font-size: 15px; line-height: 1.7;">${escapeHtml(compita.descripcion)}</p>` : ''}
             <a href="${process.env.NEXT_PUBLIC_SITE_URL}/dashboard" style="display:inline-block; background:#FF6B2B; color:white; border-radius:9999px; padding:14px 28px; font-weight:800; font-size:16px; text-decoration:none; margin-top:20px;">
               Ver mi portal →
             </a>
