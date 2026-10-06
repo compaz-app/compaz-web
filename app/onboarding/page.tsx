@@ -242,7 +242,7 @@ function OnboardingForm() {
     return (
       <div style={s.center}>
         <div style={{ ...s.card, maxWidth: '520px' }}>
-          <h2 style={s.h2}>¡Ya eres parte de Compaz!</h2>
+          <h2 style={s.h2}>¡Ya eres parte de Compaz, {form.nombre.split(' ')[0]}!</h2>
           <p style={{ color: '#6B5C90', marginTop: '8px', marginBottom: '16px', lineHeight: '1.7' }}>
             Tu perfil fue creado exitosamente. Falta un paso importante:
           </p>
