@@ -44,8 +44,10 @@ export async function GET(req: NextRequest) {
     return html('Enlace inválido', 'No encontramos esta solicitud.')
   }
 
-  // Idempotencia: si ya respondió (si=completada, no=respondido_at seteado), no reprocesar
-  if (solicitud.estado === 'completada' || solicitud.respondido_at) {
+  // Idempotencia: bloquear si ya pasó a estado terminal (completada=sí, contratada=ya pagó)
+  // NO usar respondido_at como señal del cliente: confirmarSlot lo setea cuando el compita
+  // acepta el slot, por lo que siempre es no-nulo en solicitudes aceptadas.
+  if (solicitud.estado === 'completada' || solicitud.estado === 'contratada') {
     return html('Ya registramos tu respuesta', 'Ya habías respondido a esta encuesta. ¡Gracias!')
   }
 
@@ -111,8 +113,11 @@ export async function GET(req: NextRequest) {
   }
 
   // respuesta === 'no'
-  // Marcar respondido_at para evitar que el link se reutilice con 'si' después
-  await admin.from('solicitudes').update({ respondido_at: new Date().toISOString() }).eq('id', solicitud.id)
+  // Marcar seguimiento2_enviado para suprimir el recordatorio de 24h (el cliente ya respondió)
+  await admin.from('solicitudes').update({
+    respondido_at: new Date().toISOString(),
+    seguimiento2_enviado: true,
+  }).eq('id', solicitud.id)
 
   // Notificar al compita con mensaje empático
   const { data: compitaNo } = await admin

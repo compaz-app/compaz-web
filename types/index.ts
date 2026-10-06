@@ -10,7 +10,7 @@ export interface HorarioDisponible {
   inicio: string // "09:00" en hora Venezuela (UTC-4)
   fin: string    // "17:00" — bloques de 20 min, máximo 20:00
 }
-export type VisitaEstado = 'programada' | 'en_curso' | 'terminada'
+export type VisitaEstado = 'pre_visita' | 'programada' | 'en_curso' | 'terminada'
 export type MensajeOrigen = 'compita' | 'cliente' | 'admin'
 export type MensajeTipo = 'texto' | 'foto'
 
@@ -38,6 +38,9 @@ export interface Compita {
   codigo: string | null
   horarios_disponibles: HorarioDisponible[] | null
   created_at: string
+  // Stats calculados en runtime (no en BD)
+  tasa_aceptacion?: number | null
+  total_solicitudes?: number
 }
 
 export interface Usuario {
@@ -47,6 +50,10 @@ export interface Usuario {
   zona: string | null
   plan: string | null
   compita_id: string | null
+  familiar_nombre: string | null
+  familiar_edad: number | null
+  familiar_condicion: string | null
+  familiar_notas: string | null
   created_at: string
   compita?: Compita
 }
@@ -56,6 +63,7 @@ export interface Visita {
   compita_id: string
   usuario_id: string
   estado: VisitaEstado
+  fecha_programada: string | null
   inicio: string | null
   fin: string | null
   room_url: string | null
@@ -129,7 +137,7 @@ export interface DailyRoom {
 
 // ── Solicitudes de entrevista ─────────────────────────────────────────────────
 
-export type SolicitudEstado = 'pendiente' | 'aceptada' | 'rechazada' | 'completada'
+export type SolicitudEstado = 'pendiente' | 'aceptada' | 'rechazada' | 'completada' | 'contratada'
 
 export interface Solicitud {
   id: string
@@ -150,6 +158,21 @@ export interface Solicitud {
   seguimiento2_enviado: boolean
   created_at: string
   respondido_at?: string | null
+}
+
+// ── Reportes de visita ────────────────────────────────────────────────────────
+
+export interface ReporteVisita {
+  id: string
+  visita_id: string
+  animo: number | null           // 1-5 o null (N/A)
+  fisico: number | null
+  participacion: number | null
+  entorno: number | null
+  novedad: string | null
+  resumen_ia: string | null
+  created_at: string
+  visita?: Visita
 }
 
 // ── API responses ─────────────────────────────────────────────────────────────
