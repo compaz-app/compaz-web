@@ -12,6 +12,7 @@ type UsuarioConCompita = Usuario & { compita: { nombre: string; zona: string; ve
 
 interface Props {
   visitasActivas: VisitaConRelaciones[]
+  visitasPreVisita: VisitaConRelaciones[]
   usuarios: UsuarioConCompita[]
   compitas: Compita[]
   visitasPasadas: Visita[]
@@ -22,7 +23,7 @@ interface Props {
 
 type Tab = 'visitas' | 'clientes' | 'compitas' | 'desactivadas' | 'historial' | 'solicitudes' | 'cliente' | 'accesos' | 'perfil'
 
-export default function AdminDashboard({ visitasActivas: inicial, usuarios, compitas: todasCompitas, visitasPasadas, todasSolicitudes, visitasMes, defaultTab }: Props) {
+export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisita: inicialPreVisita, usuarios, compitas: todasCompitas, visitasPasadas, todasSolicitudes, visitasMes, defaultTab }: Props) {
   const router = useRouter()
   const [tab, setTabState] = useState<Tab>((defaultTab as Tab) ?? 'visitas')
 
@@ -33,6 +34,7 @@ export default function AdminDashboard({ visitasActivas: inicial, usuarios, comp
 
   useEffect(() => { history.scrollRestoration = 'auto' }, [])
   const [visitasActivas, setVisitasActivas] = useState(inicial)
+  const [visitasPreVisita, setVisitasPreVisita] = useState(inicialPreVisita)
   const [visitaSeleccionada, setVisitaSeleccionada] = useState<string | null>(null)
   const [mensajes, setMensajes] = useState<Record<string, Mensaje[]>>({})
   const [inviteUrl, setInviteUrl] = useState<string | null>(null)
@@ -81,12 +83,19 @@ export default function AdminDashboard({ visitasActivas: inicial, usuarios, comp
     const canal = supabase
       .channel('admin-visitas-live')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'visitas' }, async () => {
-        const { data } = await supabase
+        const { data: activas } = await supabase
           .from('visitas')
           .select('*, compita:compitas(*), usuario:usuarios(*)')
           .eq('estado', 'en_curso')
           .order('inicio', { ascending: false })
-        if (data) setVisitasActivas(data as VisitaConRelaciones[])
+        if (activas) setVisitasActivas(activas as VisitaConRelaciones[])
+
+        const { data: previas } = await supabase
+          .from('visitas')
+          .select('*, compita:compitas(*), usuario:usuarios(*)')
+          .eq('estado', 'pre_visita')
+          .order('created_at', { ascending: false })
+        if (previas) setVisitasPreVisita(previas as VisitaConRelaciones[])
       })
       .subscribe()
     return () => { supabase.removeChannel(canal) }
@@ -95,6 +104,9 @@ export default function AdminDashboard({ visitasActivas: inicial, usuarios, comp
   // Suscripción Realtime a mensajes — sin filtro, filtramos en cliente
   useEffect(() => {
     const supabase = createBrowserSupabase()
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.access_token) supabase.realtime.setAuth(session.access_token)
+    })
     const canal = supabase
       .channel('admin-mensajes-live')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensajes' }, (payload) => {
@@ -173,14 +185,22 @@ export default function AdminDashboard({ visitasActivas: inicial, usuarios, comp
     }
   }
 
-  async function eliminarCompita(compitaId: string) {
+  async function eliminarCompita(compitaId: string, force: boolean): Promise<{ ok: true } | { ok: false; visitas?: number; error?: string }> {
     const res = await fetch('/api/admin/eliminar-compita', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ compita_id: compitaId }),
+      body: JSON.stringify({ compita_id: compitaId, force }),
     })
     if (res.ok) {
       setCompitas((prev) => prev.filter((c) => c.id !== compitaId))
+      return { ok: true }
+    }
+    try {
+      const data = await res.json()
+      if (res.status === 409 && data.visitas != null) return { ok: false, visitas: data.visitas }
+      return { ok: false, error: data.error ?? 'Error desconocido' }
+    } catch {
+      return { ok: false, error: `Error ${res.status}` }
     }
   }
 
@@ -245,7 +265,7 @@ export default function AdminDashboard({ visitasActivas: inicial, usuarios, comp
           Compitas {compitasPendientes.length > 0 && <span style={{ background: '#FF6B2B', color: 'white', borderRadius: '9999px', padding: '1px 7px', fontSize: '11px', fontWeight: 800, marginLeft: '4px' }}>{compitasPendientes.length}</span>}
         </button>
         <button style={tabStyle('desactivadas')} onClick={() => setTab('desactivadas')}>
-          Desactivadas ({compitasInactivas.length + compitasBloqueadas.length})
+          Desactivados ({compitasInactivas.length + compitasBloqueadas.length})
           {compitasBloqueadas.length > 0 && <span style={{ background: '#dc2626', color: 'white', borderRadius: '9999px', padding: '1px 7px', fontSize: '11px', fontWeight: 800, marginLeft: '4px' }}>{compitasBloqueadas.length}</span>}
         </button>
         <button style={tabStyle('historial')} onClick={() => setTab('historial')}>Historial</button>
@@ -274,11 +294,63 @@ export default function AdminDashboard({ visitasActivas: inicial, usuarios, comp
         {/* ── Visitas activas ─────────────────────────────────────────────── */}
         {tab === 'visitas' && (
           <div>
-            {visitasActivas.length === 0 ? (
+
+            {/* Chats de coordinación pre-visita */}
+            {visitasPreVisita.length > 0 && (
+              <div style={{ marginBottom: '24px' }}>
+                <h3 style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '15px', color: '#2D1464', margin: '0 0 12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#7C4DFF', display: 'inline-block' }} />
+                  Coordinando visita ({visitasPreVisita.length})
+                </h3>
+                <div style={{ display: 'grid', gridTemplateColumns: visitaSeleccionada ? '1fr 1fr' : '1fr', gap: '20px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {visitasPreVisita.map((v) => (
+                      <div
+                        key={v.id}
+                        onClick={() => setVisitaSeleccionada(v.id === visitaSeleccionada ? null : v.id)}
+                        style={{ background: 'white', border: `2px solid ${v.id === visitaSeleccionada ? '#7C4DFF' : '#D4C9E8'}`, borderRadius: '16px', padding: '20px', cursor: 'pointer' }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#7C4DFF' }} />
+                          <strong style={{ color: '#1A0A3C', fontFamily: 'Bricolage Grotesque, sans-serif' }}>{v.compita.nombre}</strong>
+                          <span style={{ color: '#6B5C90', fontSize: '14px' }}>con {v.usuario.nombre}</span>
+                          <span style={{ marginLeft: 'auto', background: '#F5F0FF', color: '#7C4DFF', border: '1.5px solid #D4C9E8', borderRadius: '9999px', padding: '2px 10px', fontSize: '11px', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif' }}>Coordinando</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {visitaSeleccionada && visitasPreVisita.find(v => v.id === visitaSeleccionada) && (
+                    <div style={{ background: 'white', border: '2px solid #D4C9E8', borderRadius: '16px', height: '400px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                      <div style={{ padding: '16px 20px', borderBottom: '2px solid #E8E0D4' }}>
+                        <strong style={{ color: '#2D1464', fontFamily: 'Bricolage Grotesque, sans-serif' }}>Chat de coordinación (solo lectura)</strong>
+                      </div>
+                      <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        {(mensajes[visitaSeleccionada] ?? []).filter((m) => m.origen !== 'admin').map((m) => (
+                          <div key={m.id} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                            <span style={{ fontSize: '11px', color: '#6B5C90', whiteSpace: 'nowrap', marginTop: '2px' }}>
+                              {new Date(m.created_at).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                            <span style={{ fontSize: '12px', fontWeight: 700, color: m.origen === 'cliente' ? '#FF6B2B' : '#2D1464', fontFamily: 'Bricolage Grotesque, sans-serif', whiteSpace: 'nowrap' }}>
+                              {m.origen.toUpperCase()}
+                            </span>
+                            <span style={{ fontSize: '14px', color: '#1A0A3C' }}>{m.contenido}</span>
+                          </div>
+                        ))}
+                        {(mensajes[visitaSeleccionada] ?? []).filter((m) => m.origen !== 'admin').length === 0 && (
+                          <p style={{ color: '#9B8AB8', fontSize: '13px', textAlign: 'center', marginTop: '40px' }}>Sin mensajes aún.</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {visitasActivas.length === 0 && visitasPreVisita.length === 0 ? (
               <div style={{ background: 'white', border: '2px solid #E8E0D4', borderRadius: '16px', padding: '48px', textAlign: 'center' }}>
                 <p style={{ color: '#6B5C90' }}>No hay visitas activas en este momento.</p>
               </div>
-            ) : (
+            ) : visitasActivas.length > 0 ? (
               <div style={{ display: 'grid', gridTemplateColumns: visitaSeleccionada ? '1fr 1fr' : '1fr', gap: '20px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   {visitasActivas.map((v) => (
@@ -326,7 +398,7 @@ export default function AdminDashboard({ visitasActivas: inicial, usuarios, comp
                       <strong style={{ color: '#2D1464', fontFamily: 'Bricolage Grotesque, sans-serif' }}>Chat en vivo (solo lectura)</strong>
                     </div>
                     <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                      {(mensajes[visitaSeleccionada] ?? []).map((m) => (
+                      {(mensajes[visitaSeleccionada] ?? []).filter((m) => m.origen !== 'admin').map((m) => (
                         <div key={m.id} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
                           <span style={{ fontSize: '11px', color: '#6B5C90', whiteSpace: 'nowrap', marginTop: '2px' }}>
                             {new Date(m.created_at).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' })}
@@ -345,7 +417,7 @@ export default function AdminDashboard({ visitasActivas: inicial, usuarios, comp
                   </div>
                 )}
               </div>
-            )}
+            ) : null}
           </div>
         )}
 
@@ -431,9 +503,9 @@ export default function AdminDashboard({ visitasActivas: inicial, usuarios, comp
                   <div style={{ marginBottom: '20px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
                       <span style={{ background: sinTelegram.length > 0 ? '#FFFBEB' : '#F5F0E8', border: `2px solid ${sinTelegram.length > 0 ? '#f59e0b' : '#D4C9E8'}`, color: sinTelegram.length > 0 ? '#B45309' : '#9B8AB8', borderRadius: '9999px', padding: '3px 12px', fontSize: '12px', fontWeight: 800, fontFamily: 'Bricolage Grotesque, sans-serif' }}>
-                        ⚠️ Verificadas — {sinTelegram.length}
+                        ⚠️ Verificados — {sinTelegram.length}
                       </span>
-                      <span style={{ fontSize: '12px', color: '#9B8AB8' }}>Verificadas pero aún no visibles para los clientes</span>
+                      <span style={{ fontSize: '12px', color: '#9B8AB8' }}>Verificados pero aún no visibles para los clientes</span>
                     </div>
                     {sinTelegram.length > 0 ? (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -493,7 +565,7 @@ export default function AdminDashboard({ visitasActivas: inicial, usuarios, comp
                     {(['todas', 'inactivo', 'bloqueado'] as const).map((f) => (
                       <button key={f} onClick={() => setFiltroDesactivadas(f)}
                         style={{ background: filtroDesactivadas === f ? (f === 'bloqueado' ? '#B91C1C' : '#2D1464') : 'white', color: filtroDesactivadas === f ? 'white' : '#4A3B6B', border: `2px solid ${filtroDesactivadas === f ? (f === 'bloqueado' ? '#B91C1C' : '#2D1464') : 'rgba(45,20,100,0.2)'}`, borderRadius: '9999px', padding: '8px 16px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                        {f === 'todas' ? `Todas (${compitasInactivas.length + compitasBloqueadas.length})` : f === 'bloqueado' ? `🚫 Bloqueadas (${compitasBloqueadas.length})` : `Desactivadas (${compitasInactivas.length})`}
+                        {f === 'todas' ? `Todos (${compitasInactivas.length + compitasBloqueadas.length})` : f === 'bloqueado' ? `🚫 Bloqueados (${compitasBloqueadas.length})` : `Desactivados (${compitasInactivas.length})`}
                       </button>
                     ))}
                   </div>
@@ -756,7 +828,7 @@ function ClientePreview({ usuarioId }: { usuarioId: string }) {
                 <h2 style={{ color: '#1A0A3C', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '20px', margin: 0 }}>{compita.nombre}</h2>
                 {compita.verificado && (
                   <span style={{ background: 'white', border: '2px solid #E8E0D4', borderRadius: '9999px', padding: '2px 10px', fontSize: '12px', color: '#2D1464', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700 }}>
-                    <span style={{ color: '#FF6B2B' }}>✓</span> Verificada
+                    <span style={{ color: '#FF6B2B' }}>✓</span> Verificado
                   </span>
                 )}
               </div>
@@ -843,15 +915,19 @@ function ClientePreview({ usuarioId }: { usuarioId: string }) {
   )
 }
 
+type DeletePhase = 'idle' | 'confirm' | 'warn' | 'loading' | 'error'
+
 function CompitaCard({ c, onToggleVerificado, onToggleEstado, onVerPerfil, onToggleBloqueado, onEliminar }: {
   c: Compita
   onToggleVerificado: (id: string, actual: boolean) => void
   onToggleEstado: (id: string, estado: string) => void
   onVerPerfil: (id: string) => void
   onToggleBloqueado: (id: string, bloqueado: boolean) => void
-  onEliminar: (id: string) => void
+  onEliminar: (id: string, force: boolean) => Promise<{ ok: true } | { ok: false; visitas?: number; error?: string }>
 }) {
-  const [confirmEliminar, setConfirmEliminar] = useState(false)
+  const [deletePhase, setDeletePhase] = useState<DeletePhase>('idle')
+  const [warnVisitas, setWarnVisitas] = useState(0)
+  const [deleteError, setDeleteError] = useState('')
 
   const isPendiente = c.estado === 'activo' && !c.verificado
   const isVerificada = c.estado === 'activo' && c.verificado && !!c.telegram_chat_id
@@ -863,7 +939,7 @@ function CompitaCard({ c, onToggleVerificado, onToggleEstado, onVerPerfil, onTog
   const borderColor = isBloqueada ? '#dc2626' : isPendiente ? '#FF6B2B' : isVerificadaAny ? '#22c55e' : '#E8E0D4'
   const badgeBg = isBloqueada ? '#FEF2F2' : isPendiente ? '#FFF3E8' : isVerificadaAny ? '#F0FDF4' : '#F5F0E8'
   const badgeColor = isBloqueada ? '#B91C1C' : isPendiente ? '#C84B0E' : isVerificadaAny ? '#15803d' : '#6B5C90'
-  const badgeText = isBloqueada ? '🚫 Bloqueada' : isPendiente ? '⏳ Pendiente' : (isVerificada || isVerificadaSinTelegram) ? '✓ Verificada' : '✗ Desactivada'
+  const badgeText = isBloqueada ? '🚫 Bloqueado' : isPendiente ? '⏳ Pendiente' : (isVerificada || isVerificadaSinTelegram) ? '✓ Verificado' : '✗ Desactivado'
 
   const cardBg = isBloqueada ? '#FEF2F2' : 'white'
 
@@ -909,7 +985,7 @@ function CompitaCard({ c, onToggleVerificado, onToggleEstado, onVerPerfil, onTog
             onClick={() => onToggleVerificado(c.id, c.verificado)}
             style={{ background: (isVerificada || isVerificadaSinTelegram) ? '#F0FDF4' : '#2D1464', color: (isVerificada || isVerificadaSinTelegram) ? '#15803d' : 'white', border: `2px solid ${(isVerificada || isVerificadaSinTelegram) ? '#22c55e' : '#2D1464'}`, borderRadius: '9999px', padding: '8px 16px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap' }}
           >
-            {isVerificada || isVerificadaSinTelegram ? '✓ Verificada — Quitar' : '✓ Verificar'}
+            {isVerificada || isVerificadaSinTelegram ? '✓ Verificado — Quitar' : '✓ Verificar'}
           </button>
         )}
         {!isBloqueada && (
@@ -926,19 +1002,66 @@ function CompitaCard({ c, onToggleVerificado, onToggleEstado, onVerPerfil, onTog
         >
           {isBloqueada ? 'Desbloquear' : '🚫 Bloquear'}
         </button>
-        {confirmEliminar ? (
-          <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-            <span style={{ fontSize: '12px', color: '#B91C1C', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif', whiteSpace: 'nowrap' }}>¿Confirmar?</span>
-            <button onClick={() => onEliminar(c.id)} style={{ background: '#B91C1C', color: 'white', border: 'none', borderRadius: '9999px', padding: '8px 14px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap' }}>Sí, eliminar</button>
-            <button onClick={() => setConfirmEliminar(false)} style={{ background: 'white', color: '#6B5C90', border: '2px solid #D1C8E0', borderRadius: '9999px', padding: '8px 12px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', cursor: 'pointer' }}>Cancelar</button>
-          </div>
-        ) : (
+        {deletePhase === 'idle' && (
           <button
-            onClick={() => setConfirmEliminar(true)}
+            onClick={() => setDeletePhase('confirm')}
             style={{ background: 'white', color: '#6B5C90', border: '2px solid #E8E0D4', borderRadius: '9999px', padding: '8px 14px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap' }}
           >
             🗑 Eliminar
           </button>
+        )}
+        {deletePhase === 'confirm' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', background: '#FEF2F2', border: '2px solid #FCA5A5', borderRadius: '12px', padding: '12px 16px', maxWidth: '320px' }}>
+            <span style={{ fontSize: '13px', color: '#B91C1C', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif' }}>¿Eliminar a {c.nombre}?</span>
+            <span style={{ fontSize: '12px', color: '#7F1D1D', lineHeight: '1.5' }}>Se borrarán su perfil, sus solicitudes pendientes y su registro de Telegram en el sistema. Esta acción no se puede deshacer.</span>
+            <div style={{ display: 'flex', gap: '6px' }}>
+              <button
+                onClick={async () => {
+                  setDeletePhase('loading')
+                  const result = await onEliminar(c.id, false)
+                  if (result.ok) return
+                  if (result.visitas != null) { setWarnVisitas(result.visitas); setDeletePhase('warn') }
+                  else { setDeleteError(result.error ?? 'Error desconocido'); setDeletePhase('error') }
+                }}
+                style={{ background: '#B91C1C', color: 'white', border: 'none', borderRadius: '9999px', padding: '8px 14px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap' }}
+              >Sí, eliminar</button>
+              <button onClick={() => setDeletePhase('idle')} style={{ background: 'white', color: '#6B5C90', border: '2px solid #D1C8E0', borderRadius: '9999px', padding: '8px 12px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', cursor: 'pointer' }}>Cancelar</button>
+            </div>
+          </div>
+        )}
+        {deletePhase === 'warn' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', background: '#FFFBEB', border: '2px solid #FCD34D', borderRadius: '12px', padding: '12px 16px', maxWidth: '340px' }}>
+            <span style={{ fontSize: '13px', color: '#92400E', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif' }}>No se puede eliminar a {c.nombre}</span>
+            <span style={{ fontSize: '12px', color: '#78350F', lineHeight: '1.5' }}>
+              Este compita tiene {warnVisitas} {warnVisitas === 1 ? 'visita registrada' : 'visitas registradas'} con clientes. Las visitas son el historial de trabajo y están vinculadas a los clientes que atendió.
+            </span>
+            <span style={{ fontSize: '12px', color: '#78350F', lineHeight: '1.5' }}>
+              Si igual quieres eliminarlo, se borrarán permanentemente {warnVisitas === 1 ? 'esa visita y todos sus mensajes' : `esas ${warnVisitas} visitas y todos sus mensajes`}, sus solicitudes pendientes y su acceso al sistema por Telegram.
+            </span>
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+              <button
+                onClick={async () => {
+                  setDeletePhase('loading')
+                  const result = await onEliminar(c.id, true)
+                  if (result.ok) return
+                  setDeleteError(result.error ?? 'Error desconocido')
+                  setDeletePhase('error')
+                }}
+                style={{ background: '#B91C1C', color: 'white', border: 'none', borderRadius: '9999px', padding: '8px 14px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap' }}
+              >Eliminar de todas formas</button>
+              <button onClick={() => setDeletePhase('idle')} style={{ background: 'white', color: '#6B5C90', border: '2px solid #D1C8E0', borderRadius: '9999px', padding: '8px 12px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', cursor: 'pointer' }}>Cancelar</button>
+            </div>
+          </div>
+        )}
+        {deletePhase === 'loading' && (
+          <span style={{ fontSize: '13px', color: '#6B5C90', fontFamily: 'Bricolage Grotesque, sans-serif' }}>Eliminando...</span>
+        )}
+        {deletePhase === 'error' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', background: '#FEF2F2', border: '2px solid #FCA5A5', borderRadius: '12px', padding: '10px 14px', maxWidth: '300px' }}>
+            <span style={{ fontSize: '12px', color: '#B91C1C', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif' }}>Error al eliminar</span>
+            <span style={{ fontSize: '11px', color: '#7F1D1D', fontFamily: 'monospace' }}>{deleteError}</span>
+            <button onClick={() => setDeletePhase('idle')} style={{ background: 'white', color: '#6B5C90', border: '2px solid #D1C8E0', borderRadius: '9999px', padding: '6px 12px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '12px', cursor: 'pointer', alignSelf: 'flex-start' }}>Cerrar</button>
+          </div>
         )}
       </div>
     </div>

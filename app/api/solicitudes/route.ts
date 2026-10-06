@@ -29,26 +29,33 @@ export async function POST(req: NextRequest) {
   const body = await req.json() as {
     compita_id: string
     mensaje: string
+    sobre_cliente?: string | null
     slots_propuestos: string[]
     franja_horaria?: string
   }
 
-  const { compita_id, mensaje, slots_propuestos, franja_horaria } = body
+  const { compita_id, mensaje, sobre_cliente, slots_propuestos, franja_horaria } = body
 
   if (!compita_id || !mensaje?.trim()) return err('Faltan campos requeridos')
   if (!Array.isArray(slots_propuestos) || slots_propuestos.length === 0 || slots_propuestos.length > 3) {
     return err('Debes proponer entre 1 y 3 horarios')
   }
+  const ahora = Date.now()
+  const slotsPasados = slots_propuestos.filter((s) => new Date(s).getTime() <= ahora)
+  if (slotsPasados.length > 0) return err('Todos los horarios propuestos deben ser en el futuro')
 
   // Traer datos del cliente y del compita
   const admin = createAdminSupabase()
   const [{ data: cliente }, { data: compita }] = await Promise.all([
-    admin.from('usuarios').select('nombre, email').eq('id', user.id).single(),
+    admin.from('usuarios').select('nombre, email, plan').eq('id', user.id).single(),
     admin.from('compitas').select('nombre, telegram_chat_id, estado, verificado').eq('id', compita_id).single(),
   ])
 
   if (!compita) return err('Compita no encontrada', 404)
   if (!cliente) return err('Tu cuenta no está registrada como cliente. Contacta al administrador.')
+  if ((cliente as { plan: string | null }).plan === 'bloqueado') {
+    return err('Tu cuenta ha sido suspendida. Escríbenos a hola@micompaz.com para más información.', 403)
+  }
   if ((compita as { estado: string; verificado: boolean }).estado !== 'activo' || !(compita as { estado: string; verificado: boolean }).verificado) {
     return err('Este compita no está disponible', 400)
   }
@@ -75,23 +82,36 @@ export async function POST(req: NextRequest) {
       .map((s, i) => `${['1️⃣', '2️⃣', '3️⃣'][i]} ${formatSlotVE(s)}`)
       .join('\n')
 
+    const escapeHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+
+    const partesSobre: string[] = []
+    if (sobre_cliente?.trim()) {
+      partesSobre.push(`<b>Sobre el cliente:</b>`, escapeHtml(sobre_cliente.trim()), ``)
+    }
+
     const mensajeTelegram = [
       `🔔 <b>Nueva solicitud de entrevista</b>`,
       ``,
-      `<b>${clienteNombre}</b> quiere conocerte.`,
+      `<b>${escapeHtml(clienteNombre)}</b> quiere conocerte.`,
       ``,
+      ...partesSobre,
       `<b>Sobre su familiar:</b>`,
-      mensaje,
+      escapeHtml(mensaje),
       ``,
       `<b>Elige el horario que te funcione (llamada de 20 min):</b>`,
       slotLabels,
     ].join('\n')
 
     // Botones inline con callback_data — todo se resuelve dentro de Telegram
-    const botonesSlots = slots_propuestos.map((_, i) => ([{
-      text: `✅ Opción ${i + 1}`,
-      callback_data: `slot:${i}:${solicitud.token_respuesta}`,
-    }]))
+    const botonesSlots = slots_propuestos.map((iso, i) => {
+      const d = new Date(iso)
+      const label = d.toLocaleString('es-VE', {
+        timeZone: 'America/Caracas',
+        weekday: 'short', day: 'numeric', month: 'short',
+        hour: '2-digit', minute: '2-digit', hour12: true,
+      })
+      return [{ text: `✅ ${label}`, callback_data: `slot:${i}:${solicitud.token_respuesta}` }]
+    })
     const teclado = makeInlineKeyboard([
       ...botonesSlots,
       [{ text: '❌ No puedo atender', callback_data: `rechazar:${solicitud.token_respuesta}` }],

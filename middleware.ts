@@ -1,7 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
-
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? '').split(',').map((e) => e.trim())
+import { isAdminEmail } from '@/lib/auth'
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -34,7 +33,7 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) return NextResponse.redirect(new URL('/login', request.url))
-  if (!ADMIN_EMAILS.includes(user.email ?? '')) return NextResponse.redirect(new URL('/dashboard', request.url))
+  if (!isAdminEmail(user.email ?? '')) return NextResponse.redirect(new URL('/dashboard', request.url))
 
   return response
 }
