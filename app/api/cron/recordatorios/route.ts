@@ -79,6 +79,9 @@ export async function POST(req: NextRequest) {
               <p style="color:#C84B0E;background:#FFF3E8;border:2px solid #FF6B2B;border-radius:12px;padding:14px;font-size:14px">
                 ${recordatorio20}
               </p>
+              <p style="color:#4A3B6B;font-size:14px;line-height:1.6">
+                La sala se abre <strong>5 minutos antes</strong> de la hora pautada. Si entras antes y ves un error, espera un momento y vuelve a intentarlo.
+              </p>
               <a href="${roomUrl}" style="display:inline-block;background:#FF6B2B;color:white;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:16px;margin-top:8px">
                 Entrar a la llamada →
               </a>
@@ -109,6 +112,8 @@ export async function POST(req: NextRequest) {
             `Con <b>${cliente?.nombre ?? 'el cliente'}</b> a las <b>${slotLabel}</b>.`,
             ``,
             `⏱️ La llamada es de <b>20 minutos</b>. La sala se cierra automáticamente a los 23 min.`,
+            ``,
+            `🔓 La sala se abre <b>5 minutos antes</b> de la hora pautada. Si entras antes y ves un error, espera un momento y vuelve a intentarlo.`,
             ``,
             `<a href="${roomUrl}">Entrar a la llamada →</a>`,
           ].join('\n'),
