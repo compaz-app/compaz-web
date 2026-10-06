@@ -329,7 +329,7 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
                   Mis solicitudes
                 </span>
                 <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '13px', marginLeft: '10px' }}>
-                  {solicitudesActivas.length}/{MAX_SOLICITUDES} — el equipo Compaz te contactará pronto
+                  {solicitudesActivas.length}/{MAX_SOLICITUDES} — esperando respuesta del compita
                 </span>
               </div>
               {solicitudesActivas.length >= MAX_SOLICITUDES && (
