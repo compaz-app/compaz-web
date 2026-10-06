@@ -60,7 +60,10 @@ export async function POST(req: NextRequest) {
     .select()
     .single()
 
-  if (error) return serverError(error)
+  if (error) {
+    console.error('[flags POST]', JSON.stringify(error))
+    return err(error.message, 500)
+  }
   return ok(data)
 }
 
