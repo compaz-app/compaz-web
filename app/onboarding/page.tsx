@@ -381,7 +381,7 @@ function OnboardingForm() {
               value={form.descripcion}
               onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
               style={{ ...s.input, minHeight: '110px', resize: 'vertical' }}
-              placeholder="Cuéntanos tu experiencia, cuánto tiempo llevas en el cuidado, qué es lo que más te apasiona de este trabajo…"
+              placeholder="Cuéntanos quién eres: a qué te dedicas, qué has hecho, qué te mueve, qué disfrutas hacer…"
             />
           </div>
 
@@ -585,7 +585,7 @@ function OnboardingForm() {
                 <li>Habla con calma, mira directo a la cámara y sonríe</li>
                 <li>Evita ruido de fondo: apaga el televisor y cierra puertas</li>
                 <li>Viste ropa limpia y ordenada, como si fuera a una entrevista</li>
-                <li>Di tu nombre, tu experiencia y por qué te apasiona el cuidado</li>
+                <li>Di tu nombre, cuéntanos un poco sobre ti y por qué quieres ser parte de Compaz</li>
                 <li>Sube el video a YouTube como «No listado» <span style={{ color: '#6B5C90', fontWeight: 400 }}>(significa que solo quien tenga el link puede verlo — no aparece en búsquedas)</span> y pega el enlace aquí</li>
               </ul>
             </div>
