@@ -140,13 +140,17 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
     const ahora = new Date()
     const porDia: { diaLabel: string; slots: { iso: string; hora: string }[] }[] = []
     for (let d = 0; d < 14; d++) {
-      const fecha = new Date(ahora)
-      fecha.setDate(ahora.getDate() + d)
+      // Calcular la fecha en timezone Venezuela para no depender del browser del cliente
+      const refVE = new Date(ahora.getTime() + d * 24 * 60 * 60 * 1000)
+      const partsVE = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Caracas', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(refVE)
+      const anoVE = Number(partsVE.find(p => p.type === 'year')!.value)
+      const mesVE = Number(partsVE.find(p => p.type === 'month')!.value) - 1
+      const diaVE = Number(partsVE.find(p => p.type === 'day')!.value)
       const slotsDelDia: { iso: string; hora: string }[] = []
       for (let hVE = 8; hVE < 20; hVE++) {
         for (const m of [0, 20, 40]) {
-          const slotUTC = new Date(fecha)
-          slotUTC.setHours(hVE + 4, m, 0, 0)
+          // VE es UTC-4: construir UTC explícitamente
+          const slotUTC = new Date(Date.UTC(anoVE, mesVE, diaVE, hVE + 4, m, 0))
           if (slotUTC > ahora) {
             const hora = slotUTC.toLocaleTimeString('es-VE', {
               timeZone: 'America/Caracas', hour: '2-digit', minute: '2-digit', hour12: true,
@@ -156,7 +160,7 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
         }
       }
       if (slotsDelDia.length > 0) {
-        const diaLabel = fecha.toLocaleDateString('es-VE', {
+        const diaLabel = refVE.toLocaleDateString('es-VE', {
           timeZone: 'America/Caracas', weekday: 'long', day: 'numeric', month: 'short',
         })
         porDia.push({ diaLabel, slots: slotsDelDia })
@@ -180,6 +184,10 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
       const horariosDelDia = horarios.filter((h) => h.dia === diaSemana)
       if (horariosDelDia.length === 0) continue
 
+      const partsVE2 = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Caracas', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(fecha)
+      const anoVE2 = Number(partsVE2.find(p => p.type === 'year')!.value)
+      const mesVE2 = Number(partsVE2.find(p => p.type === 'month')!.value) - 1
+      const diaVE2 = Number(partsVE2.find(p => p.type === 'day')!.value)
       const slotsDelDia: { iso: string; hora: string }[] = []
       for (const horario of horariosDelDia) {
         const [iH, iM] = horario.inicio.split(':').map(Number)
@@ -187,14 +195,14 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
         let cH = iH, cM = iM
 
         while (cH * 60 + cM + 20 <= fH * 60 + fM) {
-          const slotVE = new Date(fecha)
-          slotVE.setHours(cH + 4, cM, 0, 0) // UTC = VE + 4
-          if (slotVE > ahora) {
-            const hora = slotVE.toLocaleTimeString('es-VE', {
+          // VE es UTC-4: construir UTC explícitamente
+          const slotUTC = new Date(Date.UTC(anoVE2, mesVE2, diaVE2, cH + 4, cM, 0))
+          if (slotUTC > ahora) {
+            const hora = slotUTC.toLocaleTimeString('es-VE', {
               timeZone: 'America/Caracas',
               hour: '2-digit', minute: '2-digit', hour12: true,
             })
-            slotsDelDia.push({ iso: slotVE.toISOString(), hora })
+            slotsDelDia.push({ iso: slotUTC.toISOString(), hora })
           }
           cM += 20
           if (cM >= 60) { cM -= 60; cH++ }
