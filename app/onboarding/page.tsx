@@ -550,7 +550,7 @@ function OnboardingForm() {
           <div style={{ background: '#F5F0FF', border: '2px solid rgba(45,20,100,0.12)', borderRadius: '16px', padding: '20px' }}>
             <label style={{ ...s.label, marginBottom: '4px' }}>Video de presentación en YouTube <span style={{ fontWeight: 400, color: '#6B5C90' }}>(opcional pero muy recomendado)</span></label>
             <p style={{ color: '#4A3B6B', fontSize: '13px', lineHeight: '1.6', marginBottom: '12px' }}>
-              Un video de máximo <strong>60 segundos</strong> donde te presentas y hablas de tu experiencia puede <strong>triplicar</strong> las probabilidades de que una familia te elija. Las familias quieren ver quién va a cuidar a su ser querido antes de decidir.
+              Este video es lo primero que ve el cliente antes de elegirte. Preséntate, cuenta quién eres y muestra tu personalidad. Entre <strong>1 y 1:30 minutos</strong> es suficiente — máximo 2:30. Un buen video puede <strong>triplicar</strong> las probabilidades de que una familia te elija.
             </p>
             {/* Ejemplo visual video */}
             <div style={{ display: 'flex', gap: '12px', marginBottom: '14px' }}>
@@ -585,7 +585,7 @@ function OnboardingForm() {
                 <li>Habla con calma, mira directo a la cámara y sonríe</li>
                 <li>Evita ruido de fondo: apaga el televisor y cierra puertas</li>
                 <li>Viste ropa limpia y ordenada, como si fuera a una entrevista</li>
-                <li>Di tu nombre, cuéntanos un poco sobre ti y por qué quieres ser parte de Compaz</li>
+                <li>Di tu nombre, cuéntanos quién eres y por qué serías una buena compañía</li>
                 <li>Sube el video a YouTube como «No listado» <span style={{ color: '#6B5C90', fontWeight: 400 }}>(significa que solo quien tenga el link puede verlo — no aparece en búsquedas)</span> y pega el enlace aquí</li>
               </ul>
             </div>
