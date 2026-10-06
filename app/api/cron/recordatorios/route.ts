@@ -45,6 +45,12 @@ export async function POST(req: NextRequest) {
       } catch (e) { console.error('Error creando sala Daily en recordatorio:', e) }
     }
 
+    // Si no hay sala disponible, no enviar el recordatorio — se reintentará en 5 min
+    if (!roomUrl) {
+      console.error(`Sin sala para solicitud ${solicitud.id}, se reintentará`)
+      continue
+    }
+
     // Traer datos del cliente
     const { data: cliente } = await admin
       .from('usuarios')
@@ -53,7 +59,10 @@ export async function POST(req: NextRequest) {
       .single()
 
     // ── Email al cliente ────────────────────────────────────────────────────
-    if (cliente) {
+    // emailEnviado controla si se marca recordatorio_enviado=true.
+    // Si el cliente no tiene email, se considera enviado (nada que enviar).
+    let emailEnviado = !cliente?.email
+    if (cliente?.email) {
       try {
         await resend.emails.send({
           from: 'Compaz <visitas@micompaz.com>',
@@ -77,6 +86,7 @@ export async function POST(req: NextRequest) {
             </div>
           `,
         })
+        emailEnviado = true
       } catch (e) { console.error('Email recordatorio cliente:', e) }
     }
 
@@ -123,10 +133,13 @@ export async function POST(req: NextRequest) {
       } catch (e) { console.error('Telegram recordatorio admin:', e) }
     }
 
-    // Marcar como enviado para no repetir
-    try {
-      await marcarRecordatorioEnviado(solicitud.id)
-    } catch (e) { console.error('Error marcando recordatorio:', e) }
+    // Solo marcar como enviado si el email al cliente llegó (o no tenía email).
+    // Si falló, el cron reintenta en 5 min.
+    if (emailEnviado) {
+      try {
+        await marcarRecordatorioEnviado(solicitud.id)
+      } catch (e) { console.error('Error marcando recordatorio:', e) }
+    }
   }
 
   return ok({ procesados: solicitudes.length })

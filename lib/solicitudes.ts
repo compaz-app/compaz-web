@@ -84,17 +84,18 @@ export async function getSolicitudesAdmin(): Promise<Solicitud[]> {
 export async function getSolicitudesParaRecordatorio(): Promise<Solicitud[]> {
   const supabase = createAdminSupabase()
   const ahora = new Date()
+  const hace30min = new Date(ahora.getTime() - 30 * 60 * 1000).toISOString()
   const en65min = new Date(ahora.getTime() + 65 * 60 * 1000).toISOString()
 
-  // Captura cualquier llamada en los próximos 65 min sin recordatorio enviado.
-  // La ventana arranca desde ahora (no desde 55 min) para cubrir llamadas
-  // agendadas a último momento que el compita aceptó con poca antelación.
+  // Ventana: slot entre -30 min y +65 min desde ahora, sin recordatorio enviado.
+  // El límite inferior cubre retrasos del cron (Netlify latency, cold starts).
+  // El flag recordatorio_enviado=false previene duplicados si el cron corre varias veces.
   const { data, error } = await supabase
     .from('solicitudes')
     .select(SELECT_FIELDS)
     .eq('estado', 'aceptada')
     .eq('recordatorio_enviado', false)
-    .gte('slot_confirmado', ahora.toISOString())
+    .gte('slot_confirmado', hace30min)
     .lte('slot_confirmado', en65min)
 
   if (error) throw new Error(error.message)
@@ -247,7 +248,6 @@ export async function getSolicitudesParaSegundoSeguimiento(): Promise<Solicitud[
     .eq('estado', 'aceptada')
     .eq('seguimiento_enviado', true)
     .eq('seguimiento2_enviado', false)
-    .is('respondido_at', null)
     .lte('slot_confirmado', hace24h)
     .gte('slot_confirmado', hace48h)
 
