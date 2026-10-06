@@ -446,7 +446,7 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
       {seleccionada && (
         <div
           style={{ position: 'fixed', inset: 0, background: 'rgba(26,10,60,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', zIndex: 2000 }}
-          onClick={(e) => { if (e.target === e.currentTarget) { setSeleccionada(null); setMostrarFormulario(false); setSlotsElegidos([]); setFormMensaje(''); setFormSobreCliente(''); setReagendando(false) } }}
+          onClick={(e) => { if (e.target === e.currentTarget) { setSeleccionada(null); setMostrarFormulario(false) } }}
         >
           <div style={{ background: '#FDFAF6', borderRadius: '24px', maxWidth: '560px', width: '100%', maxHeight: '90vh', overflowY: 'auto', position: 'relative' }}>
             <button onClick={() => { setSeleccionada(null); setMostrarFormulario(false); setSlotsElegidos([]); setFormMensaje(''); setFormSobreCliente(''); setReagendando(false) }} style={{ position: 'absolute', top: '16px', right: '16px', background: 'white', border: '2px solid #E8E0D4', borderRadius: '9999px', width: '32px', height: '32px', cursor: 'pointer', fontSize: '16px', zIndex: 10 }}>×</button>
@@ -622,10 +622,10 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
                   {/* Slot picker — sin límite de disponibilidad del compita */}
                   <div>
                     <label style={{ display: 'block', fontWeight: 600, fontSize: '13px', color: '#1A0A3C', marginBottom: '4px' }}>
-                      Elige hasta 3 horarios disponibles *
+                      Elige uno o varios horarios *
                     </label>
                     <p style={{ color: '#6B5C90', fontSize: '12px', marginBottom: '10px' }}>
-                      {seleccionada.nombre} confirmará uno de los que propongas. La llamada es de 20 minutos.
+                      {seleccionada.nombre} confirmará uno. Puedes proponer hasta 3 para darle más opciones. La llamada es de 20 minutos.
                     </p>
                     {(() => {
                       const diasConSlots = generarSlotsSinLimite()
@@ -670,7 +670,7 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
                     })()}
                     {slotsElegidos.length > 0 && (
                       <p style={{ color: '#FF6B2B', fontSize: '12px', fontWeight: 700, marginTop: '8px' }}>
-                        {slotsElegidos.length}/3 horarios seleccionados
+                        {slotsElegidos.length === 3 ? '3/3 — máximo alcanzado' : `${slotsElegidos.length}/3 horarios seleccionados`}
                       </p>
                     )}
                   </div>
