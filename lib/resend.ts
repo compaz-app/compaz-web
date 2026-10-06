@@ -1,9 +1,72 @@
 import { Resend } from 'resend'
-import type { Visita, Compita, Usuario, Mensaje } from '@/types'
+import Anthropic from '@anthropic-ai/sdk'
+import type { Visita, Compita, Usuario, Mensaje, ReporteVisita } from '@/types'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
+const anthropic = process.env.ANTHROPIC_API_KEY ? new Anthropic() : null
 
 const FROM = 'Compaz <visitas@micompaz.com>'
+
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+const ESCALA: Record<number, string> = { 1: 'Muy bajo', 2: 'Bajo', 3: 'Regular', 4: 'Bueno', 5: 'Excelente' }
+
+function indicadorLabel(v: number | null): string {
+  if (v === null) return 'No aplica'
+  return `${v}/5 — ${ESCALA[v] ?? ''}`
+}
+
+async function generarResumenIA(
+  compita: Compita,
+  usuario: Usuario,
+  reporte: Pick<ReporteVisita, 'animo' | 'fisico' | 'participacion' | 'entorno' | 'novedad'>,
+  historial: Pick<ReporteVisita, 'animo' | 'fisico' | 'participacion' | 'entorno' | 'created_at'>[],
+): Promise<string> {
+  if (!anthropic) return ''
+
+  const nVisitas = historial.length
+  const historialTexto = nVisitas > 0
+    ? historial.slice(-5).map((r, i) => {
+        const fecha = new Date(r.created_at).toLocaleDateString('es-VE', { day: 'numeric', month: 'long' })
+        return `Visita ${i + 1} (${fecha}): Ánimo ${r.animo ?? 'N/A'}, Físico ${r.fisico ?? 'N/A'}, Participación ${r.participacion ?? 'N/A'}, Entorno ${r.entorno ?? 'N/A'}`
+      }).join('\n')
+    : 'Esta es la primera visita registrada.'
+
+  const prompt = `Eres el asistente de Compaz, servicio venezolano de cuidado de personas mayores.
+La compita ${compita.nombre} terminó una visita con el familiar de ${usuario.nombre}.
+
+Indicadores de esta visita (escala 1-5, 5 = excelente, null = no aplica):
+Ánimo: ${reporte.animo ?? 'N/A'}
+Condición física: ${reporte.fisico ?? 'N/A'}
+Participación: ${reporte.participacion ?? 'N/A'}
+Ambiente y entorno: ${reporte.entorno ?? 'N/A'}
+${reporte.novedad ? `Novedad: ${reporte.novedad}` : ''}
+
+Historial de visitas previas:
+${historialTexto}
+
+Escribe un párrafo de 2 a 3 oraciones en español, en tono cálido y profesional, dirigido a la familia. No uses guiones como viñetas. No inventes datos. Si hay novedades, menciónalas con tacto. Si hay 3 o más visitas y ves una tendencia clara (positiva o negativa), menciona brevemente. Si solo hay una visita, describe el estado observado.`
+
+  try {
+    const msg = await anthropic.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 300,
+      messages: [{ role: 'user', content: prompt }],
+    })
+    const block = msg.content[0]
+    return block.type === 'text' ? block.text.trim() : ''
+  } catch (e) {
+    console.error('Error generando resumen IA:', e)
+    return ''
+  }
+}
 
 export async function sendCodigoTelegram(email: string, nombre: string, codigo: string): Promise<void> {
   await resend.emails.send({
@@ -155,7 +218,7 @@ export async function sendVisitaResumen(
   const duracion = horas > 0 ? `${horas}h ${minutos}min` : `${minutos} minutos`
 
   const mensajesTexto = mensajes
-    .filter((m) => m.tipo === 'texto')
+    .filter((m) => m.tipo === 'texto' && m.origen !== 'admin')
     .map((m) => {
       const hora = new Date(m.created_at).toLocaleTimeString('es-VE', {
         hour: '2-digit',
@@ -165,7 +228,7 @@ export async function sendVisitaResumen(
       const quien = m.origen === 'compita' ? compita.nombre : 'Tú'
       return `<tr>
         <td style="color: #6B5C90; font-size: 13px; padding: 4px 8px; white-space: nowrap;">${hora}</td>
-        <td style="color: #4A3B6B; font-size: 14px; padding: 4px 8px;"><strong>${quien}:</strong> ${m.contenido}</td>
+        <td style="color: #4A3B6B; font-size: 14px; padding: 4px 8px;"><strong>${quien}:</strong> ${escapeHtml(m.contenido ?? '')}</td>
       </tr>`
     })
     .join('')
@@ -206,4 +269,58 @@ export async function sendVisitaResumen(
       </div>
     `,
   })
+}
+
+export async function sendResumenConReporte(
+  usuario: Usuario,
+  compita: Compita,
+  visita: Visita,
+  mensajes: Mensaje[],
+  reporte: Pick<ReporteVisita, 'animo' | 'fisico' | 'participacion' | 'entorno' | 'novedad'>,
+  historial: Pick<ReporteVisita, 'animo' | 'fisico' | 'participacion' | 'entorno' | 'created_at'>[],
+  esActualizacion = false,
+): Promise<string> {
+  const inicio = new Date(visita.inicio!)
+  const fin = new Date(visita.fin!)
+  const duracionMin = Math.round((fin.getTime() - inicio.getTime()) / 60000)
+  const horas = Math.floor(duracionMin / 60)
+  const minutos = duracionMin % 60
+  const duracion = horas > 0 ? `${horas}h ${minutos}min` : `${minutos} minutos`
+
+  const resumenIA = await generarResumenIA(compita, usuario, reporte, historial)
+
+  const fotos = mensajes.filter((m) => m.tipo === 'foto')
+  const fotosHtml = fotos.length > 0
+    ? `<div style="margin-top:20px">${fotos.map((f) => `<img src="${f.contenido}" alt="Foto de la visita" style="max-width:100%;border-radius:12px;margin-bottom:12px;display:block" />`).join('')}</div>`
+    : ''
+
+  const indicadoresHtml = `
+    <table style="width:100%;border-collapse:collapse;margin:16px 0">
+      ${reporte.animo !== null ? `<tr><td style="color:#6B5C90;font-size:13px;padding:6px 8px;white-space:nowrap;width:180px">Ánimo</td><td style="font-size:14px;color:#1A0A3C;padding:6px 8px">${indicadorLabel(reporte.animo)}</td></tr>` : ''}
+      ${reporte.fisico !== null ? `<tr><td style="color:#6B5C90;font-size:13px;padding:6px 8px">Condición física</td><td style="font-size:14px;color:#1A0A3C;padding:6px 8px">${indicadorLabel(reporte.fisico)}</td></tr>` : ''}
+      ${reporte.participacion !== null ? `<tr><td style="color:#6B5C90;font-size:13px;padding:6px 8px">Participación</td><td style="font-size:14px;color:#1A0A3C;padding:6px 8px">${indicadorLabel(reporte.participacion)}</td></tr>` : ''}
+      ${reporte.entorno !== null ? `<tr><td style="color:#6B5C90;font-size:13px;padding:6px 8px">Ambiente y entorno</td><td style="font-size:14px;color:#1A0A3C;padding:6px 8px">${indicadorLabel(reporte.entorno)}</td></tr>` : ''}
+    </table>`
+
+  await resend.emails.send({
+    from: FROM,
+    to: usuario.email,
+    subject: esActualizacion ? `Actualización de la visita de hoy con ${compita.nombre}` : `Resumen de la visita de hoy con ${compita.nombre}`,
+    html: `
+      <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px">
+        <img src="https://micompaz.com/logo.png" alt="Compaz" style="height:40px;margin-bottom:24px" />
+        <h2 style="color:#2D1464;font-size:24px;margin-bottom:4px">${esActualizacion ? 'Actualización de la visita' : 'Resumen de la visita'}</h2>
+        <p style="color:#6B5C90;font-size:14px;margin-bottom:20px">La visita de <strong>${compita.nombre}</strong> duró <strong>${duracion}</strong>.</p>
+        ${resumenIA ? `<div style="background:#F5F0FF;border-left:4px solid #7C4DFF;border-radius:8px;padding:16px 20px;margin-bottom:20px"><p style="color:#1A0A3C;font-size:15px;line-height:1.7;margin:0">${resumenIA}</p></div>` : ''}
+        <h3 style="color:#2D1464;font-size:15px;margin-bottom:4px">Indicadores de la visita</h3>
+        ${indicadoresHtml}
+        ${reporte.novedad ? `<div style="background:#FFF3E8;border:1.5px solid #FF6B2B;border-radius:10px;padding:14px 18px;margin-bottom:16px"><p style="color:#C84B0E;font-size:13px;font-weight:700;margin:0 0 4px">Novedad reportada</p><p style="color:#1A0A3C;font-size:14px;margin:0;line-height:1.6">${escapeHtml(reporte.novedad)}</p></div>` : ''}
+        ${fotosHtml}
+        <a href="https://micompaz.com/dashboard" style="display:inline-block;background:#2D1464;color:white;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:600;margin-top:16px">Ver historial completo</a>
+        <p style="color:#6B5C90;font-size:13px;margin-top:32px">Compaz — <em>Cerca aunque estés lejos</em></p>
+      </div>
+    `,
+  })
+
+  return resumenIA
 }

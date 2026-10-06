@@ -58,10 +58,11 @@ export async function POST(req: NextRequest) {
   // Reenviar al Compita por Telegram
   if (visita.compita.telegram_chat_id) {
     const nombreCliente = visita.usuario?.nombre ?? 'El cliente'
+    const escapeHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
     try {
       await sendTelegramMessage(
         visita.compita.telegram_chat_id,
-        `💬 <b>${nombreCliente}:</b>\n\n${contenido}`
+        `💬 <b>${escapeHtml(nombreCliente)}:</b>\n\n${escapeHtml(contenido)}`
       )
     } catch (e) {
       console.error('Error reenviando a Telegram:', e)
