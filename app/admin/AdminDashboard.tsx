@@ -73,9 +73,12 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
       .then((d) => { if (Array.isArray(d.data)) setFlags(d.data) })
   }, [])
 
+  const [flagError, setFlagError] = useState('')
+
   async function crearFlag() {
     if (!flagModal || !flagNota.trim() || !flagReportadoPor.trim()) return
     setFlagGuardando(true)
+    setFlagError('')
     try {
       const res = await fetch('/api/admin/flags', {
         method: 'POST',
@@ -87,7 +90,13 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
         setFlags((prev) => [d.data, ...prev])
         setFlagModal(null)
         setFlagNota('')
+        setFlagReportadoPor('')
+        setFlagError('')
+      } else {
+        setFlagError(d.error ?? 'Error al guardar. Intenta de nuevo.')
       }
+    } catch {
+      setFlagError('Error de red. Intenta de nuevo.')
     } finally {
       setFlagGuardando(false)
     }
@@ -805,9 +814,10 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
               />
             </div>
 
+            {flagError && <p style={{ color: '#dc2626', fontSize: '13px', margin: '0 0 10px', textAlign: 'right' }}>{flagError}</p>}
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
               <button
-                onClick={() => { setFlagModal(null); setFlagNota(''); setFlagReportadoPor('') }}
+                onClick={() => { setFlagModal(null); setFlagNota(''); setFlagReportadoPor(''); setFlagError('') }}
                 style={{ background: 'white', border: '2px solid #D4C9E8', color: '#6B5C90', borderRadius: '9999px', padding: '8px 20px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '14px', cursor: 'pointer' }}
               >
                 Cancelar
