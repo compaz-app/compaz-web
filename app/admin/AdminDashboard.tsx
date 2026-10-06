@@ -21,7 +21,24 @@ interface Props {
   defaultTab: string
 }
 
-type Tab = 'visitas' | 'clientes' | 'compitas' | 'desactivadas' | 'historial' | 'solicitudes' | 'cliente' | 'accesos' | 'perfil'
+type Tab = 'visitas' | 'clientes' | 'compitas' | 'desactivadas' | 'historial' | 'solicitudes' | 'cliente' | 'accesos' | 'perfil' | 'atencion'
+
+type AdminFlag = {
+  id: string
+  entidad_tipo: 'visita' | 'compita' | 'cliente'
+  entidad_id: string
+  entidad_nombre: string
+  nota: string
+  reportado_por: string
+  resuelto: boolean
+  created_at: string
+}
+
+type FlagModal = {
+  entidad_tipo: 'visita' | 'compita' | 'cliente'
+  entidad_id: string
+  entidad_nombre: string
+} | null
 
 export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisita: inicialPreVisita, usuarios, compitas: todasCompitas, visitasPasadas, todasSolicitudes, visitasMes, defaultTab }: Props) {
   const router = useRouter()
@@ -44,6 +61,48 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
   const [filtroDesactivadas, setFiltroDesactivadas] = useState<'todas' | 'inactivo' | 'bloqueado'>('todas')
   const [clientePreviewId, setClientePreviewId] = useState<string | null>(null)
   const [compitaPerfilId, setCompitaPerfilId] = useState<string | null>(null)
+  const [flags, setFlags] = useState<AdminFlag[]>([])
+  const [flagModal, setFlagModal] = useState<FlagModal>(null)
+  const [flagNota, setFlagNota] = useState('')
+  const [flagReportadoPor, setFlagReportadoPor] = useState('')
+  const [flagGuardando, setFlagGuardando] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/admin/flags')
+      .then((r) => r.json())
+      .then((d) => { if (Array.isArray(d.data)) setFlags(d.data) })
+  }, [])
+
+  async function crearFlag() {
+    if (!flagModal || !flagNota.trim() || !flagReportadoPor.trim()) return
+    setFlagGuardando(true)
+    try {
+      const res = await fetch('/api/admin/flags', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...flagModal, nota: flagNota, reportado_por: flagReportadoPor }),
+      })
+      const d = await res.json()
+      if (res.ok) {
+        setFlags((prev) => [d.data, ...prev])
+        setFlagModal(null)
+        setFlagNota('')
+      }
+    } finally {
+      setFlagGuardando(false)
+    }
+  }
+
+  async function resolverFlag(flagId: string) {
+    const res = await fetch('/api/admin/flags', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ flag_id: flagId }),
+    })
+    if (res.ok) setFlags((prev) => prev.filter((f) => f.id !== flagId))
+  }
+
+  const flagsAbiertos = flags.filter((f) => !f.resuelto)
 
   const compitasPendientes = compitas.filter((c) => c.estado === 'activo' && !c.verificado)
   const compitasEnMapa = compitas.filter((c) => c.estado === 'activo' && c.verificado && !!c.telegram_chat_id)
@@ -277,6 +336,9 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
           )}
         </button>
         <button style={tabStyle('accesos')} onClick={() => setTab('accesos')}>Accesos rápidos</button>
+        <button style={tabStyle('atencion')} onClick={() => setTab('atencion')}>
+          ⚑ Atención {flagsAbiertos.length > 0 && <span style={{ background: '#dc2626', color: 'white', borderRadius: '9999px', padding: '1px 7px', fontSize: '11px', fontWeight: 800, marginLeft: '4px' }}>{flagsAbiertos.length}</span>}
+        </button>
         {clientePreviewId && (
           <button style={{ ...tabStyle('cliente'), borderBottom: tab === 'cliente' ? '3px solid #22c55e' : '3px solid transparent', color: tab === 'cliente' ? '#16a34a' : '#6B5C90' }} onClick={() => setTab('cliente')}>
             👁 Ver cliente
@@ -310,11 +372,17 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
                         onClick={() => setVisitaSeleccionada(v.id === visitaSeleccionada ? null : v.id)}
                         style={{ background: 'white', border: `2px solid ${v.id === visitaSeleccionada ? '#7C4DFF' : '#D4C9E8'}`, borderRadius: '16px', padding: '20px', cursor: 'pointer' }}
                       >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                           <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#7C4DFF' }} />
                           <strong style={{ color: '#1A0A3C', fontFamily: 'Bricolage Grotesque, sans-serif' }}>{v.compita.nombre}</strong>
                           <span style={{ color: '#6B5C90', fontSize: '14px' }}>con {v.usuario.nombre}</span>
-                          <span style={{ marginLeft: 'auto', background: '#F5F0FF', color: '#7C4DFF', border: '1.5px solid #D4C9E8', borderRadius: '9999px', padding: '2px 10px', fontSize: '11px', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif' }}>Coordinando</span>
+                          <span style={{ background: '#F5F0FF', color: '#7C4DFF', border: '1.5px solid #D4C9E8', borderRadius: '9999px', padding: '2px 10px', fontSize: '11px', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif' }}>Coordinando</span>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setFlagModal({ entidad_tipo: 'visita', entidad_id: v.id, entidad_nombre: `${v.compita.nombre} con ${v.usuario.nombre}` }) }}
+                            style={{ background: 'none', border: '1.5px solid #dc2626', color: '#dc2626', borderRadius: '9999px', padding: '3px 10px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Bricolage Grotesque, sans-serif', marginLeft: 'auto' }}
+                          >
+                            ⚑ Marcar
+                          </button>
                         </div>
                       </div>
                     ))}
@@ -372,8 +440,16 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
                         </strong>
                         <span style={{ color: '#6B5C90', fontSize: '14px' }}>con {v.usuario.nombre}</span>
                       </div>
-                      <div style={{ color: '#6B5C90', fontSize: '13px' }}>
-                        Iniciada: {v.inicio ? new Date(v.inicio).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' }) : '—'}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                        <div style={{ color: '#6B5C90', fontSize: '13px' }}>
+                          Iniciada: {v.inicio ? new Date(v.inicio).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' }) : '—'}
+                        </div>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setFlagModal({ entidad_tipo: 'visita', entidad_id: v.id, entidad_nombre: `${v.compita.nombre} con ${v.usuario.nombre}` }) }}
+                          style={{ background: 'none', border: '1.5px solid #dc2626', color: '#dc2626', borderRadius: '9999px', padding: '3px 10px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Bricolage Grotesque, sans-serif' }}
+                        >
+                          ⚑ Marcar
+                        </button>
                       </div>
                       {(v as VisitaConRelaciones & { room_url?: string | null }).room_url && (
                         <div style={{ marginTop: '8px' }}>
@@ -428,6 +504,7 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
             compitas={compitas}
             onAsignar={asignarCompita}
             onEliminar={eliminarCliente}
+            onMarcar={(id, nombre) => setFlagModal({ entidad_tipo: 'cliente', entidad_id: id, entidad_nombre: nombre })}
           />
         )}
 
@@ -489,7 +566,7 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
                     {pendientes.length > 0 ? (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         {pendientes.map((c) => (
-                          <CompitaCard key={c.id} c={c} onToggleVerificado={toggleVerificado} onToggleEstado={toggleEstado} onVerPerfil={(id) => { setCompitaPerfilId(id); setTab('perfil') }} onToggleBloqueado={toggleBloqueado} onEliminar={eliminarCompita} />
+                          <CompitaCard key={c.id} c={c} onToggleVerificado={toggleVerificado} onToggleEstado={toggleEstado} onVerPerfil={(id) => { setCompitaPerfilId(id); setTab('perfil') }} onToggleBloqueado={toggleBloqueado} onEliminar={eliminarCompita} onMarcar={(id, nombre) => setFlagModal({ entidad_tipo: 'compita', entidad_id: id, entidad_nombre: nombre })} />
                         ))}
                       </div>
                     ) : (
@@ -510,7 +587,7 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
                     {sinTelegram.length > 0 ? (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         {sinTelegram.map((c) => (
-                          <CompitaCard key={c.id} c={c} onToggleVerificado={toggleVerificado} onToggleEstado={toggleEstado} onVerPerfil={(id) => { setCompitaPerfilId(id); setTab('perfil') }} onToggleBloqueado={toggleBloqueado} onEliminar={eliminarCompita} />
+                          <CompitaCard key={c.id} c={c} onToggleVerificado={toggleVerificado} onToggleEstado={toggleEstado} onVerPerfil={(id) => { setCompitaPerfilId(id); setTab('perfil') }} onToggleBloqueado={toggleBloqueado} onEliminar={eliminarCompita} onMarcar={(id, nombre) => setFlagModal({ entidad_tipo: 'compita', entidad_id: id, entidad_nombre: nombre })} />
                         ))}
                       </div>
                     ) : (
@@ -531,7 +608,7 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
                     {enMapa.length > 0 ? (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         {enMapa.map((c) => (
-                          <CompitaCard key={c.id} c={c} onToggleVerificado={toggleVerificado} onToggleEstado={toggleEstado} onVerPerfil={(id) => { setCompitaPerfilId(id); setTab('perfil') }} onToggleBloqueado={toggleBloqueado} onEliminar={eliminarCompita} />
+                          <CompitaCard key={c.id} c={c} onToggleVerificado={toggleVerificado} onToggleEstado={toggleEstado} onVerPerfil={(id) => { setCompitaPerfilId(id); setTab('perfil') }} onToggleBloqueado={toggleBloqueado} onEliminar={eliminarCompita} onMarcar={(id, nombre) => setFlagModal({ entidad_tipo: 'compita', entidad_id: id, entidad_nombre: nombre })} />
                         ))}
                       </div>
                     ) : (
@@ -571,7 +648,7 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
                   </div>
                   {lista.length === 0
                     ? <div style={{ background: 'white', border: '2px solid #E8E0D4', borderRadius: '16px', padding: '40px', textAlign: 'center' }}><p style={{ color: '#6B5C90' }}>No hay resultados.</p></div>
-                    : lista.map((c) => <CompitaCard key={c.id} c={c} onToggleVerificado={toggleVerificado} onToggleEstado={toggleEstado} onVerPerfil={(id) => { setCompitaPerfilId(id); setTab('perfil') }} onToggleBloqueado={toggleBloqueado} onEliminar={eliminarCompita} />)
+                    : lista.map((c) => <CompitaCard key={c.id} c={c} onToggleVerificado={toggleVerificado} onToggleEstado={toggleEstado} onVerPerfil={(id) => { setCompitaPerfilId(id); setTab('perfil') }} onToggleBloqueado={toggleBloqueado} onEliminar={eliminarCompita} onMarcar={(id, nombre) => setFlagModal({ entidad_tipo: 'compita', entidad_id: id, entidad_nombre: nombre })} />)
                   }
                 </div>
               )
@@ -629,6 +706,49 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
           <SolicitudesTab solicitudes={todasSolicitudes} />
         )}
 
+        {/* ── Atención ──────────────────────────────────────────────────────── */}
+        {tab === 'atencion' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {flagsAbiertos.length === 0 ? (
+              <div style={{ background: 'white', border: '2px solid #E8E0D4', borderRadius: '16px', padding: '48px', textAlign: 'center' }}>
+                <p style={{ color: '#6B5C90', fontSize: '15px' }}>No hay marcas pendientes. Todo en orden.</p>
+              </div>
+            ) : (
+              <>
+                {(['visita', 'compita', 'cliente'] as const).map((tipo) => {
+                  const grupo = flagsAbiertos.filter((f) => f.entidad_tipo === tipo)
+                  if (grupo.length === 0) return null
+                  const label = tipo === 'visita' ? 'Visitas' : tipo === 'compita' ? 'Compitas' : 'Clientes'
+                  return (
+                    <div key={tipo}>
+                      <div style={{ fontSize: '12px', fontWeight: 800, color: '#9B8AB8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>{label}</div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {grupo.map((f) => (
+                          <div key={f.id} style={{ background: 'white', border: '2px solid #fca5a5', borderRadius: '12px', padding: '16px 20px', display: 'flex', alignItems: 'flex-start', gap: '12px', flexWrap: 'wrap' }}>
+                            <div style={{ flex: 1, minWidth: '180px' }}>
+                              <div style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, color: '#1A0A3C', fontSize: '14px', marginBottom: '4px' }}>{f.entidad_nombre}</div>
+                              <div style={{ fontSize: '14px', color: '#4A3B6B' }}>{f.nota}</div>
+                              <div style={{ fontSize: '12px', color: '#9B8AB8', marginTop: '6px' }}>
+                                {f.reportado_por} · {new Date(f.created_at).toLocaleDateString('es-VE', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => resolverFlag(f.id)}
+                              style={{ background: '#F0FDF4', border: '1.5px solid #22c55e', color: '#15803d', borderRadius: '9999px', padding: '5px 14px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Bricolage Grotesque, sans-serif', whiteSpace: 'nowrap' }}
+                            >
+                              ✓ Resolver
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })}
+              </>
+            )}
+          </div>
+        )}
+
         {/* ── Historial ─────────────────────────────────────────────────────── */}
         {tab === 'historial' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -651,6 +771,58 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
           </div>
         )}
       </div>
+
+      {/* ── Modal: crear flag ──────────────────────────────────────────────── */}
+      {flagModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '24px' }}>
+          <div style={{ background: 'white', borderRadius: '20px', padding: '28px', maxWidth: '480px', width: '100%', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+            <h3 style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '18px', color: '#1A0A3C', margin: '0 0 4px' }}>⚑ Marcar para atención</h3>
+            <p style={{ color: '#6B5C90', fontSize: '13px', margin: '0 0 20px' }}>{flagModal.entidad_nombre}</p>
+
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#4A3B6B', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>¿Quién reporta?</label>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                {['Juan', 'Lucho'].map((nombre) => (
+                  <button
+                    key={nombre}
+                    onClick={() => setFlagReportadoPor(nombre)}
+                    style={{ flex: 1, padding: '8px', border: `2px solid ${flagReportadoPor === nombre ? '#2D1464' : '#D4C9E8'}`, borderRadius: '10px', background: flagReportadoPor === nombre ? '#2D1464' : 'white', color: flagReportadoPor === nombre ? 'white' : '#4A3B6B', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '14px', cursor: 'pointer' }}
+                  >
+                    {nombre}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#4A3B6B', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Nota</label>
+              <textarea
+                value={flagNota}
+                onChange={(e) => setFlagNota(e.target.value)}
+                placeholder="Describe qué hay que revisar…"
+                rows={4}
+                style={{ width: '100%', border: '2px solid #D4C9E8', borderRadius: '12px', padding: '10px 14px', fontFamily: 'Inter, sans-serif', fontSize: '14px', color: '#1A0A3C', resize: 'vertical', outline: 'none', boxSizing: 'border-box' }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => { setFlagModal(null); setFlagNota(''); setFlagReportadoPor('') }}
+                style={{ background: 'white', border: '2px solid #D4C9E8', color: '#6B5C90', borderRadius: '9999px', padding: '8px 20px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '14px', cursor: 'pointer' }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={crearFlag}
+                disabled={flagGuardando || !flagNota.trim() || !flagReportadoPor.trim()}
+                style={{ background: '#dc2626', color: 'white', border: 'none', borderRadius: '9999px', padding: '8px 20px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '14px', cursor: flagGuardando || !flagNota.trim() || !flagReportadoPor.trim() ? 'not-allowed' : 'pointer', opacity: flagGuardando || !flagNota.trim() || !flagReportadoPor.trim() ? 0.5 : 1 }}
+              >
+                {flagGuardando ? 'Guardando…' : 'Guardar marca'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -662,11 +834,12 @@ type ClientePreviewData = {
   visitasPasadas: { id: string; created_at: string; fin: string | null; inicio: string | null; compita: { nombre: string } }[]
 }
 
-function ClientesTab({ usuarios, compitas, onAsignar, onEliminar }: {
+function ClientesTab({ usuarios, compitas, onAsignar, onEliminar, onMarcar }: {
   usuarios: UsuarioConCompita[]
   compitas: Compita[]
   onAsignar: (usuarioId: string, compitaId: string) => void
   onEliminar: (usuarioId: string) => void
+  onMarcar: (id: string, nombre: string) => void
 }) {
   const [busqueda, setBusqueda] = useState('')
   const [filtro, setFiltro] = useState<'todos' | 'activos' | 'bloqueados'>('todos')
@@ -720,18 +893,19 @@ function ClientesTab({ usuarios, compitas, onAsignar, onEliminar }: {
         </div>
       ) : (
         lista.map((u) => (
-          <ClienteCard key={u.id} u={u} compitas={compitas} onAsignar={onAsignar} onEliminar={onEliminar} />
+          <ClienteCard key={u.id} u={u} compitas={compitas} onAsignar={onAsignar} onEliminar={onEliminar} onMarcar={onMarcar} />
         ))
       )}
     </div>
   )
 }
 
-function ClienteCard({ u, compitas, onAsignar, onEliminar }: {
+function ClienteCard({ u, compitas, onAsignar, onEliminar, onMarcar }: {
   u: UsuarioConCompita
   compitas: Compita[]
   onAsignar: (usuarioId: string, compitaId: string) => void
   onEliminar: (usuarioId: string) => void
+  onMarcar: (id: string, nombre: string) => void
 }) {
   const [confirmEliminar, setConfirmEliminar] = useState(false)
   const [bloqueado, setBloqueado] = useState((u as unknown as { plan: string | null }).plan === 'bloqueado')
@@ -761,6 +935,12 @@ function ClienteCard({ u, compitas, onAsignar, onEliminar }: {
         </div>
       </div>
       <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+        <button
+          onClick={() => onMarcar(u.id, u.nombre)}
+          style={{ background: 'none', border: '1.5px solid #dc2626', color: '#dc2626', borderRadius: '9999px', padding: '6px 12px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Bricolage Grotesque, sans-serif', whiteSpace: 'nowrap' }}
+        >
+          ⚑ Marcar
+        </button>
         <a href={`/dashboard?preview=${u.id}`} target="_blank" rel="noreferrer"
           style={{ background: 'white', color: '#16a34a', border: '2px solid #22c55e', borderRadius: '9999px', padding: '8px 14px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', textDecoration: 'none', whiteSpace: 'nowrap' }}>
           👁 Ver
@@ -917,13 +1097,14 @@ function ClientePreview({ usuarioId }: { usuarioId: string }) {
 
 type DeletePhase = 'idle' | 'confirm' | 'warn' | 'loading' | 'error'
 
-function CompitaCard({ c, onToggleVerificado, onToggleEstado, onVerPerfil, onToggleBloqueado, onEliminar }: {
+function CompitaCard({ c, onToggleVerificado, onToggleEstado, onVerPerfil, onToggleBloqueado, onEliminar, onMarcar }: {
   c: Compita
   onToggleVerificado: (id: string, actual: boolean) => void
   onToggleEstado: (id: string, estado: string) => void
   onVerPerfil: (id: string) => void
   onToggleBloqueado: (id: string, bloqueado: boolean) => void
   onEliminar: (id: string, force: boolean) => Promise<{ ok: true } | { ok: false; visitas?: number; error?: string }>
+  onMarcar: (id: string, nombre: string) => void
 }) {
   const [deletePhase, setDeletePhase] = useState<DeletePhase>('idle')
   const [warnVisitas, setWarnVisitas] = useState(0)
@@ -974,6 +1155,12 @@ function CompitaCard({ c, onToggleVerificado, onToggleEstado, onVerPerfil, onTog
         </div>
       </div>
       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', flexShrink: 0, alignItems: 'center' }}>
+        <button
+          onClick={() => onMarcar(c.id, c.nombre)}
+          style={{ background: 'none', border: '1.5px solid #dc2626', color: '#dc2626', borderRadius: '9999px', padding: '6px 12px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Bricolage Grotesque, sans-serif', whiteSpace: 'nowrap' }}
+        >
+          ⚑ Marcar
+        </button>
         <button
           onClick={() => onVerPerfil(c.id)}
           style={{ background: 'white', color: '#7C3AED', border: '2px solid #8B5CF6', borderRadius: '9999px', padding: '8px 16px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap' }}

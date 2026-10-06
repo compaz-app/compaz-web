@@ -210,3 +210,43 @@ create policy "tokens_cliente" on action_tokens
 
 -- Nota: las operaciones de escritura admin usan la service_role key (bypassa RLS).
 -- Las APIs de Next.js usan createAdminSupabase() para operaciones administrativas.
+
+-- ══════════════════════════════════════════════════════════════════════════════
+-- TABLA: admin_flags
+-- Flags de atención/revisión creados por admins sobre visitas, compitas o clientes.
+-- ══════════════════════════════════════════════════════════════════════════════
+create table admin_flags (
+  id             uuid primary key default uuid_generate_v4(),
+  entidad_tipo   text not null check (entidad_tipo in ('visita', 'compita', 'cliente')),
+  entidad_id     text not null,
+  entidad_nombre text not null default '',
+  nota           text not null,
+  reportado_por  text not null,
+  resuelto       boolean not null default false,
+  resuelto_at    timestamptz,
+  created_at     timestamptz not null default now()
+);
+
+create index admin_flags_resuelto_idx on admin_flags(resuelto);
+create index admin_flags_entidad_idx on admin_flags(entidad_tipo, entidad_id);
+
+-- Solo accesible via service_role (admins desde el servidor). Sin RLS para clientes.
+alter table admin_flags enable row level security;
+
+-- ══════════════════════════════════════════════════════════════════════════════
+-- TABLA: compita_edit_tokens
+-- Tokens de un solo uso para que compitas editen su perfil sin login.
+-- ══════════════════════════════════════════════════════════════════════════════
+create table if not exists compita_edit_tokens (
+  id          uuid primary key default uuid_generate_v4(),
+  token       text not null unique,
+  compita_id  uuid not null references compitas(id) on delete cascade,
+  expires_at  timestamptz not null,
+  usado       boolean not null default false,
+  created_at  timestamptz not null default now()
+);
+
+create index if not exists compita_edit_tokens_token_idx on compita_edit_tokens(token);
+create index if not exists compita_edit_tokens_compita_id_idx on compita_edit_tokens(compita_id);
+
+alter table compita_edit_tokens enable row level security;
