@@ -66,8 +66,15 @@ export async function GET(req: NextRequest) {
   const adminTg = process.env.TELEGRAM_ADMIN_CHAT_ID
 
   if (respuesta === 'si') {
-    // Actualizar estado a completada
-    await admin.from('solicitudes').update({ estado: 'completada' }).eq('id', solicitud.id)
+    // Actualizar atómicamente — previene doble notificación si el cliente hace clic dos veces
+    const { data: claimed } = await admin
+      .from('solicitudes')
+      .update({ estado: 'completada' })
+      .eq('id', solicitud.id)
+      .eq('estado', 'aceptada')
+      .select('id')
+      .single()
+    if (!claimed) return html('Ya registramos tu respuesta', 'Ya habías respondido a esta encuesta. ¡Gracias!')
 
     // Notificar al admin por email
     try {
@@ -104,12 +111,21 @@ export async function GET(req: NextRequest) {
       try {
         await sendTelegramMessage(
           compita.telegram_chat_id,
-          `🎉 <b>¡Buenas noticias!</b>\n\n<b>${cliente?.nombre ?? 'El cliente'}</b> quiere contratarte. Ahora está completando el pago — cuando confirme, recibirás otro mensaje aquí con todos los detalles para arrancar.\n\n¡Sigue así! 🤝`,
+          [
+            `🎉 <b>¡Buenas noticias!</b>`,
+            ``,
+            `<b>${cliente?.nombre?.split(' ')[0] ?? 'El cliente'}</b> quiere seguir adelante contigo. Estamos coordinando los últimos detalles y cuando todo esté confirmado, te avisamos aquí mismo para que puedan arrancar.`,
+            ``,
+            `¡Sigue así! 🤝`,
+          ].join('\n'),
         )
       } catch (e) { console.error('Telegram compita contratación:', e) }
     }
 
-    return NextResponse.redirect(`${SITE_URL}/pago?solicitud=${solicitud.id}`, 303)
+    return html(
+      '¡Perfecto, ya lo sabemos!',
+      `Gracias por confirmar. Estamos coordinando los últimos detalles con <strong>${solicitud.compita_nombre}</strong> y pronto estaremos en contacto contigo para arrancar.`,
+    )
   }
 
   // respuesta === 'no'

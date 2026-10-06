@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminSupabase } from '@/lib/supabase-server'
+import { sendTelegramMessage } from '@/lib/telegram'
 import { Resend } from 'resend'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
@@ -44,11 +45,38 @@ export async function GET(req: NextRequest) {
   const { error } = await admin.from('usuarios').update({ compita_id: compitaId }).eq('id', clienteId)
   if (error) return new NextResponse('Error interno', { status: 500 })
 
-  // Traer datos para el email
-  const { data: cliente } = await admin.from('usuarios').select('nombre, email').eq('id', clienteId).single()
-  const { data: compita } = await admin.from('compitas').select('nombre, foto_url, zona, descripcion').eq('id', compitaId).single()
+  // Traer datos para el email y Telegram
+  const { data: cliente } = await admin.from('usuarios').select('nombre, email, familiar_nombre, familiar_edad, familiar_condicion, familiar_notas').eq('id', clienteId).single() as { data: { nombre: string; email: string; familiar_nombre: string | null; familiar_edad: number | null; familiar_condicion: string | null; familiar_notas: string | null } | null }
+  const { data: compita } = await admin.from('compitas').select('nombre, foto_url, zona, descripcion, telegram_chat_id').eq('id', compitaId).single() as { data: { nombre: string; foto_url: string | null; zona: string | null; descripcion: string | null; telegram_chat_id: string | null } | null }
 
   if (cliente && compita) {
+    // Notificar al compita por Telegram con el perfil del familiar
+    if (compita.telegram_chat_id) {
+      const perfilLineas: string[] = []
+      if (cliente.familiar_nombre) perfilLineas.push(`<b>Nombre:</b> ${cliente.familiar_nombre}`)
+      if (cliente.familiar_edad) perfilLineas.push(`<b>Edad:</b> ${cliente.familiar_edad} años`)
+      if (cliente.familiar_condicion) perfilLineas.push(`<b>Condición:</b> ${cliente.familiar_condicion}`)
+      if (cliente.familiar_notas) perfilLineas.push(`<b>Notas:</b> ${cliente.familiar_notas}`)
+      const perfilBloque = perfilLineas.length > 0
+        ? [``, `🧓 <b>Sobre el familiar que vas a atender:</b>`, ...perfilLineas]
+        : []
+      try {
+        await sendTelegramMessage(
+          compita.telegram_chat_id,
+          [
+            `🎉 <b>¡Tienes un nuevo cliente!</b>`,
+            ``,
+            `<b>${escapeHtml(cliente.nombre)}</b> fue asignado a tu cuenta.`,
+            ...perfilBloque,
+            ``,
+            `👋 <b>Saluda a ${escapeHtml(cliente.nombre.split(' ')[0])}</b> desde este chat para arrancar la coordinación. Ellos lo verán en su portal.`,
+            ``,
+            `💙 Toda la comunicación debe mantenerse dentro de Compaz.`,
+          ].join('\n'),
+        )
+      } catch (e) { console.error('Telegram asignar-rapido compita:', e) }
+    }
+
     try {
       await resend.emails.send({
         from: 'Compaz <visitas@micompaz.com>',

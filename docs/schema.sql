@@ -250,3 +250,18 @@ create index if not exists compita_edit_tokens_token_idx on compita_edit_tokens(
 create index if not exists compita_edit_tokens_compita_id_idx on compita_edit_tokens(compita_id);
 
 alter table compita_edit_tokens enable row level security;
+
+-- ══════════════════════════════════════════════════════════════════════════════
+-- MIGRACIÓN: Confirmación post-llamada en solicitudes
+-- Correr en Supabase SQL Editor antes del próximo deploy
+-- ══════════════════════════════════════════════════════════════════════════════
+-- alter table solicitudes
+--   add column if not exists confirmacion_llamada_enviada boolean not null default false,
+--   add column if not exists confirmacion_cliente boolean default null,
+--   add column if not exists confirmacion_compita boolean default null,
+--   add column if not exists reagendado_slots text[] not null default '{}',
+--   add column if not exists sobre_cliente text;
+--
+-- create index if not exists solicitudes_confirmacion_idx
+--   on solicitudes(confirmacion_llamada_enviada, estado)
+--   where estado = 'aceptada';

@@ -112,7 +112,6 @@ export default function EditarPerfil({ token, inicial }: Props) {
 
   const [descripcion, setDescripcion] = useState(inicial.descripcion)
   const [servicios, setServicios] = useState<string[]>(inicial.servicios)
-  const [habilidades, setHabilidades] = useState('')
   const [youtubeUrl, setYoutubeUrl] = useState(inicial.youtube_url)
   const [fotoUrl, setFotoUrl] = useState(inicial.foto_url)
   const [fotoPreview, setFotoPreview] = useState<string | null>(inicial.foto_url || null)
@@ -217,7 +216,7 @@ export default function EditarPerfil({ token, inicial }: Props) {
       const res = await fetch('/api/compita/perfil', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, zona, descripcion, servicios, habilidades: habilidades || null, youtube_url: youtubeUrl || null, foto_url: fotoUrl || null, horarios_disponibles: horarios }),
+        body: JSON.stringify({ token, zona, descripcion, servicios, youtube_url: youtubeUrl || null, foto_url: fotoUrl || null, horarios_disponibles: horarios }),
       })
       const data = await res.json() as { guardado?: boolean; error?: string }
       if (!res.ok) throw new Error(data.error ?? 'Error al guardar')
@@ -326,15 +325,6 @@ export default function EditarPerfil({ token, inicial }: Props) {
             </div>
           ))}
         </div>
-      </div>
-
-      {/* Habilidades especiales */}
-      <div>
-        <label style={s.label}>¿Tienes alguna habilidad o formación especial? <span style={{ fontWeight: 400, color: '#6B5C90' }}>(opcional)</span></label>
-        <p style={s.hint}>Por ejemplo: fisioterapeuta, maestra, músico, cocinera, hablas otro idioma, conoces artes marciales… Lo que te hace única.</p>
-        <textarea value={habilidades} onChange={e => setHabilidades(e.target.value)}
-          style={{ ...s.input, minHeight: '80px', resize: 'vertical' }}
-          placeholder="Soy licenciada en educación, toco guitarra y hablo inglés básico…" />
       </div>
 
       {/* Foto */}

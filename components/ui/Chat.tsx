@@ -44,6 +44,7 @@ export default function Chat({ visita, mensajesIniciales, compitaNombre }: ChatP
   const [mensajes, setMensajes] = useState<Mensaje[]>(mensajesIniciales)
   const [texto, setTexto] = useState('')
   const [enviando, setEnviando] = useState(false)
+  const [errorEnvio, setErrorEnvio] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -83,13 +84,24 @@ export default function Chat({ visita, mensajesIniciales, compitaNombre }: ChatP
     if (!texto.trim() || enviando) return
 
     setEnviando(true)
-    const res = await fetch('/api/send-message', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contenido: texto.trim() }),
-    })
-    if (res.ok) setTexto('')
-    setEnviando(false)
+    setErrorEnvio('')
+    try {
+      const res = await fetch('/api/send-message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contenido: texto.trim() }),
+      })
+      if (res.ok) {
+        setTexto('')
+      } else {
+        const data = await res.json().catch(() => ({}))
+        setErrorEnvio(data.error ?? 'No se pudo enviar el mensaje.')
+      }
+    } catch {
+      setErrorEnvio('Error de conexión. Intenta de nuevo.')
+    } finally {
+      setEnviando(false)
+    }
   }
 
   return (
@@ -155,7 +167,11 @@ export default function Chat({ visita, mensajesIniciales, compitaNombre }: ChatP
       </div>
 
       {/* Input */}
-      <form onSubmit={enviarMensaje} style={{ padding: '16px 20px', borderTop: '2px solid #E8E0D4', display: 'flex', gap: '10px' }}>
+      <form onSubmit={enviarMensaje} style={{ padding: '16px 20px', borderTop: '2px solid #E8E0D4', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        {errorEnvio && (
+          <p style={{ color: '#E05520', fontSize: '13px', margin: 0, fontFamily: 'Inter, sans-serif' }}>{errorEnvio}</p>
+        )}
+        <div style={{ display: 'flex', gap: '10px' }}>
         <input
           type="text"
           value={texto}
@@ -189,8 +205,9 @@ export default function Chat({ visita, mensajesIniciales, compitaNombre }: ChatP
             opacity: enviando || !texto.trim() ? 0.5 : 1,
           }}
         >
-          →
+          {enviando ? '…' : '→'}
         </button>
+        </div>
       </form>
     </div>
   )

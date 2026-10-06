@@ -34,7 +34,6 @@ export async function PUT(req: NextRequest) {
     zona?: string
     descripcion?: string
     servicios?: string[]
-    habilidades?: string | null
     youtube_url?: string | null
     foto_url?: string | null
     horarios_disponibles?: { dia: string; inicio: string; fin: string }[]

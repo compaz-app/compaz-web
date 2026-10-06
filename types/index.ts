@@ -147,6 +147,7 @@ export interface Solicitud {
   compita_foto?: string | null
   compita_zona?: string
   mensaje: string
+  sobre_cliente?: string | null
   estado: SolicitudEstado
   franja_horaria?: string | null
   token_respuesta: string
@@ -156,6 +157,11 @@ export interface Solicitud {
   recordatorio_enviado: boolean
   seguimiento_enviado: boolean
   seguimiento2_enviado: boolean
+  // Confirmación post-llamada (¿ocurrió la llamada?)
+  confirmacion_llamada_enviada: boolean
+  confirmacion_cliente: boolean | null   // null=sin respuesta, true=✅, false=❌
+  confirmacion_compita: boolean | null   // null=sin respuesta, true=✅, false=❌
+  reagendado_slots: string[]             // slots propuestos en reagendado
   created_at: string
   respondido_at?: string | null
 }

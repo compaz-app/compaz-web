@@ -66,6 +66,7 @@ export async function POST(req: NextRequest) {
       cliente_id: user.id,
       compita_id,
       mensaje,
+      sobre_cliente: sobre_cliente ?? null,
       slots_propuestos,
       franja_horaria,
     })

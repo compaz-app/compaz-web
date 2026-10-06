@@ -18,6 +18,7 @@ function mapRow(row: Record<string, unknown>): Solicitud {
     cliente_id: row.cliente_id as string,
     compita_id: row.compita_id as string,
     mensaje: row.mensaje as string,
+    sobre_cliente: (row.sobre_cliente as string | null) ?? null,
     estado: row.estado as SolicitudEstado,
     franja_horaria: (row.franja_horaria as string | null) ?? null,
     slots_propuestos: (row.slots_propuestos as string[]) ?? [],
@@ -26,6 +27,10 @@ function mapRow(row: Record<string, unknown>): Solicitud {
     recordatorio_enviado: (row.recordatorio_enviado as boolean) ?? false,
     seguimiento_enviado: (row.seguimiento_enviado as boolean) ?? false,
     seguimiento2_enviado: (row.seguimiento2_enviado as boolean) ?? false,
+    confirmacion_llamada_enviada: (row.confirmacion_llamada_enviada as boolean) ?? false,
+    confirmacion_cliente: row.confirmacion_cliente as boolean | null ?? null,
+    confirmacion_compita: row.confirmacion_compita as boolean | null ?? null,
+    reagendado_slots: (row.reagendado_slots as string[]) ?? [],
     token_respuesta: row.token_respuesta as string,
     created_at: row.created_at as string,
     respondido_at: (row.respondido_at as string | null) ?? null,
@@ -36,9 +41,10 @@ function mapRow(row: Record<string, unknown>): Solicitud {
 }
 
 const SELECT_FIELDS = `
-  id, cliente_id, compita_id, mensaje, estado, franja_horaria,
+  id, cliente_id, compita_id, mensaje, sobre_cliente, estado, franja_horaria,
   slots_propuestos, slot_confirmado, room_url, recordatorio_enviado, seguimiento_enviado,
-  seguimiento2_enviado, token_respuesta, created_at, respondido_at,
+  seguimiento2_enviado, confirmacion_llamada_enviada, confirmacion_cliente, confirmacion_compita,
+  reagendado_slots, token_respuesta, created_at, respondido_at,
   compitas ( nombre, foto_url, zona )
 `
 
@@ -108,6 +114,7 @@ export interface CrearSolicitudInput {
   cliente_id: string
   compita_id: string
   mensaje: string
+  sobre_cliente?: string | null
   slots_propuestos: string[]  // hasta 3 ISO datetimes
   franja_horaria?: string
 }
@@ -135,6 +142,7 @@ export async function crearSolicitud(input: CrearSolicitudInput): Promise<Solici
       cliente_id: input.cliente_id,
       compita_id: input.compita_id,
       mensaje: input.mensaje,
+      sobre_cliente: input.sobre_cliente ?? null,
       slots_propuestos: input.slots_propuestos,
       franja_horaria: input.franja_horaria ?? null,
       estado: 'pendiente',
@@ -189,6 +197,7 @@ export async function confirmarSlot(
       respondido_at: new Date().toISOString(),
     })
     .eq('token_respuesta', token)
+    .eq('estado', 'pendiente')
     .select(SELECT_FIELDS)
     .single()
 
@@ -208,21 +217,46 @@ export async function guardarRoomUrl(solicitudId: string, roomUrl: string): Prom
 }
 
 /**
- * Solicitudes aceptadas cuya llamada ya terminó (slot + 23 min) sin seguimiento enviado.
+ * Solicitudes listas para "¿quieres contratar?":
+ * - Ambas partes confirmaron YES, o
+ * - Han pasado 4h desde el slot y ninguna dijo NO (timeout: asumimos que ocurrió)
  */
 export async function getSolicitudesParaSeguimiento(): Promise<Solicitud[]> {
   const supabase = createAdminSupabase()
-  const hace23min = new Date(Date.now() - 23 * 60 * 1000).toISOString()
+  const hace4h = new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString()
 
-  const { data, error } = await supabase
+  // Caso A: ambas confirmaron
+  const { data: ambas, error: e1 } = await supabase
     .from('solicitudes')
     .select(SELECT_FIELDS)
     .eq('estado', 'aceptada')
     .eq('seguimiento_enviado', false)
-    .lte('slot_confirmado', hace23min)
+    .eq('confirmacion_cliente', true)
+    .eq('confirmacion_compita', true)
 
-  if (error) throw new Error(error.message)
-  return (data ?? []).map(mapRow)
+  if (e1) throw new Error(e1.message)
+
+  // Caso B: timeout 4h — confirmación enviada, nadie dijo NO, slot ya pasó
+  const { data: timeout, error: e2 } = await supabase
+    .from('solicitudes')
+    .select(SELECT_FIELDS)
+    .eq('estado', 'aceptada')
+    .eq('seguimiento_enviado', false)
+    .eq('confirmacion_llamada_enviada', true)
+    .neq('confirmacion_cliente', false)
+    .neq('confirmacion_compita', false)
+    .lte('slot_confirmado', hace4h)
+
+  if (e2) throw new Error(e2.message)
+
+  // Deduplicar por id (Caso A puede solaparse con Caso B después de 4h)
+  const vistos = new Set<string>()
+  const resultado: Solicitud[] = []
+  for (const row of [...(ambas ?? []), ...(timeout ?? [])]) {
+    const s = mapRow(row as Record<string, unknown>)
+    if (!vistos.has(s.id)) { vistos.add(s.id); resultado.push(s) }
+  }
+  return resultado
 }
 
 /**
@@ -286,4 +320,95 @@ export async function marcarRecordatorioEnviado(solicitudId: string): Promise<vo
     .update({ recordatorio_enviado: true })
     .eq('id', solicitudId)
   if (error) throw new Error(error.message)
+}
+
+// ── Confirmación post-llamada ─────────────────────────────────────────────────
+
+/**
+ * Solicitudes cuya llamada terminó hace 25+ minutos y aún no se envió la confirmación.
+ */
+export async function getSolicitudesParaConfirmacion(): Promise<Solicitud[]> {
+  const supabase = createAdminSupabase()
+  const hace25min = new Date(Date.now() - 25 * 60 * 1000).toISOString()
+
+  const { data, error } = await supabase
+    .from('solicitudes')
+    .select(SELECT_FIELDS)
+    .eq('estado', 'aceptada')
+    .eq('confirmacion_llamada_enviada', false)
+    .lte('slot_confirmado', hace25min)
+
+  if (error) throw new Error(error.message)
+  return (data ?? []).map(mapRow)
+}
+
+/**
+ * Marca que se enviaron los mensajes de "¿ocurrió la llamada?".
+ */
+export async function marcarConfirmacionEnviada(solicitudId: string): Promise<void> {
+  const supabase = createAdminSupabase()
+  await supabase
+    .from('solicitudes')
+    .update({ confirmacion_llamada_enviada: true })
+    .eq('id', solicitudId)
+}
+
+/**
+ * Registra la respuesta de cliente o compita sobre si ocurrió la llamada.
+ * Idempotente: si ya hay una respuesta registrada, devuelve la solicitud sin cambiarla.
+ */
+export async function registrarConfirmacion(
+  solicitudId: string,
+  quien: 'cliente' | 'compita',
+  ocurrio: boolean,
+): Promise<Solicitud | null> {
+  const supabase = createAdminSupabase()
+  const campo = quien === 'cliente' ? 'confirmacion_cliente' : 'confirmacion_compita'
+
+  // Solo actualiza si el campo aún es null — previene que un segundo clic sobreescriba la respuesta original
+  const { data, error } = await supabase
+    .from('solicitudes')
+    .update({ [campo]: ocurrio })
+    .eq('id', solicitudId)
+    .is(campo, null)
+    .select(SELECT_FIELDS)
+    .single()
+
+  if (error || !data) {
+    // El campo ya tenía valor — devolver la solicitud sin modificar
+    const { data: existing } = await supabase
+      .from('solicitudes')
+      .select(SELECT_FIELDS)
+      .eq('id', solicitudId)
+      .single()
+    return existing ? mapRow(existing as Record<string, unknown>) : null
+  }
+  return mapRow(data as Record<string, unknown>)
+}
+
+/**
+ * Guarda los slots propuestos por el cliente en el reagendado.
+ * Resetea el estado a 'pendiente' para reiniciar el ciclo.
+ */
+export async function guardarSlotsReagendado(
+  solicitudId: string,
+  slots: string[],
+): Promise<void> {
+  const supabase = createAdminSupabase()
+  await supabase
+    .from('solicitudes')
+    .update({
+      reagendado_slots: slots,
+      slots_propuestos: slots,
+      estado: 'pendiente',
+      slot_confirmado: null,
+      room_url: null,
+      recordatorio_enviado: false,
+      seguimiento_enviado: false,
+      seguimiento2_enviado: false,
+      confirmacion_llamada_enviada: false,
+      confirmacion_cliente: null,
+      confirmacion_compita: null,
+    })
+    .eq('id', solicitudId)
 }

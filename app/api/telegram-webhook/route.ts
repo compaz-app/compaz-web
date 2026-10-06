@@ -168,7 +168,7 @@ async function guardarReporteYEnviarEmail(
   await clearPendiente(supabase, chatId)
 
   if (!visita || !visita.usuario) {
-    await sendTelegramMessage(chatId, `Gracias. El cuestionario fue registrado. ¡Hasta la próxima! 😊`, INLINE_INICIO)
+    await sendTelegramMessage(chatId, `Hubo un problema al recuperar los datos de la visita. No pudimos guardar el cuestionario ni enviar el resumen a la familia. Escríbenos a hola@micompaz.com y lo resolvemos.`, INLINE_INICIO)
     return
   }
 
@@ -446,7 +446,7 @@ export async function POST(req: NextRequest) {
     // Código correcto — vincular
     await clearPendiente(supabase, chatId)
     const { data: encontrada } = await supabase.from('compitas').select('nombre').eq('id', compitaId).single() as { data: Compita | null }
-    await supabase.from('compitas').update({ telegram_chat_id: chatId }).eq('id', compitaId).is('telegram_chat_id', null)
+    await supabase.from('compitas').update({ telegram_chat_id: chatId }).eq('id', compitaId)
     const nombre = encontrada?.nombre ?? 'Compita'
     await sendTelegramMessage(
       chatId,
@@ -471,7 +471,6 @@ export async function POST(req: NextRequest) {
       .from('compitas')
       .select('id, nombre, email, codigo')
       .ilike('nombre', `%${text.trim()}%`)
-      .is('telegram_chat_id', null)
       .limit(5) as { data: Compita[] | null }
 
     const encontrada = resultados?.length === 1 ? resultados[0] : null
@@ -538,47 +537,46 @@ export async function POST(req: NextRequest) {
 
   // ── Botón: Iniciar visita ────────────────────────────────────────────────────
   if (text === '▶️ Iniciar visita') {
-    const { data: visitaActiva } = await supabase
+    const { data: visitaEnCurso } = await supabase
       .from('visitas')
       .select('id')
       .eq('compita_id', compita.id)
       .eq('estado', 'en_curso')
-      .single()
+      .maybeSingle()
 
-    if (visitaActiva) {
+    if (visitaEnCurso) {
       await sendTelegramMessage(chatId, `Ya tienes una visita en curso. Cuando termines, toca el botón rojo. 👇`, INLINE_DURANTE)
       return NextResponse.json({ ok: true })
     }
 
-    // Solo permitir iniciar visita si hay al menos una solicitud completada o contratada para este compita
-    const { data: solicitudActiva } = await supabase
-      .from('solicitudes')
-      .select('id, cliente_id')
+    // Buscar visita programada (fecha acordada y registrada en el sistema)
+    const { data: visitaProgramada } = await supabase
+      .from('visitas')
+      .select('id, usuario_id, fecha_programada, usuario:usuarios(nombre)')
       .eq('compita_id', compita.id)
-      .in('estado', ['completada', 'contratada'])
+      .in('estado', ['programada', 'pre_visita'])
+      .order('created_at', { ascending: false })
       .limit(1)
-      .maybeSingle()
+      .maybeSingle() as { data: { id: string; usuario_id: string; fecha_programada: string | null; usuario: { nombre: string } | null } | null }
 
-    if (!solicitudActiva) {
+    if (!visitaProgramada) {
       await sendTelegramMessage(
         chatId,
-        `No encontré ninguna visita programada para ti en este momento.\n\nEsto puede pasar si el cliente aún no ha confirmado la contratación, o si hubo un problema con tu cuenta.\n\nSi crees que es un error, escríbenos a hola@micompaz.com y te ayudamos a resolverlo.`,
+        `No encontré ninguna visita programada para ti en este momento.\n\nEsto ocurre cuando el cliente todavía no ha registrado la fecha de la visita en el sistema. Una vez que lo haga, podrás iniciarla desde aquí.\n\nSi crees que es un error, escríbenos a hola@micompaz.com.`,
         INLINE_INICIO,
       )
       return NextResponse.json({ ok: true })
     }
 
-    const { data: usuarioCheck } = await supabase
-      .from('usuarios')
-      .select('nombre')
-      .eq('compita_id', compita.id)
-      .limit(1)
-      .maybeSingle() as { data: { nombre: string } | null }
+    const clienteNombre = visitaProgramada.usuario?.nombre ?? 'tu cliente'
+    const fechaLabel = visitaProgramada.fecha_programada
+      ? new Date(visitaProgramada.fecha_programada + 'T00:00:00').toLocaleDateString('es-VE', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'America/Caracas' })
+      : null
 
     await setPendiente(supabase, chatId, 'iniciar')
     await sendTelegramMessage(
       chatId,
-      `¿Vas a empezar la visita${usuarioCheck ? ` con <b>${usuarioCheck.nombre}</b>` : ''}?\n\nToca <b>✅ Sí, iniciar</b> para confirmar.`,
+      `¿Vas a empezar la visita con <b>${clienteNombre}</b>${fechaLabel ? ` (programada para el ${fechaLabel})` : ''}?\n\nToca <b>✅ Sí, iniciar</b> para confirmar. La familia sabrá que ya llegaste.`,
       INLINE_CONFIRMAR_INICIO,
     )
     return NextResponse.json({ ok: true })
@@ -792,14 +790,14 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ ok: true })
       }
 
-      // Intentar promover pre_visita existente; si no hay, crear nueva
+      // Promover visita programada o pre_visita → en_curso
       const ahora = new Date().toISOString()
-      const { data: preVisita } = await supabase
+      const { data: visitaExistente } = await supabase
         .from('visitas')
         .select('id')
         .eq('compita_id', compita.id)
         .eq('usuario_id', usuario.id)
-        .eq('estado', 'pre_visita')
+        .in('estado', ['programada', 'pre_visita'])
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle()
@@ -807,11 +805,11 @@ export async function POST(req: NextRequest) {
       let visita: Visita | null = null
       let visitaError: unknown = null
 
-      if (preVisita) {
+      if (visitaExistente) {
         const { data: updated, error } = await supabase
           .from('visitas')
           .update({ estado: 'en_curso', inicio: ahora })
-          .eq('id', preVisita.id)
+          .eq('id', visitaExistente.id)
           .select()
           .single() as { data: Visita | null; error: unknown }
         visita = updated
@@ -1067,12 +1065,12 @@ export async function POST(req: NextRequest) {
   // ── Mensajes y fotos durante visita activa o coordinación pre-visita ──────────
   // Solo procesar si no es un callback (los callbacks no tienen contenido multimedia)
   if (!isCallback) {
-    // Buscar visita en_curso o pre_visita
+    // Buscar visita activa (en_curso, pre_visita o programada)
     const { data: visitaActiva } = await supabase
       .from('visitas')
       .select('id, estado')
       .eq('compita_id', compita.id)
-      .in('estado', ['en_curso', 'pre_visita'])
+      .in('estado', ['en_curso', 'pre_visita', 'programada'])
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle() as { data: { id: string; estado: string } | null }

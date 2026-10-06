@@ -10,7 +10,17 @@ export async function POST(req: NextRequest) {
 
   const { solicitud_id, plan } = await req.json()
   if (!solicitud_id || !plan) return err('Faltan parámetros', 400)
-  if (plan !== 'unica' && plan !== 'mensual') return err('Plan inválido', 400)
+  const planesValidos = ['carta', 'quincenal', 'semanal', 'unica', 'mensual']
+  if (!planesValidos.includes(plan)) return err('Plan inválido', 400)
+
+  const PLAN_INFO: Record<string, { nombre: string; descripcion: string }> = {
+    carta:     { nombre: 'A la carta',      descripcion: 'Una visita de 2 horas.' },
+    quincenal: { nombre: 'Compañía',        descripcion: '2 visitas al mes de 2 horas cada una.' },
+    semanal:   { nombre: 'Compañía Plus',   descripcion: '4 visitas al mes de 2 horas cada una.' },
+    unica:     { nombre: 'Visita puntual',  descripcion: 'Una visita de 2 horas.' },
+    mensual:   { nombre: 'Membresía',       descripcion: 'Visitas regulares de 2 horas cada una.' },
+  }
+  const planInfo = PLAN_INFO[plan]
 
   const admin = createAdminSupabase()
 
@@ -31,14 +41,17 @@ export async function POST(req: NextRequest) {
 
   if (!sol) return notFound()
   if (sol.cliente_id !== user.id) return unauthorized()
-  if (sol.estado !== 'completada') return err('Esta solicitud ya fue procesada', 400)
 
-  // Marcar solicitud como contratada
-  const { error: eSol } = await admin
+  // Marcar como contratada atómicamente — el .eq('estado', 'completada') previene race conditions
+  // si el cliente hace doble clic: solo la primera request afecta filas, la segunda no encuentra nada.
+  const { data: claimed, error: eSol } = await admin
     .from('solicitudes')
     .update({ estado: 'contratada' })
     .eq('id', solicitud_id)
-  if (eSol) return serverError(eSol)
+    .eq('estado', 'completada')
+    .select('id')
+    .single()
+  if (eSol || !claimed) return err('Esta solicitud ya fue procesada', 400)
 
   // Crear visita en estado pre_visita para el chat de coordinación
   const { error: eVisita } = await admin
@@ -49,7 +62,6 @@ export async function POST(req: NextRequest) {
   // Notificar al compita por Telegram
   if (sol.compitas?.telegram_chat_id) {
     const clienteNombre = sol.usuarios?.nombre ?? 'El cliente'
-    const planTexto = plan === 'unica' ? 'una visita puntual' : 'una membresía mensual'
     const u = sol.usuarios
     const perfilLineas: string[] = []
     if (u?.familiar_nombre) perfilLineas.push(`<b>Nombre:</b> ${u.familiar_nombre}`)
@@ -67,12 +79,18 @@ export async function POST(req: NextRequest) {
         [
           `🎉 <b>¡Te contrataron!</b>`,
           ``,
-          `<b>${clienteNombre}</b> acaba de confirmar tu contratación con <b>${planTexto}</b>.`,
+          `<b>${clienteNombre}</b> acaba de contratarte con el plan <b>${planInfo.nombre}</b>.`,
+          ``,
+          `📋 <b>En qué consiste:</b> ${planInfo.descripcion}`,
           ...perfilBloque,
           ``,
-          `Ya puedes coordinar con ellos la fecha y hora de la primera visita. <b>Escríbeles desde este mismo chat</b> y ellos lo verán en su dashboard. Cuando el cliente te responda, también recibirás el mensaje aquí.`,
+          `👋 <b>Empieza saludando a ${clienteNombre.split(' ')[0]}</b>`,
           ``,
-          `💙 <b>Recuerda:</b> Toda la comunicación con tu cliente debe mantenerse dentro de Compaz. Coordinar o acordar servicios fuera de la plataforma va contra nuestras condiciones de uso y puede resultar en la suspensión de tu cuenta. Llevamos esto con respeto y confianza de ambas partes, y estamos aquí para apoyarte.`,
+          `Escríbele desde este mismo chat — un simple "¡Hola! Soy tu compita, ¿cuándo te queda bien para la primera visita?" es suficiente para arrancar. Ellos lo verán en su dashboard y te responderán aquí.`,
+          ``,
+          `Una vez que queden de acuerdo, ingresa la fecha en el sistema para que quede registrada y el cliente reciba la confirmación.`,
+          ``,
+          `💙 Toda la comunicación con tu cliente debe mantenerse dentro de Compaz. Coordinar por fuera va contra nuestras condiciones de uso y puede resultar en la suspensión de tu cuenta.`,
         ].join('\n'),
       )
     } catch (e) { console.error('Telegram compita contratado:', e) }

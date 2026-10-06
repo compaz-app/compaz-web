@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
     .from('visitas')
     .select('*, compita:compitas(*), usuario:usuarios(*)')
     .eq('usuario_id', user.id)
-    .in('estado', ['en_curso', 'pre_visita'])
+    .in('estado', ['en_curso', 'pre_visita', 'programada'])
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle() as { data: (Visita & { compita: Compita; usuario: Usuario }) | null }

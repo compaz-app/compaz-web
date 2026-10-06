@@ -15,7 +15,12 @@ export async function generarTokenPerfil(compitaId: string): Promise<string> {
     .eq('compita_id', compitaId)
     .eq('usado', false)
 
-  await supabase.from('compita_edit_tokens').insert({ token, compita_id: compitaId, expires_at, usado: false })
+  const { error } = await supabase
+    .from('compita_edit_tokens')
+    .insert({ token, compita_id: compitaId, expires_at, usado: false })
+
+  if (error) throw new Error(`Error guardando token de perfil: ${error.message}`)
+
   return token
 }
 
