@@ -276,7 +276,7 @@ function OnboardingForm() {
             <p style={{ fontWeight: 700, color: '#1A0A3C', marginBottom: '16px', fontFamily: 'Bricolage Grotesque, sans-serif', fontSize: '15px' }}>Paso 2 — Abre el bot de Compaz</p>
             <ol style={{ paddingLeft: '20px', color: '#4A3B6B', lineHeight: '1', margin: 0 }}>
               <li style={{ marginBottom: '14px' }}>
-                <strong>Toca el botón naranja de abajo</strong> — te abrirá directamente el chat del bot dentro de Telegram.
+                <strong>Toca el botón naranja de abajo.</strong> Te abrirá directamente el chat del bot dentro de Telegram.
               </li>
               <li style={{ marginBottom: '14px' }}>
                 Cuando abra el chat, toca el botón verde que dice <strong>«Iniciar»</strong> (o escribe <code style={s.code}>/start</code> y envíalo).
@@ -285,7 +285,7 @@ function OnboardingForm() {
                 El bot te preguntará tu nombre. Escríbelo <strong>exactamente igual</strong> a como lo pusiste en el formulario y envíalo.
               </li>
               <li>
-                Listo — recibirás un mensaje de confirmación y ya estarás conectada.
+                Recibirás un mensaje de confirmación y ya estarás conectado.
               </li>
             </ol>
           </div>
