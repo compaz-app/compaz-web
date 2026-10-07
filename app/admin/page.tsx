@@ -31,6 +31,8 @@ export default async function AdminPage({
 
   const inicioMes = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
 
+  const hace30dias = new Date(Date.now() - 30 * 24 * 60 * 60_000).toISOString()
+
   const [
     { data: visitasActivas },
     { data: visitasPreVisita },
@@ -39,6 +41,8 @@ export default async function AdminPage({
     { data: visitasPasadas },
     { data: todasSolicitudes },
     { count: visitasMes },
+    { data: ultimasVisitasPorUsuario },
+    { data: visitasActivas30 },
   ] = await Promise.all([
     supabase
       .from('visitas')
@@ -73,7 +77,33 @@ export default async function AdminPage({
       .from('visitas')
       .select('*', { count: 'exact', head: true })
       .gte('created_at', inicioMes),
+    // Última visita terminada por usuario (para detectar inactivos)
+    supabase
+      .from('visitas')
+      .select('usuario_id, fin')
+      .eq('estado', 'terminada')
+      .order('fin', { ascending: false }),
+    // Visitas activas en los últimos 30 días (para excluir del churn)
+    supabase
+      .from('visitas')
+      .select('usuario_id')
+      .in('estado', ['pre_visita', 'programada', 'en_curso']),
   ])
+
+  // Calcular set de clientes inactivos (última visita terminada >30 días, sin visita activa)
+  const usuariosConActivaSet = new Set((visitasActivas30 ?? []).map((v) => v.usuario_id))
+  const ultimaFinPorUsuario = new Map<string, string>()
+  for (const v of (ultimasVisitasPorUsuario ?? [])) {
+    if (v.fin && !ultimaFinPorUsuario.has(v.usuario_id)) {
+      ultimaFinPorUsuario.set(v.usuario_id, v.fin)
+    }
+  }
+  const clientesInactivosSet = new Set<string>()
+  for (const [usuarioId, fin] of ultimaFinPorUsuario) {
+    if (!usuariosConActivaSet.has(usuarioId) && new Date(fin) < new Date(hace30dias)) {
+      clientesInactivosSet.add(usuarioId)
+    }
+  }
 
   return (
     <Suspense>
@@ -86,6 +116,7 @@ export default async function AdminPage({
         todasSolicitudes={(todasSolicitudes ?? []) as unknown as SolicitudAdmin[]}
         visitasMes={visitasMes ?? 0}
         defaultTab={defaultTab}
+        clientesInactivos={clientesInactivosSet}
       />
     </Suspense>
   )

@@ -19,6 +19,7 @@ interface Props {
   todasSolicitudes: SolicitudAdmin[]
   visitasMes: number
   defaultTab: string
+  clientesInactivos?: Set<string>
 }
 
 type Tab = 'visitas' | 'clientes' | 'compitas' | 'desactivadas' | 'historial' | 'solicitudes' | 'cliente' | 'accesos' | 'perfil' | 'atencion'
@@ -40,7 +41,7 @@ type FlagModal = {
   entidad_nombre: string
 } | null
 
-export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisita: inicialPreVisita, usuarios, compitas: todasCompitas, visitasPasadas, todasSolicitudes, visitasMes, defaultTab }: Props) {
+export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisita: inicialPreVisita, usuarios, compitas: todasCompitas, visitasPasadas, todasSolicitudes, visitasMes, defaultTab, clientesInactivos }: Props) {
   const router = useRouter()
   const [tab, setTabState] = useState<Tab>((defaultTab as Tab) ?? 'visitas')
 
@@ -514,6 +515,7 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
             onAsignar={asignarCompita}
             onEliminar={eliminarCliente}
             onMarcar={(id, nombre) => setFlagModal({ entidad_tipo: 'cliente', entidad_id: id, entidad_nombre: nombre })}
+            clientesInactivos={clientesInactivos}
           />
         )}
 
@@ -862,12 +864,13 @@ type ClientePreviewData = {
   visitasPasadas: { id: string; created_at: string; fin: string | null; inicio: string | null; compita: { nombre: string } }[]
 }
 
-function ClientesTab({ usuarios, compitas, onAsignar, onEliminar, onMarcar }: {
+function ClientesTab({ usuarios, compitas, onAsignar, onEliminar, onMarcar, clientesInactivos }: {
   usuarios: UsuarioConCompita[]
   compitas: Compita[]
   onAsignar: (usuarioId: string, compitaId: string) => void
   onEliminar: (usuarioId: string) => void
   onMarcar: (id: string, nombre: string) => void
+  clientesInactivos?: Set<string>
 }) {
   const [busqueda, setBusqueda] = useState('')
   const [filtro, setFiltro] = useState<'todos' | 'activos' | 'bloqueados'>('todos')
@@ -921,16 +924,17 @@ function ClientesTab({ usuarios, compitas, onAsignar, onEliminar, onMarcar }: {
         </div>
       ) : (
         lista.map((u) => (
-          <ClienteCard key={u.id} u={u} compitas={compitas} onAsignar={onAsignar} onEliminar={onEliminar} onMarcar={onMarcar} />
+          <ClienteCard key={u.id} u={u} compitas={compitas} onAsignar={onAsignar} onEliminar={onEliminar} onMarcar={onMarcar} inactivo={clientesInactivos?.has(u.id) ?? false} />
         ))
       )}
     </div>
   )
 }
 
-function ClienteCard({ u, compitas, onAsignar, onEliminar, onMarcar }: {
+function ClienteCard({ u, compitas, onAsignar, onEliminar, onMarcar, inactivo = false }: {
   u: UsuarioConCompita
   compitas: Compita[]
+  inactivo?: boolean
   onAsignar: (usuarioId: string, compitaId: string) => void
   onEliminar: (usuarioId: string) => void
   onMarcar: (id: string, nombre: string) => void
@@ -955,6 +959,7 @@ function ClienteCard({ u, compitas, onAsignar, onEliminar, onMarcar }: {
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           <span style={{ color: '#1A0A3C', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700 }}>{u.nombre}</span>
           {bloqueado && <span style={{ background: '#FEE2E2', color: '#B91C1C', border: '1px solid #FCA5A5', borderRadius: '9999px', padding: '2px 8px', fontSize: '11px', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif' }}>🚫 Bloqueado</span>}
+          {inactivo && <span style={{ background: '#FFF7ED', color: '#C2410C', border: '1.5px solid #FED7AA', borderRadius: '9999px', padding: '2px 9px', fontSize: '11px', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif', whiteSpace: 'nowrap' }}>⚠️ Sin visita +30 días</span>}
         </div>
         <div style={{ color: '#4A3B6B', fontSize: '13px', marginTop: '3px' }}>✉️ {u.email}</div>
         <div style={{ color: '#6B5C90', fontSize: '13px', marginTop: '2px' }}>{u.zona ?? 'Sin zona'} · {u.plan ?? 'Sin plan'}</div>
