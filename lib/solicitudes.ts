@@ -300,6 +300,26 @@ export async function marcarSeguimiento2Enviado(solicitudId: string): Promise<vo
 /**
  * Busca una solicitud por token (sin filtro de estado).
  */
+export async function getSolicitudPorRoomUrl(roomUrl: string): Promise<Solicitud | null> {
+  const supabase = createAdminSupabase()
+  const { data } = await supabase
+    .from('solicitudes')
+    .select(SELECT_FIELDS)
+    .eq('room_url', roomUrl)
+    .single()
+  return data ? mapRow(data as Record<string, unknown>) : null
+}
+
+export async function marcarResultadoLlamada(
+  solicitudId: string,
+  resultado: 'contratar' | 'reagendar' | 'no_contratar',
+): Promise<void> {
+  const supabase = createAdminSupabase()
+  const updates: Record<string, unknown> = { confirmacion_llamada_enviada: true }
+  if (resultado === 'contratar') updates.estado = 'contratada'
+  await supabase.from('solicitudes').update(updates).eq('id', solicitudId)
+}
+
 export async function getSolicitudPorToken(token: string): Promise<Solicitud | null> {
   const supabase = createAdminSupabase()
   const { data } = await supabase

@@ -11,6 +11,7 @@ import { Resend } from 'resend'
 import { ok, unauthorized, err, notFound, serverError } from '@/lib/api'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? ''
 
 function formatSlotVE(iso: string): string {
   return new Date(iso).toLocaleString('es-VE', {
@@ -41,7 +42,7 @@ export async function POST(req: NextRequest) {
   if (!row) return notFound('Solicitud no encontrada')
   if (!row.slot_confirmado) return err('La solicitud no tiene slot confirmado')
 
-  const compitaData = row.compitas as { nombre: string; telegram_chat_id: string | null } | null
+  const compitaData = row.compitas as unknown as { nombre: string; telegram_chat_id: string | null } | null
   const slotLabel = formatSlotVE(row.slot_confirmado)
 
   // Crear sala si no existe, reusar si ya existe
@@ -63,6 +64,8 @@ export async function POST(req: NextRequest) {
     .eq('id', row.cliente_id)
     .single()
 
+  const salaClienteUrl = `${SITE_URL}/sala/${row.token_respuesta}?quien=cliente`
+  const salaCompitaUrl = `${SITE_URL}/sala/${row.token_respuesta}?quien=compita`
   const resultados: string[] = []
 
   // ── Email al cliente ──────────────────────────────────────────────────────
@@ -82,7 +85,7 @@ export async function POST(req: NextRequest) {
             <p style="color:#C84B0E;background:#FFF3E8;border:2px solid #FF6B2B;border-radius:12px;padding:14px;font-size:14px">
               ⏱️ Recuerda: la llamada tiene un límite de 20 minutos. La sala se cierra automáticamente a los 23 min.
             </p>
-            <a href="${roomUrl}" style="display:inline-block;background:#FF6B2B;color:white;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:16px;margin-top:8px">
+            <a href="${salaClienteUrl}" style="display:inline-block;background:#FF6B2B;color:white;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:16px;margin-top:8px">
               Entrar a la llamada →
             </a>
             <p style="color:#6B5C90;font-size:13px;margin-top:24px">
@@ -112,7 +115,7 @@ export async function POST(req: NextRequest) {
           ``,
           `⏱️ La llamada es de <b>20 minutos</b>. La sala se cierra a los 23 min.`,
           ``,
-          `<a href="${roomUrl}">Entrar a la llamada →</a>`,
+          `<a href="${salaCompitaUrl}">Entrar a la llamada →</a>`,
         ].join('\n'),
       )
       resultados.push('telegram_compita: ok')

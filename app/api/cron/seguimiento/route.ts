@@ -1,7 +1,7 @@
 // POST /api/cron/seguimiento — enviado por Netlify Scheduled Function cada 5 min
-// Paso 1: 25 min post-slot → pregunta "¿ocurrió la llamada?" a ambas partes
-// Paso 2: cuando ambos confirman ✅ → pregunta "¿quieres contratar?"
-// Paso 3: si alguien dice ❌ → envía link de reagendado al cliente
+// El Paso 1 ("¿ocurrió la llamada?") ya no existe: el webhook de Daily lo maneja al instante.
+// Paso 1 (fallback): 25 min post-slot → si confirmacion_llamada_enviada=false, dispara igual (por si el webhook falló)
+// Paso 2: recordatorio a las 24h si el cliente no respondió sobre contratar
 import { NextRequest } from 'next/server'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import {

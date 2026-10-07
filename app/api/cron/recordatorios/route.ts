@@ -53,6 +53,10 @@ export async function POST(req: NextRequest) {
       continue
     }
 
+    const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? ''
+    const salaClienteUrl = `${SITE_URL}/sala/${solicitud.token_respuesta}?quien=cliente`
+    const salaCompitaUrl = `${SITE_URL}/sala/${solicitud.token_respuesta}?quien=compita`
+
     // Traer datos del cliente
     const { data: cliente } = await admin
       .from('usuarios')
@@ -61,8 +65,6 @@ export async function POST(req: NextRequest) {
       .single()
 
     // ── Email al cliente ────────────────────────────────────────────────────
-    // emailEnviado controla si se marca recordatorio_enviado=true.
-    // Si el cliente no tiene email, se considera enviado (nada que enviar).
     let emailEnviado = !cliente?.email
     if (cliente?.email) {
       try {
@@ -82,7 +84,7 @@ export async function POST(req: NextRequest) {
               <p style="color:#4A3B6B;font-size:14px;line-height:1.6">
                 La sala se abre <strong>5 minutos antes</strong> de la hora pautada. Si entras antes y ves un error, espera un momento y vuelve a intentarlo.
               </p>
-              <a href="${roomUrl}" style="display:inline-block;background:#FF6B2B;color:white;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:16px;margin-top:8px">
+              <a href="${salaClienteUrl}" style="display:inline-block;background:#FF6B2B;color:white;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:16px;margin-top:8px">
                 Entrar a la llamada →
               </a>
               <p style="color:#6B5C90;font-size:13px;margin-top:24px">
@@ -115,7 +117,7 @@ export async function POST(req: NextRequest) {
             ``,
             `🔓 La sala se abre <b>5 minutos antes</b> de la hora pautada. Si entras antes y ves un error, espera un momento y vuelve a intentarlo.`,
             ``,
-            `<a href="${roomUrl}">Entrar a la llamada →</a>`,
+            `<a href="${salaCompitaUrl}">Entrar a la llamada →</a>`,
           ].join('\n'),
         )
       } catch (e) { console.error('Telegram recordatorio compita:', e) }
