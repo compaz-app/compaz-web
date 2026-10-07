@@ -38,6 +38,9 @@ export interface Compita {
   codigo: string | null
   horarios_disponibles: HorarioDisponible[] | null
   created_at: string
+  // Rating público (promedio 1-5 de visitas calificadas)
+  rating_promedio: number | null
+  total_ratings: number
   // Stats calculados en runtime (no en BD)
   tasa_aceptacion?: number | null
   total_solicitudes?: number
@@ -69,6 +72,7 @@ export interface Visita {
   inicio: string | null
   fin: string | null
   room_url: string | null
+  rating_cliente: number | null  // 1-5
   created_at: string
   compita?: Compita
   usuario?: Usuario

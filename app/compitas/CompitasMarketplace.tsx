@@ -437,6 +437,12 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
                 )}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    {compita.rating_promedio != null && compita.total_ratings > 0 && (
+                      <span style={{ fontSize: '13px', color: '#F59E0B', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '3px' }}>
+                        ★ <span style={{ color: '#1A0A3C' }}>{compita.rating_promedio.toFixed(1)}</span>
+                        <span style={{ color: '#9B8AB8', fontWeight: 400 }}>({compita.total_ratings})</span>
+                      </span>
+                    )}
                     <span style={{ color: '#6B5C90', fontSize: '13px' }}>{compita.visitas_realizadas} visitas</span>
                     {compita.tasa_aceptacion != null && (
                       <span style={{
@@ -482,6 +488,12 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' }}>
+                {seleccionada.rating_promedio != null && seleccionada.total_ratings > 0 && (
+                  <span style={{ fontSize: '14px', color: '#F59E0B', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '3px' }}>
+                    ★ <span style={{ color: '#1A0A3C' }}>{seleccionada.rating_promedio.toFixed(1)}</span>
+                    <span style={{ color: '#9B8AB8', fontWeight: 400, fontSize: '13px' }}>({seleccionada.total_ratings} {seleccionada.total_ratings === 1 ? 'calificación' : 'calificaciones'})</span>
+                  </span>
+                )}
                 <span style={{ color: '#6B5C90', fontSize: '13px' }}>{seleccionada.visitas_realizadas} visitas realizadas</span>
                 {seleccionada.tasa_aceptacion != null && (
                   <span style={{

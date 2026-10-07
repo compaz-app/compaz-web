@@ -6,6 +6,7 @@ const resend = new Resend(process.env.RESEND_API_KEY)
 const anthropic = process.env.ANTHROPIC_API_KEY ? new Anthropic() : null
 
 const FROM = 'Compaz <visitas@micompaz.com>'
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://micompaz.com'
 
 function escapeHtml(str: string): string {
   return str
@@ -266,6 +267,17 @@ export async function sendVisitaResumen(
            style="display: inline-block; background: #2D1464; color: white; padding: 14px 28px; border-radius: 9999px; text-decoration: none; font-weight: 600; margin-top: 16px;">
           Ver historial completo
         </a>
+        <div style="margin-top:28px;padding-top:24px;border-top:1.5px solid #E8E0D4">
+          <p style="color:#4A3B6B;font-size:14px;font-weight:600;margin:0 0 12px">¿Cómo estuvo la visita de hoy?</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            ${[1,2,3,4,5].map(n => `<a href="${SITE_URL}/api/visita/rating?visita_id=${visita.id}&valor=${n}" style="display:inline-block;background:#F5F0FF;border:2px solid #D4C9E8;color:#2D1464;padding:8px 14px;border-radius:9999px;text-decoration:none;font-weight:700;font-size:16px">${'⭐'.repeat(n)}</a>`).join('')}
+          </div>
+        </div>
+        <div style="margin-top:20px">
+          <a href="${SITE_URL}/compitas/${compita.id}" style="display:inline-block;background:#FF6B2B;color:white;padding:12px 24px;border-radius:9999px;text-decoration:none;font-weight:700;font-size:14px">
+            Agendar la próxima visita →
+          </a>
+        </div>
         <p style="color: #6B5C90; font-size: 14px; margin-top: 32px;">
           Compaz — <em>Cerca aunque estés lejos</em>
         </p>
@@ -319,7 +331,18 @@ export async function sendResumenConReporte(
         ${indicadoresHtml}
         ${reporte.novedad ? `<div style="background:#FFF3E8;border:1.5px solid #FF6B2B;border-radius:10px;padding:14px 18px;margin-bottom:16px"><p style="color:#C84B0E;font-size:13px;font-weight:700;margin:0 0 4px">Novedad reportada</p><p style="color:#1A0A3C;font-size:14px;margin:0;line-height:1.6">${escapeHtml(reporte.novedad)}</p></div>` : ''}
         ${fotosHtml}
-        <a href="https://micompaz.com/dashboard" style="display:inline-block;background:#2D1464;color:white;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:600;margin-top:16px">Ver historial completo</a>
+        <a href="${SITE_URL}/dashboard" style="display:inline-block;background:#2D1464;color:white;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:600;margin-top:16px">Ver historial completo</a>
+        <div style="margin-top:28px;padding-top:24px;border-top:1.5px solid #E8E0D4">
+          <p style="color:#4A3B6B;font-size:14px;font-weight:600;margin:0 0 12px">¿Cómo estuvo la visita de hoy?</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            ${[1,2,3,4,5].map(n => `<a href="${SITE_URL}/api/visita/rating?visita_id=${visita.id}&valor=${n}" style="display:inline-block;background:#F5F0FF;border:2px solid #D4C9E8;color:#2D1464;padding:8px 14px;border-radius:9999px;text-decoration:none;font-weight:700;font-size:16px">${'⭐'.repeat(n)}</a>`).join('')}
+          </div>
+        </div>
+        <div style="margin-top:20px">
+          <a href="${SITE_URL}/compitas/${compita.id}" style="display:inline-block;background:#FF6B2B;color:white;padding:12px 24px;border-radius:9999px;text-decoration:none;font-weight:700;font-size:14px">
+            Agendar la próxima visita →
+          </a>
+        </div>
         <p style="color:#6B5C90;font-size:13px;margin-top:32px">Compaz — <em>Cerca aunque estés lejos</em></p>
       </div>
     `,

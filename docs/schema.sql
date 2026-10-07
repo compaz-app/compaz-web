@@ -19,6 +19,8 @@ create table compitas (
   verificado        boolean not null default false,  -- Solo verificadas aparecen en el mapa
   fecha_ingreso     date,
   visitas_realizadas integer not null default 0,
+  rating_promedio   numeric(3,2),           -- Promedio de ratings 1-5 (actualizado al recibir cada rating)
+  total_ratings     integer not null default 0,
   foto_url          text,
   descripcion       text,
   servicios         text[],                 -- Ej: ['acompañamiento', 'medicamentos', 'cocina']
@@ -60,6 +62,7 @@ create table visitas (
   inicio      timestamptz,
   fin         timestamptz,
   room_url    text,                          -- URL de la sala Daily.co para videollamada
+  rating_cliente smallint check (rating_cliente between 1 and 5),  -- Calificación del cliente (1-5 estrellas)
   created_at  timestamptz not null default now()
 );
 

@@ -11,7 +11,7 @@ export default async function CompitasPage() {
   const supabase = createAdminSupabase()
   const { data: compitasRaw } = await supabase
     .from('compitas')
-    .select('id, nombre, zona, estado, verificado, foto_url, descripcion, servicios, youtube_url, visitas_realizadas, horarios_disponibles, created_at')
+    .select('id, nombre, zona, estado, verificado, foto_url, descripcion, servicios, youtube_url, visitas_realizadas, rating_promedio, total_ratings, horarios_disponibles, created_at')
     .eq('estado', 'activo')
     .eq('verificado', true)
     .not('telegram_chat_id', 'is', null)
