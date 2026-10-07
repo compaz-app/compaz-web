@@ -257,6 +257,22 @@ create index if not exists compita_edit_tokens_compita_id_idx on compita_edit_to
 alter table compita_edit_tokens enable row level security;
 
 -- ══════════════════════════════════════════════════════════════════════════════
+-- TABLA: telegram_estados
+-- Persiste el estado de conversación del bot Telegram entre cold starts.
+-- chat_id puede ser un Telegram chat_id real (numérico) o una clave sintética
+-- para idempotencia (ej. "alerta_sala_vacia:<solicitud_id>").
+-- ══════════════════════════════════════════════════════════════════════════════
+create table if not exists telegram_estados (
+  chat_id              text primary key,
+  registro_pendiente   boolean not null default false,
+  pendiente_accion     text,
+  pendiente_expira     timestamptz,
+  updated_at           timestamptz not null default now()
+);
+
+alter table telegram_estados enable row level security;
+
+-- ══════════════════════════════════════════════════════════════════════════════
 -- MIGRACIÓN: Confirmación post-llamada en solicitudes
 -- Correr en Supabase SQL Editor antes del próximo deploy
 -- ══════════════════════════════════════════════════════════════════════════════

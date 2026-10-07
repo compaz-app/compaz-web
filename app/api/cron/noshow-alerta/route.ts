@@ -20,16 +20,20 @@ export async function POST(req: NextRequest) {
   const ahoraUTC = new Date()
   const ahoraVE = new Date(ahoraUTC.getTime() - 4 * 60 * 60_000)
   const hoyVE = ahoraVE.toISOString().slice(0, 10)
-  // Hora VE formateada como HH:MM para comparar con hora_inicio_programada (tipo time)
-  // Umbral: hora actual menos 30 minutos
-  const hace30min = new Date(ahoraVE.getTime() - 30 * 60_000).toTimeString().slice(0, 5)
 
-  // Visitas programadas para hoy que debían haber empezado hace 30+ min
+  // Umbral: hace 30 min, con detección de cruce de medianoche
+  const umbralVE = new Date(ahoraVE.getTime() - 30 * 60_000)
+  const hace30min = umbralVE.toTimeString().slice(0, 5)
+  // Si el umbral cruza hacia el día anterior, buscamos en esa fecha
+  const cruzaMedianoche = umbralVE.toISOString().slice(0, 10) < hoyVE
+  const fechaBusqueda = cruzaMedianoche ? umbralVE.toISOString().slice(0, 10) : hoyVE
+
+  // Visitas programadas en la fecha correcta que debían haber empezado hace 30+ min
   const { data: visitas } = await admin
     .from('visitas')
     .select('id, compita_id, usuario_id, hora_inicio_programada, compitas(nombre, telegram_chat_id), usuarios(nombre, email)')
     .eq('estado', 'programada')
-    .eq('fecha_programada', hoyVE)
+    .eq('fecha_programada', fechaBusqueda)
     .not('hora_inicio_programada', 'is', null)
     .lte('hora_inicio_programada', hace30min)
 

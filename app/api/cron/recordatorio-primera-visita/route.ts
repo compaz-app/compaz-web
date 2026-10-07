@@ -4,6 +4,7 @@ import { sendTelegramMessage, INLINE_REAGENDAR_VISITA } from '@/lib/telegram'
 import { Resend } from 'resend'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://micompaz.com'
 
 // POST /api/cron/recordatorio-primera-visita
 // Se ejecuta diariamente. Envía recordatorio 24h antes de visitas en estado 'programada'.
@@ -100,7 +101,7 @@ export async function POST(req: NextRequest) {
               <p style="color:#4A3B6B;font-size:14px;line-height:1.6">
                 Si necesitas hacer algún cambio, entra al dashboard y comunícaselo a ${compita?.nombre ?? 'tu compita'} por el chat. También puedes reagendar desde allí si surge algún imprevisto.
               </p>
-              <a href="https://micompaz.com/dashboard" style="display:inline-block;background:#FF6B2B;color:white;padding:12px 24px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:14px;margin-top:8px">
+              <a href="${SITE_URL}/dashboard" style="display:inline-block;background:#FF6B2B;color:white;padding:12px 24px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:14px;margin-top:8px">
                 Ver en el dashboard →
               </a>
               <p style="color:#9990A8;font-size:13px;margin-top:32px">Compaz — <em>Cerca aunque estés lejos</em></p>

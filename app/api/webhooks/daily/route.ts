@@ -20,9 +20,9 @@ function formatSlotVE(iso: string): string {
 }
 
 export async function POST(req: NextRequest) {
-  // Verificar firma de Daily.co
+  // Verificar firma de Daily.co — rechazar si el secret no está configurado
   const signature = req.headers.get('x-daily-signature')
-  if (DAILY_WEBHOOK_SECRET && signature !== DAILY_WEBHOOK_SECRET) {
+  if (!DAILY_WEBHOOK_SECRET || signature !== DAILY_WEBHOOK_SECRET) {
     return NextResponse.json({ error: 'Firma inválida' }, { status: 401 })
   }
 

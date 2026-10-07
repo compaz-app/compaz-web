@@ -98,9 +98,14 @@ export default async function AdminPage({
       ultimaFinPorUsuario.set(v.usuario_id, v.fin)
     }
   }
+  const usuariosConCompitaSet = new Set((todosUsuarios ?? []).filter((u) => u.compita).map((u) => u.id))
   const clientesInactivosSet = new Set<string>()
   for (const [usuarioId, fin] of ultimaFinPorUsuario) {
-    if (!usuariosConActivaSet.has(usuarioId) && new Date(fin) < new Date(hace30dias)) {
+    if (
+      usuariosConCompitaSet.has(usuarioId) &&
+      !usuariosConActivaSet.has(usuarioId) &&
+      new Date(fin) < new Date(hace30dias)
+    ) {
       clientesInactivosSet.add(usuarioId)
     }
   }

@@ -70,13 +70,13 @@ export async function POST(req: NextRequest) {
       .update({ pendiente_accion: null, pendiente_expira: null })
       .eq('chat_id', estado.chat_id)
 
-    // Marcar solicitud como rechazada en la BD
+    // Marcar solicitud como rechazada — no sobreescribir si ya fue contratada o completada
     if (solicitudId) {
       await supabase
         .from('solicitudes')
         .update({ estado: 'rechazada' })
         .eq('id', solicitudId)
-        .eq('estado', 'pendiente') // solo si aún está pendiente
+        .not('estado', 'in', '("completada","contratada")')
     }
 
     // Buscar nombre del compita para el email

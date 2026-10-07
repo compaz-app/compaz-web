@@ -4,7 +4,8 @@ import { createHmac } from 'crypto'
 import type { Visita, Compita, Usuario, Mensaje, ReporteVisita } from '@/types'
 
 function ratingToken(visita_id: string): string {
-  const secret = process.env.CRON_SECRET ?? 'compaz-rating'
+  const secret = process.env.CRON_SECRET
+  if (!secret) return ''
   return createHmac('sha256', secret).update(visita_id).digest('hex').slice(0, 16)
 }
 

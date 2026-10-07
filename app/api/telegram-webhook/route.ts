@@ -1292,28 +1292,30 @@ export async function POST(req: NextRequest) {
               .single() as { data: { usuario: { nombre: string; email: string } | null } | null }
             const emailCliente = clienteMensaje?.usuario?.email
             if (emailCliente) {
-              const resendMsg = new Resend(process.env.RESEND_API_KEY)
-              await resendMsg.emails.send({
-                from: 'Compaz <visitas@micompaz.com>',
-                to: emailCliente,
-                subject: `${compita.nombre} te escribió en Compaz`,
-                html: `
-                  <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px">
-                    <h2 style="color:#2D1464;font-size:20px;margin-bottom:12px">💬 Nuevo mensaje de ${compita.nombre}</h2>
-                    <div style="background:#F5F0FF;border-left:4px solid #7C4DFF;border-radius:8px;padding:16px 20px;margin:16px 0;color:#1A0A3C;font-size:15px;line-height:1.6">
-                      ${text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>')}
-                    </div>
-                    <a href="${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://micompaz.com'}/dashboard" style="display:inline-block;background:#FF6B2B;color:white;padding:12px 24px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:14px;margin-top:8px">
-                      Ver en el dashboard →
-                    </a>
-                    <p style="color:#9990A8;font-size:13px;margin-top:32px">Compaz — <em>Cerca aunque estés lejos</em></p>
-                  </div>
-                `,
-              })
-              // Marcar que el email fue enviado (throttle flag)
-              await adminMsg.from('mensajes').insert({
+              // Insertar el marcador ANTES de enviar para reducir la ventana de race condition
+              const { error: throttleError } = await adminMsg.from('mensajes').insert({
                 visit_id: visitaActiva.id, origen: 'admin', tipo: 'texto', contenido: 'email_notif_mensaje',
               })
+              if (!throttleError) {
+                const resendMsg = new Resend(process.env.RESEND_API_KEY)
+                await resendMsg.emails.send({
+                  from: 'Compaz <visitas@micompaz.com>',
+                  to: emailCliente,
+                  subject: `${compita.nombre} te escribió en Compaz`,
+                  html: `
+                    <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px">
+                      <h2 style="color:#2D1464;font-size:20px;margin-bottom:12px">💬 Nuevo mensaje de ${compita.nombre}</h2>
+                      <div style="background:#F5F0FF;border-left:4px solid #7C4DFF;border-radius:8px;padding:16px 20px;margin:16px 0;color:#1A0A3C;font-size:15px;line-height:1.6">
+                        ${text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>')}
+                      </div>
+                      <a href="${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://micompaz.com'}/dashboard" style="display:inline-block;background:#FF6B2B;color:white;padding:12px 24px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:14px;margin-top:8px">
+                        Ver en el dashboard →
+                      </a>
+                      <p style="color:#9990A8;font-size:13px;margin-top:32px">Compaz — <em>Cerca aunque estés lejos</em></p>
+                    </div>
+                  `,
+                }).catch((e) => console.error('Email compita→cliente en mensaje:', e))
+              }
             }
           }
         } catch (e) { console.error('Email compita→cliente en mensaje:', e) }

@@ -294,7 +294,8 @@ export async function getSolicitudesParaSegundoSeguimiento(): Promise<Solicitud[
  */
 export async function marcarSeguimiento2Enviado(solicitudId: string): Promise<void> {
   const supabase = createAdminSupabase()
-  await supabase.from('solicitudes').update({ seguimiento2_enviado: true }).eq('id', solicitudId)
+  const { error } = await supabase.from('solicitudes').update({ seguimiento2_enviado: true }).eq('id', solicitudId)
+  if (error) throw new Error(error.message)
 }
 
 /**
@@ -350,6 +351,7 @@ export async function marcarRecordatorioEnviado(solicitudId: string): Promise<vo
 export async function getSolicitudesParaConfirmacion(): Promise<Solicitud[]> {
   const supabase = createAdminSupabase()
   const hace25min = new Date(Date.now() - 25 * 60 * 1000).toISOString()
+  const hace7d = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
 
   const { data, error } = await supabase
     .from('solicitudes')
@@ -357,6 +359,7 @@ export async function getSolicitudesParaConfirmacion(): Promise<Solicitud[]> {
     .eq('estado', 'aceptada')
     .eq('confirmacion_llamada_enviada', false)
     .lte('slot_confirmado', hace25min)
+    .gte('slot_confirmado', hace7d)
 
   if (error) throw new Error(error.message)
   return (data ?? []).map(mapRow)
