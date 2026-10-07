@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import type { Usuario } from '@/types'
 
 type Props = {
@@ -9,6 +10,7 @@ type Props = {
 }
 
 export default function PerfilFamiliar({ usuario, readonly = false }: Props) {
+  const router = useRouter()
   const [editando, setEditando] = useState(false)
   const [nombre, setNombre] = useState(usuario.familiar_nombre ?? '')
   const [edad, setEdad] = useState(String(usuario.familiar_edad ?? ''))
@@ -35,6 +37,7 @@ export default function PerfilFamiliar({ usuario, readonly = false }: Props) {
       })
       if (!res.ok) throw new Error('Error guardando')
       setEditando(false)
+      router.refresh()
     } catch {
       setError('No se pudo guardar. Intenta de nuevo.')
     } finally {

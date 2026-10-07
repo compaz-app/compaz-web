@@ -112,7 +112,9 @@ export async function GET(req: NextRequest) {
 
   const adminTg = process.env.TELEGRAM_ADMIN_CHAT_ID
 
-  // ── Email al cliente — confirmación sin link (llegará 1h antes) ───────────
+  const reagendarUrl = `${SITE_URL}/compitas?compita=${solicitud.compita_id}&reagendar=${solicitud.id}`
+
+  // ── Email al cliente — confirmación con opción de reagendar ──────────────
   if (cliente) {
     try {
       await resend.emails.send({
@@ -129,6 +131,12 @@ export async function GET(req: NextRequest) {
             <p style="color:#4A3B6B;background:#F5F0E8;border:2px solid #D4C9E8;border-radius:12px;padding:14px;font-size:14px">
               📩 Te enviaremos el link de acceso a la llamada <strong>1 hora antes</strong>.
             </p>
+            <p style="color:#6B5C90;font-size:14px;line-height:1.6;margin-top:24px">
+              ¿Surgió algo y necesitas cambiar la fecha? Puedes proponer nuevos horarios desde aquí:
+            </p>
+            <a href="${reagendarUrl}" style="display:inline-block;background:#6B5C90;color:white;padding:12px 24px;border-radius:9999px;text-decoration:none;font-weight:700;font-size:14px;margin-top:4px">
+              🔄 Reagendar llamada
+            </a>
             <p style="color:#6B5C90;font-size:13px;margin-top:24px">
               Compaz — <em>Cerca aunque estés lejos</em>
             </p>
@@ -138,7 +146,7 @@ export async function GET(req: NextRequest) {
     } catch (e) { console.error('Email cliente confirmación:', e) }
   }
 
-  // ── Telegram al compita — confirmación sin link ───────────────────────────
+  // ── Telegram al compita — confirmación con opción de reagendar ───────────
   if (solicitud.compita_id) {
     const { data: compita } = await admin
       .from('compitas')
@@ -157,7 +165,15 @@ export async function GET(req: NextRequest) {
             `<b>Fecha y hora:</b> ${slotLabel}`,
             ``,
             `📩 Te enviaremos el link de acceso <b>1 hora antes</b> de la llamada.`,
+            ``,
+            `Si surge algo y necesitas cambiar la fecha, toca el botón de abajo.`,
           ].join('\n'),
+          {
+            inline_keyboard: [[{
+              text: '🔄 Reagendar llamada',
+              url: `${SITE_URL}/api/solicitud/reagendar-compita?token=${solicitud.token_respuesta}`,
+            }]],
+          },
         )
       } catch (e) { console.error('Telegram compita confirmación:', e) }
     }

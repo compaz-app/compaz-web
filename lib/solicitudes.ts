@@ -387,6 +387,44 @@ export async function registrarConfirmacion(
 }
 
 /**
+ * Inicia reagendado desde el compita: resetea la solicitud aceptada a pendiente
+ * para que el compita pueda sugerir nuevos horarios por Telegram.
+ * Acepta solicitudes en estado 'aceptada'.
+ */
+export async function iniciarReagendadoPorCompita(
+  token: string,
+): Promise<Solicitud | null> {
+  const supabase = createAdminSupabase()
+  const { data: row } = await supabase
+    .from('solicitudes')
+    .select(SELECT_FIELDS)
+    .eq('token_respuesta', token)
+    .in('estado', ['aceptada', 'pendiente'])
+    .single()
+
+  if (!row) return null
+
+  const { data: updated } = await supabase
+    .from('solicitudes')
+    .update({
+      estado: 'rechazada',
+      slot_confirmado: null,
+      room_url: null,
+      recordatorio_enviado: false,
+      seguimiento_enviado: false,
+      seguimiento2_enviado: false,
+      confirmacion_llamada_enviada: false,
+      confirmacion_cliente: null,
+      confirmacion_compita: null,
+    })
+    .eq('token_respuesta', token)
+    .select(SELECT_FIELDS)
+    .single()
+
+  return updated ? mapRow(updated as Record<string, unknown>) : null
+}
+
+/**
  * Guarda los slots propuestos por el cliente en el reagendado.
  * Resetea el estado a 'pendiente' para reiniciar el ciclo.
  */

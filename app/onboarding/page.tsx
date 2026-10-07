@@ -113,11 +113,23 @@ function OnboardingForm() {
   const [horarioDia, setHorarioDia] = useState('')
   const [horarioInicio, setHorarioInicio] = useState('08:00')
   const [horarioFin, setHorarioFin] = useState('17:00')
+  const [horarioError, setHorarioError] = useState<string | null>(null)
 
   const ORDEN_DIAS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo']
 
+  function seSuperpone(existentes: HorarioItem[], dia: string, inicio: string, fin: string): boolean {
+    return existentes.some(
+      (h) => h.dia === dia && inicio < h.fin && fin > h.inicio
+    )
+  }
+
   function agregarHorario() {
     if (!horarioDia || horarioInicio >= horarioFin) return
+    if (seSuperpone(horarios, horarioDia, horarioInicio, horarioFin)) {
+      setHorarioError(`Ya tienes un horario para ${horarioDia} que se superpone con ${horarioInicio}–${horarioFin}. Elimínalo primero o elige otro rango.`)
+      return
+    }
+    setHorarioError(null)
     setHorarios((prev) => {
       const nuevo = [...prev, { dia: horarioDia, inicio: horarioInicio, fin: horarioFin }]
       return nuevo.sort((a, b) => {
@@ -130,10 +142,15 @@ function OnboardingForm() {
 
   function aplicarATodos() {
     if (horarioInicio >= horarioFin) return
+    const conflictos = ORDEN_DIAS.filter((dia) => seSuperpone(horarios, dia, horarioInicio, horarioFin))
+    if (conflictos.length > 0) {
+      setHorarioError(`Hay superposición en: ${conflictos.join(', ')}. Elimina esos horarios primero.`)
+      return
+    }
+    setHorarioError(null)
     setHorarios((prev) => {
-      const nuevos = ORDEN_DIAS.filter((dia) =>
-        !prev.some((h) => h.dia === dia && h.inicio === horarioInicio && h.fin === horarioFin)
-      ).map((dia) => ({ dia, inicio: horarioInicio, fin: horarioFin }))
+      const nuevos = ORDEN_DIAS.filter((dia) => !prev.some((h) => h.dia === dia))
+        .map((dia) => ({ dia, inicio: horarioInicio, fin: horarioFin }))
       const combinado = [...prev, ...nuevos]
       return combinado.sort((a, b) => {
         const di = ORDEN_DIAS.indexOf(a.dia) - ORDEN_DIAS.indexOf(b.dia)
@@ -145,6 +162,7 @@ function OnboardingForm() {
 
   function quitarHorario(idx: number) {
     setHorarios((prev) => prev.filter((_, i) => i !== idx))
+    setHorarioError(null)
   }
 
   function agregarZona() {
@@ -543,6 +561,11 @@ function OnboardingForm() {
               >
                 Aplicar este horario a todos los días
               </button>
+            )}
+            {horarioError && (
+              <p style={{ marginTop: '8px', color: '#B91C1C', fontSize: '13px', background: '#FEF2F2', border: '1px solid #FCA5A5', borderRadius: '8px', padding: '8px 12px', lineHeight: '1.5' }}>
+                ⚠️ {horarioError}
+              </p>
             )}
           </div>
 

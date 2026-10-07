@@ -1616,6 +1616,30 @@ function RegistrarCompitaDirecto({ onRegistrada }: { onRegistrada: (c: Compita) 
 
 function SolicitudesTab({ solicitudes }: { solicitudes: SolicitudAdmin[] }) {
   const [filtro, setFiltro] = useState<'todas' | 'pendiente' | 'aceptada' | 'rechazada'>('todas')
+  const [enviandoLink, setEnviandoLink] = useState<string | null>(null)
+  const [linkEnviado, setLinkEnviado] = useState<string | null>(null)
+
+  async function enviarLink(solicitudId: string) {
+    setEnviandoLink(solicitudId)
+    try {
+      const res = await fetch('/api/admin/enviar-link-llamada', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ solicitud_id: solicitudId }),
+      })
+      const d = await res.json()
+      if (res.ok) {
+        setLinkEnviado(solicitudId)
+        setTimeout(() => setLinkEnviado(null), 4000)
+      } else {
+        alert(d.error ?? 'Error enviando el link')
+      }
+    } catch {
+      alert('Error de red')
+    } finally {
+      setEnviandoLink(null)
+    }
+  }
 
   const lista = filtro === 'todas' ? solicitudes : solicitudes.filter((s) => s.estado === filtro)
 
@@ -1680,11 +1704,22 @@ function SolicitudesTab({ solicitudes }: { solicitudes: SolicitudAdmin[] }) {
                   {s.usuarios?.email} · {s.compitas?.zona ?? ''} · {new Date(s.created_at).toLocaleDateString('es-VE', { day: 'numeric', month: 'short', year: 'numeric' })}
                 </div>
               </div>
-              {s.room_url && isAceptada && (
-                <a href={s.room_url} target="_blank" rel="noreferrer"
-                  style={{ background: '#22c55e', color: 'white', borderRadius: '9999px', padding: '8px 16px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                  📹 Sala de llamada
-                </a>
+              {isAceptada && s.slot_confirmado && (
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', flexShrink: 0 }}>
+                  {s.room_url && (
+                    <a href={s.room_url} target="_blank" rel="noreferrer"
+                      style={{ background: '#22c55e', color: 'white', borderRadius: '9999px', padding: '8px 16px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+                      📹 Sala de llamada
+                    </a>
+                  )}
+                  <button
+                    onClick={() => enviarLink(s.id)}
+                    disabled={enviandoLink === s.id}
+                    style={{ background: linkEnviado === s.id ? '#15803d' : '#2D1464', color: 'white', border: 'none', borderRadius: '9999px', padding: '8px 16px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', cursor: enviandoLink === s.id ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', opacity: enviandoLink === s.id ? 0.7 : 1 }}
+                  >
+                    {linkEnviado === s.id ? '✅ Enviado' : enviandoLink === s.id ? 'Enviando…' : '📨 Enviar link'}
+                  </button>
+                </div>
               )}
             </div>
 

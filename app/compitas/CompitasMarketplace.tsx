@@ -74,22 +74,27 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
               setFormSobreCliente('')
               setReagendando(true)
               setMostrarFormulario(true)
+              // Seleccionar el compita directamente para no depender del segundo useEffect
+              const compitaSol = compitas.find((c) => c.id === sol.compita_id)
+              if (compitaSol) setSeleccionada(compitaSol)
             }
           }
         }
       })
       .catch(() => {})
-  }, [reagendarId])
+  }, [reagendarId, compitas])
 
   useEffect(() => { history.scrollRestoration = 'auto' }, [])
 
   // Abrir modal directamente si viene ?compita=<id> en la URL (ej: link desde email de rechazo)
+  // Solo cuando NO es reagendado — en ese caso el useEffect de mis-solicitudes ya setea seleccionada
   useEffect(() => {
+    if (reagendarId) return
     const id = searchParams.get('compita')
     if (!id) return
     const encontrada = compitas.find((c) => c.id === id)
     if (encontrada) setSeleccionada(encontrada)
-  }, [compitas, searchParams])
+  }, [compitas, searchParams, reagendarId])
 
   // Auto-scroll a resultados cuando se selecciona un municipio
   useEffect(() => {
