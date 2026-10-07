@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { createServerSupabase, createAdminSupabase } from '@/lib/supabase-server'
 import { ok, err, unauthorized, notFound } from '@/lib/api'
-import { sendTelegramMessage } from '@/lib/telegram'
+import { sendTelegramMessage, INLINE_REAGENDAR_VISITA } from '@/lib/telegram'
 import { Resend } from 'resend'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
@@ -57,8 +57,9 @@ export async function POST(req: NextRequest) {
           `${cliente?.nombre ?? 'El cliente'} confirmó que ya quedaron de acuerdo.`,
           fechaFormateada ? `\n📅 <b>Fecha de la visita:</b> ${fechaFormateada}` : '',
           ``,
-          `Recibirás un recordatorio el día anterior. Si necesitas reagendar, escríbele al cliente por el chat del dashboard.`,
+          `Recibirás un recordatorio el día anterior. Si surge algún imprevisto y necesitas cambiar la fecha, toca el botón de abajo.`,
         ].filter(Boolean).join('\n'),
+        INLINE_REAGENDAR_VISITA,
       )
     } catch (e) { console.error('Telegram cerrar-chat compita:', e) }
   }

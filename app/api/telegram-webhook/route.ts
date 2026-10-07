@@ -11,6 +11,7 @@ import {
   INLINE_CONFIRMAR_INICIO,
   INLINE_CONFIRMAR_FIN,
   INLINE_START,
+  INLINE_REAGENDAR_VISITA,
   QUITAR_TECLADO,
   makeInlineKeyboard,
 } from '@/lib/telegram'
@@ -661,6 +662,79 @@ export async function POST(req: NextRequest) {
       chatId,
       `🚨 <b>Alerta enviada.</b>\n\nEl equipo de Compaz fue notificado ahora mismo y te contactará de inmediato.\n\nSi hay peligro inmediato, llama al <b>911</b>.`,
       INLINE_DURANTE,
+    )
+    return NextResponse.json({ ok: true })
+  }
+
+  // ── Botón: Reagendar visita ──────────────────────────────────────────────────
+  if (isCallback && text === 'reagendar_visita') {
+    const { data: visitaAReagendar } = await supabase
+      .from('visitas')
+      .select('id, usuario_id, fecha_programada, usuario:usuarios(nombre, email)')
+      .eq('compita_id', compita.id)
+      .in('estado', ['pre_visita', 'programada'])
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle() as { data: { id: string; usuario_id: string; fecha_programada: string | null; usuario: { nombre: string; email: string } | null } | null }
+
+    if (!visitaAReagendar) {
+      await sendTelegramMessage(chatId, `No encontré ninguna visita activa para reagendar.`, INLINE_INICIO)
+      return NextResponse.json({ ok: true })
+    }
+
+    const fechaAnterior = visitaAReagendar.fecha_programada
+      ? new Date(visitaAReagendar.fecha_programada + 'T00:00:00').toLocaleDateString('es-VE', {
+          weekday: 'long', day: 'numeric', month: 'long',
+        })
+      : null
+
+    // Resetear la visita a pre_visita y limpiar la fecha
+    await supabase
+      .from('visitas')
+      .update({ estado: 'pre_visita', fecha_programada: null })
+      .eq('id', visitaAReagendar.id)
+
+    const clienteNombre = visitaAReagendar.usuario?.nombre ?? 'El cliente'
+    const clienteEmail = visitaAReagendar.usuario?.email
+
+    // Notificar al cliente por email
+    if (clienteEmail) {
+      const { Resend } = await import('resend')
+      const resend = new Resend(process.env.RESEND_API_KEY)
+      try {
+        await resend.emails.send({
+          from: 'Compaz <visitas@micompaz.com>',
+          to: clienteEmail,
+          subject: `${compita.nombre} necesita reagendar la visita`,
+          html: `
+            <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px">
+              <h2 style="color:#2D1464;font-size:22px;margin-bottom:12px">🔄 La visita necesita reagendarse</h2>
+              <p style="color:#4A3B6B;font-size:15px;line-height:1.6">
+                <strong>${compita.nombre}</strong> tuvo un imprevisto y necesita cambiar la fecha${fechaAnterior ? ` del <strong>${fechaAnterior}</strong>` : ''}.
+              </p>
+              <p style="color:#4A3B6B;font-size:14px;line-height:1.6">
+                Entra al dashboard y coordinen juntos una nueva fecha por el chat.
+              </p>
+              <a href="${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://micompaz.com'}/dashboard" style="display:inline-block;background:#FF6B2B;color:white;padding:12px 24px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:14px;margin-top:8px">
+                Ir al chat →
+              </a>
+              <p style="color:#9990A8;font-size:13px;margin-top:32px">Compaz — <em>Cerca aunque estés lejos</em></p>
+            </div>
+          `,
+        })
+      } catch (e) { console.error('Email reagendar compita→cliente:', e) }
+    }
+
+    await sendTelegramMessage(
+      chatId,
+      [
+        `🔄 <b>Visita reagendada</b>`,
+        ``,
+        `Le avisamos a <b>${clienteNombre}</b> que necesitas cambiar la fecha${fechaAnterior ? ` del ${fechaAnterior}` : ''}.`,
+        ``,
+        `Escríbele por el chat del dashboard para acordar un nuevo día. Ellos lo verán en su portal.`,
+      ].join('\n'),
+      INLINE_INICIO,
     )
     return NextResponse.json({ ok: true })
   }

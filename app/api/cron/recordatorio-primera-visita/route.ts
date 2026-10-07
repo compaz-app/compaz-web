@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminSupabase } from '@/lib/supabase-server'
-import { sendTelegramMessage } from '@/lib/telegram'
+import { sendTelegramMessage, INLINE_REAGENDAR_VISITA } from '@/lib/telegram'
 import { Resend } from 'resend'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
@@ -68,7 +68,10 @@ export async function POST(req: NextRequest) {
             `📅 <b>${fechaFormateada}</b>`,
             ``,
             `Recuerda llegar puntual, presentarte con una sonrisa y revisar las notas del familiar en tu perfil del dashboard. ¡Éxito!`,
+            ``,
+            `Si surge algún imprevisto y necesitas reagendar, toca el botón de abajo.`,
           ].join('\n'),
+          INLINE_REAGENDAR_VISITA,
         )
         ok = true
       } catch (e) { console.error('Telegram recordatorio-primera-visita compita:', e) }
