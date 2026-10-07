@@ -1098,16 +1098,17 @@ export async function POST(req: NextRequest) {
   if (isCallback && text === 'reanudar_reporte') {
     const estadoReanuda = await getEstado(supabase, chatId)
     const accionReanuda = estadoReanuda?.pendiente_accion ?? ''
-    if (!accionReanuda.startsWith('reporte:') && !accionReanuda.startsWith('reporte_novedad:')) {
+    if (!accionReanuda.startsWith('reporte:') && !accionReanuda.startsWith('reporte_r:') && !accionReanuda.startsWith('reporte_novedad:')) {
       await sendTelegramMessage(chatId, `Ya no hay un cuestionario pendiente.`, INLINE_INICIO)
       return NextResponse.json({ ok: true })
     }
-    // Extender expiración otros 30 min y re-mostrar la pregunta actual
-    await supabase.from('telegram_estados').update({ pendiente_expira: new Date(Date.now() + 30 * 60_000).toISOString() }).eq('chat_id', chatId)
-    if (accionReanuda.startsWith('reporte_novedad:')) {
+    // Extender expiración otros 30 min y restaurar prefijo reporte: (si estaba como reporte_r:)
+    const accionRestaurada = accionReanuda.replace('reporte_r:', 'reporte:')
+    await supabase.from('telegram_estados').update({ pendiente_accion: accionRestaurada, pendiente_expira: new Date(Date.now() + 30 * 60_000).toISOString() }).eq('chat_id', chatId)
+    if (accionRestaurada.startsWith('reporte_novedad:')) {
       await sendTelegramMessage(chatId, `📝 <b>¿Hay algo que quieras contarle a la familia?</b>\n\nEscríbelo aquí — puede ser una anécdota, un avance que notaste, algo que le gustó especialmente, o cualquier detalle que creas que les daría paz o alegría.`, QUITAR_TECLADO)
     } else {
-      const partes = accionReanuda.split(':')
+      const partes = accionRestaurada.split(':')
       const step = parseInt(partes[2] ?? '0', 10)
       if (step < PREGUNTAS_REPORTE.length) {
         const pregunta = PREGUNTAS_REPORTE[step]
@@ -1127,7 +1128,8 @@ export async function POST(req: NextRequest) {
   // ── Respuesta a cuestionario de bienestar (callback rr:value) ───────────────
   if (isCallback && text.startsWith('rr:')) {
     const estadoActualRR = await getEstado(supabase, chatId)
-    const accion = estadoActualRR?.pendiente_accion ?? ''
+    const accionRaw = estadoActualRR?.pendiente_accion ?? ''
+    const accion = accionRaw.replace('reporte_r:', 'reporte:') // normalizar si llegó marcado
     if (!accion.startsWith('reporte:')) {
       await sendTelegramMessage(chatId, `Ya no hay un cuestionario activo.`, INLINE_INICIO)
       return NextResponse.json({ ok: true })

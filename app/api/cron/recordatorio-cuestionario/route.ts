@@ -2,46 +2,63 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { sendTelegramMessage, makeInlineKeyboard } from '@/lib/telegram'
 
+// POST /api/cron/recordatorio-cuestionario
+// Corre cada 10 min. Envía un recordatorio al compita si lleva ~15 min sin
+// completar el cuestionario de bienestar (pendiente_expira entre 10 y 20 min
+// restantes = aproximadamente 10-20 min después de terminar la visita).
+// Usa el prefijo del pendiente_accion como idempotencia:
+//   reporte:...       → cuestionario activo, aún no fue recordado
+//   reporte_r:...     → ya se envió el recordatorio, no volver a enviar
 export async function POST(req: NextRequest) {
   const secret = req.headers.get('x-cron-secret')
   if (secret !== process.env.CRON_SECRET) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const supabase = createAdminSupabase()
+  const admin = createAdminSupabase()
   const ahora = new Date()
-  const hace24h = new Date(Date.now() - 24 * 60 * 60_000).toISOString()
 
-  // Buscar estados de Telegram con cuestionario pendiente y expirado
-  const { data: estados } = await supabase
+  // Ventana: pendiente_expira entre ahora+10min y ahora+20min
+  // = cuestionario que expira pronto pero aún no expiró
+  const en10min = new Date(ahora.getTime() + 10 * 60_000).toISOString()
+  const en20min = new Date(ahora.getTime() + 20 * 60_000).toISOString()
+
+  const { data: pendientes } = await admin
     .from('telegram_estados')
     .select('chat_id, pendiente_accion, pendiente_expira')
-    .or('pendiente_accion.like.reporte:%,pendiente_accion.like.reporte_novedad:%')
-    .lt('pendiente_expira', ahora.toISOString())
-    .gt('pendiente_expira', hace24h) // no más de 24h abandonado
-
-  if (!estados || estados.length === 0) {
-    return NextResponse.json({ ok: true, recordatorios: 0 })
-  }
+    .like('pendiente_accion', 'reporte:%') // solo los no recordados aún
+    .gt('pendiente_expira', en10min)
+    .lt('pendiente_expira', en20min)
 
   let enviados = 0
-  for (const estado of estados) {
-    // Extender el tiempo 30 minutos más para que pueda responder
-    const nuevaExpira = new Date(Date.now() + 30 * 60_000).toISOString()
-    await supabase
+
+  for (const estado of pendientes ?? []) {
+    const accion = estado.pendiente_accion as string
+
+    // Marcar como recordado cambiando el prefijo, para que la próxima
+    // corrida del cron no lo vuelva a enviar.
+    const accionMarcada = accion.replace('reporte:', 'reporte_r:')
+    await admin
       .from('telegram_estados')
-      .update({ pendiente_expira: nuevaExpira })
+      .update({ pendiente_accion: accionMarcada })
       .eq('chat_id', estado.chat_id)
 
     try {
       await sendTelegramMessage(
         estado.chat_id,
-        `📋 <b>Aún tienes el cuestionario pendiente.</b>\n\nTómate un momento para registrar cómo estuvo el familiar. La familia lo agradece mucho. 💙`,
-        makeInlineKeyboard([[{ text: '✏️ Completar ahora', callback_data: 'reanudar_reporte' }]]),
+        `⏰ <b>Cuestionario pendiente</b>\n\nTodavía no completaste el resumen de la visita. La familia espera saber cómo estuvo su familiar.\n\nTienes unos minutos antes de que expire. Toca el botón para retomarlo:`,
+        makeInlineKeyboard([[{ text: '📋 Completar ahora', callback_data: 'reanudar_reporte' }]]),
       )
       enviados++
     } catch (e) { console.error('Error recordatorio cuestionario:', e) }
   }
 
-  return NextResponse.json({ ok: true, recordatorios: enviados })
+  // También limpiar estados reporte_r: ya expirados (housekeeping)
+  await admin
+    .from('telegram_estados')
+    .update({ pendiente_accion: null, pendiente_expira: null })
+    .like('pendiente_accion', 'reporte_r:%')
+    .lt('pendiente_expira', ahora.toISOString())
+
+  return NextResponse.json({ ok: true, enviados })
 }
