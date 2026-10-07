@@ -46,9 +46,12 @@ export default function Chat({ visita, mensajesIniciales, compitaNombre }: ChatP
   const [enviando, setEnviando] = useState(false)
   const [errorEnvio, setErrorEnvio] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
+  const listRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    const el = listRef.current
+    if (!el) return
+    el.scrollTop = el.scrollHeight
   }, [mensajes])
 
   // Suscripción Realtime
@@ -116,7 +119,7 @@ export default function Chat({ visita, mensajesIniciales, compitaNombre }: ChatP
       </div>
 
       {/* Mensajes */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      <div ref={listRef} style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
         {/* Mensaje de bienvenida del sistema — siempre primero */}
         <MensajeSistema texto={MENSAJE_SISTEMA_BIENVENIDA.contenido} />
 
@@ -163,7 +166,7 @@ export default function Chat({ visita, mensajesIniciales, compitaNombre }: ChatP
             </div>
           )
         })}
-        <div ref={bottomRef} />
+        <div />
       </div>
 
       {/* Input */}
