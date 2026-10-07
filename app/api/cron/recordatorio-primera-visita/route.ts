@@ -67,9 +67,9 @@ export async function POST(req: NextRequest) {
             ``,
             `📅 <b>${fechaFormateada}</b>`,
             ``,
-            `Recuerda llegar puntual, presentarte con una sonrisa y revisar las notas del familiar en tu perfil del dashboard. ¡Éxito!`,
+            `Recuerda llegar puntual, presentarte con una sonrisa y revisar las notas del familiar. ¡Éxito!`,
             ``,
-            `Si surge algún imprevisto y necesitas reagendar, toca el botón de abajo.`,
+            `🔄 <b>Si surge algún imprevisto:</b> toca el botón <b>▶️ Iniciar visita</b> de abajo. En la pantalla de confirmación verás la opción <b>"🔄 Necesito reagendar"</b> y le avisaremos al cliente automáticamente.`,
           ].join('\n'),
           INLINE_REAGENDAR_VISITA,
         )

@@ -55,9 +55,11 @@ export async function POST(req: NextRequest) {
           `✅ <b>¡Todo coordinado!</b>`,
           ``,
           `${cliente?.nombre ?? 'El cliente'} confirmó que ya quedaron de acuerdo.`,
-          fechaFormateada ? `\n📅 <b>Fecha de la visita:</b> ${fechaFormateada}` : '',
+          fechaFormateada ? `📅 <b>Fecha de la visita:</b> ${fechaFormateada}` : '',
           ``,
-          `Recibirás un recordatorio el día anterior. Si surge algún imprevisto y necesitas cambiar la fecha, toca el botón de abajo.`,
+          `Recibirás un recordatorio el día anterior.`,
+          ``,
+          `🔄 <b>Si necesitas reagendar:</b> toca el botón <b>▶️ Iniciar visita</b> que tienes abajo. Cuando aparezca la pantalla de confirmación, verás la opción <b>"🔄 Necesito reagendar"</b> y podrás cambiar la fecha desde ahí. Le avisaremos al cliente automáticamente.`,
         ].filter(Boolean).join('\n'),
         INLINE_REAGENDAR_VISITA,
       )
