@@ -53,6 +53,17 @@ export async function POST(req: NextRequest) {
 
   if (!compita) return err('Compita no encontrada', 404)
   if (!cliente) return err('Tu cuenta no está registrada como cliente. Contacta al administrador.')
+
+  // Rate limit: máximo 5 solicitudes por usuario en las últimas 24 horas
+  const hace24h = new Date(Date.now() - 24 * 60 * 60_000).toISOString()
+  const { count: solicitudesRecientes } = await admin
+    .from('solicitudes')
+    .select('id', { count: 'exact', head: true })
+    .eq('cliente_id', user.id)
+    .gte('created_at', hace24h)
+  if ((solicitudesRecientes ?? 0) >= 5) {
+    return err('Has enviado demasiadas solicitudes hoy. Espera 24 horas antes de enviar otra.', 429)
+  }
   if ((cliente as { plan: string | null }).plan === 'bloqueado') {
     return err('Tu cuenta ha sido suspendida. Escríbenos a hola@micompaz.com para más información.', 403)
   }

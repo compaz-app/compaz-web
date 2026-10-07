@@ -28,6 +28,14 @@ export async function GET(req: NextRequest) {
   })
 }
 
+function validarYoutubeUrl(url: string | null | undefined): boolean {
+  if (!url) return true
+  try {
+    const parsed = new URL(url)
+    return ['youtube.com', 'www.youtube.com', 'youtu.be'].includes(parsed.hostname)
+  } catch { return false }
+}
+
 export async function PUT(req: NextRequest) {
   const body = await req.json() as {
     token: string
@@ -41,6 +49,10 @@ export async function PUT(req: NextRequest) {
 
   const { token, ...campos } = body
   if (!token) return unauthorized()
+
+  if (!validarYoutubeUrl(campos.youtube_url)) {
+    return err('La URL del video debe ser de YouTube (youtube.com o youtu.be)')
+  }
 
   // Consumir el token atómicamente — solo funciona una vez
   const compitaId = await consumirTokenPerfil(token)

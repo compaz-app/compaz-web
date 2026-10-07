@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
 
   // Email de bienvenida con instrucciones de Telegram
   if (email) {
-    const botUsername = process.env.TELEGRAM_BOT_USERNAME ?? 'CompazBot'
+    const botUsername = process.env.TELEGRAM_BOT_USERNAME ?? ''
     try {
       await sendBienvenidaCompita(email, nombre, botUsername)
     } catch (e) { console.error('Error enviando email bienvenida compita:', e) }

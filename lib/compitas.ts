@@ -5,8 +5,9 @@ import { createAdminSupabase } from '@/lib/supabase-server'
 import type { Compita } from '@/types'
 
 // Campos públicos seguros para mostrar a clientes
+// telegram_chat_id excluido intencionalmente — es dato personal del trabajador
 const PUBLIC_FIELDS =
-  'id, nombre, zona, estado, verificado, foto_url, descripcion, servicios, youtube_url, visitas_realizadas, horarios_disponibles, telegram_chat_id, created_at' as const
+  'id, nombre, zona, estado, verificado, foto_url, descripcion, servicios, youtube_url, visitas_realizadas, horarios_disponibles, created_at' as const
 
 /**
  * Compitas visibles en el marketplace y en el mapa.

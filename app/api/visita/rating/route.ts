@@ -4,10 +4,10 @@ import { createHmac } from 'crypto'
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://micompaz.com'
 
-export function generarTokenRating(visita_id: string): string {
+export function generarTokenRating(visita_id: string, valor: number): string {
   const secret = process.env.CRON_SECRET
   if (!secret) throw new Error('CRON_SECRET no configurado')
-  return createHmac('sha256', secret).update(visita_id).digest('hex').slice(0, 16)
+  return createHmac('sha256', secret).update(`${visita_id}:${valor}`).digest('hex').slice(0, 16)
 }
 
 function html(titulo: string, mensaje: string, redirigir = false) {
@@ -40,10 +40,10 @@ export async function GET(req: NextRequest) {
     return html('Enlace inválido', 'Este enlace no es válido o ya expiró.')
   }
 
-  // Verificar token para evitar spoofing
+  // Verificar token para evitar spoofing — firmado con visita_id:valor para evitar downgrade
   let tokenEsperado: string
   try {
-    tokenEsperado = generarTokenRating(visita_id)
+    tokenEsperado = generarTokenRating(visita_id, valor)
   } catch {
     return html('Error de configuración', 'El sistema no está configurado correctamente. Contacta al equipo Compaz.')
   }

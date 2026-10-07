@@ -3,10 +3,10 @@ import Anthropic from '@anthropic-ai/sdk'
 import { createHmac } from 'crypto'
 import type { Visita, Compita, Usuario, Mensaje, ReporteVisita } from '@/types'
 
-function ratingToken(visita_id: string): string {
+function ratingToken(visita_id: string, valor: number): string {
   const secret = process.env.CRON_SECRET
   if (!secret) return ''
-  return createHmac('sha256', secret).update(visita_id).digest('hex').slice(0, 16)
+  return createHmac('sha256', secret).update(`${visita_id}:${valor}`).digest('hex').slice(0, 16)
 }
 
 const resend = new Resend(process.env.RESEND_API_KEY)
@@ -48,7 +48,7 @@ async function generarResumenIA(
     : 'Esta es la primera visita registrada.'
 
   const prompt = `Eres el asistente de Compaz, servicio venezolano de cuidado de personas mayores.
-La compita ${compita.nombre} terminó una visita con el familiar de ${usuario.nombre}.
+La compita ${escapeHtml(compita.nombre)} terminó una visita con el familiar de ${escapeHtml(usuario.nombre)}.
 
 Indicadores de esta visita (escala 1-5, 5 = excelente, null = no aplica):
 Ánimo: ${reporte.animo ?? 'N/A'}
@@ -238,15 +238,15 @@ export async function sendVisitaInicio(
   await resend.emails.send({
     from: FROM,
     to: usuario.email,
-    subject: `${compita.nombre} llegó con tu familiar`,
+    subject: `${escapeHtml(compita.nombre)} llegó con tu familiar`,
     html: `
       <div style="font-family: Inter, sans-serif; max-width: 600px; margin: 0 auto; padding: 32px;">
         <img src="${SITE_URL}/logo.png" alt="Compaz" style="height: 40px; margin-bottom: 24px;" />
         <h2 style="color: #2D1464; font-size: 24px; margin-bottom: 16px;">
-          ${compita.nombre} comenzó la visita
+          ${escapeHtml(compita.nombre)} comenzó la visita
         </h2>
         <p style="color: #4A3B6B; font-size: 16px; line-height: 1.6;">
-          ${compita.nombre} llegó a las <strong>${hora}</strong> y la visita ya está en curso.
+          ${escapeHtml(compita.nombre)} llegó a las <strong>${hora}</strong> y la visita ya está en curso.
         </p>
         <p style="color: #4A3B6B; font-size: 16px; line-height: 1.6;">
           Puedes seguirla en tiempo real desde tu portal:
@@ -285,7 +285,7 @@ export async function sendVisitaResumen(
         minute: '2-digit',
         timeZone: 'America/Caracas',
       })
-      const quien = m.origen === 'compita' ? compita.nombre : 'Tú'
+      const quien = m.origen === 'compita' ? escapeHtml(compita.nombre) : 'Tú'
       return `<tr>
         <td style="color: #6B5C90; font-size: 13px; padding: 4px 8px; white-space: nowrap;">${hora}</td>
         <td style="color: #4A3B6B; font-size: 14px; padding: 4px 8px;"><strong>${quien}:</strong> ${escapeHtml(m.contenido ?? '')}</td>
@@ -304,7 +304,7 @@ export async function sendVisitaResumen(
   await resend.emails.send({
     from: FROM,
     to: usuario.email,
-    subject: `Resumen de la visita de hoy con ${compita.nombre}`,
+    subject: `Resumen de la visita de hoy con ${escapeHtml(compita.nombre)}`,
     html: `
       <div style="font-family: Inter, sans-serif; max-width: 600px; margin: 0 auto; padding: 32px;">
         <img src="${SITE_URL}/logo.png" alt="Compaz" style="height: 40px; margin-bottom: 24px;" />
@@ -312,7 +312,7 @@ export async function sendVisitaResumen(
           Resumen de la visita
         </h2>
         <p style="color: #6B5C90; font-size: 15px; margin-bottom: 24px;">
-          La visita de ${compita.nombre} duró <strong>${duracion}</strong>.
+          La visita de ${escapeHtml(compita.nombre)} duró <strong>${duracion}</strong>.
         </p>
         ${mensajesTexto ? `
         <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px;">
@@ -326,7 +326,7 @@ export async function sendVisitaResumen(
         <div style="margin-top:28px;padding-top:24px;border-top:1.5px solid #E8E0D4">
           <p style="color:#4A3B6B;font-size:14px;font-weight:600;margin:0 0 12px">¿Cómo estuvo la visita de hoy?</p>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
-            ${[1,2,3,4,5].map(n => `<a href="${SITE_URL}/api/visita/rating?visita_id=${visita.id}&valor=${n}&t=${ratingToken(visita.id)}" style="display:inline-block;background:#F5F0FF;border:2px solid #D4C9E8;color:#2D1464;padding:8px 14px;border-radius:9999px;text-decoration:none;font-weight:700;font-size:16px">${'⭐'.repeat(n)}</a>`).join('')}
+            ${[1,2,3,4,5].map(n => `<a href="${SITE_URL}/api/visita/rating?visita_id=${visita.id}&valor=${n}&t=${ratingToken(visita.id, n)}" style="display:inline-block;background:#F5F0FF;border:2px solid #D4C9E8;color:#2D1464;padding:8px 14px;border-radius:9999px;text-decoration:none;font-weight:700;font-size:16px">${'⭐'.repeat(n)}</a>`).join('')}
           </div>
         </div>
         <div style="margin-top:20px">
@@ -376,12 +376,12 @@ export async function sendResumenConReporte(
   await resend.emails.send({
     from: FROM,
     to: usuario.email,
-    subject: esActualizacion ? `Actualización de la visita de hoy con ${compita.nombre}` : `Resumen de la visita de hoy con ${compita.nombre}`,
+    subject: esActualizacion ? `Actualización de la visita de hoy con ${escapeHtml(compita.nombre)}` : `Resumen de la visita de hoy con ${escapeHtml(compita.nombre)}`,
     html: `
       <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px">
         <img src="${SITE_URL}/logo.png" alt="Compaz" style="height:40px;margin-bottom:24px" />
         <h2 style="color:#2D1464;font-size:24px;margin-bottom:4px">${esActualizacion ? 'Actualización de la visita' : 'Resumen de la visita'}</h2>
-        <p style="color:#6B5C90;font-size:14px;margin-bottom:20px">La visita de <strong>${compita.nombre}</strong> duró <strong>${duracion}</strong>.</p>
+        <p style="color:#6B5C90;font-size:14px;margin-bottom:20px">La visita de <strong>${escapeHtml(compita.nombre)}</strong> duró <strong>${duracion}</strong>.</p>
         ${resumenIA ? `<div style="background:#F5F0FF;border-left:4px solid #7C4DFF;border-radius:8px;padding:16px 20px;margin-bottom:20px"><p style="color:#1A0A3C;font-size:15px;line-height:1.7;margin:0">${resumenIA}</p></div>` : ''}
         <h3 style="color:#2D1464;font-size:15px;margin-bottom:4px">Indicadores de la visita</h3>
         ${indicadoresHtml}
@@ -391,7 +391,7 @@ export async function sendResumenConReporte(
         <div style="margin-top:28px;padding-top:24px;border-top:1.5px solid #E8E0D4">
           <p style="color:#4A3B6B;font-size:14px;font-weight:600;margin:0 0 12px">¿Cómo estuvo la visita de hoy?</p>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
-            ${[1,2,3,4,5].map(n => `<a href="${SITE_URL}/api/visita/rating?visita_id=${visita.id}&valor=${n}&t=${ratingToken(visita.id)}" style="display:inline-block;background:#F5F0FF;border:2px solid #D4C9E8;color:#2D1464;padding:8px 14px;border-radius:9999px;text-decoration:none;font-weight:700;font-size:16px">${'⭐'.repeat(n)}</a>`).join('')}
+            ${[1,2,3,4,5].map(n => `<a href="${SITE_URL}/api/visita/rating?visita_id=${visita.id}&valor=${n}&t=${ratingToken(visita.id, n)}" style="display:inline-block;background:#F5F0FF;border:2px solid #D4C9E8;color:#2D1464;padding:8px 14px;border-radius:9999px;text-decoration:none;font-weight:700;font-size:16px">${'⭐'.repeat(n)}</a>`).join('')}
           </div>
         </div>
         <div style="margin-top:20px">
