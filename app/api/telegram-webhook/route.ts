@@ -160,8 +160,11 @@ async function guardarReporteYEnviarEmail(
     novedad: novedad?.trim() || null,
   }
 
+  // Todas las queries usan admin para saltarse RLS (compita no tiene sesión de Auth)
+  const adminReporte = createAdminSupabase()
+
   // Obtener visita con usuario
-  const { data: visita } = await supabase
+  const { data: visita } = await adminReporte
     .from('visitas')
     .select('*, usuario:usuarios(*)')
     .eq('id', visitaId)
@@ -175,7 +178,7 @@ async function guardarReporteYEnviarEmail(
   }
 
   // Reportes anteriores del mismo cliente (vía sus visitas)
-  const { data: visitasCliente } = await supabase
+  const { data: visitasCliente } = await adminReporte
     .from('visitas')
     .select('id')
     .eq('usuario_id', visita.usuario_id)
@@ -186,7 +189,7 @@ async function guardarReporteYEnviarEmail(
   let historial: HistorialRow[] = []
   if (visitasCliente && visitasCliente.length > 0) {
     const visitaIds = visitasCliente.map((v) => v.id)
-    const { data: reportesPrevios } = await supabase
+    const { data: reportesPrevios } = await adminReporte
       .from('reportes_visita')
       .select('animo, fisico, participacion, entorno, created_at')
       .in('visita_id', visitaIds)
@@ -195,7 +198,7 @@ async function guardarReporteYEnviarEmail(
   }
 
   // Guardar reporte en BD
-  const { data: reporteGuardado, error: reporteError } = await supabase
+  const { data: reporteGuardado, error: reporteError } = await adminReporte
     .from('reportes_visita')
     .insert({ visita_id: visitaId, ...reporte })
     .select('id')
@@ -209,7 +212,7 @@ async function guardarReporteYEnviarEmail(
 
   // Enviar segundo email con indicadores de bienestar y resumen IA
   try {
-    const { data: mensajes } = await supabase
+    const { data: mensajes } = await adminReporte
       .from('mensajes').select('*').eq('visit_id', visitaId).order('created_at', { ascending: true }) as { data: import('@/types').Mensaje[] | null }
 
     const resumenIA = await sendResumenConReporte(
@@ -224,7 +227,7 @@ async function guardarReporteYEnviarEmail(
 
     // Guardar resumen IA en el reporte
     if (reporteGuardado?.id && resumenIA) {
-      await supabase.from('reportes_visita').update({ resumen_ia: resumenIA }).eq('id', reporteGuardado.id)
+      await adminReporte.from('reportes_visita').update({ resumen_ia: resumenIA }).eq('id', reporteGuardado.id)
     }
   } catch (e) { console.error('Error correo resumen con reporte:', e) }
 
@@ -985,7 +988,8 @@ export async function POST(req: NextRequest) {
 
     // ── Confirmar fin ─────────────────────────────────────────────────────────
     if (accionPendiente === 'terminar') {
-      const { data: visita } = await supabase
+      const adminTerminar = createAdminSupabase()
+      const { data: visita } = await adminTerminar
         .from('visitas')
         .select('*, usuario:usuarios(*)')
         .eq('compita_id', compita.id)
@@ -998,12 +1002,20 @@ export async function POST(req: NextRequest) {
       }
 
       const fin = new Date().toISOString()
-      await supabase.from('visitas').update({ estado: 'terminada', fin, room_url: null }).eq('id', visita.id)
-      await supabase.from('compitas').update({ visitas_realizadas: (compita.visitas_realizadas ?? 0) + 1 }).eq('id', compita.id)
+      await adminTerminar.from('visitas').update({ estado: 'terminada', fin, room_url: null }).eq('id', visita.id)
+      await adminTerminar.from('compitas').update({ visitas_realizadas: (compita.visitas_realizadas ?? 0) + 1 }).eq('id', compita.id)
+
+      // Notificar al admin
+      const adminTgTerminar = process.env.TELEGRAM_ADMIN_CHAT_ID
+      if (adminTgTerminar) {
+        const duracionMin = Math.round((new Date(fin).getTime() - new Date(visita.inicio!).getTime()) / 60000)
+        const duracion = duracionMin >= 60 ? `${Math.floor(duracionMin / 60)}h ${duracionMin % 60}min` : `${duracionMin} min`
+        sendTelegramMessage(adminTgTerminar, `✅ <b>Visita terminada</b>\n\n<b>Compita:</b> ${compita.nombre}\n<b>Cliente:</b> ${visita.usuario?.nombre ?? '—'}\n<b>Duración:</b> ${duracion}`).catch(() => {})
+      }
 
       // Enviar email básico inmediatamente (sin esperar el cuestionario)
       try {
-        const { data: mensajes } = await supabase
+        const { data: mensajes } = await adminTerminar
           .from('mensajes').select('*').eq('visit_id', visita.id).order('created_at', { ascending: true }) as { data: import('@/types').Mensaje[] | null }
         await sendVisitaResumen(visita.usuario, compita, { ...visita, fin }, mensajes ?? [])
       } catch (e) { console.error('Error correo básico al terminar:', e) }

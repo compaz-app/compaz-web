@@ -138,7 +138,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
   const ultimaVisitaPasada = visitasPasadas?.[0]
   const visitaTerminoHoy = !visitaActiva && ultimaVisitaPasada
-    ? new Date(ultimaVisitaPasada.created_at).toDateString() === new Date().toDateString()
+    ? new Date(ultimaVisitaPasada.fin ?? ultimaVisitaPasada.created_at).toDateString() === new Date().toDateString()
     : false
   const hayVisitaActivaOCercana = !!(visitaActiva || visitaPreVisita || visitaProgramada)
 
