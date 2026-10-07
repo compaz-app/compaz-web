@@ -1,6 +1,12 @@
 import { Resend } from 'resend'
 import Anthropic from '@anthropic-ai/sdk'
+import { createHmac } from 'crypto'
 import type { Visita, Compita, Usuario, Mensaje, ReporteVisita } from '@/types'
+
+function ratingToken(visita_id: string): string {
+  const secret = process.env.CRON_SECRET ?? 'compaz-rating'
+  return createHmac('sha256', secret).update(visita_id).digest('hex').slice(0, 16)
+}
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 const anthropic = process.env.ANTHROPIC_API_KEY ? new Anthropic() : null
@@ -168,6 +174,55 @@ export async function sendBienvenidaCompita(
   })
 }
 
+export async function sendBienvenidaCliente(email: string, nombre: string): Promise<void> {
+  await resend.emails.send({
+    from: FROM,
+    to: email,
+    subject: `Bienvenido a Compaz, ${nombre.split(' ')[0]}`,
+    html: `
+      <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px;background:#FDFAF6">
+        <h1 style="color:#2D1464;font-size:26px;margin-bottom:8px">¡Hola, ${nombre.split(' ')[0]}! 👋</h1>
+        <p style="color:#4A3B6B;font-size:16px;line-height:1.6;margin-bottom:24px">
+          Ya tienes acceso a tu portal de Compaz. Aquí puedes encontrar al compita ideal para acompañar a tu familiar.
+        </p>
+
+        <div style="background:white;border:2px solid #E8E0D4;border-radius:16px;padding:24px;margin-bottom:16px">
+          <p style="color:#FF6B2B;font-weight:800;font-size:13px;margin:0 0 8px;text-transform:uppercase;letter-spacing:1px">Paso 1</p>
+          <h2 style="color:#2D1464;font-size:18px;margin:0 0 10px">Explora los compitas disponibles</h2>
+          <p style="color:#4A3B6B;font-size:15px;line-height:1.6;margin:0">
+            Desde tu portal puedes ver perfiles, leer descripciones y elegir quién mejor se adapta a las necesidades de tu familiar.
+          </p>
+        </div>
+
+        <div style="background:white;border:2px solid #E8E0D4;border-radius:16px;padding:24px;margin-bottom:16px">
+          <p style="color:#FF6B2B;font-weight:800;font-size:13px;margin:0 0 8px;text-transform:uppercase;letter-spacing:1px">Paso 2</p>
+          <h2 style="color:#2D1464;font-size:18px;margin:0 0 10px">Solicita una entrevista</h2>
+          <p style="color:#4A3B6B;font-size:15px;line-height:1.6;margin:0">
+            Cuando encuentres un compita que te interese, propón tres horarios para una videollamada de 20 minutos. El compita confirmará el que mejor le funcione.
+          </p>
+        </div>
+
+        <div style="background:white;border:2px solid #E8E0D4;border-radius:16px;padding:24px;margin-bottom:24px">
+          <p style="color:#FF6B2B;font-weight:800;font-size:13px;margin:0 0 8px;text-transform:uppercase;letter-spacing:1px">Paso 3</p>
+          <h2 style="color:#2D1464;font-size:18px;margin:0 0 10px">Agenda la primera visita</h2>
+          <p style="color:#4A3B6B;font-size:15px;line-height:1.6;margin:0">
+            Después de la entrevista, coordina directamente con el compita y agenda el primer día de visita. Recibirás actualizaciones en tiempo real.
+          </p>
+        </div>
+
+        <a href="${SITE_URL}/compitas" style="display:inline-block;background:#FF6B2B;color:white;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:16px">
+          Ver compitas disponibles →
+        </a>
+
+        <p style="color:#4A3B6B;font-size:15px;line-height:1.6;margin-top:28px">
+          Cualquier duda, responde este correo o escríbenos a <a href="mailto:hola@micompaz.com" style="color:#FF6B2B">hola@micompaz.com</a>.
+        </p>
+        <p style="color:#9990A8;font-size:13px;margin-top:8px">Compaz — <em>Cerca aunque estés lejos</em></p>
+      </div>
+    `,
+  })
+}
+
 export async function sendVisitaInicio(
   usuario: Usuario,
   compita: Compita,
@@ -270,7 +325,7 @@ export async function sendVisitaResumen(
         <div style="margin-top:28px;padding-top:24px;border-top:1.5px solid #E8E0D4">
           <p style="color:#4A3B6B;font-size:14px;font-weight:600;margin:0 0 12px">¿Cómo estuvo la visita de hoy?</p>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
-            ${[1,2,3,4,5].map(n => `<a href="${SITE_URL}/api/visita/rating?visita_id=${visita.id}&valor=${n}" style="display:inline-block;background:#F5F0FF;border:2px solid #D4C9E8;color:#2D1464;padding:8px 14px;border-radius:9999px;text-decoration:none;font-weight:700;font-size:16px">${'⭐'.repeat(n)}</a>`).join('')}
+            ${[1,2,3,4,5].map(n => `<a href="${SITE_URL}/api/visita/rating?visita_id=${visita.id}&valor=${n}&t=${ratingToken(visita.id)}" style="display:inline-block;background:#F5F0FF;border:2px solid #D4C9E8;color:#2D1464;padding:8px 14px;border-radius:9999px;text-decoration:none;font-weight:700;font-size:16px">${'⭐'.repeat(n)}</a>`).join('')}
           </div>
         </div>
         <div style="margin-top:20px">
@@ -335,7 +390,7 @@ export async function sendResumenConReporte(
         <div style="margin-top:28px;padding-top:24px;border-top:1.5px solid #E8E0D4">
           <p style="color:#4A3B6B;font-size:14px;font-weight:600;margin:0 0 12px">¿Cómo estuvo la visita de hoy?</p>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
-            ${[1,2,3,4,5].map(n => `<a href="${SITE_URL}/api/visita/rating?visita_id=${visita.id}&valor=${n}" style="display:inline-block;background:#F5F0FF;border:2px solid #D4C9E8;color:#2D1464;padding:8px 14px;border-radius:9999px;text-decoration:none;font-weight:700;font-size:16px">${'⭐'.repeat(n)}</a>`).join('')}
+            ${[1,2,3,4,5].map(n => `<a href="${SITE_URL}/api/visita/rating?visita_id=${visita.id}&valor=${n}&t=${ratingToken(visita.id)}" style="display:inline-block;background:#F5F0FF;border:2px solid #D4C9E8;color:#2D1464;padding:8px 14px;border-radius:9999px;text-decoration:none;font-weight:700;font-size:16px">${'⭐'.repeat(n)}</a>`).join('')}
           </div>
         </div>
         <div style="margin-top:20px">

@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { createServerSupabase, createAdminSupabase } from '@/lib/supabase-server'
 import { isAdminEmail } from '@/lib/auth'
 import { ok, err, unauthorized, serverError } from '@/lib/api'
+import { sendBienvenidaCliente } from '@/lib/resend'
 
 export async function POST(req: NextRequest) {
   const supabase = await createServerSupabase()
@@ -23,6 +24,12 @@ export async function POST(req: NextRequest) {
   await admin
     .from('usuarios')
     .upsert({ id: data.user.id, email, nombre }, { onConflict: 'id', ignoreDuplicates: true })
+
+  try {
+    await sendBienvenidaCliente(email, nombre)
+  } catch (e) {
+    console.error('Error enviando email bienvenida cliente:', e)
+  }
 
   return ok({ email, nombre })
 }

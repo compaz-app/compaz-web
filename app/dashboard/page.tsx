@@ -82,7 +82,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const hace30dias = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
   const { data: solicitudesRaw } = await adminDb
     .from('solicitudes')
-    .select('id, compita_id, estado, slot_confirmado, room_url, created_at, slots_propuestos, compitas(nombre, foto_url, zona)')
+    .select('id, compita_id, estado, slot_confirmado, room_url, created_at, slots_propuestos, token_respuesta, compitas(nombre, foto_url, zona)')
     .eq('cliente_id', targetUid)
     .gte('created_at', hace30dias)
     .order('created_at', { ascending: false })
@@ -95,6 +95,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     room_url: string | null
     created_at: string
     slots_propuestos: string[]
+    token_respuesta: string | null
     compitas: { nombre: string; foto_url: string | null; zona: string } | null
   }
   const solicitudes = ((solicitudesRaw ?? []) as unknown[]).map((r) => r as SolicitudRow)
@@ -509,8 +510,10 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                     {solicitudesHistorial.map((sol) => {
                       const c = sol.compitas
                       const esCompletada = sol.estado === 'completada'
+                      const esRechazada = sol.estado === 'rechazada'
+                      const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://micompaz.com'
                       return (
-                        <div key={sol.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', background: 'white', border: '1.5px solid #E8E0D4', borderRadius: '12px' }}>
+                        <div key={sol.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', background: 'white', border: '1.5px solid #E8E0D4', borderRadius: '12px', flexWrap: 'wrap' }}>
                           {c?.foto_url
                             // eslint-disable-next-line @next/next/no-img-element
                             ? <img src={c.foto_url} alt={c.nombre} style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0, opacity: 0.6 }} />
@@ -519,15 +522,23 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, color: '#9B8AB8', fontSize: '13px' }}>{c?.nombre ?? '—'}</div>
                           </div>
-                          <span style={{
-                            borderRadius: '9999px', padding: '3px 10px', fontSize: '11px', fontWeight: 700,
-                            fontFamily: 'Bricolage Grotesque, sans-serif', whiteSpace: 'nowrap', flexShrink: 0,
-                            background: esCompletada ? '#DCFCE7' : '#F1F0F5',
-                            color: esCompletada ? '#166534' : '#9B8AB8',
-                            border: esCompletada ? '1.5px solid #86EFAC' : '1.5px solid #D4CAE8',
-                          }}>
-                            {esCompletada ? '✅ Contratado' : '✗ No continuó'}
-                          </span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0, flexWrap: 'wrap' }}>
+                            {esRechazada && sol.token_respuesta && !previewUid && (
+                              <a href={`${SITE}/reagendar/${sol.token_respuesta}`}
+                                style={{ fontSize: '11px', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif', color: '#FF6B2B', border: '1.5px solid #FF6B2B', borderRadius: '9999px', padding: '3px 10px', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+                                🔄 Proponer horarios
+                              </a>
+                            )}
+                            <span style={{
+                              borderRadius: '9999px', padding: '3px 10px', fontSize: '11px', fontWeight: 700,
+                              fontFamily: 'Bricolage Grotesque, sans-serif', whiteSpace: 'nowrap',
+                              background: esCompletada ? '#DCFCE7' : '#F1F0F5',
+                              color: esCompletada ? '#166534' : '#9B8AB8',
+                              border: esCompletada ? '1.5px solid #86EFAC' : '1.5px solid #D4CAE8',
+                            }}>
+                              {esCompletada ? '✅ Contratado' : '✗ No continuó'}
+                            </span>
+                          </div>
                         </div>
                       )
                     })}

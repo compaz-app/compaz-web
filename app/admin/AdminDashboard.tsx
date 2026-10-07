@@ -1538,6 +1538,7 @@ function RegistrarCompitaDirecto({ onRegistrada }: { onRegistrada: (c: Compita) 
   const [servicios, setServicios] = useState<string[]>([])
   const [fotoUrl, setFotoUrl] = useState('')
   const [youtubeUrl, setYoutubeUrl] = useState('')
+  const [emailCompita, setEmailCompita] = useState('')
   const [estado, setEstado] = useState<'idle' | 'enviando' | 'ok' | 'error'>('idle')
   const [error, setError] = useState('')
 
@@ -1551,13 +1552,13 @@ function RegistrarCompitaDirecto({ onRegistrada }: { onRegistrada: (c: Compita) 
     const res = await fetch('/api/admin/registrar-compita', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nombre, zona, descripcion, servicios, foto_url: fotoUrl || null, youtube_url: youtubeUrl || null }),
+      body: JSON.stringify({ nombre, zona, descripcion, servicios, foto_url: fotoUrl || null, youtube_url: youtubeUrl || null, email: emailCompita || null }),
     })
     const d = await res.json()
     if (res.ok && d.ok) {
       onRegistrada(d.data)
       setEstado('ok')
-      setTimeout(() => { setEstado('idle'); setAbierto(false); setNombre(''); setZona(''); setDescripcion(''); setServicios([]); setFotoUrl(''); setYoutubeUrl('') }, 2000)
+      setTimeout(() => { setEstado('idle'); setAbierto(false); setNombre(''); setZona(''); setDescripcion(''); setServicios([]); setFotoUrl(''); setYoutubeUrl(''); setEmailCompita('') }, 2000)
     } else {
       setError(d.error ?? 'Error al registrar')
       setEstado('error')
@@ -1598,6 +1599,7 @@ function RegistrarCompitaDirecto({ onRegistrada }: { onRegistrada: (c: Compita) 
               ))}
             </div>
           </div>
+          {inp(emailCompita, setEmailCompita, 'Email del compita (opcional — recibe bienvenida)')}
           {inp(fotoUrl, setFotoUrl, 'URL de foto (opcional)')}
           {inp(youtubeUrl, setYoutubeUrl, 'URL de YouTube (opcional)')}
           {estado === 'error' && <p style={{ margin: 0, color: '#B91C1C', fontSize: '13px', fontWeight: 600 }}>⚠️ {error}</p>}

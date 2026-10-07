@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
   const { data: pendientesNuevos } = await supabase
     .from('telegram_estados')
     .select('chat_id, pendiente_accion, pendiente_expira')
-    .like('pendiente_accion', 'sugerir_horarios:%')
+    .or('pendiente_accion.like.sugerir_horarios:%,pendiente_accion.like.sugerir_r:%')
     .lt('pendiente_expira', en22h) // más de 2h desde el rechazo
     .gt('pendiente_expira', ahora.toISOString()) // aún no expirado
 

@@ -76,6 +76,22 @@ export async function POST(req: NextRequest) {
     return err(msg)
   }
 
+  // Alertar al admin si el compita no tiene Telegram vinculado
+  if (!compita.telegram_chat_id) {
+    const adminTg = process.env.TELEGRAM_ADMIN_CHAT_ID
+    if (adminTg) {
+      const { sendTelegramMessage: tg } = await import('@/lib/telegram')
+      tg(adminTg, [
+        `⚠️ <b>Solicitud sin Telegram</b>`,
+        ``,
+        `El cliente <b>${cliente?.nombre ?? '—'}</b> solicitó a <b>${compita.nombre}</b>, pero esa compita no tiene Telegram vinculado.`,
+        ``,
+        `La solicitud fue creada pero la compita no fue notificada. Contáctala directamente.`,
+      ].join('\n')).catch(() => {})
+    }
+    return ok({ solicitud_id: solicitud.id, estado: solicitud.estado })
+  }
+
   // Notificar al compita por Telegram si tiene chat_id
   if (compita.telegram_chat_id) {
     const clienteNombre = cliente?.nombre ?? 'Un cliente'

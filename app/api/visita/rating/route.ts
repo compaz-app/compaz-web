@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminSupabase } from '@/lib/supabase-server'
+import { createHmac } from 'crypto'
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://micompaz.com'
+
+export function generarTokenRating(visita_id: string): string {
+  const secret = process.env.CRON_SECRET ?? 'compaz-rating'
+  return createHmac('sha256', secret).update(visita_id).digest('hex').slice(0, 16)
+}
 
 function html(titulo: string, mensaje: string, redirigir = false) {
   return new NextResponse(
@@ -22,13 +28,19 @@ function html(titulo: string, mensaje: string, redirigir = false) {
   )
 }
 
-// GET /api/visita/rating?visita_id=X&valor=N
+// GET /api/visita/rating?visita_id=X&valor=N&t=TOKEN
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const visita_id = searchParams.get('visita_id')
   const valor = parseInt(searchParams.get('valor') ?? '', 10)
+  const token = searchParams.get('t') ?? ''
 
   if (!visita_id || isNaN(valor) || valor < 1 || valor > 5) {
+    return html('Enlace inválido', 'Este enlace no es válido o ya expiró.')
+  }
+
+  // Verificar token para evitar spoofing
+  if (token !== generarTokenRating(visita_id)) {
     return html('Enlace inválido', 'Este enlace no es válido o ya expiró.')
   }
 

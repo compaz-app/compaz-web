@@ -115,7 +115,7 @@ export async function POST(req: NextRequest) {
             ``,
             `⏱️ La llamada es de <b>20 minutos</b>. La sala se cierra automáticamente a los 23 min.`,
             ``,
-            `🔓 La sala se abre <b>5 minutos antes</b> de la hora pautada. Si entras antes y ves un error, espera un momento y vuelve a intentarlo.`,
+            `🔓 La sala ya está lista. Puedes entrar cuando quieras; la reunión está programada para las <b>${slotLabel}</b>.`,
             ``,
             `<a href="${salaCompitaUrl}">Entrar a la llamada →</a>`,
           ].join('\n'),
@@ -149,6 +149,48 @@ export async function POST(req: NextRequest) {
         await marcarRecordatorioEnviado(solicitud.id)
       } catch (e) { console.error('Error marcando recordatorio:', e) }
     }
+  }
+
+  // ── Detectar llamadas sin confirmación: slot pasó hace >90 min y webhook Daily
+  // nunca se disparó (nadie entró). Alertar al admin para que intervenga.
+  const hace90min = new Date(Date.now() - 90 * 60_000).toISOString()
+  const hace4h = new Date(Date.now() - 4 * 60 * 60_000).toISOString()
+  const { data: sinConfirmacion } = await admin
+    .from('solicitudes')
+    .select('id, slot_confirmado, compita_nombre, cliente_id, usuarios(nombre, email)')
+    .eq('estado', 'aceptada')
+    .eq('confirmacion_llamada_enviada', false)
+    .not('slot_confirmado', 'is', null)
+    .lt('slot_confirmado', hace90min)
+    .gt('slot_confirmado', hace4h) as { data: Array<{ id: string; slot_confirmado: string; compita_nombre: string; usuarios: { nombre: string; email: string } | null }> | null }
+
+  for (const sol of sinConfirmacion ?? []) {
+    if (!adminTg) break
+    // Idempotencia: verificar si ya enviamos esta alerta
+    const { count } = await admin
+      .from('mensajes')
+      .select('id', { count: 'exact', head: true })
+      .eq('visit_id', sol.id)
+      .eq('origen', 'admin')
+      .eq('contenido', 'alerta_sala_vacia')
+    if ((count ?? 0) > 0) continue
+
+    try {
+      await sendTelegramMessage(
+        adminTg,
+        [
+          `⚠️ <b>Llamada sin confirmar — posible sala vacía</b>`,
+          ``,
+          `La entrevista estaba pautada para <b>${formatSlotVE(sol.slot_confirmado)}</b> y el sistema no recibió confirmación de Daily.`,
+          ``,
+          `<b>Compita:</b> ${sol.compita_nombre}`,
+          `<b>Cliente:</b> ${sol.usuarios?.nombre ?? '—'} (${sol.usuarios?.email ?? '—'})`,
+          ``,
+          `Es posible que ninguno de los dos haya entrado a la sala. Contacta a ambos.`,
+        ].join('\n'),
+      )
+      await admin.from('mensajes').insert({ visit_id: sol.id, origen: 'admin', tipo: 'texto', contenido: 'alerta_sala_vacia' })
+    } catch (e) { console.error('Error alerta sala vacía:', e) }
   }
 
   return ok({ procesados: solicitudes.length })

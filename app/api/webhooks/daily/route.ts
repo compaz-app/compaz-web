@@ -52,6 +52,7 @@ export async function POST(req: NextRequest) {
 
   const token = solicitud.token_respuesta
   const llamadaCorta = durationSeg < 180 // menos de 3 minutos = posible caída
+  const nadieLlego = durationSeg === 0   // sala terminó sin ningún participante
 
   const { data: cliente } = await admin
     .from('usuarios').select('nombre, email').eq('id', solicitud.cliente_id).single()
@@ -65,6 +66,26 @@ export async function POST(req: NextRequest) {
 
   const slotLabel = solicitud.slot_confirmado ? formatSlotVE(solicitud.slot_confirmado) : ''
   const nombreCliente = cliente?.nombre?.split(' ')[0] ?? 'Cliente'
+
+  // ── Sala vacía: nadie entró — solo alertar al admin ────────────────────────
+  if (nadieLlego) {
+    const adminTg = process.env.TELEGRAM_ADMIN_CHAT_ID
+    if (adminTg) {
+      await sendTelegramMessage(
+        adminTg,
+        [
+          `⚠️ <b>Sala de entrevista expiró sin participantes</b>`,
+          ``,
+          `<b>Cliente:</b> ${cliente?.nombre ?? '—'} (${cliente?.email ?? '—'})`,
+          `<b>Compita:</b> ${solicitud.compita_nombre}`,
+          `<b>Hora acordada:</b> ${slotLabel}`,
+          ``,
+          `Ninguno de los dos entró a la sala. Contacta a ambos para reagendar.`,
+        ].join('\n'),
+      ).catch(() => {})
+    }
+    return NextResponse.json({ ok: true })
+  }
 
   // ── Email al cliente ────────────────────────────────────────────────────────
   if (cliente?.email) {

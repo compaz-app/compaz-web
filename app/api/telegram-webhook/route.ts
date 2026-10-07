@@ -984,6 +984,13 @@ export async function POST(req: NextRequest) {
       )
 
       try { await sendVisitaInicio(usuario, compita, visita) } catch (e) { console.error('Error correo inicio:', e) }
+
+      // Notificar al admin del inicio de visita
+      const adminTgInicio = process.env.TELEGRAM_ADMIN_CHAT_ID
+      if (adminTgInicio) {
+        const horaInicio = new Date(ahora).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Caracas', hour12: true })
+        sendTelegramMessage(adminTgInicio, `▶️ <b>Visita iniciada</b>\n\n<b>Compita:</b> ${compita.nombre}\n<b>Cliente:</b> ${usuario.nombre}\n<b>Hora:</b> ${horaInicio}`).catch(() => {})
+      }
     }
 
     // ── Confirmar fin ─────────────────────────────────────────────────────────
@@ -1238,8 +1245,52 @@ export async function POST(req: NextRequest) {
       const photo = message.photo[message.photo.length - 1]
       try {
         const fileUrl = await getTelegramFileUrl(photo.file_id)
-        const adminMsg = createAdminSupabase()
-        await adminMsg.from('mensajes').insert({ visit_id: visitaActiva.id, origen: 'compita', tipo: 'foto', contenido: fileUrl })
+        const adminFoto = createAdminSupabase()
+        await adminFoto.from('mensajes').insert({ visit_id: visitaActiva.id, origen: 'compita', tipo: 'foto', contenido: fileUrl })
+
+        // Notificar al cliente por email si no recibió notificación en los últimos 10 min
+        if (visitaActiva.estado === 'programada' || visitaActiva.estado === 'en_curso') {
+          const hace10min = new Date(Date.now() - 10 * 60_000).toISOString()
+          const { count: notifReciente } = await adminFoto
+            .from('mensajes')
+            .select('id', { count: 'exact', head: true })
+            .eq('visit_id', visitaActiva.id)
+            .eq('origen', 'admin')
+            .eq('contenido', 'email_notif_mensaje')
+            .gt('created_at', hace10min)
+
+          if ((notifReciente ?? 0) === 0) {
+            const { data: clienteFoto } = await adminFoto
+              .from('visitas')
+              .select('usuario:usuarios(nombre, email)')
+              .eq('id', visitaActiva.id)
+              .single() as { data: { usuario: { nombre: string; email: string } | null } | null }
+            const emailCliente = clienteFoto?.usuario?.email
+            if (emailCliente) {
+              const resendFoto = new Resend(process.env.RESEND_API_KEY)
+              await resendFoto.emails.send({
+                from: 'Compaz <visitas@micompaz.com>',
+                to: emailCliente,
+                subject: `${compita.nombre} envió una foto`,
+                html: `
+                  <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px">
+                    <h2 style="color:#2D1464;font-size:20px;margin-bottom:12px">📷 ${compita.nombre} envió una foto</h2>
+                    <p style="color:#4A3B6B;font-size:15px;line-height:1.6;margin-bottom:20px">
+                      Puedes verla en el dashboard de la visita.
+                    </p>
+                    <a href="${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://micompaz.com'}/dashboard" style="display:inline-block;background:#FF6B2B;color:white;padding:12px 24px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:14px">
+                      Ver en el dashboard →
+                    </a>
+                    <p style="color:#9990A8;font-size:13px;margin-top:32px">Compaz — <em>Cerca aunque estés lejos</em></p>
+                  </div>
+                `,
+              }).catch(() => {})
+              await adminFoto.from('mensajes').insert({
+                visit_id: visitaActiva.id, origen: 'admin', tipo: 'texto', contenido: 'email_notif_mensaje',
+              })
+            }
+          }
+        }
       } catch (e) { console.error('Error guardando foto:', e) }
       return NextResponse.json({ ok: true })
     }
@@ -1264,34 +1315,50 @@ export async function POST(req: NextRequest) {
       const adminMsg = createAdminSupabase()
       await adminMsg.from('mensajes').insert({ visit_id: visitaActiva.id, origen: 'compita', tipo: 'texto', contenido: text })
 
-      // Email al cliente cuando el compita escribe (programada o en_curso — no tiene Realtime garantizado si dashboard cerrado)
+      // Email al cliente cuando el compita escribe — throttling: 1 email cada 10 min por visita
       if (visitaActiva.estado === 'programada' || visitaActiva.estado === 'en_curso') {
         try {
-          const { data: clienteMensaje } = await adminMsg
-            .from('visitas')
-            .select('usuario:usuarios(nombre, email)')
-            .eq('id', visitaActiva.id)
-            .single() as { data: { usuario: { nombre: string; email: string } | null } | null }
-          const emailCliente = clienteMensaje?.usuario?.email
-          if (emailCliente) {
-            const resendMsg = new Resend(process.env.RESEND_API_KEY)
-            await resendMsg.emails.send({
-              from: 'Compaz <visitas@micompaz.com>',
-              to: emailCliente,
-              subject: `${compita.nombre} te escribió en Compaz`,
-              html: `
-                <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px">
-                  <h2 style="color:#2D1464;font-size:20px;margin-bottom:12px">💬 Nuevo mensaje de ${compita.nombre}</h2>
-                  <div style="background:#F5F0FF;border-left:4px solid #7C4DFF;border-radius:8px;padding:16px 20px;margin:16px 0;color:#1A0A3C;font-size:15px;line-height:1.6">
-                    ${text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>')}
+          // Verificar si ya se envió un email de notificación en los últimos 10 min
+          const hace10min = new Date(Date.now() - 10 * 60_000).toISOString()
+          const { count: emailsRecientes } = await adminMsg
+            .from('mensajes')
+            .select('id', { count: 'exact', head: true })
+            .eq('visit_id', visitaActiva.id)
+            .eq('origen', 'admin')
+            .eq('contenido', 'email_notif_mensaje')
+            .gt('created_at', hace10min)
+
+          if ((emailsRecientes ?? 0) === 0) {
+            const { data: clienteMensaje } = await adminMsg
+              .from('visitas')
+              .select('usuario:usuarios(nombre, email)')
+              .eq('id', visitaActiva.id)
+              .single() as { data: { usuario: { nombre: string; email: string } | null } | null }
+            const emailCliente = clienteMensaje?.usuario?.email
+            if (emailCliente) {
+              const resendMsg = new Resend(process.env.RESEND_API_KEY)
+              await resendMsg.emails.send({
+                from: 'Compaz <visitas@micompaz.com>',
+                to: emailCliente,
+                subject: `${compita.nombre} te escribió en Compaz`,
+                html: `
+                  <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px">
+                    <h2 style="color:#2D1464;font-size:20px;margin-bottom:12px">💬 Nuevo mensaje de ${compita.nombre}</h2>
+                    <div style="background:#F5F0FF;border-left:4px solid #7C4DFF;border-radius:8px;padding:16px 20px;margin:16px 0;color:#1A0A3C;font-size:15px;line-height:1.6">
+                      ${text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>')}
+                    </div>
+                    <a href="${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://micompaz.com'}/dashboard" style="display:inline-block;background:#FF6B2B;color:white;padding:12px 24px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:14px;margin-top:8px">
+                      Ver en el dashboard →
+                    </a>
+                    <p style="color:#9990A8;font-size:13px;margin-top:32px">Compaz — <em>Cerca aunque estés lejos</em></p>
                   </div>
-                  <a href="${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://micompaz.com'}/dashboard" style="display:inline-block;background:#FF6B2B;color:white;padding:12px 24px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:14px;margin-top:8px">
-                    Responder en el dashboard →
-                  </a>
-                  <p style="color:#9990A8;font-size:13px;margin-top:32px">Compaz — <em>Cerca aunque estés lejos</em></p>
-                </div>
-              `,
-            })
+                `,
+              })
+              // Marcar que el email fue enviado (throttle flag)
+              await adminMsg.from('mensajes').insert({
+                visit_id: visitaActiva.id, origen: 'admin', tipo: 'texto', contenido: 'email_notif_mensaje',
+              })
+            }
           }
         } catch (e) { console.error('Email compita→cliente en mensaje:', e) }
       }
