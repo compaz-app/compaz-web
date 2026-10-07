@@ -27,6 +27,7 @@ export async function POST(req: NextRequest) {
   if (!visita) return notFound()
   if (visita.usuario_id !== user.id) return err('Sin acceso', 403)
   if (visita.estado !== 'pre_visita') return err('Solo se puede cerrar una visita en pre_visita')
+  if (!visita.fecha_programada) return err('Debes registrar la fecha antes de confirmar la coordinación')
 
   const { error } = await admin
     .from('visitas')

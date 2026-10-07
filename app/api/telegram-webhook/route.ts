@@ -575,13 +575,21 @@ export async function POST(req: NextRequest) {
       ? new Date(visitaProgramada.fecha_programada + 'T00:00:00').toLocaleDateString('es-VE', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'America/Caracas' })
       : null
 
+    // Bloquear inicio si la fecha todavía no ha sido confirmada por el cliente
+    if (!visitaProgramada.fecha_programada) {
+      await sendTelegramMessage(
+        chatId,
+        `⚠️ <b>La fecha de la visita aún no está confirmada</b>\n\n${clienteNombre} todavía no registró la fecha en el sistema. Escríbele por el chat del dashboard para coordinarla. Una vez que ella la confirme, podrás iniciar la visita desde aquí.`,
+        INLINE_INICIO,
+      )
+      return NextResponse.json({ ok: true })
+    }
+
     await setPendiente(supabase, chatId, 'iniciar')
-    // Si la visita ya está formalmente programada, ofrecer también la opción de reagendar
-    const teclado = visitaProgramada.fecha_programada ? INLINE_INICIAR_O_REAGENDAR : INLINE_CONFIRMAR_INICIO
     await sendTelegramMessage(
       chatId,
-      `¿Vas a empezar la visita con <b>${clienteNombre}</b>${fechaLabel ? ` (programada para el ${fechaLabel})` : ''}?\n\nToca <b>✅ Sí, iniciar</b> para confirmar. La familia sabrá que ya llegaste.\n\nSi surgió algún imprevisto, puedes reagendar tocando el botón de abajo.`,
-      teclado,
+      `¿Vas a empezar la visita con <b>${clienteNombre}</b> (programada para el <b>${fechaLabel}</b>)?\n\nToca <b>✅ Sí, iniciar</b> para confirmar. La familia sabrá que ya llegaste.\n\nSi surgió algún imprevisto, puedes reagendar tocando el botón de abajo.`,
+      INLINE_INICIAR_O_REAGENDAR,
     )
     return NextResponse.json({ ok: true })
   }
