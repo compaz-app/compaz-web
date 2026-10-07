@@ -53,12 +53,14 @@ export async function POST(req: NextRequest) {
     } catch (e) { console.error('Error recordatorio cuestionario:', e) }
   }
 
-  // También limpiar estados reporte_r: ya expirados (housekeeping)
-  await admin
-    .from('telegram_estados')
-    .update({ pendiente_accion: null, pendiente_expira: null })
-    .like('pendiente_accion', 'reporte_r:%')
-    .lt('pendiente_expira', ahora.toISOString())
+  // Limpiar estados expirados: reporte_r:, reporte_novedad: y reporte: ya vencidos
+  for (const prefix of ['reporte_r:%', 'reporte_novedad:%', 'reporte:%']) {
+    await admin
+      .from('telegram_estados')
+      .update({ pendiente_accion: null, pendiente_expira: null })
+      .like('pendiente_accion', prefix)
+      .lt('pendiente_expira', ahora.toISOString())
+  }
 
   return NextResponse.json({ ok: true, enviados })
 }

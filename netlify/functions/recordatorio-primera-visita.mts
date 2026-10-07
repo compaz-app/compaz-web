@@ -2,7 +2,7 @@
 import type { Config } from '@netlify/functions'
 
 export const config: Config = {
-  schedule: '0 10 * * *',
+  schedule: '0 14 * * *',
 }
 
 export default async function () {

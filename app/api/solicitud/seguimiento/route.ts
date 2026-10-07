@@ -5,9 +5,7 @@ import { createAdminSupabase } from '@/lib/supabase-server'
 import { getSolicitudPorToken } from '@/lib/solicitudes'
 import { sendTelegramMessage, makeInlineKeyboard } from '@/lib/telegram'
 import { generarTokenPerfil } from '@/lib/compita-tokens'
-import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? ''
 
 function html(titulo: string, cuerpo: string, boton?: { texto: string; href: string }) {
@@ -66,66 +64,17 @@ export async function GET(req: NextRequest) {
   const adminTg = process.env.TELEGRAM_ADMIN_CHAT_ID
 
   if (respuesta === 'si') {
-    // Actualizar atómicamente — previene doble notificación si el cliente hace clic dos veces
+    // Verificar que no haya respondido ya (idempotencia)
     const { data: claimed } = await admin
       .from('solicitudes')
-      .update({ estado: 'completada' })
+      .select('id')
       .eq('id', solicitud.id)
       .eq('estado', 'aceptada')
-      .select('id')
       .single()
     if (!claimed) return html('Ya registramos tu respuesta', 'Ya habías respondido a esta encuesta. ¡Gracias!')
 
-    // Notificar al admin por email
-    try {
-      await resend.emails.send({
-        from: 'Compaz <visitas@micompaz.com>',
-        to: 'soycompaz@gmail.com',
-        subject: `🎉 ${cliente?.nombre ?? 'Un cliente'} quiere contratar a ${solicitud.compita_nombre}`,
-        html: `
-          <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px">
-            <h2 style="color:#2D1464">¡Contratación confirmada!</h2>
-            <p style="color:#4A3B6B;font-size:16px;line-height:1.6">
-              <strong>${cliente?.nombre ?? 'Un cliente'}</strong> (${cliente?.email ?? ''}) quiere contratar a <strong>${solicitud.compita_nombre}</strong>.
-            </p>
-            <p style="color:#4A3B6B;font-size:15px">Coordina los próximos pasos con ambas partes.</p>
-          </div>
-        `,
-      })
-    } catch (e) { console.error('Email admin contratación:', e) }
-
-    // Notificar al admin por Telegram
-    if (adminTg) {
-      try {
-        await sendTelegramMessage(
-          adminTg,
-          `🎉 <b>¡Contratación!</b>\n\n<b>${cliente?.nombre ?? 'Un cliente'}</b> (${cliente?.email ?? ''}) quiere contratar a <b>${solicitud.compita_nombre}</b>.\n\nCoordina los próximos pasos.`,
-        )
-      } catch (e) { console.error('Telegram admin contratación:', e) }
-    }
-
-    // Notificar al compita por Telegram
-    const { data: compita } = await admin
-      .from('compitas').select('telegram_chat_id').eq('id', solicitud.compita_id).single()
-    if (compita?.telegram_chat_id) {
-      try {
-        await sendTelegramMessage(
-          compita.telegram_chat_id,
-          [
-            `🎉 <b>¡Buenas noticias!</b>`,
-            ``,
-            `<b>${cliente?.nombre?.split(' ')[0] ?? 'El cliente'}</b> quiere seguir adelante contigo. Estamos coordinando los últimos detalles y cuando todo esté confirmado, te avisamos aquí mismo para que puedan arrancar.`,
-            ``,
-            `¡Sigue así! 🤝`,
-          ].join('\n'),
-        )
-      } catch (e) { console.error('Telegram compita contratación:', e) }
-    }
-
-    return html(
-      '¡Perfecto, ya lo sabemos!',
-      `Gracias por confirmar. Estamos coordinando los últimos detalles con <strong>${solicitud.compita_nombre}</strong> y pronto estaremos en contacto contigo para arrancar.`,
-    )
+    // Redirigir al flujo de pago — es donde se formaliza la contratación
+    return NextResponse.redirect(`${SITE_URL}/pago?solicitud=${solicitud.id}`, { status: 302 })
   }
 
   // respuesta === 'no'

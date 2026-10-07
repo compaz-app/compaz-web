@@ -103,7 +103,7 @@ export async function sendBienvenidaCompita(
     subject: `¡Bienvenido a Compaz, ${nombre}! Así funciona todo`,
     html: `
       <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px;background:#FDFAF6">
-        <img src="https://micompaz.com/logo.png" alt="Compaz" style="height:40px;margin-bottom:24px" />
+        <img src="${SITE_URL}/logo.png" alt="Compaz" style="height:40px;margin-bottom:24px" />
 
         <h1 style="color:#2D1464;font-size:26px;margin-bottom:8px">¡Hola, ${nombre}! 👋</h1>
         <p style="color:#4A3B6B;font-size:16px;line-height:1.6;margin-bottom:24px">
@@ -159,8 +159,8 @@ export async function sendBienvenidaCompita(
           <table style="width:100%;border-collapse:collapse">
             <tr><td style="color:#FF6B2B;font-weight:700;font-size:14px;padding:4px 8px;white-space:nowrap">/menu</td><td style="color:#4A3B6B;font-size:14px;padding:4px 8px">Ver todas las opciones disponibles</td></tr>
             <tr><td style="color:#FF6B2B;font-weight:700;font-size:14px;padding:4px 8px;white-space:nowrap">/perfil</td><td style="color:#4A3B6B;font-size:14px;padding:4px 8px">Obtener tu enlace para editar tu perfil</td></tr>
-            <tr><td style="color:#FF6B2B;font-weight:700;font-size:14px;padding:4px 8px;white-space:nowrap">/visita</td><td style="color:#4A3B6B;font-size:14px;padding:4px 8px">Ver tu visita activa (si tienes una)</td></tr>
-            <tr><td style="color:#FF6B2B;font-weight:700;font-size:14px;padding:4px 8px;white-space:nowrap">/ayuda</td><td style="color:#4A3B6B;font-size:14px;padding:4px 8px">Contactar al equipo Compaz</td></tr>
+            <tr><td style="color:#FF6B2B;font-weight:700;font-size:14px;padding:4px 8px;white-space:nowrap">/menu</td><td style="color:#4A3B6B;font-size:14px;padding:4px 8px">Ver todas las opciones disponibles</td></tr>
+            <tr><td style="color:#FF6B2B;font-weight:700;font-size:14px;padding:4px 8px;white-space:nowrap">/ayuda</td><td style="color:#4A3B6B;font-size:14px;padding:4px 8px">Ver comandos y guía de uso</td></tr>
           </table>
         </div>
 
@@ -240,7 +240,7 @@ export async function sendVisitaInicio(
     subject: `${compita.nombre} llegó con tu familiar`,
     html: `
       <div style="font-family: Inter, sans-serif; max-width: 600px; margin: 0 auto; padding: 32px;">
-        <img src="https://micompaz.com/logo.png" alt="Compaz" style="height: 40px; margin-bottom: 24px;" />
+        <img src="${SITE_URL}/logo.png" alt="Compaz" style="height: 40px; margin-bottom: 24px;" />
         <h2 style="color: #2D1464; font-size: 24px; margin-bottom: 16px;">
           ${compita.nombre} comenzó la visita
         </h2>
@@ -250,7 +250,7 @@ export async function sendVisitaInicio(
         <p style="color: #4A3B6B; font-size: 16px; line-height: 1.6;">
           Puedes seguirla en tiempo real desde tu portal:
         </p>
-        <a href="https://micompaz.com/dashboard"
+        <a href="${SITE_URL}/dashboard"
            style="display: inline-block; background: #FF6B2B; color: white; padding: 14px 28px; border-radius: 9999px; text-decoration: none; font-weight: 600; margin-top: 8px;">
           Ver visita en vivo
         </a>
@@ -306,7 +306,7 @@ export async function sendVisitaResumen(
     subject: `Resumen de la visita de hoy con ${compita.nombre}`,
     html: `
       <div style="font-family: Inter, sans-serif; max-width: 600px; margin: 0 auto; padding: 32px;">
-        <img src="https://micompaz.com/logo.png" alt="Compaz" style="height: 40px; margin-bottom: 24px;" />
+        <img src="${SITE_URL}/logo.png" alt="Compaz" style="height: 40px; margin-bottom: 24px;" />
         <h2 style="color: #2D1464; font-size: 24px; margin-bottom: 8px;">
           Resumen de la visita
         </h2>
@@ -318,7 +318,7 @@ export async function sendVisitaResumen(
           ${mensajesTexto}
         </table>` : ''}
         ${fotosHtml}
-        <a href="https://micompaz.com/dashboard"
+        <a href="${SITE_URL}/dashboard"
            style="display: inline-block; background: #2D1464; color: white; padding: 14px 28px; border-radius: 9999px; text-decoration: none; font-weight: 600; margin-top: 16px;">
           Ver historial completo
         </a>
@@ -378,7 +378,7 @@ export async function sendResumenConReporte(
     subject: esActualizacion ? `Actualización de la visita de hoy con ${compita.nombre}` : `Resumen de la visita de hoy con ${compita.nombre}`,
     html: `
       <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px">
-        <img src="https://micompaz.com/logo.png" alt="Compaz" style="height:40px;margin-bottom:24px" />
+        <img src="${SITE_URL}/logo.png" alt="Compaz" style="height:40px;margin-bottom:24px" />
         <h2 style="color:#2D1464;font-size:24px;margin-bottom:4px">${esActualizacion ? 'Actualización de la visita' : 'Resumen de la visita'}</h2>
         <p style="color:#6B5C90;font-size:14px;margin-bottom:20px">La visita de <strong>${compita.nombre}</strong> duró <strong>${duracion}</strong>.</p>
         ${resumenIA ? `<div style="background:#F5F0FF;border-left:4px solid #7C4DFF;border-radius:8px;padding:16px 20px;margin-bottom:20px"><p style="color:#1A0A3C;font-size:15px;line-height:1.7;margin:0">${resumenIA}</p></div>` : ''}

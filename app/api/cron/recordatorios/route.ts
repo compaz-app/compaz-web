@@ -166,14 +166,14 @@ export async function POST(req: NextRequest) {
 
   for (const sol of sinConfirmacion ?? []) {
     if (!adminTg) break
-    // Idempotencia: verificar si ya enviamos esta alerta
-    const { count } = await admin
-      .from('mensajes')
-      .select('id', { count: 'exact', head: true })
-      .eq('visit_id', sol.id)
-      .eq('origen', 'admin')
-      .eq('contenido', 'alerta_sala_vacia')
-    if ((count ?? 0) > 0) continue
+    // Idempotencia: usar telegram_estados con clave sintética para evitar FK a visitas
+    const idempotencyKey = `alerta_sala_vacia:${sol.id}`
+    const { data: yaEnviado } = await admin
+      .from('telegram_estados')
+      .select('chat_id')
+      .eq('chat_id', idempotencyKey)
+      .maybeSingle()
+    if (yaEnviado) continue
 
     try {
       await sendTelegramMessage(
@@ -189,7 +189,8 @@ export async function POST(req: NextRequest) {
           `Es posible que ninguno de los dos haya entrado a la sala. Contacta a ambos.`,
         ].join('\n'),
       )
-      await admin.from('mensajes').insert({ visit_id: sol.id, origen: 'admin', tipo: 'texto', contenido: 'alerta_sala_vacia' })
+      // Marcar como enviado en telegram_estados (no FK a visitas)
+      await admin.from('telegram_estados').upsert({ chat_id: idempotencyKey, pendiente_accion: 'alerta_sala_vacia' })
     } catch (e) { console.error('Error alerta sala vacía:', e) }
   }
 

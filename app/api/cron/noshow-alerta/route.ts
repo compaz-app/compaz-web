@@ -21,7 +21,6 @@ export async function POST(req: NextRequest) {
   const ahoraVE = new Date(ahoraUTC.getTime() - 4 * 60 * 60_000)
   const hoyVE = ahoraVE.toISOString().slice(0, 10)
   // Hora VE formateada como HH:MM para comparar con hora_inicio_programada (tipo time)
-  const horaVE = ahoraVE.toTimeString().slice(0, 5)
   // Umbral: hora actual menos 30 minutos
   const hace30min = new Date(ahoraVE.getTime() - 30 * 60_000).toTimeString().slice(0, 5)
 

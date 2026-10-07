@@ -274,7 +274,7 @@ export async function marcarSeguimientoEnviado(solicitudId: string): Promise<voi
 export async function getSolicitudesParaSegundoSeguimiento(): Promise<Solicitud[]> {
   const supabase = createAdminSupabase()
   const hace24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-  const hace48h = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
+  const hace7d = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
 
   const { data, error } = await supabase
     .from('solicitudes')
@@ -283,7 +283,7 @@ export async function getSolicitudesParaSegundoSeguimiento(): Promise<Solicitud[
     .eq('seguimiento_enviado', true)
     .eq('seguimiento2_enviado', false)
     .lte('slot_confirmado', hace24h)
-    .gte('slot_confirmado', hace48h)
+    .gte('slot_confirmado', hace7d)
 
   if (error) throw new Error(error.message)
   return (data ?? []).map(mapRow)

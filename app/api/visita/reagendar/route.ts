@@ -5,6 +5,7 @@ import { sendTelegramMessage, INLINE_INICIO } from '@/lib/telegram'
 import { Resend } from 'resend'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://micompaz.com'
 
 const ADMIN_TG = process.env.TELEGRAM_ADMIN_CHAT_ID ?? ''
 
@@ -79,7 +80,7 @@ export async function POST(req: NextRequest) {
             <p style="color:#4A3B6B;font-size:14px;line-height:1.6">
               Entra al dashboard, escríbele por el chat y acuerden la nueva fecha.
             </p>
-            <a href="https://micompaz.com/dashboard" style="display:inline-block;background:#FF6B2B;color:white;padding:12px 24px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:14px;margin-top:8px">
+            <a href="${SITE_URL}/dashboard" style="display:inline-block;background:#FF6B2B;color:white;padding:12px 24px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:14px;margin-top:8px">
               Ir al chat →
             </a>
             <p style="color:#9990A8;font-size:13px;margin-top:32px">Compaz — <em>Cerca aunque estés lejos</em></p>
