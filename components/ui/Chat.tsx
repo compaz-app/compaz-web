@@ -45,7 +45,6 @@ export default function Chat({ visita, mensajesIniciales, compitaNombre }: ChatP
   const [texto, setTexto] = useState('')
   const [enviando, setEnviando] = useState(false)
   const [errorEnvio, setErrorEnvio] = useState('')
-  const bottomRef = useRef<HTMLDivElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {

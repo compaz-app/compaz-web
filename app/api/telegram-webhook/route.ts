@@ -1199,8 +1199,9 @@ export async function POST(req: NextRequest) {
   // ── Mensajes y fotos durante visita activa o coordinación pre-visita ──────────
   // Solo procesar si no es un callback (los callbacks no tienen contenido multimedia)
   if (!isCallback) {
-    // Buscar visita activa (en_curso, pre_visita o programada)
-    const { data: visitaActiva } = await supabase
+    // Buscar visita activa (en_curso, pre_visita o programada) — admin para saltarse RLS (compita no es usuario_id)
+    const adminVisita = createAdminSupabase()
+    const { data: visitaActiva } = await adminVisita
       .from('visitas')
       .select('id, estado')
       .eq('compita_id', compita.id)
@@ -1223,7 +1224,33 @@ export async function POST(req: NextRequest) {
       const photo = message.photo[message.photo.length - 1]
       try {
         const fileUrl = await getTelegramFileUrl(photo.file_id)
-        await supabase.from('mensajes').insert({ visit_id: visitaActiva.id, origen: 'compita', tipo: 'foto', contenido: fileUrl })
+        const adminMsg = createAdminSupabase()
+        await adminMsg.from('mensajes').insert({ visit_id: visitaActiva.id, origen: 'compita', tipo: 'foto', contenido: fileUrl })
+
+        // Notificar al cliente por email si no tiene el dashboard abierto
+        if (visitaActiva.estado === 'en_curso' || visitaActiva.estado === 'programada') {
+          const { data: visitaConCliente } = await adminMsg
+            .from('visitas').select('usuario:usuarios(nombre, email)').eq('id', visitaActiva.id).single() as { data: { usuario: { nombre: string; email: string } | null } | null }
+          const emailCliente = visitaConCliente?.usuario?.email
+          if (emailCliente) {
+            const resendFoto = new Resend(process.env.RESEND_API_KEY)
+            await resendFoto.emails.send({
+              from: 'Compaz <visitas@micompaz.com>',
+              to: emailCliente,
+              subject: `${compita.nombre} te envió una foto`,
+              html: `
+                <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px">
+                  <h2 style="color:#2D1464;font-size:20px;margin-bottom:12px">📸 Nueva foto de ${compita.nombre}</h2>
+                  <p style="color:#4A3B6B;font-size:15px;line-height:1.6">${compita.nombre} te envió una foto durante la visita. Ábrela en el dashboard.</p>
+                  <a href="${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://micompaz.com'}/dashboard" style="display:inline-block;background:#FF6B2B;color:white;padding:12px 24px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:14px;margin-top:8px">
+                    Ver foto →
+                  </a>
+                  <p style="color:#9990A8;font-size:13px;margin-top:32px">Compaz — <em>Cerca aunque estés lejos</em></p>
+                </div>
+              `,
+            }).catch((e) => console.error('Email foto compita→cliente:', e))
+          }
+        }
       } catch (e) { console.error('Error guardando foto:', e) }
       return NextResponse.json({ ok: true })
     }
@@ -1245,20 +1272,21 @@ export async function POST(req: NextRequest) {
     }
 
     if (text) {
-      await supabase.from('mensajes').insert({ visit_id: visitaActiva.id, origen: 'compita', tipo: 'texto', contenido: text })
+      const adminMsg = createAdminSupabase()
+      await adminMsg.from('mensajes').insert({ visit_id: visitaActiva.id, origen: 'compita', tipo: 'texto', contenido: text })
 
-      // Email al cliente cuando el compita escribe en estado programada (no tiene Realtime garantizado)
-      if (visitaActiva.estado === 'programada') {
+      // Email al cliente cuando el compita escribe (programada o en_curso — no tiene Realtime garantizado si dashboard cerrado)
+      if (visitaActiva.estado === 'programada' || visitaActiva.estado === 'en_curso') {
         try {
-          const { data: clienteProgramada } = await supabase
+          const { data: clienteMensaje } = await adminMsg
             .from('visitas')
             .select('usuario:usuarios(nombre, email)')
             .eq('id', visitaActiva.id)
             .single() as { data: { usuario: { nombre: string; email: string } | null } | null }
-          const emailCliente = clienteProgramada?.usuario?.email
+          const emailCliente = clienteMensaje?.usuario?.email
           if (emailCliente) {
-            const resendProgramada = new Resend(process.env.RESEND_API_KEY)
-            await resendProgramada.emails.send({
+            const resendMsg = new Resend(process.env.RESEND_API_KEY)
+            await resendMsg.emails.send({
               from: 'Compaz <visitas@micompaz.com>',
               to: emailCliente,
               subject: `${compita.nombre} te escribió en Compaz`,
@@ -1276,12 +1304,12 @@ export async function POST(req: NextRequest) {
               `,
             })
           }
-        } catch (e) { console.error('Email compita→cliente en programada:', e) }
+        } catch (e) { console.error('Email compita→cliente en mensaje:', e) }
       }
 
       // Recordatorio anti-fuga cada 5 mensajes durante pre_visita
       if (visitaActiva.estado === 'pre_visita') {
-        const { count } = await supabase
+        const { count } = await adminMsg
           .from('mensajes')
           .select('id', { count: 'exact', head: true })
           .eq('visit_id', visitaActiva.id)
