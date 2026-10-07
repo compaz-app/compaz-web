@@ -1,11 +1,14 @@
 import { NextRequest } from 'next/server'
 import { createServerSupabase, createAdminSupabase } from '@/lib/supabase-server'
 import { ok, err, unauthorized, notFound } from '@/lib/api'
-import { sendTelegramMessage } from '@/lib/telegram'
+import { sendTelegramMessage, INLINE_REAGENDAR_VISITA } from '@/lib/telegram'
 import { Resend } from 'resend'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
+// PUT /api/visita/fecha
+// Guarda la fecha acordada Y confirma la coordinación en un solo paso:
+// pre_visita → programada. Elimina el riesgo de dropout entre los dos pasos.
 export async function PUT(req: NextRequest) {
   const supabase = await createServerSupabase()
   const { data: { user } } = await supabase.auth.getUser()
@@ -31,16 +34,16 @@ export async function PUT(req: NextRequest) {
 
   if (!visita) return notFound()
   if (visita.usuario_id !== user.id) return err('Sin acceso', 403)
-  if (visita.estado !== 'pre_visita') return err('Solo se puede asignar fecha en pre_visita')
+  if (!['pre_visita', 'programada'].includes(visita.estado)) return err('Estado de visita inválido')
 
+  // Un solo update: guarda la fecha Y pasa a programada
   const { error } = await admin
     .from('visitas')
-    .update({ fecha_programada })
+    .update({ fecha_programada, estado: 'programada' })
     .eq('id', visita_id)
 
   if (error) return err(error.message)
 
-  // Notificar al compita y al cliente
   const fechaFormateada = new Date(fecha_programada + 'T00:00:00').toLocaleDateString('es-VE', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
   })
@@ -54,9 +57,18 @@ export async function PUT(req: NextRequest) {
     try {
       await sendTelegramMessage(
         compita.telegram_chat_id,
-        `📅 <b>Fecha acordada</b>\n\n${cliente?.nombre ?? 'El cliente'} registró la fecha de la primera visita: <b>${fechaFormateada}</b>.\n\nSi hay algún cambio, avísale por el chat del dashboard.`,
+        [
+          `✅ <b>¡Visita confirmada!</b>`,
+          ``,
+          `${cliente?.nombre ?? 'El cliente'} fijó la fecha de la primera visita:`,
+          ``,
+          `📅 <b>${fechaFormateada}</b>`,
+          ``,
+          `Recibirás un recordatorio el día anterior. Si necesitas reagendar, toca el botón <b>▶️ Iniciar visita</b> — en la pantalla de confirmación verás la opción <b>"🔄 Necesito reagendar"</b>.`,
+        ].join('\n'),
+        INLINE_REAGENDAR_VISITA,
       )
-    } catch (e) { console.error('Telegram fecha visita compita:', e) }
+    } catch (e) { console.error('Telegram fecha/confirmar compita:', e) }
   }
 
   if (cliente?.email) {
@@ -64,28 +76,29 @@ export async function PUT(req: NextRequest) {
       await resend.emails.send({
         from: 'Compaz <visitas@micompaz.com>',
         to: cliente.email,
-        subject: `Fecha de visita registrada: ${fechaFormateada}`,
+        subject: `✅ Visita confirmada: ${fechaFormateada}`,
         html: `
           <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px">
-            <h2 style="color:#2D1464;font-size:22px;margin-bottom:12px">📅 Fecha registrada</h2>
+            <h2 style="color:#2D1464;font-size:22px;margin-bottom:12px">✅ Visita confirmada</h2>
             <p style="color:#4A3B6B;font-size:15px;line-height:1.6">
-              Registraste la fecha de la primera visita con <strong>${compita?.nombre ?? 'tu compita'}</strong>:
+              La primera visita de <strong>${compita?.nombre ?? 'tu compita'}</strong> con tu familiar está agendada.
             </p>
-            <div style="background:#F0FDF4;border:2px solid #86EFAC;border-radius:12px;padding:16px 20px;margin:16px 0;text-align:center">
-              <p style="color:#15803d;font-size:18px;font-weight:700;margin:0;text-transform:capitalize">${fechaFormateada}</p>
+            <div style="background:#F5F0FF;border:2px solid #7C4DFF;border-radius:12px;padding:16px 20px;margin:20px 0;text-align:center">
+              <p style="color:#6B5C90;font-size:13px;margin:0 0 4px">Fecha de la visita</p>
+              <p style="color:#2D1464;font-size:18px;font-weight:800;margin:0;text-transform:capitalize">${fechaFormateada}</p>
             </div>
             <p style="color:#4A3B6B;font-size:14px;line-height:1.6">
-              Cuando termines de coordinar todos los detalles con ${compita?.nombre ?? 'tu compita'} en el chat, confirma la coordinación desde tu dashboard para que activemos el seguimiento.
+              Te enviaremos un recordatorio el día anterior. Si necesitas cambiar la fecha puedes reagendar desde tu dashboard.
             </p>
-            <a href="https://micompaz.com/dashboard" style="display:inline-block;background:#FF6B2B;color:white;padding:12px 24px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:14px;margin-top:8px">
-              Ir al dashboard →
+            <a href="${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://micompaz.com'}/dashboard" style="display:inline-block;background:#FF6B2B;color:white;padding:12px 24px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:14px;margin-top:8px">
+              Ver en el dashboard →
             </a>
             <p style="color:#9990A8;font-size:13px;margin-top:32px">Compaz — <em>Cerca aunque estés lejos</em></p>
           </div>
         `,
       })
-    } catch (e) { console.error('Email fecha visita cliente:', e) }
+    } catch (e) { console.error('Email confirmar visita cliente:', e) }
   }
 
-  return ok({ fecha_programada })
+  return ok({ fecha_programada, estado: 'programada' })
 }

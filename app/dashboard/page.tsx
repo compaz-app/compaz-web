@@ -284,9 +284,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             </div>
             {!previewUid && (
               <PreVisitaActions
-                visitaId={visitaPreVisita.id}
                 compitaNombre={visitaPreVisita.compita.nombre}
-                fechaActual={visitaPreVisita.fecha_programada ?? null}
+                tieneFecha={!!visitaPreVisita.fecha_programada}
               />
             )}
           </section>

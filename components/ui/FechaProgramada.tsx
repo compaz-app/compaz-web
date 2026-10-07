@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 
 interface Props {
   visitaId: string
@@ -13,17 +14,26 @@ export default function FechaProgramada({ visitaId, fechaActual, compitaNombre }
   const [fecha, setFecha] = useState(fechaActual ?? '')
   const [guardando, setGuardando] = useState(false)
   const [guardada, setGuardada] = useState(!!fechaActual)
+  const [errorGuardar, setErrorGuardar] = useState('')
+  const router = useRouter()
 
   async function guardar() {
     if (!fecha || fecha < hoy) return
     setGuardando(true)
+    setErrorGuardar('')
     try {
       const res = await fetch('/api/visita/fecha', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ visita_id: visitaId, fecha_programada: fecha }),
       })
-      if (res.ok) setGuardada(true)
+      if (res.ok) {
+        setGuardada(true)
+        router.refresh() // pre_visita → programada: el dashboard actualiza la sección
+      } else {
+        const data = await res.json().catch(() => ({}))
+        setErrorGuardar(data.error ?? 'No se pudo guardar la fecha.')
+      }
     } finally {
       setGuardando(false)
     }
@@ -40,6 +50,9 @@ export default function FechaProgramada({ visitaId, fechaActual, compitaNombre }
       <p style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, color: '#15803d', fontSize: '14px', margin: '0 0 8px' }}>
         📅 ¿Acordaron una fecha con {compitaNombre}?
       </p>
+      {errorGuardar && (
+        <p style={{ color: '#E05520', fontSize: '13px', margin: '0 0 8px', fontFamily: 'Inter, sans-serif' }}>{errorGuardar}</p>
+      )}
       {guardada && fecha ? (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
           <span style={{ color: '#166534', fontSize: '14px', fontWeight: 600, textTransform: 'capitalize' }}>
@@ -71,7 +84,7 @@ export default function FechaProgramada({ visitaId, fechaActual, compitaNombre }
               cursor: (!fecha || fecha < hoy || guardando) ? 'not-allowed' : 'pointer',
             }}
           >
-            {guardando ? 'Guardando…' : 'Confirmar'}
+            {guardando ? 'Confirmando…' : '✓ Confirmar visita'}
           </button>
         </div>
       )}
