@@ -57,11 +57,16 @@ export default function SalaEntrevista({ token, quien, roomUrl, compitaNombre, c
         window.location.href = `/api/solicitud/resultado-llamada?token=${token}&resultado=reagendar&quien=cliente`
         return
       }
-      if (r === 'no_contratar') {
-        window.location.href = `/api/solicitud/resultado-llamada?token=${token}&resultado=no_contratar&quien=cliente`
+      // contratar y no_contratar redirigen vía el servidor (303)
+      if (r === 'contratar' || r === 'no_contratar') {
+        window.location.href = `/api/solicitud/resultado-llamada?token=${token}&resultado=${r}&quien=cliente`
         return
       }
-      await fetch(`/api/solicitud/resultado-llamada?token=${token}&resultado=${r}&quien=${quien}`)
+      const res = await fetch(`/api/solicitud/resultado-llamada?token=${token}&resultado=${r}&quien=${quien}`)
+      if (!res.ok) {
+        alert('No pudimos registrar tu decisión. Intenta de nuevo o escríbenos a hola@micompaz.com.')
+        return
+      }
       setPaso('resultado')
     } catch (e) {
       console.error(e)

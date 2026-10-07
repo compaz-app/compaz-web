@@ -54,7 +54,9 @@ create table visitas (
   usuario_id  uuid not null references usuarios(id),
   estado      text not null default 'programada'
               check (estado in ('pre_visita', 'programada', 'en_curso', 'terminada')),
-  fecha_programada  date,                          -- Día agendado para la visita de cuidado
+  fecha_programada        date,        -- Día agendado para la visita de cuidado
+  hora_inicio_programada  time,        -- Hora de inicio acordada (Venezuela UTC-4)
+  hora_fin_programada     time,        -- Hora de fin acordada (Venezuela UTC-4)
   inicio      timestamptz,
   fin         timestamptz,
   room_url    text,                          -- URL de la sala Daily.co para videollamada

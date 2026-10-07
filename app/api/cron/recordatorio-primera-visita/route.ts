@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
   const { data: visitas } = await admin
     .from('visitas')
     .select(`
-      id, compita_id, usuario_id, fecha_programada,
+      id, compita_id, usuario_id, fecha_programada, hora_inicio_programada, hora_fin_programada,
       compitas(telegram_chat_id, nombre),
       usuarios(nombre, email)
     `)
@@ -53,6 +53,9 @@ export async function POST(req: NextRequest) {
     const fechaFormateada = new Date(visita.fecha_programada! + 'T00:00:00').toLocaleDateString('es-VE', {
       weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
     })
+    const horarioLabel = visita.hora_inicio_programada && visita.hora_fin_programada
+      ? `${visita.hora_inicio_programada} – ${visita.hora_fin_programada}`
+      : null
 
     let ok = false
 
@@ -66,11 +69,12 @@ export async function POST(req: NextRequest) {
             `Mañana es tu primera visita con <b>${cliente?.nombre ?? 'el cliente'}</b>.`,
             ``,
             `📅 <b>${fechaFormateada}</b>`,
+            horarioLabel ? `🕐 <b>${horarioLabel}</b>` : '',
             ``,
             `Recuerda llegar puntual, presentarte con una sonrisa y revisar las notas del familiar. ¡Éxito!`,
             ``,
             `🔄 <b>Si surge algún imprevisto:</b> toca el botón <b>▶️ Iniciar visita</b> de abajo. En la pantalla de confirmación verás la opción <b>"🔄 Necesito reagendar"</b> y le avisaremos al cliente automáticamente.`,
-          ].join('\n'),
+          ].filter(Boolean).join('\n'),
           INLINE_REAGENDAR_VISITA,
         )
         ok = true
@@ -90,7 +94,8 @@ export async function POST(req: NextRequest) {
                 Mañana es la primera visita de <strong>${compita?.nombre ?? 'tu compita'}</strong> con tu familiar.
               </p>
               <div style="background:#F5F0FF;border:2px solid #7C4DFF;border-radius:12px;padding:16px 20px;margin:16px 0;text-align:center">
-                <p style="color:#2D1464;font-size:18px;font-weight:800;margin:0;text-transform:capitalize">${fechaFormateada}</p>
+                <p style="color:#2D1464;font-size:18px;font-weight:800;margin:0 0 4px;text-transform:capitalize">${fechaFormateada}</p>
+                ${horarioLabel ? `<p style="color:#2D1464;font-size:16px;font-weight:700;margin:0">🕐 ${horarioLabel}</p>` : ''}
               </div>
               <p style="color:#4A3B6B;font-size:14px;line-height:1.6">
                 Si necesitas hacer algún cambio, entra al dashboard y comunícaselo a ${compita?.nombre ?? 'tu compita'} por el chat. También puedes reagendar desde allí si surge algún imprevisto.

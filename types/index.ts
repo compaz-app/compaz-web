@@ -64,6 +64,8 @@ export interface Visita {
   usuario_id: string
   estado: VisitaEstado
   fecha_programada: string | null
+  hora_inicio_programada: string | null  // 'HH:MM'
+  hora_fin_programada: string | null     // 'HH:MM'
   inicio: string | null
   fin: string | null
   room_url: string | null

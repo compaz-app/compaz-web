@@ -55,8 +55,12 @@ export async function GET(req: NextRequest) {
   const { data: compita } = await admin
     .from('compitas').select('telegram_chat_id, nombre').eq('id', solicitud.compita_id).single()
 
-  // ── Compita reporta que estuvo bien — avisar que esperamos decisión del cliente ──
+  // ── Compita reporta que estuvo bien — marcar completada y avisar ──
   if (quien === 'compita' && resultado === 'bien') {
+    await admin.from('solicitudes')
+      .update({ estado: 'completada' })
+      .eq('id', solicitud.id)
+      .in('estado', ['aceptada', 'completada'])
     if (compita?.telegram_chat_id) {
       try {
         await sendTelegramMessage(
@@ -118,40 +122,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(`${origin}/compitas?compita=${solicitud.compita_id}&reagendar=${solicitud.id}`, 303)
   }
 
-  // ── Cliente contrata ──────────────────────────────────────────────────────
+  // ── Cliente contrata → llevar al paywall, el pago dispara el resto del flujo ──
   if (resultado === 'contratar') {
-    const { error: errUpdate } = await admin.from('solicitudes')
-      .update({ estado: 'contratada', confirmacion_cliente: true, confirmacion_compita: true })
-      .eq('id', solicitud.id)
-    if (errUpdate) {
-      console.error('Error guardando contratación:', errUpdate)
-      return html('Error al guardar', 'No pudimos registrar tu decisión. Por favor escríbenos a hola@micompaz.com.')
-    }
-
-    // Notificar al compita
-    if (compita?.telegram_chat_id) {
-      try {
-        await sendTelegramMessage(
-          compita.telegram_chat_id,
-          `🎉 <b>¡Felicitaciones!</b>\n\n<b>${cliente?.nombre ?? 'La familia'}</b> decidió contratarte.\n\nEl equipo de Compaz se pondrá en contacto para coordinar los próximos pasos.`,
-        )
-      } catch (e) { console.error('Telegram contratada compita:', e) }
-    }
-
-    // Notificar al admin
-    if (adminTg) {
-      try {
-        await sendTelegramMessage(
-          adminTg,
-          `🎉 <b>¡Contratación!</b>\n\n<b>Cliente:</b> ${cliente?.nombre ?? ''} (${cliente?.email ?? ''})\n<b>Compita:</b> ${solicitud.compita_nombre}\n\nEl cliente confirmó que quiere contratar.`,
-        )
-      } catch (e) { console.error('Telegram admin contratada:', e) }
-    }
-
-    return html(
-      '¡Genial!',
-      `El equipo de Compaz se pondrá en contacto contigo pronto para coordinar los detalles con <strong>${solicitud.compita_nombre}</strong>.`,
-    )
+    return NextResponse.redirect(`${origin}/pago?solicitud=${solicitud.id}`, 303)
   }
 
   // ── Cliente no contrata ───────────────────────────────────────────────────

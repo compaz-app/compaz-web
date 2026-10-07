@@ -554,12 +554,12 @@ export async function POST(req: NextRequest) {
     // Buscar visita programada (fecha acordada y registrada en el sistema)
     const { data: visitaProgramada } = await supabase
       .from('visitas')
-      .select('id, usuario_id, fecha_programada, usuario:usuarios(nombre)')
+      .select('id, usuario_id, fecha_programada, hora_inicio_programada, hora_fin_programada, usuario:usuarios(nombre)')
       .eq('compita_id', compita.id)
       .in('estado', ['programada', 'pre_visita'])
       .order('created_at', { ascending: false })
       .limit(1)
-      .maybeSingle() as { data: { id: string; usuario_id: string; fecha_programada: string | null; usuario: { nombre: string } | null } | null }
+      .maybeSingle() as { data: { id: string; usuario_id: string; fecha_programada: string | null; hora_inicio_programada: string | null; hora_fin_programada: string | null; usuario: { nombre: string } | null } | null }
 
     if (!visitaProgramada) {
       await sendTelegramMessage(
@@ -573,6 +573,9 @@ export async function POST(req: NextRequest) {
     const clienteNombre = visitaProgramada.usuario?.nombre ?? 'tu cliente'
     const fechaLabel = visitaProgramada.fecha_programada
       ? new Date(visitaProgramada.fecha_programada + 'T00:00:00').toLocaleDateString('es-VE', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'America/Caracas' })
+      : null
+    const horarioLabel = visitaProgramada.hora_inicio_programada && visitaProgramada.hora_fin_programada
+      ? `${visitaProgramada.hora_inicio_programada} – ${visitaProgramada.hora_fin_programada}`
       : null
 
     // Bloquear inicio si la fecha todavía no ha sido confirmada por el cliente
@@ -588,7 +591,16 @@ export async function POST(req: NextRequest) {
     await setPendiente(supabase, chatId, 'iniciar')
     await sendTelegramMessage(
       chatId,
-      `¿Vas a empezar la visita con <b>${clienteNombre}</b> (programada para el <b>${fechaLabel}</b>)?\n\nToca <b>✅ Sí, iniciar</b> para confirmar. La familia sabrá que ya llegaste.\n\nSi surgió algún imprevisto, puedes reagendar tocando el botón de abajo.`,
+      [
+        `¿Vas a empezar la visita con <b>${clienteNombre}</b>?`,
+        ``,
+        fechaLabel ? `📅 <b>${fechaLabel}</b>` : '',
+        horarioLabel ? `🕐 <b>${horarioLabel}</b>` : '',
+        ``,
+        `Toca <b>✅ Sí, iniciar</b> para confirmar. La familia sabrá que ya llegaste.`,
+        ``,
+        `Si surgió algún imprevisto, puedes reagendar tocando el botón de abajo.`,
+      ].filter(Boolean).join('\n'),
       INLINE_INICIAR_O_REAGENDAR,
     )
     return NextResponse.json({ ok: true })

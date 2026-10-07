@@ -265,6 +265,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                 <FechaProgramada
                   visitaId={visitaPreVisita.id}
                   fechaActual={visitaPreVisita.fecha_programada ?? null}
+                  horaInicioActual={visitaPreVisita.hora_inicio_programada ?? null}
+                  horaFinActual={visitaPreVisita.hora_fin_programada ?? null}
                   compitaNombre={visitaPreVisita.compita.nombre}
                 />
               )}
@@ -310,6 +312,11 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                 <p style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '22px', color: '#2D1464', margin: '0 0 6px' }}>
                   🗓️ {fechaFormateada ? `Tu visita es el ${fechaFormateada}` : 'Visita próximamente'}
                 </p>
+                {visitaProgramada.hora_inicio_programada && visitaProgramada.hora_fin_programada && (
+                  <p style={{ color: '#2D1464', fontSize: '17px', fontWeight: 700, margin: '0 0 6px' }}>
+                    🕐 {visitaProgramada.hora_inicio_programada} – {visitaProgramada.hora_fin_programada}
+                  </p>
+                )}
                 <p style={{ color: '#6B5C90', fontSize: '15px', margin: 0 }}>
                   {visitaProgramada.compita.nombre} visitará a tu familiar ese día.
                 </p>

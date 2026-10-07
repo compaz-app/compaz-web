@@ -23,8 +23,8 @@ const PLANES = [
     badge: null,
     precio: 75,
     unidad: 'por mes',
-    descripcion: '2 visitas al mes, siempre con el mismo compita. Una rutina estable para tu familiar.',
-    detalles: ['2 visitas al mes', '2 horas cada visita', 'Siempre el mismo compita', 'Agenda fija quincenal'],
+    descripcion: '2 visitas al mes con una rutina estable para tu familiar.',
+    detalles: ['2 visitas al mes', '2 horas cada visita', 'Agenda fija quincenal'],
     precioBase: 90,
     ahorro: 15,
     stripe_price_id: null, // TODO: 'price_xxxx'
@@ -36,7 +36,7 @@ const PLANES = [
     precio: 140,
     unidad: 'por mes',
     descripcion: 'Una visita por semana. Presencia constante, vínculo real con tu familiar.',
-    detalles: ['4 visitas al mes', '2 horas cada visita', 'Siempre el mismo compita', 'Agenda fija semanal'],
+    detalles: ['4 visitas al mes', '2 horas cada visita', 'Agenda fija semanal'],
     precioBase: 180,
     ahorro: 40,
     stripe_price_id: null, // TODO: 'price_xxxx'
@@ -97,6 +97,8 @@ function PagoContent() {
     if (!data.ok) {
       setError(data.error ?? 'Ocurrió un error. Intenta de nuevo.')
       setProcesando(false)
+    } else {
+      window.location.href = '/dashboard?contratado=1'
     }
   }
 
