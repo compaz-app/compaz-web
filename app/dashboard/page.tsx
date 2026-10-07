@@ -12,6 +12,7 @@ import FechaProgramada from '@/components/ui/FechaProgramada'
 import PreVisitaActions from '@/components/ui/PreVisitaActions'
 import ChatColapsable from '@/components/ui/ChatColapsable'
 import ReagendarButton from '@/components/ui/ReagendarButton'
+import LimpiarParamContratado from '@/components/ui/LimpiarParamContratado'
 import type { Visita, Compita, Mensaje, Usuario, ReporteVisita } from '@/types'
 
 export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ preview?: string; contratado?: string }> }) {
@@ -205,17 +206,20 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
         {/* Banner post-pago */}
         {recienContratado && visitaPreVisita && (
-          <div style={{ background: '#F0FDF4', border: '2px solid #22c55e', borderRadius: '16px', padding: '20px 24px', marginBottom: '28px', display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
-            <span style={{ fontSize: '28px', flexShrink: 0 }}>🎉</span>
-            <div>
-              <p style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '17px', color: '#15803d', margin: '0 0 4px' }}>
-                ¡Contratación confirmada!
-              </p>
-              <p style={{ color: '#166534', fontSize: '14px', margin: 0, lineHeight: 1.6 }}>
-                <strong>{visitaPreVisita.compita.nombre}</strong> ya recibió la notificación y te va a escribir por este chat para coordinar la fecha de la primera visita. Puedes escribirle tú también.
-              </p>
+          <>
+            <LimpiarParamContratado />
+            <div style={{ background: '#F0FDF4', border: '2px solid #22c55e', borderRadius: '16px', padding: '20px 24px', marginBottom: '28px', display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
+              <span style={{ fontSize: '28px', flexShrink: 0 }}>🎉</span>
+              <div>
+                <p style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '17px', color: '#15803d', margin: '0 0 4px' }}>
+                  ¡Contratación confirmada!
+                </p>
+                <p style={{ color: '#166534', fontSize: '14px', margin: 0, lineHeight: 1.6 }}>
+                  <strong>{visitaPreVisita.compita.nombre}</strong> ya recibió la notificación y te va a escribir por este chat para coordinar la fecha de la primera visita. Puedes escribirle tú también.
+                </p>
+              </div>
             </div>
-          </div>
+          </>
         )}
 
         {/* ─────────────────────────────────────────────

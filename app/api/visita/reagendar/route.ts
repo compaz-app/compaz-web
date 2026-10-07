@@ -1,10 +1,12 @@
 import { NextRequest } from 'next/server'
 import { createServerSupabase, createAdminSupabase } from '@/lib/supabase-server'
 import { ok, err, unauthorized, notFound } from '@/lib/api'
-import { sendTelegramMessage } from '@/lib/telegram'
+import { sendTelegramMessage, INLINE_INICIO } from '@/lib/telegram'
 import { Resend } from 'resend'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
+
+const ADMIN_TG = process.env.TELEGRAM_ADMIN_CHAT_ID ?? ''
 
 // POST /api/visita/reagendar
 // Cancela la fecha acordada y vuelve al estado pre_visita para recoordinar
@@ -55,8 +57,9 @@ export async function POST(req: NextRequest) {
           ``,
           `${cliente?.nombre ?? 'El cliente'} canceló la fecha${fechaAnterior ? ` del ${fechaAnterior}` : ''} y necesita acordar un nuevo día.`,
           ``,
-          `Escríbele por el chat del dashboard para coordinar una nueva fecha.`,
+          `Escríbele desde este mismo chat para coordinar una nueva fecha. Ellos lo verán en su portal.`,
         ].join('\n'),
+        INLINE_INICIO,
       )
     } catch (e) { console.error('Telegram reagendar compita:', e) }
   }
@@ -85,6 +88,32 @@ export async function POST(req: NextRequest) {
       })
     } catch (e) { console.error('Email reagendar cliente:', e) }
   }
+
+  // Alerta al admin si esta visita acumula 3+ reagendados
+  try {
+    const { count: totalReagendados } = await admin
+      .from('mensajes')
+      .select('id', { count: 'exact', head: true })
+      .eq('visit_id', visita_id)
+      .eq('origen', 'admin')
+      .like('contenido', 'reagendado:%')
+    const nuevo = (totalReagendados ?? 0) + 1
+    await admin.from('mensajes').insert({ visit_id: visita_id, origen: 'admin', tipo: 'texto', contenido: `reagendado:cliente` })
+    if (nuevo >= 3 && ADMIN_TG) {
+      await sendTelegramMessage(
+        ADMIN_TG,
+        [
+          `⚠️ <b>Visita con ${nuevo} reagendados</b>`,
+          ``,
+          `<b>Cliente:</b> ${cliente?.nombre ?? visita.usuario_id}`,
+          `<b>Compita:</b> ${compita?.nombre ?? visita.compita_id}`,
+          `<b>Iniciador:</b> cliente`,
+          ``,
+          `Puede indicar un problema de coordinación. Considera intervenir.`,
+        ].join('\n'),
+      )
+    }
+  } catch (e) { console.error('Alerta reagendados admin:', e) }
 
   return ok({ estado: 'pre_visita' })
 }

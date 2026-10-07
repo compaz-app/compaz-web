@@ -579,7 +579,7 @@ export async function POST(req: NextRequest) {
     if (!visitaProgramada.fecha_programada) {
       await sendTelegramMessage(
         chatId,
-        `⚠️ <b>La fecha de la visita aún no está confirmada</b>\n\n${clienteNombre} todavía no registró la fecha en el sistema. Escríbele por el chat del dashboard para coordinarla. Una vez que ella la confirme, podrás iniciar la visita desde aquí.`,
+        `⚠️ <b>La fecha de la visita aún no está confirmada</b>\n\n${clienteNombre} todavía no registró la fecha en el sistema. Escríbele desde este mismo chat para coordinarla. Una vez que la confirme, podrás iniciar la visita desde aquí.`,
         INLINE_INICIO,
       )
       return NextResponse.json({ ok: true })
@@ -699,8 +699,9 @@ export async function POST(req: NextRequest) {
         })
       : null
 
-    // Resetear la visita a pre_visita y limpiar la fecha
-    await supabase
+    // Resetear la visita a pre_visita y limpiar la fecha (admin para saltarse RLS)
+    const adminForReagendar = createAdminSupabase()
+    await adminForReagendar
       .from('visitas')
       .update({ estado: 'pre_visita', fecha_programada: null })
       .eq('id', visitaAReagendar.id)
@@ -743,10 +744,39 @@ export async function POST(req: NextRequest) {
         ``,
         `Le avisamos a <b>${clienteNombre}</b> que necesitas cambiar la fecha${fechaAnterior ? ` del ${fechaAnterior}` : ''}.`,
         ``,
-        `Escríbele por el chat del dashboard para acordar un nuevo día. Ellos lo verán en su portal.`,
+        `Escríbele desde este mismo chat para acordar un nuevo día. Ellos lo verán en su portal.`,
       ].join('\n'),
       INLINE_INICIO,
     )
+
+    // Alerta al admin si esta visita acumula 3+ reagendados
+    try {
+      const adminForCount = createAdminSupabase()
+      const { count: totalReagendados } = await adminForCount
+        .from('mensajes')
+        .select('id', { count: 'exact', head: true })
+        .eq('visit_id', visitaAReagendar.id)
+        .eq('origen', 'admin')
+        .like('contenido', 'reagendado:%')
+      const nuevo = (totalReagendados ?? 0) + 1
+      await adminForCount.from('mensajes').insert({ visit_id: visitaAReagendar.id, origen: 'admin', tipo: 'texto', contenido: `reagendado:compita` })
+      const adminTgId = process.env.TELEGRAM_ADMIN_CHAT_ID
+      if (nuevo >= 3 && adminTgId) {
+        await sendTelegramMessage(
+          adminTgId,
+          [
+            `⚠️ <b>Visita con ${nuevo} reagendados</b>`,
+            ``,
+            `<b>Cliente:</b> ${clienteNombre}`,
+            `<b>Compita:</b> ${compita.nombre}`,
+            `<b>Iniciador:</b> compita`,
+            ``,
+            `Puede indicar un problema de coordinación. Considera intervenir.`,
+          ].join('\n'),
+        )
+      }
+    } catch (e) { console.error('Alerta reagendados admin (compita):', e) }
+
     return NextResponse.json({ ok: true })
   }
 
@@ -891,6 +921,13 @@ export async function POST(req: NextRequest) {
       let visitaError: unknown = null
 
       if (visitaExistente) {
+        // Re-verificar que la fecha esté confirmada antes de iniciar
+        const { data: visitaCheck } = await supabase
+          .from('visitas').select('fecha_programada').eq('id', visitaExistente.id).single()
+        if (!visitaCheck?.fecha_programada) {
+          await sendTelegramMessage(chatId, `⚠️ <b>La fecha de la visita aún no está confirmada.</b>\n\nEscríbele a ${usuario.nombre} desde este mismo chat para coordinarla. Una vez que la confirme, podrás iniciar desde aquí.`, INLINE_INICIO)
+          return NextResponse.json({ ok: true })
+        }
         const { data: updated, error } = await supabase
           .from('visitas')
           .update({ estado: 'en_curso', inicio: ahora })
@@ -1197,6 +1234,38 @@ export async function POST(req: NextRequest) {
 
     if (text) {
       await supabase.from('mensajes').insert({ visit_id: visitaActiva.id, origen: 'compita', tipo: 'texto', contenido: text })
+
+      // Email al cliente cuando el compita escribe en estado programada (no tiene Realtime garantizado)
+      if (visitaActiva.estado === 'programada') {
+        try {
+          const { data: clienteProgramada } = await supabase
+            .from('visitas')
+            .select('usuario:usuarios(nombre, email)')
+            .eq('id', visitaActiva.id)
+            .single() as { data: { usuario: { nombre: string; email: string } | null } | null }
+          const emailCliente = clienteProgramada?.usuario?.email
+          if (emailCliente) {
+            const resendProgramada = new Resend(process.env.RESEND_API_KEY)
+            await resendProgramada.emails.send({
+              from: 'Compaz <visitas@micompaz.com>',
+              to: emailCliente,
+              subject: `${compita.nombre} te escribió en Compaz`,
+              html: `
+                <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px">
+                  <h2 style="color:#2D1464;font-size:20px;margin-bottom:12px">💬 Nuevo mensaje de ${compita.nombre}</h2>
+                  <div style="background:#F5F0FF;border-left:4px solid #7C4DFF;border-radius:8px;padding:16px 20px;margin:16px 0;color:#1A0A3C;font-size:15px;line-height:1.6">
+                    ${text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>')}
+                  </div>
+                  <a href="${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://micompaz.com'}/dashboard" style="display:inline-block;background:#FF6B2B;color:white;padding:12px 24px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:14px;margin-top:8px">
+                    Responder en el dashboard →
+                  </a>
+                  <p style="color:#9990A8;font-size:13px;margin-top:32px">Compaz — <em>Cerca aunque estés lejos</em></p>
+                </div>
+              `,
+            })
+          }
+        } catch (e) { console.error('Email compita→cliente en programada:', e) }
+      }
 
       // Recordatorio anti-fuga cada 5 mensajes durante pre_visita
       if (visitaActiva.estado === 'pre_visita') {
