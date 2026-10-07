@@ -62,6 +62,10 @@ export const INLINE_CONFIRMAR_FIN = makeInlineKeyboard([[
 ]])
 export const INLINE_START = makeInlineKeyboard([[{ text: '▶️ Comenzar', callback_data: '/start' }]])
 export const INLINE_REAGENDAR_VISITA = makeInlineKeyboard([[{ text: '🔄 Necesito reagendar la visita', callback_data: 'reagendar_visita' }]])
+export const INLINE_INICIAR_O_REAGENDAR = makeInlineKeyboard([
+  [{ text: '✅ Sí, iniciar', callback_data: '✅ Sí, iniciar' }],
+  [{ text: '🔄 Necesito reagendar', callback_data: 'reagendar_visita' }],
+])
 
 // Teclados reutilizables
 export const TECLADO_INICIO = {

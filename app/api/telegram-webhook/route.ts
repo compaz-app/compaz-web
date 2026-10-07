@@ -12,6 +12,7 @@ import {
   INLINE_CONFIRMAR_FIN,
   INLINE_START,
   INLINE_REAGENDAR_VISITA,
+  INLINE_INICIAR_O_REAGENDAR,
   QUITAR_TECLADO,
   makeInlineKeyboard,
 } from '@/lib/telegram'
@@ -575,10 +576,12 @@ export async function POST(req: NextRequest) {
       : null
 
     await setPendiente(supabase, chatId, 'iniciar')
+    // Si la visita ya está formalmente programada, ofrecer también la opción de reagendar
+    const teclado = visitaProgramada.fecha_programada ? INLINE_INICIAR_O_REAGENDAR : INLINE_CONFIRMAR_INICIO
     await sendTelegramMessage(
       chatId,
-      `¿Vas a empezar la visita con <b>${clienteNombre}</b>${fechaLabel ? ` (programada para el ${fechaLabel})` : ''}?\n\nToca <b>✅ Sí, iniciar</b> para confirmar. La familia sabrá que ya llegaste.`,
-      INLINE_CONFIRMAR_INICIO,
+      `¿Vas a empezar la visita con <b>${clienteNombre}</b>${fechaLabel ? ` (programada para el ${fechaLabel})` : ''}?\n\nToca <b>✅ Sí, iniciar</b> para confirmar. La familia sabrá que ya llegaste.\n\nSi surgió algún imprevisto, puedes reagendar tocando el botón de abajo.`,
+      teclado,
     )
     return NextResponse.json({ ok: true })
   }
