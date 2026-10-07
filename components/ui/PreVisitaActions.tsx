@@ -11,6 +11,7 @@ interface Props {
 
 export default function PreVisitaActions({ visitaId, compitaNombre, fechaActual }: Props) {
   const [cerrando, setCerrando] = useState(false)
+  const [reagendando, setReagendando] = useState(false)
   const [error, setError] = useState('')
   const router = useRouter()
 
@@ -40,6 +41,29 @@ export default function PreVisitaActions({ visitaId, compitaNombre, fechaActual 
     } catch {
       setError('Error de conexión.')
       setCerrando(false)
+    }
+  }
+
+  async function reagendar() {
+    if (reagendando) return
+    setReagendando(true)
+    setError('')
+    try {
+      const res = await fetch('/api/visita/reagendar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ visita_id: visitaId }),
+      })
+      if (res.ok) {
+        router.refresh()
+      } else {
+        const data = await res.json().catch(() => ({}))
+        setError(data.error ?? 'No se pudo reagendar.')
+        setReagendando(false)
+      }
+    } catch {
+      setError('Error de conexión.')
+      setReagendando(false)
     }
   }
 
@@ -94,9 +118,30 @@ export default function PreVisitaActions({ visitaId, compitaNombre, fechaActual 
               fontWeight: 800,
               fontSize: '15px',
               cursor: cerrando ? 'not-allowed' : 'pointer',
+              marginBottom: '10px',
+              width: '100%',
             }}
           >
             {cerrando ? 'Confirmando…' : '¡Listo, ya acordamos todo! →'}
+          </button>
+          <button
+            onClick={reagendar}
+            disabled={reagendando}
+            style={{
+              background: 'none',
+              color: '#6B5C90',
+              border: '1.5px solid #D4C9E8',
+              borderRadius: '9999px',
+              padding: '10px 20px',
+              fontFamily: 'Bricolage Grotesque, sans-serif',
+              fontWeight: 700,
+              fontSize: '13px',
+              cursor: reagendando ? 'not-allowed' : 'pointer',
+              opacity: reagendando ? 0.6 : 1,
+              width: '100%',
+            }}
+          >
+            {reagendando ? 'Reagendando…' : '🔄 Necesito cambiar la fecha'}
           </button>
         </>
       )}

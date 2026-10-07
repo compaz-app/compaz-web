@@ -6,44 +6,40 @@ import { Resend } from 'resend'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
-export async function PUT(req: NextRequest) {
+// POST /api/visita/reagendar
+// Cancela la fecha acordada y vuelve al estado pre_visita para recoordinar
+export async function POST(req: NextRequest) {
   const supabase = await createServerSupabase()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return unauthorized()
 
-  const { visita_id, fecha_programada } = await req.json() as {
-    visita_id: string
-    fecha_programada: string // 'YYYY-MM-DD'
-  }
-
-  if (!visita_id || !fecha_programada) return err('Faltan parámetros')
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha_programada)) return err('Fecha inválida')
-  const hoy = new Date().toISOString().slice(0, 10)
-  if (fecha_programada < hoy) return err('La fecha debe ser hoy o en el futuro')
+  const { visita_id } = await req.json() as { visita_id: string }
+  if (!visita_id) return err('Falta visita_id')
 
   const admin = createAdminSupabase()
 
   const { data: visita } = await admin
     .from('visitas')
-    .select('id, usuario_id, compita_id, estado')
+    .select('id, usuario_id, compita_id, estado, fecha_programada')
     .eq('id', visita_id)
     .single()
 
   if (!visita) return notFound()
   if (visita.usuario_id !== user.id) return err('Sin acceso', 403)
-  if (visita.estado !== 'pre_visita') return err('Solo se puede asignar fecha en pre_visita')
+  if (!['pre_visita', 'programada'].includes(visita.estado)) return err('Solo se puede reagendar desde pre_visita o programada')
 
   const { error } = await admin
     .from('visitas')
-    .update({ fecha_programada })
+    .update({ estado: 'pre_visita', fecha_programada: null })
     .eq('id', visita_id)
 
   if (error) return err(error.message)
 
-  // Notificar al compita y al cliente
-  const fechaFormateada = new Date(fecha_programada + 'T00:00:00').toLocaleDateString('es-VE', {
-    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
-  })
+  const fechaAnterior = visita.fecha_programada
+    ? new Date(visita.fecha_programada + 'T00:00:00').toLocaleDateString('es-VE', {
+        weekday: 'long', day: 'numeric', month: 'long',
+      })
+    : null
 
   const [{ data: compita }, { data: cliente }] = await Promise.all([
     admin.from('compitas').select('telegram_chat_id, nombre').eq('id', visita.compita_id).single(),
@@ -54,9 +50,15 @@ export async function PUT(req: NextRequest) {
     try {
       await sendTelegramMessage(
         compita.telegram_chat_id,
-        `📅 <b>Fecha acordada</b>\n\n${cliente?.nombre ?? 'El cliente'} registró la fecha de la primera visita: <b>${fechaFormateada}</b>.\n\nSi hay algún cambio, avísale por el chat del dashboard.`,
+        [
+          `🔄 <b>La visita necesita reagendarse</b>`,
+          ``,
+          `${cliente?.nombre ?? 'El cliente'} canceló la fecha${fechaAnterior ? ` del ${fechaAnterior}` : ''} y necesita acordar un nuevo día.`,
+          ``,
+          `Escríbele por el chat del dashboard para coordinar una nueva fecha.`,
+        ].join('\n'),
       )
-    } catch (e) { console.error('Telegram fecha visita compita:', e) }
+    } catch (e) { console.error('Telegram reagendar compita:', e) }
   }
 
   if (cliente?.email) {
@@ -64,28 +66,25 @@ export async function PUT(req: NextRequest) {
       await resend.emails.send({
         from: 'Compaz <visitas@micompaz.com>',
         to: cliente.email,
-        subject: `Fecha de visita registrada: ${fechaFormateada}`,
+        subject: 'Visita reagendada — coordina la nueva fecha con tu compita',
         html: `
           <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px">
-            <h2 style="color:#2D1464;font-size:22px;margin-bottom:12px">📅 Fecha registrada</h2>
+            <h2 style="color:#2D1464;font-size:22px;margin-bottom:12px">🔄 Visita reagendada</h2>
             <p style="color:#4A3B6B;font-size:15px;line-height:1.6">
-              Registraste la fecha de la primera visita con <strong>${compita?.nombre ?? 'tu compita'}</strong>:
+              Cancelaste la fecha${fechaAnterior ? ` del <strong>${fechaAnterior}</strong>` : ''}. Le avisamos a <strong>${compita?.nombre ?? 'tu compita'}</strong> para que coordinen un nuevo día.
             </p>
-            <div style="background:#F0FDF4;border:2px solid #86EFAC;border-radius:12px;padding:16px 20px;margin:16px 0;text-align:center">
-              <p style="color:#15803d;font-size:18px;font-weight:700;margin:0;text-transform:capitalize">${fechaFormateada}</p>
-            </div>
             <p style="color:#4A3B6B;font-size:14px;line-height:1.6">
-              Cuando termines de coordinar todos los detalles con ${compita?.nombre ?? 'tu compita'} en el chat, confirma la coordinación desde tu dashboard para que activemos el seguimiento.
+              Entra al dashboard, escríbele por el chat y acuerden la nueva fecha.
             </p>
             <a href="https://micompaz.com/dashboard" style="display:inline-block;background:#FF6B2B;color:white;padding:12px 24px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:14px;margin-top:8px">
-              Ir al dashboard →
+              Ir al chat →
             </a>
             <p style="color:#9990A8;font-size:13px;margin-top:32px">Compaz — <em>Cerca aunque estés lejos</em></p>
           </div>
         `,
       })
-    } catch (e) { console.error('Email fecha visita cliente:', e) }
+    } catch (e) { console.error('Email reagendar cliente:', e) }
   }
 
-  return ok({ fecha_programada })
+  return ok({ estado: 'pre_visita' })
 }

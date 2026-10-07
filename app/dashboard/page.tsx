@@ -11,6 +11,7 @@ import HistorialVisitas from '@/components/ui/HistorialVisitas'
 import FechaProgramada from '@/components/ui/FechaProgramada'
 import PreVisitaActions from '@/components/ui/PreVisitaActions'
 import ChatColapsable from '@/components/ui/ChatColapsable'
+import ReagendarButton from '@/components/ui/ReagendarButton'
 import type { Visita, Compita, Mensaje, Usuario, ReporteVisita } from '@/types'
 
 export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ preview?: string }> }) {
@@ -299,6 +300,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                 mensajesIniciales={mensajes}
                 compitaNombre={visitaProgramada.compita.nombre}
               />
+              <ReagendarButton visitaId={visitaProgramada.id} compitaNombre={visitaProgramada.compita.nombre} />
             </section>
           )
         })()}
