@@ -1247,50 +1247,6 @@ export async function POST(req: NextRequest) {
         const fileUrl = await getTelegramFileUrl(photo.file_id)
         const adminFoto = createAdminSupabase()
         await adminFoto.from('mensajes').insert({ visit_id: visitaActiva.id, origen: 'compita', tipo: 'foto', contenido: fileUrl })
-
-        // Notificar al cliente por email si no recibió notificación en los últimos 10 min
-        if (visitaActiva.estado === 'programada' || visitaActiva.estado === 'en_curso') {
-          const hace10min = new Date(Date.now() - 10 * 60_000).toISOString()
-          const { count: notifReciente } = await adminFoto
-            .from('mensajes')
-            .select('id', { count: 'exact', head: true })
-            .eq('visit_id', visitaActiva.id)
-            .eq('origen', 'admin')
-            .eq('contenido', 'email_notif_mensaje')
-            .gt('created_at', hace10min)
-
-          if ((notifReciente ?? 0) === 0) {
-            const { data: clienteFoto } = await adminFoto
-              .from('visitas')
-              .select('usuario:usuarios(nombre, email)')
-              .eq('id', visitaActiva.id)
-              .single() as { data: { usuario: { nombre: string; email: string } | null } | null }
-            const emailCliente = clienteFoto?.usuario?.email
-            if (emailCliente) {
-              const resendFoto = new Resend(process.env.RESEND_API_KEY)
-              await resendFoto.emails.send({
-                from: 'Compaz <visitas@micompaz.com>',
-                to: emailCliente,
-                subject: `${compita.nombre} envió una foto`,
-                html: `
-                  <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px">
-                    <h2 style="color:#2D1464;font-size:20px;margin-bottom:12px">📷 ${compita.nombre} envió una foto</h2>
-                    <p style="color:#4A3B6B;font-size:15px;line-height:1.6;margin-bottom:20px">
-                      Puedes verla en el dashboard de la visita.
-                    </p>
-                    <a href="${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://micompaz.com'}/dashboard" style="display:inline-block;background:#FF6B2B;color:white;padding:12px 24px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:14px">
-                      Ver en el dashboard →
-                    </a>
-                    <p style="color:#9990A8;font-size:13px;margin-top:32px">Compaz — <em>Cerca aunque estés lejos</em></p>
-                  </div>
-                `,
-              }).catch(() => {})
-              await adminFoto.from('mensajes').insert({
-                visit_id: visitaActiva.id, origen: 'admin', tipo: 'texto', contenido: 'email_notif_mensaje',
-              })
-            }
-          }
-        }
       } catch (e) { console.error('Error guardando foto:', e) }
       return NextResponse.json({ ok: true })
     }
