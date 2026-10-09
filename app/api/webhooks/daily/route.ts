@@ -32,6 +32,16 @@ function firmaValida(req: NextRequest, rawBody: string): boolean {
 
 export async function POST(req: NextRequest) {
   const raw = await req.text()
+
+  // Al crear un webhook, Daily envía primero una petición de verificación sin firma ({"test":"test"}).
+  // No tiene efectos, así que se acepta; cualquier evento real sigue exigiendo firma válida.
+  try {
+    const sonda = JSON.parse(raw) as Record<string, unknown>
+    if (sonda && typeof sonda === 'object' && Object.keys(sonda).length === 1 && 'test' in sonda) {
+      return NextResponse.json({ ok: true })
+    }
+  } catch { /* no es JSON: seguir con la validación normal */ }
+
   if (!firmaValida(req, raw)) return NextResponse.json({ error: 'Firma inválida' }, { status: 401 })
 
   let body: { event_type?: string; payload?: { room_name?: string; room_url?: string; duration?: number } }

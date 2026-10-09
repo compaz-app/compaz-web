@@ -41,6 +41,15 @@ describe('Webhook de Daily (fin de llamada)', () => {
     assert.equal((await dailyWebhook(eventoDaily(600))).status, 200)
   })
 
+  test('la verificación de Daily al crear el webhook ({"test":"test"}) se acepta sin firma, pero nada más', async () => {
+    mundo()
+    const sonda = (b: string) => req('/api/webhooks/daily', { body: b, headers: { 'content-type': 'application/json' } })
+    assert.equal((await dailyWebhook(sonda('{"test":"test"}'))).status, 200)
+    assert.equal((await dailyWebhook(sonda('{"test":"test","event_type":"meeting.ended"}'))).status, 401)
+    assert.equal((await dailyWebhook(sonda('{"event_type":"meeting.ended","payload":{"room_name":"ent-abc-1"}}'))).status, 401)
+    assert.equal(net.emails.length + net.tg.length, 0)
+  })
+
   test('llamada normal: un solo correo de decisión; reintentos de Daily no duplican; el cron no repite', async () => {
     const { t } = mundo()
     await dailyWebhook(eventoDaily(900)); await dailyWebhook(eventoDaily(900)); await dailyWebhook(eventoDaily(900))
