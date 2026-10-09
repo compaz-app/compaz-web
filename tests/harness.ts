@@ -6,7 +6,7 @@ Object.assign(process.env, {
   NEXT_PUBLIC_SUPABASE_ANON_KEY: 'anon', SUPABASE_SERVICE_ROLE_KEY: 'service',
   TELEGRAM_BOT_TOKEN: 'TESTBOTTOKEN:SECRETO', TELEGRAM_WEBHOOK_SECRET: 'whsecret', TELEGRAM_ADMIN_CHAT_ID: '999',
   TELEGRAM_BOT_USERNAME: 'compaz_bot',
-  RESEND_API_KEY: 're_test', CRON_SECRET: 'cronsecret', DAILY_API_KEY: 'daily', DAILY_WEBHOOK_SECRET: Buffer.from('dailysecret').toString('base64'),
+  RESEND_API_KEY: 're_test', CRON_SECRET: 'cronsecret', DAILY_API_KEY: 'daily', DAILY_WEBHOOK_SECRET: Buffer.from('dailysecret-0123456789abcdef-xyz').toString('base64'),
   NEXT_PUBLIC_SITE_URL: 'https://micompaz.test', ADMIN_EMAILS: 'admin@compaz.test',
 })
 delete process.env.ANTHROPIC_API_KEY
@@ -69,6 +69,15 @@ globalThis.fetch = (async (input: any, init?: any) => {
     const b = JSON.parse(init.body)
     net.emails.push({ to: b.to, subject: b.subject, html: b.html })
     return json({ id: randomUUID() })
+  }
+  if (url.startsWith('https://api.daily.co/v1/webhooks')) {
+    const m = init?.method ?? 'GET'
+    ;(net as any).dailyWebhooks = (net as any).dailyWebhooks ?? []
+    const lista = (net as any).dailyWebhooks as any[]
+    if (m === 'GET') return json(lista)
+    if (m === 'DELETE') { const id = url.split('/').pop(); const i = lista.findIndex((h) => h.uuid === id); if (i >= 0) lista.splice(i, 1); return json({ deleted: true }) }
+    if ((net as any).dailyWebhookFail) return new Response('rechazado', { status: 400 })
+    const b = JSON.parse(init.body); const h = { uuid: randomUUID(), ...b }; lista.push(h); return json(h)
   }
   if (url.startsWith('https://api.daily.co/v1/rooms')) {
     if (net.dailyFail) return new Response('daily caído', { status: 500 })
