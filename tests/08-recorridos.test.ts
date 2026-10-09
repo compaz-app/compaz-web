@@ -59,13 +59,13 @@ describe('RECORRIDO 1: de la invitación de la compita hasta la valoración, tod
     assert.equal((await registrar(req('/api/onboarding/registrar', { json: { token, nombre: 'Otra', zona: 'x', descripcion: 'x', servicios: ['a'] } }))).status, 400, 'la invitación es de un solo uso')
 
     // ── 2. No aparece en el mapa hasta estar vinculada Y verificada
-    assert.deepEqual((await (await cobertura()).json()).data.zonas, [])
+    assert.deepEqual((await (await (cobertura as any)()).json()).data.zonas, [])
 
     // ── 3. Vincula Telegram con el código del correo
     await webhook(tgText(2000, '/start')); await webhook(tgText(2000, 'Lucía Fernández'))
     await webhook(tgText(2000, codigoDe('lucia@mail.test')))
     assert.equal(lucia.telegram_chat_id, '2000')
-    assert.deepEqual((await (await cobertura()).json()).data.zonas, [], 'vinculada pero sin verificar: no visible')
+    assert.deepEqual((await (await (cobertura as any)()).json()).data.zonas, [], 'vinculada pero sin verificar: no visible')
     await webhook(tgText(2000, '▶️ Iniciar visita'))
     assert.match(ultimoTg(2000)!.text, /en revisión/)
 
@@ -79,7 +79,7 @@ describe('RECORRIDO 1: de la invitación de la compita hasta la valoración, tod
     // ── 5. El admin la verifica → aparece en el mapa
     admin()
     await toggleVerificado(req('/api/admin/toggle-verificado', { json: { compita_id: lucia.id, verificado: true } }))
-    assert.deepEqual((await (await cobertura()).json()).data.zonas, ['Zulia'])
+    assert.deepEqual((await (await (cobertura as any)()).json()).data.zonas, ['Zulia'])
 
     // ── 6. El admin invita al cliente; este completa el perfil de su familiar (con caracteres especiales)
     await invitarCliente(req('/api/admin/invitar-cliente', { json: { nombre: 'Carlos Ruiz', email: 'carlos@mail.test' } }))
