@@ -21,6 +21,7 @@ export default function RegistrarPago({ usuarioId, nombre }: { usuarioId: string
   const [abierto, setAbierto] = useState(false)
   const [pagos, setPagos] = useState<Pago[]>([])
   const [cupo, setCupo] = useState<Cupo>(null)
+  const [pendiente, setPendiente] = useState<{ id: string; tipo: string; plan: string | null; horas: number | null; monto_usd: number; metodo: MetodoPago; referencia: string } | null>(null)
   const [cargando, setCargando] = useState(false)
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState('')
@@ -38,7 +39,7 @@ export default function RegistrarPago({ usuarioId, nombre }: { usuarioId: string
     try {
       const r = await fetch(`/api/admin/pagos?usuario_id=${usuarioId}`)
       const d = await r.json()
-      if (d.ok) { setPagos(d.data.pagos); setCupo(d.data.cupo) }
+      if (d.ok) { setPagos(d.data.pagos); setCupo(d.data.cupo); setPendiente(d.data.pendiente ?? null) }
     } finally { setCargando(false) }
   }
   useEffect(() => { if (abierto) cargar() }, [abierto]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -63,6 +64,19 @@ export default function RegistrarPago({ usuarioId, nombre }: { usuarioId: string
     } catch { setError('Error de conexión') } finally { setGuardando(false) }
   }
 
+  async function resolverSolicitud(accion: 'confirmar' | 'cancelar') {
+    if (!pendiente || guardando) return
+    if (accion === 'confirmar' && !window.confirm(`¿Confirmas que recibiste $${pendiente.monto_usd} de ${nombre}?`)) return
+    setGuardando(true); setError(''); setAviso('')
+    try {
+      const r = await fetch('/api/admin/confirmar-solicitud', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ solicitud_id: pendiente.id, accion }) })
+      const d = await r.json()
+      if (!d.ok) { setError(d.error ?? 'No se pudo resolver'); return }
+      setAviso(accion === 'confirmar' ? 'Pago confirmado y cliente avisado.' : 'Solicitud cancelada.')
+      await cargar(); router.refresh()
+    } catch { setError('Error de conexión') } finally { setGuardando(false) }
+  }
+
   async function anular(p: Pago) {
     const motivo = window.prompt(`¿Por qué anulas este pago de $${p.monto_usd}? (opcional)`)
     if (motivo === null) return
@@ -83,6 +97,15 @@ export default function RegistrarPago({ usuarioId, nombre }: { usuarioId: string
 
       {abierto && (
         <div style={{ marginTop: '14px', background: colors.fondoClaro, border: `1.5px solid ${colors.fondoCard}`, borderRadius: '14px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          {pendiente && (
+            <div style={{ background: colors.amarilloClaro, border: `2px solid ${colors.amarillo}`, borderRadius: '12px', padding: '12px 14px', fontSize: '14px', color: colors.textoOscuro, lineHeight: 1.5 }}>
+              <strong>{nombre} quiere pagar</strong> {pendiente.tipo === 'plan' ? `el plan ${PLANES[pendiente.plan as PlanId].nombre}` : `una visita extra de ${pendiente.horas} h`}: <strong>${pendiente.monto_usd}</strong> por {ETIQUETA_METODO[pendiente.metodo]}. Referencia <strong>{pendiente.referencia}</strong>.
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '10px' }}>
+                <button onClick={() => resolverSolicitud('confirmar')} disabled={guardando} style={{ background: colors.verde, color: colors.blanco, border: 'none', borderRadius: '9999px', padding: '8px 16px', fontWeight: 700, fontSize: '13px', cursor: 'pointer' }}>Confirmar pago recibido</button>
+                <button onClick={() => resolverSolicitud('cancelar')} disabled={guardando} style={{ background: colors.blanco, color: colors.rojo, border: `2px solid ${colors.rojo}`, borderRadius: '9999px', padding: '8px 16px', fontWeight: 700, fontSize: '13px', cursor: 'pointer' }}>Descartar</button>
+              </div>
+            </div>
+          )}
           <div style={{ color: colors.textoOscuro, fontSize: '14px', lineHeight: 1.5 }}>
             {cargando ? 'Cargando…' : cupo
               ? <>

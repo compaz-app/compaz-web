@@ -14,6 +14,8 @@ import ChatColapsable from '@/components/ui/ChatColapsable'
 import ReagendarButton from '@/components/ui/ReagendarButton'
 import AgendarOtraVisita from '@/components/ui/AgendarOtraVisita'
 import { cupoDelPlan } from '@/lib/visitas'
+import PlanesPago from '@/components/ui/PlanesPago'
+import { solicitudPendiente, instruccionesPago, referenciaDe, type MetodoDirecto } from '@/lib/solicitudes-pago'
 import LimpiarParamContratado from '@/components/ui/LimpiarParamContratado'
 import type { Visita, Compita, Mensaje, Usuario, ReporteVisita } from '@/types'
 
@@ -148,6 +150,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const hayVisitaActivaOCercana = !!(visitaActiva || visitaPreVisita || visitaProgramada)
   const esPrimeraVisita = (visitasPasadas?.length ?? 0) === 0
   const cupo = await cupoDelPlan(targetUid)
+  const sp = previewUid ? null : await solicitudPendiente(targetUid)
+  const pendientePago = sp ? { id: sp.id, tipo: sp.tipo, plan: sp.plan, horas: sp.horas, monto_usd: sp.monto_usd, metodo: sp.metodo, referencia: referenciaDe(sp.id), ...(() => { const i = instruccionesPago(sp.metodo as MetodoDirecto); return { lineas: i.lineas, configurado: i.configurado } })() } : null
   // Visitas 2, 3, 4...: con compita activa y verificada, sin otra visita en curso, y cuenta no bloqueada
   const puedeAgendarOtra = !previewUid && !!compita && compita.estado === 'activo' && compita.verificado
     && !hayVisitaActivaOCercana && !esPrimeraVisita && usuario?.plan !== 'bloqueado'
@@ -213,6 +217,13 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             </div>
           )
         })()}
+
+        {/* Planes y pago directo (sin pasar antes por una compita) */}
+        {!previewUid && (
+          <section style={{ marginBottom: '28px' }}>
+            <PlanesPago pendiente={pendientePago} />
+          </section>
+        )}
 
         {/* Agendar otra visita (2ª, 3ª, 4ª...) */}
         {puedeAgendarOtra && compita && (
