@@ -107,8 +107,12 @@ export default function MapaCobertura({ onEstadoSelect, onMunicipioSelect, hideT
       .then((r) => r.json())
       .then((res: { ok: boolean; data: { zonas: string[] } }) => {
         const zonas = res.data?.zonas ?? []
-        zonasRawRef.current = zonas
-        setEstadosConCobertura(zonasAEstados(zonas))
+        // El sondeo cada 60 s no debe repintar el mapa (ni perder la selección) si nada cambió
+        const igual = JSON.stringify([...zonas].sort()) === JSON.stringify([...zonasRawRef.current].sort())
+        if (!igual) {
+          zonasRawRef.current = zonas
+          setEstadosConCobertura(zonasAEstados(zonas))
+        }
         setCargando(false)
       })
       .catch(() => setCargando(false))

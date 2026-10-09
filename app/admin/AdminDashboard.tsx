@@ -282,7 +282,8 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
       body: JSON.stringify({ compita_id: compitaId, verificado: !actual }),
     })
     if (res.ok) {
-      setCompitas((prev) => prev.map((c) => c.id === compitaId ? { ...c, verificado: !actual } : c))
+      // El servidor también ajusta el estado: verificar activa a la compita; quitar la verificación la desactiva
+      setCompitas((prev) => prev.map((c) => c.id === compitaId ? { ...c, verificado: !actual, estado: !actual ? 'activo' : 'inactivo' } : c))
     }
   }
 
