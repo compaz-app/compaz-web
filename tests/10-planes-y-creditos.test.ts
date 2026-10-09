@@ -153,9 +153,16 @@ describe('Registrar pago (panel admin)', () => {
     assert.equal(db.rows('pagos_plan').length, 0)
   })
 
-  test('el monto se puede ajustar (descuento) y la extra de 3 horas cuesta $60 por defecto', async () => {
+  test('el monto es EXACTO: un valor distinto al del plan se rechaza; el exacto o ninguno se acepta', async () => {
     const { carlos } = mundoCon([])
-    assert.equal((await (await pagar(carlos, { plan: 'quincenal', monto_usd: 60 })).json()).data.pago.monto_usd, 60)
+    assert.equal((await pagar(carlos, { plan: 'quincenal', monto_usd: 74 })).status, 400)
+    assert.equal((await pagar(carlos, { plan: 'quincenal', monto_usd: 60 })).status, 400)
+    assert.equal((await pagar(carlos, { plan: 'semanal', monto_usd: 0 })).status, 400)
+    assert.equal((await pagar(carlos, { tipo: 'extra', horas: 3, monto_usd: 59 })).status, 400)
+    assert.equal(db.rows('pagos_plan').length, 0, 'ningún pago incorrecto queda guardado')
+    assert.match((await (await pagar(carlos, { plan: 'quincenal', monto_usd: 74 })).json()).error, /exactamente \$75/)
+    assert.equal((await (await pagar(carlos, { plan: 'quincenal', monto_usd: 75 })).json()).data.pago.monto_usd, 75)
+    assert.equal((await (await pagar(carlos, { plan: 'quincenal' })).json()).data.pago.monto_usd, 75)
     assert.equal((await (await pagar(carlos, { tipo: 'extra', horas: 3 })).json()).data.pago.monto_usd, 60)
   })
 

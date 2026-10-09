@@ -38,10 +38,9 @@ export async function registrarPago(i: PagoInput): Promise<{ ok: true; pago: Pag
   } else {
     return { ok: false, error: 'Tipo de pago inválido' }
   }
-  if (i.montoUsd !== undefined && i.montoUsd !== null) {
-    const m = Number(i.montoUsd)
-    if (!Number.isFinite(m) || m < 0 || m > 10_000) return { ok: false, error: 'Monto inválido' }
-    monto = Math.round(m * 100) / 100
+  // El monto es siempre el del plan (o horas por la tarifa): no se aceptan pagos parciales ni distintos.
+  if (i.montoUsd !== undefined && i.montoUsd !== null && Math.round(Number(i.montoUsd) * 100) !== Math.round(monto * 100)) {
+    return { ok: false, error: `El monto debe ser exactamente $${monto}. Un pago por otro valor no se puede registrar.` }
   }
   const referencia = typeof i.referencia === 'string' && i.referencia.trim() ? i.referencia.trim().slice(0, 200) : null
 

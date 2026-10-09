@@ -28,7 +28,6 @@ export default function RegistrarPago({ usuarioId, nombre }: { usuarioId: string
   const [tipo, setTipo] = useState<'plan' | 'extra'>('plan')
   const [plan, setPlan] = useState<PlanId>('quincenal')
   const [horas, setHoras] = useState(HORAS_MINIMAS_EXTRA)
-  const [monto, setMonto] = useState('')
   const [metodo, setMetodo] = useState<MetodoPago>('zelle')
   const [referencia, setReferencia] = useState('')
 
@@ -53,13 +52,13 @@ export default function RegistrarPago({ usuarioId, nombre }: { usuarioId: string
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           usuario_id: usuarioId, tipo, plan: tipo === 'plan' ? plan : undefined, horas: tipo === 'extra' ? horas : undefined,
-          monto_usd: monto.trim() === '' ? undefined : Number(monto), metodo, referencia: referencia.trim() || undefined,
+          metodo, referencia: referencia.trim() || undefined,
         }),
       })
       const d = await r.json()
       if (!d.ok) { setError(d.error ?? 'No se pudo registrar el pago'); return }
       setAviso(d.data.correo_enviado ? 'Pago registrado y cliente avisado por correo.' : 'Pago registrado. No se pudo enviar el correo al cliente.')
-      setMonto(''); setReferencia('')
+      setReferencia('')
       await cargar(); router.refresh()
     } catch { setError('Error de conexión') } finally { setGuardando(false) }
   }
@@ -117,8 +116,8 @@ export default function RegistrarPago({ usuarioId, nombre }: { usuarioId: string
                 {METODOS_PAGO.map((m) => <option key={m} value={m}>{ETIQUETA_METODO[m]}</option>)}
               </select>
             </label>
-            <label style={etiqueta}>Monto (USD)
-              <input type="number" min={0} step="0.01" value={monto} placeholder={String(sugerido)} onChange={(e) => setMonto(e.target.value)} style={campo} />
+            <label style={etiqueta}>Monto a cobrar (fijo)
+              <div style={{ ...campo, background: colors.fondoClaro, fontWeight: 800, color: colors.moradoMedio }}>${sugerido}</div>
             </label>
             <label style={{ ...etiqueta, flex: '2 1 200px' }}>Referencia (opcional)
               <input value={referencia} maxLength={200} placeholder="Ej. confirmación de Zelle" onChange={(e) => setReferencia(e.target.value)} style={campo} />
