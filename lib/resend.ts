@@ -182,20 +182,20 @@ export async function sendAccesoEmail(email: string, nombre: string, enlaceAcces
   })
 }
 
-export async function sendBienvenidaCliente(email: string, nombre: string, enlaceAcceso: string, reenvio = false): Promise<void> {
+export async function sendBienvenidaCliente(email: string, nombre: string, enlaceAcceso: string): Promise<void> {
   const primero = escapeHtml(nombre.split(' ')[0])
   await sendEmail({
     to: email,
-    subject: reenvio ? 'Tu acceso a Compaz' : `Bienvenido a Compaz, ${nombre.split(' ')[0]}`,
+    subject: `Bienvenido a Compaz, ${nombre.split(' ')[0]}`,
     html: `
       <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px;background:#FDFAF6">
         <h1 style="color:#2D1464;font-size:26px;margin-bottom:8px">¡Hola, ${primero}! 👋</h1>
         <p style="color:#4A3B6B;font-size:16px;line-height:1.6;margin-bottom:20px">
-          ${reenvio ? 'Aquí tienes un nuevo enlace para entrar a tu portal de Compaz.' : 'Te damos la bienvenida a Compaz. Pulsa el botón para activar tu cuenta y entrar a tu portal.'}
+          Te damos la bienvenida a Compaz. Pulsa el botón para activar tu cuenta y entrar a tu portal.
         </p>
 
         <a href="${escapeHtml(enlaceAcceso)}" style="display:inline-block;background:#FF6B2B;color:white;padding:16px 32px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:17px">
-          ${reenvio ? 'Entrar a mi portal →' : 'Activar mi cuenta y entrar →'}
+          Activar mi cuenta y entrar →
         </a>
         <p style="color:#6B5C90;font-size:13px;line-height:1.6;margin:12px 0 28px">
           Este enlace es personal, funciona una sola vez y <strong>vence en 1 hora</strong>. Después podrás entrar siempre desde micompaz.com/login: escribes tu correo y te enviamos un enlace nuevo. Si este enlace venció, entra a micompaz.com/login, escribe tu correo y te enviamos uno nuevo al instante.

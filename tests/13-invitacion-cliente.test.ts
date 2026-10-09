@@ -1,5 +1,5 @@
 /* eslint-disable */
-import { db, net, session, limpiar, req, emailsA } from './harness'
+import { db, net, session, limpiar, req, emailsA, mkCliente } from './harness'
 import { beforeEach, test } from 'node:test'
 import assert from 'node:assert/strict'
 import { POST as invitar } from '@/app/api/admin/invitar-cliente/route'
@@ -35,28 +35,31 @@ test('la invitación envía UN solo correo con el botón que activa la cuenta y 
   assert.match(new URL((await confPost(req(url.pathname + url.search, { method: 'POST' }))).headers.get('location')!).search, /error=auth/)
 })
 
-test('reinvitar a la misma persona reenvía un acceso nuevo (sin duplicar la cuenta) y funciona', async () => {
+test('reinvitar a un cliente que YA está registrado se rechaza (409) y no se envía ningún correo', async () => {
   await invitarA({ nombre: 'Carlos Ruiz', email: 'carlos@mail.test' })
   net.emails = []
-  const r = await invitarA({ nombre: 'Carlos Ruiz', email: 'carlos@mail.test' })
-  assert.equal((await r.json()).data.reenvio, true)
-  assert.equal(db.rows('usuarios').length, 1)
-  const mail = emailsA('carlos@mail.test')[0]
-  assert.ok(mail.html.includes('Entrar a mi portal') && mail.subject === 'Tu acceso a Compaz')
-  const url = enlaceDe('carlos@mail.test')
-  assert.equal(url.searchParams.get('type'), 'magiclink')
-  session.user = null
-  assert.equal(loc(await confPost(req(url.pathname + url.search, { method: 'POST' }))), '/dashboard')
+  const r = await invitarA({ nombre: 'Carlos Ruiz', email: 'CARLOS@mail.test' })
+  assert.equal(r.status, 409)
+  assert.match((await r.json()).error, /ya está registrado/)
+  assert.equal(net.emails.length, 0); assert.equal(db.rows('usuarios').length, 1)
 })
 
-test('solo admin; datos inválidos; si Resend falla se avisa y se puede reenviar', async () => {
+test('una cuenta que ya existe en el sistema de acceso (sin fila de cliente) tampoco se reinvita', async () => {
+  const cli = mkCliente({ email: 'otro@mail.test' }); db.tables.usuarios = []; // queda solo en Auth
+  void cli
+  const r = await invitarA({ nombre: 'Otro', email: 'otro@mail.test' })
+  assert.equal(r.status, 200) // sin fila en usuarios es un cliente nuevo para el panel
+})
+
+test('solo admin; datos inválidos; si Resend falla no queda cuenta a medias y se puede reintentar', async () => {
   session.user = { id: 'c', email: 'cliente@mail.test' }
   assert.equal((await invitar(req('/api/admin/invitar-cliente', { json: { nombre: 'X', email: 'x@mail.test' } }))).status, 401)
   assert.equal((await invitarA({ nombre: 'X', email: 'no-es-correo' })).status, 400)
   assert.equal((await invitarA({ email: 'x@mail.test' })).status, 400)
   net.resendFail = true
   const r = await invitarA({ nombre: 'Ana', email: 'ana@mail.test' })
-  assert.equal(r.status, 502); assert.match((await r.json()).error, /Vuelve a pulsar Invitar/)
+  assert.equal(r.status, 502); assert.match((await r.json()).error, /No se creó la cuenta/)
+  assert.equal(db.rows('usuarios').length, 0, 'sin correo no queda una cuenta a medias')
   net.resendFail = false
   assert.equal((await invitarA({ nombre: 'Ana', email: 'ana@mail.test' })).status, 200)
   assert.equal(db.rows('usuarios').length, 1)
