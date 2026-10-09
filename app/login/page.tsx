@@ -39,7 +39,7 @@ export default function LoginPage() {
       } else if (m.includes('signup') || m.includes('not allowed') || m.includes('otp_disabled') || m.includes('user not found')) {
         setError('Este correo no está registrado. Usa el correo con el que fuiste invitado o escríbenos a hola@micompaz.com.')
       } else {
-        setError('No pudimos enviar el enlace. Intenta de nuevo en unos minutos o escríbenos a hola@micompaz.com.')
+        setError(`No pudimos enviar el enlace. Intenta de nuevo en unos minutos o escríbenos a hola@micompaz.com. (código: ${error.code ?? error.status ?? 'desconocido'})`)
       }
     } else {
       setEnviado(true)
