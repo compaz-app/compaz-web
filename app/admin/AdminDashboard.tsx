@@ -7,6 +7,7 @@ import { createBrowserSupabase } from '@/lib/supabase'
 import type { Visita, Compita, Usuario, Mensaje } from '@/types'
 import type { SolicitudAdmin } from './page'
 import LogoutButton from '@/components/ui/LogoutButton'
+import RegistrarPago from '@/components/admin/RegistrarPago'
 
 type VisitaConRelaciones = Visita & { compita: Compita; usuario: Usuario }
 type UsuarioConCompita = Usuario & { compita: { nombre: string; zona: string; verificado: boolean } | null }
@@ -999,6 +1000,7 @@ function ClienteCard({ u, compitas, onAsignar, onEliminar, onMarcar, inactivo = 
           </button>
         )}
       </div>
+      <RegistrarPago usuarioId={u.id} nombre={u.nombre} />
     </div>
   )
 }

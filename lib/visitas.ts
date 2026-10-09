@@ -1,6 +1,7 @@
 // Lógica de visitas recurrentes: de la 2ª visita en adelante el cliente agenda otra con su compita asignada.
 import { createAdminSupabase } from '@/lib/supabase-server'
-import { LIMITES_PLAN, PLAN_INFO } from '@/lib/pago'
+import { PLANES, CICLO_PAGO_DIAS, type PlanId } from '@/lib/planes'
+import { calcularCreditos, type PaqueteCredito } from '@/lib/creditos'
 
 export type MotivoNuevaVisita = 'sin_compita' | 'compita_no_disponible' | 'cliente_bloqueado' | 'visita_activa' | 'sin_visitas_previas' | 'limite_plan' | 'error'
 export type ResultadoNuevaVisita =
@@ -20,20 +21,50 @@ const MENSAJES: Record<MotivoNuevaVisita, string> = {
 const falla = (motivo: Exclude<MotivoNuevaVisita, 'limite_plan'>): ResultadoNuevaVisita => ({ ok: false, motivo, mensaje: MENSAJES[motivo] })
 
 export type CupoPlan = {
-  plan: string; planNombre: string; limite: number; usadas: number; restantes: number
-  ciclo: 'unico' | '30d'; renueva: string | null // ISO del próximo ciclo (null si es plan único)
+  plan: string | null; planNombre: string
+  limite: number; usadas: number; restantes: number
+  /** Cuándo toca pagar el siguiente mes (null si el último pago fue "A la carta" o una visita extra) */
+  renueva: string | null
+  /** Cuándo vence el primer saldo de visitas (las no usadas se pueden usar hasta entonces) */
+  vence: string | null
+  modo: 'creditos' | 'legado'
+}
+
+const LIMITES_LEGADO: Record<string, { visitas: number; ciclo: 'unico' | '30d' }> = {
+  carta: { visitas: 1, ciclo: 'unico' }, quincenal: { visitas: 2, ciclo: '30d' }, semanal: { visitas: 4, ciclo: '30d' },
 }
 
 /**
- * Cupo de visitas del plan vigente del cliente. null = sin plan registrado (cuentas anteriores o
- * asignadas a mano sin plan): no hay límite. Cuenta toda visita creada desde el inicio del ciclo.
+ * Cupo de visitas del cliente. Con pagos registrados (pagos_plan) usa paquetes que vencen a los 60 días.
+ * Sin pagos registrados cae al cupo antiguo por plan_contratado/plan_inicio. Sin ninguno de los dos: null (sin límite).
  */
 export async function cupoDelPlan(usuarioId: string): Promise<CupoPlan | null> {
   const supabase = createAdminSupabase()
+
+  const { data: pagos, error: eP } = await supabase
+    .from('pagos_plan').select('id, tipo, plan, visitas, inicio, vence, estado').eq('usuario_id', usuarioId)
+  // Con pagos registrados (aunque estén anulados) manda el sistema de paquetes: el cupo antiguo no se reactiva.
+  if (!eP && (pagos ?? []).length > 0) {
+    const { data: vs } = await supabase.from('visitas').select('created_at').eq('usuario_id', usuarioId)
+    const todos = pagos as PaqueteCredito[]
+    const r = calcularCreditos(todos, (vs ?? []).map((v) => v.created_at as string))
+    const ultimoPlan = todos.filter((p) => p.tipo === 'plan' && p.estado !== 'anulado').sort((a, b) => (a.inicio < b.inicio ? 1 : -1))[0]
+    const plan = (ultimoPlan?.plan as PlanId | undefined) ?? null
+    const hayActivos = todos.some((p) => p.estado !== 'anulado')
+    return {
+      plan, planNombre: plan ? PLANES[plan].nombre : hayActivos ? 'Visita extra' : 'Sin plan activo',
+      limite: r.total, usadas: r.usadas, restantes: r.disponibles,
+      renueva: ultimoPlan && plan !== 'carta' ? new Date(new Date(ultimoPlan.inicio).getTime() + CICLO_PAGO_DIAS * 86400_000).toISOString() : null,
+      vence: r.proximoVencimiento, modo: 'creditos',
+    }
+  }
+  if (eP) console.error('[cupoDelPlan] tabla de pagos no disponible (¿migración pendiente?):', eP.message)
+
+  // Cupo antiguo (cuentas anteriores a los pagos registrados)
   const { data: u, error } = await supabase
     .from('usuarios').select('plan_contratado, plan_inicio').eq('id', usuarioId).maybeSingle()
-  if (error) { console.error('[cupoDelPlan] columnas de plan no disponibles (¿migración pendiente?):', error.message); return null }
-  const lim = u?.plan_contratado ? LIMITES_PLAN[u.plan_contratado] : undefined
+  if (error) { console.error('[cupoDelPlan] columnas de plan no disponibles:', error.message); return null }
+  const lim = u?.plan_contratado ? LIMITES_LEGADO[u.plan_contratado] : undefined
   if (!u?.plan_contratado || !u.plan_inicio || !lim) return null
 
   const inicio = new Date(u.plan_inicio).getTime()
@@ -41,14 +72,14 @@ export async function cupoDelPlan(usuarioId: string): Promise<CupoPlan | null> {
   const k = lim.ciclo === '30d' ? Math.max(0, Math.floor((Date.now() - inicio) / CICLO)) : 0
   const desde = new Date(inicio + k * CICLO).toISOString()
   const renueva = lim.ciclo === '30d' ? new Date(inicio + (k + 1) * CICLO).toISOString() : null
-
   const { count } = await supabase
     .from('visitas').select('id', { count: 'exact', head: true })
     .eq('usuario_id', usuarioId).gte('created_at', lim.ciclo === '30d' ? desde : u.plan_inicio)
   const usadas = count ?? 0
+  const plan = u.plan_contratado as PlanId
   return {
-    plan: u.plan_contratado, planNombre: PLAN_INFO[u.plan_contratado]?.nombre ?? u.plan_contratado,
-    limite: lim.visitas, usadas, restantes: Math.max(0, lim.visitas - usadas), ciclo: lim.ciclo, renueva,
+    plan, planNombre: PLANES[plan]?.nombre ?? u.plan_contratado, limite: lim.visitas, usadas,
+    restantes: Math.max(0, lim.visitas - usadas), renueva, vence: renueva, modo: 'legado',
   }
 }
 

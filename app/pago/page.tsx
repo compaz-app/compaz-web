@@ -2,48 +2,27 @@
 
 import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
+import { PLANES as CFG, PLANES_IDS, VIGENCIA_CREDITOS_DIAS, PRECIO_HORA_EXTRA_USD, HORAS_MINIMAS_EXTRA, TEXTO_REEMBOLSO, type PlanId } from '@/lib/planes'
 
-// ── Planes ────────────────────────────────────────────────────────────────────
-const PLANES = [
-  {
-    id: 'carta',
-    nombre: 'A la carta',
-    badge: null,
-    precio: 45,
-    unidad: 'por visita',
-    descripcion: 'Una visita de 2 horas cuando lo necesites. Sin compromiso.',
-    detalles: ['Agenda cuando quieras', '2 horas por visita', 'Sin contrato fijo'],
-    precioBase: null,
-    ahorro: null,
-    stripe_price_id: null, // TODO: 'price_xxxx'
-  },
-  {
-    id: 'quincenal',
-    nombre: 'Compañía',
-    badge: null,
-    precio: 75,
-    unidad: 'por mes',
-    descripcion: '2 visitas al mes con una rutina estable para tu familiar.',
-    detalles: ['2 visitas al mes', '2 horas cada visita', 'Agenda fija quincenal'],
-    precioBase: 90,
-    ahorro: 15,
-    stripe_price_id: null, // TODO: 'price_xxxx'
-  },
-  {
-    id: 'semanal',
-    nombre: 'Compañía Plus',
-    badge: 'RECOMENDADO',
-    precio: 140,
-    unidad: 'por mes',
-    descripcion: 'Una visita por semana. Presencia constante, vínculo real con tu familiar.',
-    detalles: ['4 visitas al mes', '2 horas cada visita', 'Agenda fija semanal'],
-    precioBase: 180,
-    ahorro: 40,
-    stripe_price_id: null, // TODO: 'price_xxxx'
-  },
-]
-
-type PlanId = 'carta' | 'quincenal' | 'semanal'
+// ── Planes (precios y visitas vienen de lib/planes.ts, única fuente) ─────────
+const DETALLES: Record<PlanId, string[]> = {
+  carta: ['Agenda cuando quieras', '2 horas por visita', 'Sin contrato fijo'],
+  quincenal: ['2 visitas al mes', '2 horas cada visita', 'Pago mes a mes, sin cobros automáticos'],
+  semanal: ['4 visitas al mes', '2 horas cada visita', 'Pago mes a mes, sin cobros automáticos'],
+}
+const PLANES = PLANES_IDS.map((id) => ({
+  id,
+  nombre: CFG[id].nombre,
+  badge: id === 'semanal' ? 'RECOMENDADO' : null,
+  precio: CFG[id].precioUsd,
+  unidad: id === 'carta' ? 'por visita' : 'por mes',
+  descripcion: id === 'carta' ? 'Una visita de 2 horas cuando lo necesites. Sin compromiso.'
+    : id === 'quincenal' ? '2 visitas al mes con una rutina estable para tu familiar.'
+    : 'Una visita por semana. Presencia constante, vínculo real con tu familiar.',
+  detalles: DETALLES[id],
+  precioBase: id === 'quincenal' ? 90 : id === 'semanal' ? 180 : null,
+  ahorro: id === 'quincenal' ? 15 : id === 'semanal' ? 40 : null,
+}))
 
 type SolicitudInfo = {
   compitaNombre: string
@@ -134,7 +113,7 @@ function PagoContent() {
         <div style={{ background: 'white', border: '2px solid #E8E0D4', borderRadius: '24px', padding: '40px 32px', maxWidth: '480px', width: '100%', textAlign: 'center' }}>
           <h2 style={{ color: '#1A0A3C', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800 }}>¡Recibimos tu solicitud, {primerNombre}!</h2>
           <p style={{ color: '#4A3B6B', fontFamily: 'Inter, sans-serif', lineHeight: 1.6 }}>
-            El equipo de Compaz se pondrá en contacto contigo muy pronto para coordinar el pago y activar a {info.compitaNombre}.
+            El equipo de Compaz se pondrá en contacto contigo muy pronto para coordinar el pago por Zelle o transferencia y activar a {info.compitaNombre}.
           </p>
         </div>
       </div>
@@ -169,7 +148,7 @@ function PagoContent() {
         <div style={{ background: '#FFF3E8', border: '2px solid #FF6B2B', borderRadius: '12px', padding: '12px 16px', marginBottom: '28px', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
           <span style={{ fontSize: '18px', flexShrink: 0 }}>🔧</span>
           <p style={{ color: '#C84B0E', fontSize: '13px', margin: 0, lineHeight: 1.5 }}>
-            <strong>Pago en configuración.</strong> Por ahora el proceso es manual — nuestro equipo te contactará para coordinar. Stripe estará activo muy pronto.
+            <strong>Cómo pagar.</strong> Puedes pagar por <strong>Zelle</strong> o transferencia: nuestro equipo te contactará con los datos para completar el pago. El pago con tarjeta estará disponible muy pronto.
           </p>
         </div>
 
@@ -253,6 +232,20 @@ function PagoContent() {
               </button>
             )
           })}
+        </div>
+
+        {/* Cómo funciona el pago */}
+        <div style={{ background: 'white', border: '1.5px solid #E8E0D4', borderRadius: '12px', padding: '14px 16px', marginBottom: '12px' }}>
+          <p style={{ color: '#4A3B6B', fontSize: '13px', margin: '0 0 6px', lineHeight: 1.5 }}>
+            <strong>Pago mes a mes.</strong> No hay cobros automáticos: tú decides cuándo pagar el siguiente mes.
+          </p>
+          <p style={{ color: '#4A3B6B', fontSize: '13px', margin: '0 0 6px', lineHeight: 1.5 }}>
+            <strong>Tus visitas no se pierden al cerrar el mes.</strong> Las que no uses siguen disponibles durante {VIGENCIA_CREDITOS_DIAS / 30} meses desde el pago.
+          </p>
+          <p style={{ color: '#4A3B6B', fontSize: '13px', margin: '0 0 6px', lineHeight: 1.5 }}>
+            <strong>¿Necesitas más visitas?</strong> Una visita extra cuesta ${PRECIO_HORA_EXTRA_USD} por hora, con un mínimo de {HORAS_MINIMAS_EXTRA} horas.
+          </p>
+          <p style={{ color: '#6B5C90', fontSize: '12px', margin: 0, lineHeight: 1.5 }}>{TEXTO_REEMBOLSO}</p>
         </div>
 
         {/* Garantía */}

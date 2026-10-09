@@ -10,6 +10,7 @@ import { POST as cuestionario } from '@/app/api/cron/recordatorio-cuestionario/r
 import { POST as visitaCron } from '@/app/api/cron/recordatorio-visita/route'
 import { POST as manana } from '@/app/api/cron/recordatorio-primera-visita/route'
 import { POST as limpieza } from '@/app/api/cron/limpieza/route'
+import { POST as pagoCron } from '@/app/api/cron/recordatorio-pago/route'
 
 beforeEach(limpiar)
 const hace = (min: number) => new Date(Date.now() - min * 60_000).toISOString()
@@ -17,7 +18,7 @@ const hace = (min: number) => new Date(Date.now() - min * 60_000).toISOString()
 describe('Autorización de crons', () => {
   test('sin secreto o con secreto incorrecto → 401, y nada se ejecuta', async () => {
     const compita = mkCompita(); const cli = mkCliente(); mkSolicitud(cli, compita, { estado: 'aceptada', slot_confirmado: ahoraMas(30) })
-    for (const h of [recordatorios, seguimiento, cierre, noshow, cuestionario, visitaCron, manana, limpieza]) {
+    for (const h of [recordatorios, seguimiento, cierre, noshow, cuestionario, visitaCron, manana, limpieza, pagoCron]) {
       assert.equal((await h(cron('x', null))).status, 401)
       assert.equal((await h(cron('x', 'incorrecto'))).status, 401)
       assert.equal((await h(cron('x', ''))).status, 401)
@@ -224,5 +225,31 @@ describe('Crons de visitas', () => {
     assert.equal((await limpieza(cron('l'))).status, 200)
     const ids = db.rows('telegram_estados').map((r) => r.chat_id)
     assert.ok(!ids.includes('upd:1')); assert.ok(ids.includes('upd:2')); assert.ok(ids.includes('123'))
+  })
+})
+
+describe('recordatorio-pago (renovación mensual, sin cobros automáticos)', () => {
+  const pago = (cli: any, plan: string, diasAtras: number) => db.seed('pagos_plan', { usuario_id: cli.id, tipo: 'plan', plan, visitas: plan === 'semanal' ? 4 : 2, monto_usd: 75, metodo: 'zelle', inicio: hace(diasAtras * 24 * 60), vence: new Date(Date.now() + (60 - diasAtras) * 86400_000).toISOString() })
+
+  test('a los 30 días avisa una sola vez, menciona Zelle y las visitas que le sobran; al admin le llega el resumen', async () => {
+    const cli = mkCliente({ email: 'cli@mail.test', nombre: 'Carlos' }); pago(cli, 'quincenal', 31)
+    await pagoCron(cron('p')); await pagoCron(cron('p'))
+    const m = emailsA('cli@mail.test')
+    assert.equal(m.length, 1)
+    assert.ok(m[0].html.includes('Zelle') && m[0].html.includes('sin usar') && m[0].html.includes('reembolsos'))
+    assert.equal(tgPara(999).filter((x) => x.text.includes('Renovaciones pendientes')).length, 1)
+  })
+  test('no avisa si es "A la carta", si todavía no pasó el mes, o si ya renovó', async () => {
+    const a = mkCliente({ email: 'a@mail.test' }); pago(a, 'carta', 31)
+    const b = mkCliente({ email: 'b@mail.test' }); pago(b, 'semanal', 10)
+    const c = mkCliente({ email: 'c@mail.test' }); pago(c, 'semanal', 35); pago(c, 'semanal', 2)
+    await pagoCron(cron('p'))
+    assert.equal(net.emails.length, 0)
+  })
+  test('si Resend falla se reintenta al día siguiente', async () => {
+    const cli = mkCliente({ email: 'cli@mail.test' }); pago(cli, 'semanal', 32)
+    net.resendFail = true; await pagoCron(cron('p'))
+    net.resendFail = false; await pagoCron(cron('p'))
+    assert.equal(emailsA('cli@mail.test').length, 1)
   })
 })

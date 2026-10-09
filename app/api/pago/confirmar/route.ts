@@ -4,6 +4,7 @@ import { sendTelegramMessage, avisarAdmin, INLINE_INICIO } from '@/lib/telegram'
 import { sendEmail, SITE_URL } from '@/lib/email'
 import { esc } from '@/lib/html'
 import { pagoSimuladoActivo, PLANES_VALIDOS, PLAN_INFO } from '@/lib/pago'
+import { registrarPago } from '@/lib/pagos'
 import { ok, err, notFound, serverError, unauthorized } from '@/lib/api'
 
 type SolRow = {
@@ -64,12 +65,11 @@ export async function POST(req: NextRequest) {
   // Revertir si falla algún paso: no dejar la solicitud "contratada" sin visita ni asignación.
   const revertir = async () => { await admin.from('solicitudes').update({ estado: sol.estado }).eq('id', solicitud_id) }
 
-  // Guardar el plan comprado ANTES de crear la visita: esa primera visita cuenta dentro del cupo.
-  const { error: ePlan } = await admin
-    .from('usuarios').update({ plan_contratado: plan, plan_inicio: new Date().toISOString() }).eq('id', sol.cliente_id)
-  if (ePlan) {
-    console.error('[pago/confirmar] no se pudo guardar el plan (¿migración de planes pendiente?):', ePlan.message)
-    await avisarAdmin(`⚠️ <b>${esc(clienteNombre)}</b> contrató el plan <b>${esc(planInfo.nombre)}</b> pero no se pudo guardar el plan (sin límite de visitas). Ejecuta la migración de planes.`)
+  // Registrar el pago (paquete de visitas) ANTES de crear la visita: esa primera visita cuenta dentro del cupo.
+  const pago = await registrarPago({ usuarioId: sol.cliente_id, tipo: 'plan', plan, metodo: 'otro', referencia: 'pago simulado', registradoPor: 'sistema' })
+  if (!pago.ok) {
+    console.error('[pago/confirmar] no se pudo registrar el pago:', pago.error)
+    await avisarAdmin(`⚠️ <b>${esc(clienteNombre)}</b> contrató el plan <b>${esc(planInfo.nombre)}</b> pero no se pudo registrar el pago (sin límite de visitas). Ejecuta la migración de pagos y regístralo desde el panel.`)
   }
 
   // La visita de coordinación solo se crea si no hay ya una activa con esta compita

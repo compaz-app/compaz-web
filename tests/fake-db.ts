@@ -12,6 +12,7 @@ const REL: Record<string, Record<string, string>> = {
   solicitudes: { usuarios: 'cliente_id', compitas: 'compita_id' },
   usuarios: { compitas: 'compita_id' },
   mensajes: { visitas: 'visit_id' },
+  pagos_plan: { usuarios: 'usuario_id' },
 }
 const REL_INVERSA: Record<string, Record<string, string>> = {}
 
@@ -26,6 +27,7 @@ const DEFAULTS: Record<string, () => Row> = {
   compita_edit_tokens: () => ({ id: randomUUID(), usado: false, created_at: nowIso() }),
   onboarding_tokens: () => ({ id: randomUUID(), usado: false, created_at: nowIso() }),
   action_tokens: () => ({ id: randomUUID(), usado: false, created_at: nowIso() }),
+  pagos_plan: () => ({ id: randomUUID(), estado: 'activo', horas: null, referencia: null, created_at: nowIso() }),
   admin_flags: () => ({ id: randomUUID(), resuelto: false, created_at: nowIso() }),
 }
 

@@ -3,11 +3,12 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { colors } from '@/lib/design'
+import { PRECIO_HORA_EXTRA_USD, HORAS_MINIMAS_EXTRA } from '@/lib/planes'
 
 interface Props {
   compitaNombre: string
   /** Cupo del plan: null = sin límite registrado */
-  cupo?: { limite: number; usadas: number; restantes: number; planNombre: string; renueva: string | null } | null
+  cupo?: { limite: number; usadas: number; restantes: number; planNombre: string; renueva: string | null; vence: string | null } | null
 }
 
 export default function AgendarOtraVisita({ compitaNombre, cupo }: Props) {
@@ -34,15 +35,20 @@ export default function AgendarOtraVisita({ compitaNombre, cupo }: Props) {
     }
   }
 
+  const fmt = (iso: string) => new Date(iso).toLocaleDateString('es-VE', { day: 'numeric', month: 'long' })
+
   if (cupo && cupo.restantes <= 0) {
-    const renueva = cupo.renueva ? new Date(cupo.renueva).toLocaleDateString('es-VE', { day: 'numeric', month: 'long' }) : null
     return (
       <div style={{ background: colors.fondoClaro, border: `2px solid ${colors.fondoCard}`, borderRadius: '16px', padding: '20px 24px' }}>
-        <p style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '17px', color: colors.moradoMedio, margin: '0 0 4px' }}>
-          Ya usaste las {cupo.limite} {cupo.limite === 1 ? 'visita' : 'visitas'} de tu plan {cupo.planNombre}
+        <p style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '17px', color: colors.moradoMedio, margin: '0 0 6px' }}>
+          Ya no te quedan visitas disponibles
         </p>
-        <p style={{ color: colors.textoMedio, fontSize: '14px', margin: 0, lineHeight: 1.5 }}>
-          {renueva ? `Tu plan se renueva el ${renueva}. ` : ''}Para agendar más visitas con {compitaNombre}, escríbenos a <strong>hola@micompaz.com</strong> y renovamos o ampliamos tu plan.
+        <p style={{ color: colors.textoMedio, fontSize: '14px', margin: '0 0 6px', lineHeight: 1.5 }}>
+          Para seguir con {compitaNombre}, paga tu siguiente mes por <strong>Zelle</strong> o transferencia escribiéndonos a <strong>hola@micompaz.com</strong>.
+          {cupo.renueva ? ` Tu próximo pago corresponde desde el ${fmt(cupo.renueva)}.` : ''}
+        </p>
+        <p style={{ color: colors.textoSutil, fontSize: '13px', margin: 0, lineHeight: 1.5 }}>
+          ¿Solo necesitas una visita más? La visita extra cuesta ${PRECIO_HORA_EXTRA_USD} por hora, con un mínimo de {HORAS_MINIMAS_EXTRA} horas.
         </p>
       </div>
     )
@@ -56,7 +62,7 @@ export default function AgendarOtraVisita({ compitaNombre, cupo }: Props) {
         </p>
         <p style={{ color: colors.textoMedio, fontSize: '14px', margin: 0, lineHeight: 1.5 }}>
           Abre el chat con {compitaNombre} para ponerse de acuerdo en la fecha y la hora.
-          {cupo ? ` Te quedan ${cupo.restantes} de ${cupo.limite} visitas de tu plan ${cupo.planNombre}.` : ''}
+          {cupo ? ` Te quedan ${cupo.restantes} de ${cupo.limite} visitas${cupo.vence ? `; úsalas antes del ${fmt(cupo.vence)}` : ''}.` : ''}
         </p>
         {error && <p style={{ color: colors.rojo, fontSize: '13px', margin: '8px 0 0' }}>{error}</p>}
       </div>
