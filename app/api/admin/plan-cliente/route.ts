@@ -1,5 +1,5 @@
 // POST /api/admin/plan-cliente — el admin fija, renueva o quita el plan de un cliente (cobro manual).
-// { usuario_id, plan: 'carta'|'unica'|'quincenal'|'semanal'|'mensual'|null }  → reinicia el ciclo desde hoy.
+// { usuario_id, plan: 'carta'|'quincenal'|'semanal'|null }  → reinicia el ciclo desde hoy.
 import { NextRequest } from 'next/server'
 import { getAdminUser } from '@/lib/auth'
 import { createAdminSupabase } from '@/lib/supabase-server'
