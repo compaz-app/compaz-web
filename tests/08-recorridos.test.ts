@@ -294,7 +294,7 @@ describe('RECORRIDO 3: el admin interviene a mitad de los flujos', () => {
     await solicitar(req('/api/solicitudes', { json: { compita_id: lucia.id, mensaje: 'hola', slots_propuestos: [ahoraMas(180)] } }))
     await webhook(tgBtn(2220, `slot:0:${sol().token_respuesta}`))
     carlos.plan = 'bloqueado'
-    assert.equal((await pagoConfirmar(req('/api/pago/confirmar', { json: { solicitud_id: sol().id, plan: 'carta' } }))).status, 403)
+    assert.equal((await pagoConfirmar(req('/api/pago/confirmar', { json: { solicitud_id: sol().id, plan: 'carta' } }))).status, 401)
     assert.equal(sol().estado, 'aceptada')
   })
 })

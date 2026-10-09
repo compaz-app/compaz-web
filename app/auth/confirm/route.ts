@@ -5,7 +5,7 @@
 // Plantilla de Supabase:  {{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email
 import { NextRequest, NextResponse } from 'next/server'
 import { createRouteSupabase, type CookieASetear } from '@/lib/supabase-server'
-import { destinoTrasLogin } from '@/lib/login-destino'
+import { destinoTrasLogin, BLOQUEADO } from '@/lib/login-destino'
 import { rutaInterna } from '@/lib/html'
 import { urlPublica } from '@/lib/site'
 import { puertaConfirmacion } from '@/lib/confirm'
@@ -42,6 +42,10 @@ export async function POST(req: NextRequest) {
   }
 
   const destino = await destinoTrasLogin(data.user.id, data.user.email, p.next)
+  if (destino === BLOQUEADO) {
+    await supabase.auth.signOut()
+    return NextResponse.redirect(urlPublica('/login?error=bloqueado', req), 303)
+  }
   if (!destino) {
     await supabase.auth.signOut()
     return NextResponse.redirect(urlPublica('/login?error=no-invitado', req), 303)

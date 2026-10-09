@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server'
-import { createServerSupabase, createAdminSupabase } from '@/lib/supabase-server'
+import { createAdminSupabase } from '@/lib/supabase-server'
+import { getClienteActivo } from '@/lib/auth'
 import { ok, err, unauthorized, notFound } from '@/lib/api'
 import { sendTelegramMessage, INLINE_REAGENDAR_VISITA } from '@/lib/telegram'
 import { sendEmail, SITE_URL } from '@/lib/email'
@@ -10,8 +11,7 @@ import { hoyVE, horaVE, formatFechaVE } from '@/lib/format'
 // Guarda fecha + horario acordado Y confirma coordinación en un solo paso: pre_visita → programada.
 // Valida que el compita no tenga otra visita programada que se solape con el horario.
 export async function PUT(req: NextRequest) {
-  const supabase = await createServerSupabase()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getClienteActivo()
   if (!user) return unauthorized()
 
   const body = await req.json().catch(() => null) as { visita_id?: string; fecha_programada?: string; hora_inicio?: string; hora_fin?: string } | null

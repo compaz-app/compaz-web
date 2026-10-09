@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerSupabase, createAdminSupabase } from '@/lib/supabase-server'
+import { createAdminSupabase } from '@/lib/supabase-server'
+import { getClienteActivo } from '@/lib/auth'
 import { sendTelegramMessage } from '@/lib/telegram'
 import type { Visita, Compita, Usuario } from '@/types'
 
 export async function POST(req: NextRequest) {
-  const supabase = await createServerSupabase()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getClienteActivo()
 
   if (!user) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })

@@ -21,7 +21,9 @@ export default function LoginPage() {
     if (!e) return
     const motivo = p.get('motivo')
     setError(
-      e === 'no-invitado'
+      e === 'bloqueado'
+        ? 'Tu cuenta está suspendida. Si crees que es un error, escríbenos a hola@micompaz.com.'
+        : e === 'no-invitado'
         ? 'Esta cuenta aún no tiene acceso. Escribe tu correo aquí abajo para recibir un enlace nuevo, o escríbenos a hola@micompaz.com.'
         : `Ese enlace ya se usó o venció. Escribe tu correo aquí abajo y te enviamos uno nuevo al instante.${motivo ? ` (motivo: ${motivo})` : ''}`,
     )

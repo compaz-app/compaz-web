@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server'
-import { createServerSupabase, createAdminSupabase } from '@/lib/supabase-server'
+import { createAdminSupabase } from '@/lib/supabase-server'
+import { getClienteActivo } from '@/lib/auth'
 import { sendTelegramMessage } from '@/lib/telegram'
 import { sendEmail, SITE_URL as SITE } from '@/lib/email'
 import { esc } from '@/lib/html'
@@ -8,14 +9,14 @@ import { ok, err, unauthorized, serverError } from '@/lib/api'
 
 
 export async function POST(req: NextRequest) {
-  const supabase = await createServerSupabase()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getClienteActivo()
   if (!user) return unauthorized()
 
   const { compita_id } = (await req.json().catch(() => ({}))) as { compita_id?: string }
   if (!compita_id) return err('Faltan parámetros')
 
-  const { data: perfil } = await supabase
+  const admin = createAdminSupabase()
+  const { data: perfil } = await admin
     .from('usuarios')
     .select('nombre, compita_id')
     .eq('id', user.id)
@@ -25,7 +26,6 @@ export async function POST(req: NextRequest) {
 
   if (perfil?.compita_id === compita_id) return err('Ya tienes esta Compita asignada')
 
-  const admin = createAdminSupabase()
 
   // El nombre de la compita se lee de la BD (no del body: evita inyectar texto en mensajes al admin)
   const { data: compitaRow } = await admin.from('compitas').select('nombre, estado, verificado').eq('id', compita_id).maybeSingle()

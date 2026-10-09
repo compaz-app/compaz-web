@@ -310,6 +310,7 @@ export function makeClient(db: FakeDB, user: () => { id: string; email: string }
           OTPS.set(hashed, { id, email, usado: false })
           return { data: { user: { id, email }, properties: { hashed_token: hashed, action_link: 'x', verification_type: type } }, error: null }
         },
+        updateUserById: async (id: string, attrs: any) => { (db as any).bans = (db as any).bans ?? {}; (db as any).bans[id] = attrs.ban_duration; return { data: { user: { id } }, error: null } },
         deleteUser: async (id: string) => {
           db.tables.usuarios = db.tables.usuarios.filter((u) => u.id !== id)
           return { error: null }

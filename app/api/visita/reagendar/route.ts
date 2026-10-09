@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server'
-import { createServerSupabase, createAdminSupabase } from '@/lib/supabase-server'
+import { createAdminSupabase } from '@/lib/supabase-server'
+import { getClienteActivo } from '@/lib/auth'
 import { ok, err, unauthorized, notFound } from '@/lib/api'
 import { sendTelegramMessage, INLINE_INICIO } from '@/lib/telegram'
 import { sendEmail, SITE_URL } from '@/lib/email'
@@ -10,8 +11,7 @@ import { avisarAdmin } from '@/lib/telegram'
 // POST /api/visita/reagendar
 // Cancela la fecha acordada y vuelve al estado pre_visita para recoordinar
 export async function POST(req: NextRequest) {
-  const supabase = await createServerSupabase()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getClienteActivo()
   if (!user) return unauthorized()
 
   const { visita_id } = (await req.json().catch(() => ({}))) as { visita_id: string }

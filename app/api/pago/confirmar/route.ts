@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server'
-import { createAdminSupabase, createServerSupabase } from '@/lib/supabase-server'
+import { createAdminSupabase } from '@/lib/supabase-server'
+import { getClienteActivo } from '@/lib/auth'
 import { sendTelegramMessage, avisarAdmin, INLINE_INICIO } from '@/lib/telegram'
 import { sendEmail, SITE_URL } from '@/lib/email'
 import { esc } from '@/lib/html'
@@ -14,8 +15,7 @@ type SolRow = {
 }
 
 export async function POST(req: NextRequest) {
-  const supabase = await createServerSupabase()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getClienteActivo()
   if (!user) return unauthorized()
 
   const body = await req.json().catch(() => null) as { solicitud_id?: string; plan?: string } | null

@@ -1,4 +1,4 @@
-import { createServerSupabase } from '@/lib/supabase-server'
+import { createServerSupabase, createAdminSupabase } from '@/lib/supabase-server'
 import { redirect } from 'next/navigation'
 import type { Usuario } from '@/types'
 
@@ -54,5 +54,20 @@ export async function getAdminUser() {
   const supabase = await createServerSupabase()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user || !isAdminEmail(user.email ?? '')) return null
+  return user
+}
+
+/**
+ * Usuario de la sesión SOLO si puede usar la plataforma: tiene fila en `usuarios` y no está bloqueado
+ * (los admins siempre pasan). Un cliente bloqueado o eliminado recibe null en cada petición, de modo que
+ * queda fuera al instante aunque su sesión siga vigente.
+ */
+export async function getClienteActivo() {
+  const supabase = await createServerSupabase()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+  if (isAdminEmail(user.email ?? '')) return user
+  const { data } = await createAdminSupabase().from('usuarios').select('plan').eq('id', user.id).maybeSingle()
+  if (!data || data.plan === 'bloqueado') return null
   return user
 }

@@ -1,4 +1,5 @@
-import { requireAuth, getUsuario } from '@/lib/auth'
+import { requireAuth, getUsuario, getClienteActivo } from '@/lib/auth'
+import { redirect } from 'next/navigation'
 import CompitasMarketplace from './CompitasMarketplace'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import type { Compita } from '@/types'
@@ -6,6 +7,7 @@ import { Suspense } from 'react'
 
 export default async function CompitasPage() {
   await requireAuth()
+  if (!(await getClienteActivo())) redirect('/login?error=bloqueado')
   const usuario = await getUsuario()
 
   const supabase = createAdminSupabase()

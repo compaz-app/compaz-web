@@ -77,7 +77,7 @@ describe('Pago / contratación (Stripe aún no contratado)', () => {
     comoCliente(mkCliente()); assert.equal((await pagoConfirmar(req('/api/pago/confirmar', { json: { solicitud_id: sol.id, plan: 'carta' } }))).status, 401)
     compita.verificado = false; assert.equal((await contratar(cli, sol)).status, 409); compita.verificado = true
     db.rows('usuarios').find((u) => u.id === cli.id)!.plan = 'bloqueado'
-    assert.equal((await contratar(cli, sol)).status, 403)
+    assert.equal((await contratar(cli, sol)).status, 401)
   })
 })
 

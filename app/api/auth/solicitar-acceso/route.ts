@@ -48,8 +48,9 @@ export async function POST(req: NextRequest) {
   await admin.from('telegram_estados').upsert({ chat_id: claveMail, registro_pendiente: false, updated_at: new Date().toISOString() }, { onConflict: 'chat_id' })
 
   // Solo admins o personas invitadas (con cuenta en `usuarios`). generateLink crearía usuarios nuevos: nunca para desconocidos.
-  const { data: u } = await admin.from('usuarios').select('nombre').eq('email', email).maybeSingle()
+  const { data: u } = await admin.from('usuarios').select('nombre, plan').eq('email', email).maybeSingle()
   if (!u && !isAdminEmail(email)) return ok(GENERICO)
+  if (u?.plan === 'bloqueado') return ok(GENERICO) // cuenta suspendida: no se envía ningún acceso
 
   try {
     const link = await admin.auth.admin.generateLink({ type: 'magiclink', email })

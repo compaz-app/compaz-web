@@ -1,6 +1,7 @@
 // POST /api/solicitudes — crea una solicitud de entrevista y notifica al compita por Telegram
 import { NextRequest } from 'next/server'
-import { createServerSupabase, createAdminSupabase } from '@/lib/supabase-server'
+import { createAdminSupabase } from '@/lib/supabase-server'
+import { getClienteActivo } from '@/lib/auth'
 import { crearSolicitud } from '@/lib/solicitudes'
 import { sendTelegramMessage, makeInlineKeyboard } from '@/lib/telegram'
 import { ok, err, unauthorized, serverError } from '@/lib/api'
@@ -12,8 +13,7 @@ import { avisarAdmin } from '@/lib/telegram'
 const MENSAJES_NEGOCIO = ['Límite de', 'Ya tienes una solicitud']
 
 export async function POST(req: NextRequest) {
-  const supabase = await createServerSupabase()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getClienteActivo()
   if (!user) return unauthorized()
 
   const body = await req.json().catch(() => null) as {

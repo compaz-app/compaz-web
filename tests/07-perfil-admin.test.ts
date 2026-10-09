@@ -157,7 +157,7 @@ describe('Panel admin', () => {
     await bloquearCliente(req('/api/admin/bloquear-cliente', { json: { usuario_id: cli.id, bloquear: true } }))
     session.user = { id: cli.id, email: cli.email }
     const body = { compita_id: c.id, mensaje: 'hola', slots_propuestos: [ahoraMas(120)] }
-    assert.equal((await solicitudes(req('/api/solicitudes', { json: body }))).status, 403)
+    assert.equal((await solicitudes(req('/api/solicitudes', { json: body }))).status, 401)
     admin(); await bloquearCliente(req('/api/admin/bloquear-cliente', { json: { usuario_id: cli.id, bloquear: false } }))
     session.user = { id: cli.id, email: cli.email }
     assert.equal((await solicitudes(req('/api/solicitudes', { json: body }))).status, 200)

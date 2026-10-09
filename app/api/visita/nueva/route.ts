@@ -1,13 +1,12 @@
 // POST /api/visita/nueva — el cliente agenda otra visita (2ª, 3ª, 4ª...) con su compita asignada.
-import { createServerSupabase } from '@/lib/supabase-server'
+import { getClienteActivo } from '@/lib/auth'
 import { crearSiguienteVisita } from '@/lib/visitas'
 import { sendTelegramMessage, avisarAdmin } from '@/lib/telegram'
 import { esc } from '@/lib/html'
 import { ok, err, unauthorized } from '@/lib/api'
 
 export async function POST() {
-  const supabase = await createServerSupabase()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getClienteActivo()
   if (!user) return unauthorized()
 
   const r = await crearSiguienteVisita(user.id)

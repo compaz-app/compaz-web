@@ -1,8 +1,8 @@
 // GET /api/foto/[id] — sirve una foto de visita guardada en Telegram como "tg:<file_id>".
 // Acceso: dueño de la visita (sesión), admin, o enlace firmado con expiración (emails).
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerSupabase, createAdminSupabase } from '@/lib/supabase-server'
-import { isAdminEmail } from '@/lib/auth'
+import { createAdminSupabase } from '@/lib/supabase-server'
+import { getClienteActivo, isAdminEmail } from '@/lib/auth'
 import { descargarFotoTelegram } from '@/lib/telegram'
 import { fotoFirmaValida } from '@/lib/links'
 
@@ -26,8 +26,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
   const sp = req.nextUrl.searchParams
   let autorizado = fotoFirmaValida(id, sp.get('e'), sp.get('s'))
   if (!autorizado) {
-    const supabase = await createServerSupabase()
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = await getClienteActivo()
     autorizado = !!user && (isAdminEmail(user.email ?? '') || msg.visita?.usuario_id === user.id)
   }
   if (!autorizado) return new NextResponse('No autorizado', { status: 401 })

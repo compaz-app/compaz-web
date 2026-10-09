@@ -14,9 +14,9 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(destino)
   }
 
-  // Solo proteger /admin en middleware — el dashboard lo protege requireAuth() en el Server Component
   const isAdminRoute = pathname.startsWith('/admin')
-  if (!isAdminRoute) return NextResponse.next()
+  const isAreaCliente = pathname.startsWith('/dashboard') || pathname.startsWith('/compitas') || pathname.startsWith('/pago')
+  if (!isAdminRoute && !isAreaCliente) return NextResponse.next()
 
   let response = NextResponse.next({ request })
 
@@ -39,6 +39,25 @@ export async function middleware(request: NextRequest) {
     }
   )
 
+  // Área de clientes: una cuenta bloqueada se expulsa en cada navegación (cierra su sesión y vuelve al login).
+  // Los Server Components y las rutas de la API repiten la comprobación (getClienteActivo), esto es la primera barrera.
+  if (isAreaCliente) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user || isAdminEmail(user.email ?? '')) return response
+      const { data: fila } = await supabase.from('usuarios').select('plan').eq('id', user.id).maybeSingle()
+      if (fila?.plan === 'bloqueado') {
+        await supabase.auth.signOut()
+        const salida = NextResponse.redirect(urlPublica('/login?error=bloqueado', request))
+        response.cookies.getAll().forEach((c) => salida.cookies.set(c))
+        return salida
+      }
+    } catch (e) {
+      console.error('[middleware] comprobación de cuenta bloqueada falló:', e)
+    }
+    return response
+  }
+
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) return NextResponse.redirect(urlPublica('/login', request))
@@ -48,5 +67,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/', '/dashboard/:path*', '/compitas/:path*', '/admin/:path*'],
+  matcher: ['/', '/dashboard/:path*', '/compitas/:path*', '/pago/:path*', '/admin/:path*'],
 }

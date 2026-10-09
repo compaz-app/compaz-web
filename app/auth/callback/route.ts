@@ -1,6 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextRequest, NextResponse } from 'next/server'
-import { destinoTrasLogin } from '@/lib/login-destino'
+import { destinoTrasLogin, BLOQUEADO } from '@/lib/login-destino'
 import { urlPublica } from '@/lib/site'
 import { rutaInterna } from '@/lib/html'
 
@@ -33,6 +33,10 @@ export async function GET(req: NextRequest) {
 
     if (!error && data.user) {
       const destination = await destinoTrasLogin(data.user.id, data.user.email, redirectTo)
+      if (destination === BLOQUEADO) {
+        await supabase.auth.signOut()
+        return NextResponse.redirect(urlPublica('/login?error=bloqueado', req))
+      }
       if (!destination) {
         await supabase.auth.signOut()
         return NextResponse.redirect(urlPublica('/login?error=no-invitado', req))

@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server'
-import { createServerSupabase, createAdminSupabase } from '@/lib/supabase-server'
+import { createAdminSupabase } from '@/lib/supabase-server'
+import { getClienteActivo } from '@/lib/auth'
 import { getOrCreateDailyRoom } from '@/lib/daily'
 import { sendTelegramMessage, avisarAdmin } from '@/lib/telegram'
 import { esc } from '@/lib/html'
@@ -7,8 +8,7 @@ import { ok, err, unauthorized, serverError } from '@/lib/api'
 import type { Visita, Compita, Usuario } from '@/types'
 
 export async function POST(req: NextRequest) {
-  const supabase = await createServerSupabase()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getClienteActivo()
   if (!user) return unauthorized()
 
   const admin = createAdminSupabase()

@@ -14,7 +14,12 @@ export async function POST(req: NextRequest) {
     .from('usuarios')
     .update({ plan: bloquear ? 'bloqueado' : null })
     .eq('id', usuario_id)
-
   if (error) return serverError(error)
+
+  // Capa extra: Supabase Auth también impide iniciar sesión y renovar la sesión de una cuenta bloqueada.
+  // (El bloqueo real y inmediato lo aplica nuestro servidor en cada petición: ver getClienteActivo.)
+  const { error: eBan } = await admin.auth.admin.updateUserById(usuario_id, { ban_duration: bloquear ? '876000h' : 'none' })
+  if (eBan) console.error('[bloquear-cliente] no se pudo (des)bloquear en Auth:', eBan.message)
+
   return ok(null)
 }

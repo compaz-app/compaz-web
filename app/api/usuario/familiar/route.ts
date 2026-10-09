@@ -1,15 +1,11 @@
 import { NextRequest } from 'next/server'
-import { requireAuth } from '@/lib/auth'
+import { getClienteActivo } from '@/lib/auth'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { ok, unauthorized, serverError } from '@/lib/api'
 
 export async function PUT(req: NextRequest) {
-  let session: Awaited<ReturnType<typeof requireAuth>>
-  try {
-    session = await requireAuth()
-  } catch {
-    return unauthorized()
-  }
+  const user = await getClienteActivo()
+  if (!user) return unauthorized()
 
   const body = await req.json() as {
     familiar_nombre?: string
@@ -27,7 +23,7 @@ export async function PUT(req: NextRequest) {
       familiar_condicion: body.familiar_condicion?.trim() || null,
       familiar_notas: body.familiar_notas?.trim() || null,
     })
-    .eq('id', session.user.id)
+    .eq('id', user.id)
 
   if (error) return serverError(error)
   return ok(null)

@@ -102,7 +102,7 @@ describe('Agendar otra visita (2ª, 3ª, 4ª...)', () => {
     await visitaCompleta(carlos, lucia, 1)
     // cliente bloqueado
     admin(); await bloquearCliente(req('/api/admin/bloquear-cliente', { json: { usuario_id: carlos.id, bloquear: true } }))
-    como(carlos); assert.equal((await nueva()).status, 409)
+    como(carlos); assert.equal((await nueva()).status, 401)
     admin(); await bloquearCliente(req('/api/admin/bloquear-cliente', { json: { usuario_id: carlos.id, bloquear: false } }))
     // compita bloqueada: además queda desasignada
     await bloquearCompita(req('/api/admin/bloquear-compita', { json: { compita_id: lucia.id, bloquear: true } }))

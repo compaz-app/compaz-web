@@ -1,11 +1,11 @@
 import { NextRequest } from 'next/server'
-import { createAdminSupabase, createServerSupabase } from '@/lib/supabase-server'
+import { createAdminSupabase } from '@/lib/supabase-server'
+import { getClienteActivo } from '@/lib/auth'
 import { ok, err, notFound, unauthorized } from '@/lib/api'
 import { pagoSimuladoActivo } from '@/lib/pago'
 
 export async function GET(req: NextRequest) {
-  const supabase = await createServerSupabase()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getClienteActivo()
   if (!user) return unauthorized()
 
   const solicitudId = req.nextUrl.searchParams.get('solicitud')

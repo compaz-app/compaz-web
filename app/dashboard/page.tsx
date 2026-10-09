@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { requireAuth, getUsuario, isAdminEmail } from '@/lib/auth'
+import { getClienteActivo, requireAuth, getUsuario, isAdminEmail } from '@/lib/auth'
 import { createServerSupabase, createAdminSupabase } from '@/lib/supabase-server'
 import Chat from '@/components/ui/Chat'
 import VideoCall from '@/components/ui/VideoCall'
@@ -24,6 +24,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const recienContratado = params.contratado === '1'
 
   const isAdmin = isAdminEmail(session.user.email ?? '')
+  // Cliente bloqueado o eliminado: fuera, aunque su sesión siga vigente
+  if (!isAdmin && !(await getClienteActivo())) redirect('/login?error=bloqueado')
 
   // Admin sin preview → redirigir al panel
   if (isAdmin && !previewUid) redirect('/admin')

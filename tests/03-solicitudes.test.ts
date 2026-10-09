@@ -37,7 +37,7 @@ describe('POST /api/solicitudes (cliente pide entrevista)', () => {
     const inactiva = mkCompita({ verificado: false })
     assert.equal((await pedir(cli, { ...base, compita_id: inactiva.id })).status, 400)
     const bloqueado = mkCliente({ plan: 'bloqueado' })
-    assert.equal((await pedir(bloqueado, base)).status, 403)
+    assert.equal((await pedir(bloqueado, base)).status, 401, 'un cliente bloqueado queda fuera (401)')
   })
 
   test('creación OK: Telegram a la compita con botones; nombre del cliente con HTML llega escapado', async () => {
