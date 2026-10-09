@@ -3,6 +3,7 @@ import { createAdminSupabase } from '@/lib/supabase-server'
 import { getClienteActivo } from '@/lib/auth'
 import { sendTelegramMessage, avisarAdmin, INLINE_INICIO } from '@/lib/telegram'
 import { sendEmail, SITE_URL } from '@/lib/email'
+import { emailAdminPago } from '@/lib/aviso-pago'
 import { esc } from '@/lib/html'
 import { pagoSimuladoActivo, PLANES_VALIDOS, PLAN_INFO } from '@/lib/pago'
 import { registrarPago } from '@/lib/pagos'
@@ -49,6 +50,7 @@ export async function POST(req: NextRequest) {
       `<b>Plan:</b> ${esc(planInfo.nombre)}`, ``,
       `Coordina el pago y luego asigna la compita desde el panel admin.`,
     ].join('\n'))
+    await emailAdminPago('Un cliente quiere contratar en Compaz', `${clienteNombre} (${sol.usuarios?.email ?? ''}) quiere contratar el plan ${planInfo.nombre} con ${sol.compitas?.nombre ?? 'una compita'}. El pago está pendiente: coordínalo y asigna la compita desde el panel.`)
     return ok({ plan, pendiente: true })
   }
 

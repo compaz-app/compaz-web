@@ -8,6 +8,7 @@ import { registrarPago } from '@/lib/pagos'
 import { cupoDelPlan } from '@/lib/visitas'
 import { sendEmail, SITE_URL } from '@/lib/email'
 import { esc } from '@/lib/html'
+import { emailAdminPago } from '@/lib/aviso-pago'
 import { ETIQUETA_METODO, PLANES, TEXTO_REEMBOLSO, type PlanId, type MetodoPago } from '@/lib/planes'
 import { ok, err, unauthorized } from '@/lib/api'
 
@@ -54,5 +55,6 @@ export async function POST(req: NextRequest) {
     } catch (e) { console.error('[registrar-pago] correo al cliente falló:', e) }
   }
 
+  await emailAdminPago('Pago registrado en Compaz', `Se registró un pago de $${r.pago.monto_usd} de ${cli?.nombre ?? 'un cliente'} (${ETIQUETA_METODO[r.pago.metodo as MetodoPago]}) por ${admin.email ?? 'admin'}.`)
   return ok({ pago: r.pago, cupo: await cupoDelPlan(b.usuario_id), correo_enviado: correoEnviado })
 }

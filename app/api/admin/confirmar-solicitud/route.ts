@@ -7,6 +7,7 @@ import { cupoDelPlan } from '@/lib/visitas'
 import { sendEmail, SITE_URL } from '@/lib/email'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { esc } from '@/lib/html'
+import { emailAdminPago } from '@/lib/aviso-pago'
 import { PLANES, ETIQUETA_METODO, TEXTO_REEMBOLSO, type PlanId, type MetodoPago } from '@/lib/planes'
 import { ok, err, unauthorized } from '@/lib/api'
 
@@ -39,5 +40,6 @@ export async function POST(req: NextRequest) {
       correoEnviado = true
     } catch (e) { console.error('[confirmar-solicitud] correo falló:', e) }
   }
+  await emailAdminPago('Pago confirmado en Compaz', `Confirmaste el pago de $${r.pago.monto_usd} de ${cli?.nombre ?? 'un cliente'} (${ETIQUETA_METODO[r.pago.metodo as MetodoPago]}).`)
   return ok({ pago: r.pago, cupo: await cupoDelPlan(r.usuarioId), correo_enviado: correoEnviado })
 }
