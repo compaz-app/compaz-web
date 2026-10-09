@@ -1,6 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextRequest, NextResponse } from 'next/server'
-import { isAdminEmail } from '@/lib/auth'
+import { destinoTrasLogin } from '@/lib/login-destino'
 import { rutaInterna } from '@/lib/html'
 
 export async function GET(req: NextRequest) {
@@ -31,19 +31,10 @@ export async function GET(req: NextRequest) {
     if (error) console.error('[auth/callback] exchangeCodeForSession falló:', error.status, error.code, error.message)
 
     if (!error && data.user) {
-      let destination: string
-
-      if (isAdminEmail(data.user.email ?? '')) {
-        destination = '/admin'
-      } else {
-        const { createAdminSupabase } = await import('@/lib/supabase-server')
-        const admin = createAdminSupabase()
-        const { data: usuario } = await admin.from('usuarios').select('id').eq('id', data.user.id).maybeSingle()
-        if (!usuario) {
-          await supabase.auth.signOut()
-          return NextResponse.redirect(new URL('/login?error=no-invitado', origin))
-        }
-        destination = redirectTo
+      const destination = await destinoTrasLogin(data.user.id, data.user.email, redirectTo)
+      if (!destination) {
+        await supabase.auth.signOut()
+        return NextResponse.redirect(new URL('/login?error=no-invitado', origin))
       }
 
       const response = NextResponse.redirect(new URL(destination, origin))
