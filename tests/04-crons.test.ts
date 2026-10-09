@@ -236,7 +236,7 @@ describe('recordatorio-pago (renovación mensual, sin cobros automáticos)', () 
     await pagoCron(cron('p')); await pagoCron(cron('p'))
     const m = emailsA('cli@mail.test')
     assert.equal(m.length, 1)
-    assert.ok(m[0].html.includes('Zelle') && m[0].html.includes('sin usar') && m[0].html.includes('reembolsos'))
+    assert.ok(m[0].html.includes('Zelle') && m[0].html.includes('sin usar') && m[0].html.includes('condiciones'))
     assert.equal(tgPara(999).filter((x) => x.text.includes('Renovaciones pendientes')).length, 1)
   })
   test('no avisa si es "A la carta", si todavía no pasó el mes, o si ya renovó', async () => {

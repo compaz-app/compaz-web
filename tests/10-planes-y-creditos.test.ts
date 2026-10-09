@@ -130,7 +130,7 @@ describe('Registrar pago (panel admin)', () => {
     assert.equal((await listarPagos(req(`/api/admin/pagos?usuario_id=${carlos.id}`))).status, 401)
   })
 
-  test('Zelle: crea el paquete, vence a los 60 días, avisa al cliente y menciona Zelle y las condiciones de reembolso', async () => {
+  test('Zelle: crea el paquete, vence a los 60 días, avisa al cliente y menciona Zelle y que aplican condiciones', async () => {
     const { carlos } = mundoCon([])
     const r = await pagar(carlos, { plan: 'semanal', metodo: 'zelle', referencia: 'ZELLE-123' })
     assert.equal(r.status, 200)
@@ -138,7 +138,7 @@ describe('Registrar pago (panel admin)', () => {
     assert.equal(p.visitas, 4); assert.equal(p.monto_usd, 140)
     assert.ok(Math.abs(new Date(p.vence).getTime() - new Date(p.inicio).getTime() - 60 * DIA) < 5000)
     const mail = emailsA('carlos@mail.test')[0]
-    assert.ok(mail.html.includes('Zelle') && mail.html.includes('$140') && mail.html.includes('reembolsos'))
+    assert.ok(mail.html.includes('Zelle') && mail.html.includes('$140') && mail.html.includes('condiciones'))
     assert.equal(carlos.plan_contratado, 'semanal')
   })
 

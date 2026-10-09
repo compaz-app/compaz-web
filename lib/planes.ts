@@ -21,4 +21,5 @@ export const METODOS_PAGO = ['zelle', 'transferencia', 'stripe', 'otro'] as cons
 export type MetodoPago = (typeof METODOS_PAGO)[number]
 export const ETIQUETA_METODO: Record<MetodoPago, string> = { zelle: 'Zelle', transferencia: 'Transferencia', stripe: 'Tarjeta (Stripe)', otro: 'Otro' }
 
-export const TEXTO_REEMBOLSO = 'Los reembolsos están sujetos a condiciones.'
+/** No se promete nada por escrito: solo que aplican condiciones y que se habla directamente con Compaz. */
+export const TEXTO_REEMBOLSO = 'Aplican ciertas condiciones. Para cualquier consulta sobre tu pago, habla directamente con Compaz en hola@micompaz.com.'
