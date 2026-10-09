@@ -28,6 +28,7 @@ export async function GET(req: NextRequest) {
     )
 
     const { data, error } = await supabase.auth.exchangeCodeForSession(code)
+    if (error) console.error('[auth/callback] exchangeCodeForSession falló:', error.status, error.code, error.message)
 
     if (!error && data.user) {
       let destination: string
@@ -53,5 +54,6 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  return NextResponse.redirect(new URL('/login?error=auth', origin))
+  console.error('[auth/callback] sin code o sin sesión; code presente:', !!code)
+  return NextResponse.redirect(new URL(`/login?error=auth&motivo=${code ? 'intercambio' : 'sin_code'}`, origin))
 }

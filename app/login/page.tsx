@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createBrowserSupabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
@@ -14,6 +14,19 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [cooldown, setCooldown] = useState(0)
   const router = useRouter()
+
+  // Mensaje cuando el callback de autenticación devolvió al usuario aquí con un error
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search)
+    const e = p.get('error')
+    if (!e) return
+    const motivo = p.get('motivo')
+    setError(
+      e === 'no-invitado'
+        ? 'Este correo no está registrado. Usa el correo con el que fuiste invitado o escríbenos a hola@micompaz.com.'
+        : `No pudimos completar tu ingreso con ese enlace. Es posible que ya se haya usado o que se abriera en otro navegador. Pide uno nuevo y ábrelo en el mismo navegador.${motivo ? ` (motivo: ${motivo})` : ''}`,
+    )
+  }, [])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
