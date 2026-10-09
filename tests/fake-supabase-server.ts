@@ -1,5 +1,5 @@
 /* eslint-disable */
-import { FakeDB, makeClient } from './fake-db'
+import { FakeDB, makeClient, OTPS } from './fake-db'
 
 export const db = new FakeDB()
 export const session: { user: { id: string; email: string } | null } = { user: null }
@@ -9,7 +9,7 @@ export function createAdminSupabase() { return makeClient(db, () => null) as any
 export async function createServerSupabase() { return makeClient(db, () => session.user) as any }
 
 // ── Inicio de sesión por token_hash (/auth/confirm) ──
-export const otps = new Map<string, { id: string; email: string; usado: boolean }>()
+export const otps = OTPS
 export function createRouteSupabase(_req: any, salida: Array<{ name: string; value: string; options: Record<string, unknown> }>) {
   const base: any = makeClient(db, () => session.user)
   base.auth.verifyOtp = async ({ token_hash }: { type: string; token_hash: string }) => {

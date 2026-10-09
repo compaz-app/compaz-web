@@ -35,6 +35,8 @@ const PK: Record<string, string> = { telegram_estados: 'chat_id' }
 
 function dupError(msg: string) { return { code: '23505', message: `duplicate key value violates unique constraint "${msg}"` } }
 
+export const OTPS = new Map<string, { id: string; email: string; usado: boolean }>()
+
 export class FakeDB {
   tables: Record<string, Row[]> = {}
   /** Inyección de fallos: { 'visitas:update': 1 } hace fallar las próximas N operaciones. */
@@ -299,6 +301,14 @@ export function makeClient(db: FakeDB, user: () => { id: string; email: string }
         inviteUserByEmail: async (email: string, opts: any) => {
           const id = randomUUID()
           return { data: { user: { id, email } }, error: null }
+        },
+        generateLink: async ({ type, email }: { type: string; email: string; options?: any }) => {
+          const existente = db.tables.usuarios.find((u) => u.email === email)
+          if (type === 'invite' && existente) return { data: null, error: { status: 422, code: 'email_exists', message: 'A user with this email address has already been registered' } }
+          const id = existente?.id ?? randomUUID()
+          const hashed = `hash-${type}-${id}-${OTPS.size}`
+          OTPS.set(hashed, { id, email, usado: false })
+          return { data: { user: { id, email }, properties: { hashed_token: hashed, action_link: 'x', verification_type: type } }, error: null }
         },
         deleteUser: async (id: string) => {
           db.tables.usuarios = db.tables.usuarios.filter((u) => u.id !== id)

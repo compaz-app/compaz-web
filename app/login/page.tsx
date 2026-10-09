@@ -23,7 +23,7 @@ export default function LoginPage() {
     const motivo = p.get('motivo')
     setError(
       e === 'no-invitado'
-        ? 'Este correo no está registrado. Usa el correo con el que fuiste invitado o escríbenos a hola@micompaz.com.'
+        ? 'Esta cuenta aún no tiene acceso. Si fuiste invitado, abre el correo de bienvenida y pulsa "Activar mi cuenta", o escríbenos a hola@micompaz.com.'
         : `No pudimos completar tu ingreso con ese enlace. Es posible que ya se haya usado o que se abriera en otro navegador. Pide uno nuevo y ábrelo en el mismo navegador.${motivo ? ` (motivo: ${motivo})` : ''}`,
     )
   }, [])
@@ -50,7 +50,7 @@ export default function LoginPage() {
       if (error.status === 429 || m.includes('rate limit') || m.includes('over_email_send_rate_limit')) {
         setError('Se enviaron demasiados enlaces en poco tiempo. Espera unos minutos y vuelve a intentar.')
       } else if (m.includes('signup') || m.includes('not allowed') || m.includes('otp_disabled') || m.includes('user not found')) {
-        setError('Este correo no está registrado. Usa el correo con el que fuiste invitado o escríbenos a hola@micompaz.com.')
+        setError('No pudimos enviarte el enlace. Si fuiste invitado, abre el correo de bienvenida y pulsa "Activar mi cuenta". Si ya venció o usas otro correo, escríbenos a hola@micompaz.com y te ayudamos.')
       } else {
         setError(`No pudimos enviar el enlace. Intenta de nuevo en unos minutos o escríbenos a hola@micompaz.com. (código: ${error.code ?? error.status ?? 'desconocido'})`)
       }
