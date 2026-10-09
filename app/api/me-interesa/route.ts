@@ -1,19 +1,19 @@
 import { NextRequest } from 'next/server'
 import { createServerSupabase, createAdminSupabase } from '@/lib/supabase-server'
 import { sendTelegramMessage } from '@/lib/telegram'
-import { Resend } from 'resend'
+import { sendEmail, SITE_URL as SITE } from '@/lib/email'
+import { esc } from '@/lib/html'
 import { randomBytes } from 'crypto'
 import { ok, err, unauthorized, serverError } from '@/lib/api'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
 
 export async function POST(req: NextRequest) {
   const supabase = await createServerSupabase()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return unauthorized()
 
-  const { compita_nombre, compita_id } = await req.json() as { compita_nombre: string; compita_id: string }
-  if (!compita_nombre || !compita_id) return err('Faltan parámetros')
+  const { compita_id } = (await req.json().catch(() => ({}))) as { compita_id?: string }
+  if (!compita_id) return err('Faltan parámetros')
 
   const { data: perfil } = await supabase
     .from('usuarios')
@@ -26,6 +26,11 @@ export async function POST(req: NextRequest) {
   if (perfil?.compita_id === compita_id) return err('Ya tienes esta Compita asignada')
 
   const admin = createAdminSupabase()
+
+  // El nombre de la compita se lee de la BD (no del body: evita inyectar texto en mensajes al admin)
+  const { data: compitaRow } = await admin.from('compitas').select('nombre, estado, verificado').eq('id', compita_id).maybeSingle()
+  if (!compitaRow || compitaRow.estado !== 'activo' || !compitaRow.verificado) return err('Compita no disponible', 404)
+  const compita_nombre = compitaRow.nombre
 
   // Rate limit: 1 solicitud por usuario por compita cada 24h
   const hace24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
@@ -41,7 +46,7 @@ export async function POST(req: NextRequest) {
   if (tokenReciente) return err('Ya enviaste una solicitud para esta Compita recientemente', 429)
 
   // Generar token de asignación rápida (7 días, un solo uso)
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? ''
+  const siteUrl = SITE
   let asignarUrl: string | null = null
 
   try {
@@ -58,17 +63,17 @@ export async function POST(req: NextRequest) {
     console.error('Error generando action token:', e)
   }
 
-  const adminEmails = (process.env.ADMIN_EMAILS ?? '').split(',').map((e) => e.trim())
+  const adminEmails = (process.env.ADMIN_EMAILS ?? '').split(',').map((e) => e.trim()).filter(Boolean)
   const adminTelegramId = process.env.TELEGRAM_ADMIN_CHAT_ID
 
   const mensajeTelegram = [
     `🔔 <b>Interés en Compita</b>`,
     ``,
-    `<b>Cliente:</b> ${clienteNombre} (${user.email})`,
-    `<b>Compita:</b> ${compita_nombre}`,
+    `<b>Cliente:</b> ${esc(clienteNombre)} (${esc(user.email)})`,
+    `<b>Compita:</b> ${esc(compita_nombre)}`,
     ``,
     asignarUrl
-      ? `✅ <a href="${asignarUrl}">Asignar ${compita_nombre} a ${clienteNombre} →</a>`
+      ? `✅ <a href="${asignarUrl}">Asignar ${esc(compita_nombre)} a ${esc(clienteNombre)} →</a>`
       : `Ve al panel admin para asignar.`,
   ].join('\n')
 
@@ -78,12 +83,12 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    await resend.emails.send({
-      from: 'Compaz <visitas@micompaz.com>',
+    if (adminEmails.length === 0) throw new Error('ADMIN_EMAILS vacío')
+    await sendEmail({
       to: adminEmails,
       subject: `Interés: ${clienteNombre} quiere conocer a ${compita_nombre}`,
       html: `
-        <p><b>${clienteNombre}</b> (${user.email}) está interesado en <b>${compita_nombre}</b>.</p>
+        <p><b>${esc(clienteNombre)}</b> (${esc(user.email)}) está interesado en <b>${esc(compita_nombre)}</b>.</p>
         ${asignarUrl
           ? `<p><a href="${asignarUrl}" style="background:#FF6B2B;color:white;padding:10px 20px;border-radius:9999px;text-decoration:none;font-weight:bold;">Asignar con un clic →</a></p>`
           : ''}

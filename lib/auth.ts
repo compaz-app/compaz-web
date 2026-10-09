@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import type { Usuario } from '@/types'
 
 function getAdminEmails(): string[] {
-  return (process.env.ADMIN_EMAILS ?? '').split(',').map((e) => e.trim().toLowerCase())
+  return (process.env.ADMIN_EMAILS ?? '').split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)
 }
 
 export async function getSession() {
@@ -39,9 +39,20 @@ export async function getUsuario(): Promise<Usuario | null> {
 
   const { data } = await supabase
     .from('usuarios')
-    .select('*, compita:compitas(*)')
+    .select('*, compita:compitas(id, nombre, zona, estado, verificado, foto_url, descripcion, servicios, youtube_url, visitas_realizadas, rating_promedio, total_ratings, horarios_disponibles, created_at)')
     .eq('id', user.id)
     .single()
 
   return data as Usuario | null
+}
+
+/**
+ * Guard para API routes de admin. Devuelve el usuario o null (responder 401 en el caller).
+ * Única fuente de verdad: reemplaza las copias inline de isAdminEmail en cada ruta.
+ */
+export async function getAdminUser() {
+  const supabase = await createServerSupabase()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user || !isAdminEmail(user.email ?? '')) return null
+  return user
 }

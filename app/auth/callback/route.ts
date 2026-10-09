@@ -1,11 +1,12 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextRequest, NextResponse } from 'next/server'
 import { isAdminEmail } from '@/lib/auth'
+import { rutaInterna } from '@/lib/html'
 
 export async function GET(req: NextRequest) {
   const { searchParams, origin } = req.nextUrl
   const code = searchParams.get('code')
-  const redirectTo = searchParams.get('redirect') ?? '/dashboard'
+  const redirectTo = rutaInterna(searchParams.get('redirect'), '/dashboard') // evita open redirect (//evil.com)
 
   if (code) {
     const cookiesToSet: { name: string; value: string; options: Record<string, unknown> }[] = []

@@ -1,27 +1,21 @@
-import { Resend } from 'resend'
 import Anthropic from '@anthropic-ai/sdk'
-import { createHmac } from 'crypto'
+import { sendEmail, SITE_URL } from '@/lib/email'
+import { esc as escapeHtml } from '@/lib/html'
+import { tokenRating, urlFotoFirmada } from '@/lib/links'
 import type { Visita, Compita, Usuario, Mensaje, ReporteVisita } from '@/types'
 
 function ratingToken(visita_id: string, valor: number): string {
-  const secret = process.env.CRON_SECRET
-  if (!secret) return ''
-  return createHmac('sha256', secret).update(`${visita_id}:${valor}`).digest('hex').slice(0, 16)
+  return tokenRating(visita_id, valor)
 }
 
-const resend = new Resend(process.env.RESEND_API_KEY)
 const anthropic = process.env.ANTHROPIC_API_KEY ? new Anthropic() : null
+const MODELO_RESUMEN = process.env.ANTHROPIC_MODEL_RESUMEN ?? 'claude-haiku-4-5-20251001'
 
-const FROM = 'Compaz <visitas@micompaz.com>'
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://micompaz.com'
-
-function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
+/** src seguro de una foto para email: enlace firmado temporal; nunca URLs con token del bot. */
+function fotoParaEmail(m: Mensaje): string | null {
+  const c = m.contenido ?? ''
+  if (c.startsWith('tg:')) return urlFotoFirmada(SITE_URL, m.id)
+  return null
 }
 
 const ESCALA: Record<number, string> = { 1: 'Muy bajo', 2: 'Bajo', 3: 'Regular', 4: 'Bueno', 5: 'Excelente' }
@@ -48,7 +42,7 @@ async function generarResumenIA(
     : 'Esta es la primera visita registrada.'
 
   const prompt = `Eres el asistente de Compaz, servicio venezolano de cuidado de personas mayores.
-La compita ${escapeHtml(compita.nombre)} terminó una visita con el familiar de ${escapeHtml(usuario.nombre)}.
+La compita ${compita.nombre} terminó una visita con el familiar de ${usuario.nombre}.
 
 Indicadores de esta visita (escala 1-5, 5 = excelente, null = no aplica):
 Ánimo: ${reporte.animo ?? 'N/A'}
@@ -64,7 +58,7 @@ Escribe un párrafo de 2 a 3 oraciones en español, en tono cálido y profesiona
 
   try {
     const msg = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
+      model: MODELO_RESUMEN,
       max_tokens: 300,
       messages: [{ role: 'user', content: prompt }],
     })
@@ -77,13 +71,12 @@ Escribe un párrafo de 2 a 3 oraciones en español, en tono cálido y profesiona
 }
 
 export async function sendCodigoTelegram(email: string, nombre: string, codigo: string): Promise<void> {
-  await resend.emails.send({
-    from: FROM,
+  await sendEmail({
     to: email,
     subject: `Tu código de verificación Compaz: ${codigo}`,
     html: `
       <div style="font-family: Inter, sans-serif; max-width: 600px; margin: 0 auto; padding: 32px;">
-        <p style="font-size: 16px; color: #1A0A3C;">Hola <strong>${nombre}</strong>,</p>
+        <p style="font-size: 16px; color: #1A0A3C;">Hola <strong>${escapeHtml(nombre)}</strong>,</p>
         <p style="font-size: 16px; color: #1A0A3C;">Tu código para activar tu cuenta en el bot de Telegram es:</p>
         <div style="font-size: 40px; font-weight: bold; letter-spacing: 8px; color: #FF6B2B; text-align: center; padding: 24px 0;">${codigo}</div>
         <p style="font-size: 14px; color: #6B5C90;">Expira en 15 minutos. Ingrésalo en el chat de Telegram con el bot de Compaz.</p>
@@ -97,16 +90,15 @@ export async function sendBienvenidaCompita(
   nombre: string,
   telegramBotUsername: string,
 ): Promise<void> {
-  const botUrl = `https://t.me/${telegramBotUsername}`
-  await resend.emails.send({
-    from: FROM,
+  const botUrl = `https://t.me/${encodeURIComponent(telegramBotUsername)}`
+  await sendEmail({
     to: email,
     subject: `¡Bienvenido a Compaz, ${nombre}! Así funciona todo`,
     html: `
       <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px;background:#FDFAF6">
         <img src="${SITE_URL}/logo.png" alt="Compaz" style="height:40px;margin-bottom:24px" />
 
-        <h1 style="color:#2D1464;font-size:26px;margin-bottom:8px">¡Hola, ${nombre}! 👋</h1>
+        <h1 style="color:#2D1464;font-size:26px;margin-bottom:8px">¡Hola, ${escapeHtml(nombre)}! 👋</h1>
         <p style="color:#4A3B6B;font-size:16px;line-height:1.6;margin-bottom:24px">
           Ya eres parte de la familia Compaz. Aquí te explicamos todo lo que necesitas saber para comenzar.
         </p>
@@ -119,7 +111,7 @@ export async function sendBienvenidaCompita(
             Toda la comunicación con Compaz es a través de Telegram. Así recibirás solicitudes de clientes, confirmaciones de llamadas y mucho más.
           </p>
           <ol style="color:#4A3B6B;font-size:15px;line-height:2;padding-left:20px;margin:0 0 16px 0">
-            <li>Abre Telegram y busca <strong>@${telegramBotUsername}</strong></li>
+            <li>Abre Telegram y busca <strong>@${escapeHtml(telegramBotUsername)}</strong></li>
             <li>Pulsa <strong>Iniciar</strong> o escribe <strong>/start</strong></li>
             <li>El bot te pedirá tu nombre completo. Escríbelo tal como apareces aquí.</li>
             <li>Te enviará un código de 6 dígitos a este correo.</li>
@@ -176,13 +168,12 @@ export async function sendBienvenidaCompita(
 }
 
 export async function sendBienvenidaCliente(email: string, nombre: string): Promise<void> {
-  await resend.emails.send({
-    from: FROM,
+  await sendEmail({
     to: email,
     subject: `Bienvenido a Compaz, ${nombre.split(' ')[0]}`,
     html: `
       <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px;background:#FDFAF6">
-        <h1 style="color:#2D1464;font-size:26px;margin-bottom:8px">¡Hola, ${nombre.split(' ')[0]}! 👋</h1>
+        <h1 style="color:#2D1464;font-size:26px;margin-bottom:8px">¡Hola, ${escapeHtml(nombre.split(' ')[0])}! 👋</h1>
         <p style="color:#4A3B6B;font-size:16px;line-height:1.6;margin-bottom:24px">
           Ya tienes acceso a tu portal de Compaz. Aquí puedes encontrar al compita ideal para acompañar a tu familiar.
         </p>
@@ -235,10 +226,9 @@ export async function sendVisitaInicio(
     timeZone: 'America/Caracas',
   })
 
-  await resend.emails.send({
-    from: FROM,
+  await sendEmail({
     to: usuario.email,
-    subject: `${escapeHtml(compita.nombre)} llegó con tu familiar`,
+    subject: `${compita.nombre} llegó con tu familiar`,
     html: `
       <div style="font-family: Inter, sans-serif; max-width: 600px; margin: 0 auto; padding: 32px;">
         <img src="${SITE_URL}/logo.png" alt="Compaz" style="height: 40px; margin-bottom: 24px;" />
@@ -293,18 +283,17 @@ export async function sendVisitaResumen(
     })
     .join('')
 
-  const fotos = mensajes.filter((m) => m.tipo === 'foto')
-  const fotosHtml = fotos.length > 0
+  const fotoUrls = mensajes.filter((m) => m.tipo === 'foto').map(fotoParaEmail).filter((u): u is string => !!u)
+  const fotosHtml = fotoUrls.length > 0
     ? `<div style="margin-top: 24px;">
         <p style="color: #4A3B6B; font-size: 15px; font-weight: 600; margin-bottom: 12px;">Fotos de la visita</p>
-        ${fotos.map((f) => `<img src="${f.contenido}" alt="Foto de la visita" style="max-width: 100%; border-radius: 12px; margin-bottom: 12px; display: block;" />`).join('')}
+        ${fotoUrls.map((u) => `<img src="${escapeHtml(u)}" alt="Foto de la visita" style="max-width: 100%; border-radius: 12px; margin-bottom: 12px; display: block;" />`).join('')}
        </div>`
     : ''
 
-  await resend.emails.send({
-    from: FROM,
+  await sendEmail({
     to: usuario.email,
-    subject: `Resumen de la visita de hoy con ${escapeHtml(compita.nombre)}`,
+    subject: `Resumen de la visita de hoy con ${compita.nombre}`,
     html: `
       <div style="font-family: Inter, sans-serif; max-width: 600px; margin: 0 auto; padding: 32px;">
         <img src="${SITE_URL}/logo.png" alt="Compaz" style="height: 40px; margin-bottom: 24px;" />
@@ -330,8 +319,8 @@ export async function sendVisitaResumen(
           </div>
         </div>
         <div style="margin-top:20px">
-          <a href="${SITE_URL}/compitas/${compita.id}" style="display:inline-block;background:#FF6B2B;color:white;padding:12px 24px;border-radius:9999px;text-decoration:none;font-weight:700;font-size:14px">
-            Agendar la próxima visita →
+          <a href="${SITE_URL}/dashboard" style="display:inline-block;background:#FF6B2B;color:white;padding:12px 24px;border-radius:9999px;text-decoration:none;font-weight:700;font-size:14px">
+            Coordinar la próxima visita →
           </a>
         </div>
         <p style="color: #6B5C90; font-size: 14px; margin-top: 32px;">
@@ -360,9 +349,9 @@ export async function sendResumenConReporte(
 
   const resumenIA = await generarResumenIA(compita, usuario, reporte, historial)
 
-  const fotos = mensajes.filter((m) => m.tipo === 'foto')
-  const fotosHtml = fotos.length > 0
-    ? `<div style="margin-top:20px">${fotos.map((f) => `<img src="${f.contenido}" alt="Foto de la visita" style="max-width:100%;border-radius:12px;margin-bottom:12px;display:block" />`).join('')}</div>`
+  const fotoUrls = mensajes.filter((m) => m.tipo === 'foto').map(fotoParaEmail).filter((u): u is string => !!u)
+  const fotosHtml = fotoUrls.length > 0
+    ? `<div style="margin-top:20px">${fotoUrls.map((u) => `<img src="${escapeHtml(u)}" alt="Foto de la visita" style="max-width:100%;border-radius:12px;margin-bottom:12px;display:block" />`).join('')}</div>`
     : ''
 
   const indicadoresHtml = `
@@ -373,8 +362,7 @@ export async function sendResumenConReporte(
       ${reporte.entorno !== null ? `<tr><td style="color:#6B5C90;font-size:13px;padding:6px 8px">Ambiente y entorno</td><td style="font-size:14px;color:#1A0A3C;padding:6px 8px">${indicadorLabel(reporte.entorno)}</td></tr>` : ''}
     </table>`
 
-  await resend.emails.send({
-    from: FROM,
+  await sendEmail({
     to: usuario.email,
     subject: esActualizacion ? `Actualización de la visita de hoy con ${escapeHtml(compita.nombre)}` : `Resumen de la visita de hoy con ${escapeHtml(compita.nombre)}`,
     html: `
@@ -382,7 +370,7 @@ export async function sendResumenConReporte(
         <img src="${SITE_URL}/logo.png" alt="Compaz" style="height:40px;margin-bottom:24px" />
         <h2 style="color:#2D1464;font-size:24px;margin-bottom:4px">${esActualizacion ? 'Actualización de la visita' : 'Resumen de la visita'}</h2>
         <p style="color:#6B5C90;font-size:14px;margin-bottom:20px">La visita de <strong>${escapeHtml(compita.nombre)}</strong> duró <strong>${duracion}</strong>.</p>
-        ${resumenIA ? `<div style="background:#F5F0FF;border-left:4px solid #7C4DFF;border-radius:8px;padding:16px 20px;margin-bottom:20px"><p style="color:#1A0A3C;font-size:15px;line-height:1.7;margin:0">${resumenIA}</p></div>` : ''}
+        ${resumenIA ? `<div style="background:#F5F0FF;border-left:4px solid #7C4DFF;border-radius:8px;padding:16px 20px;margin-bottom:20px"><p style="color:#1A0A3C;font-size:15px;line-height:1.7;margin:0">${escapeHtml(resumenIA)}</p></div>` : ''}
         <h3 style="color:#2D1464;font-size:15px;margin-bottom:4px">Indicadores de la visita</h3>
         ${indicadoresHtml}
         ${reporte.novedad ? `<div style="background:#FFF3E8;border:1.5px solid #FF6B2B;border-radius:10px;padding:14px 18px;margin-bottom:16px"><p style="color:#C84B0E;font-size:13px;font-weight:700;margin:0 0 4px">Novedad reportada</p><p style="color:#1A0A3C;font-size:14px;margin:0;line-height:1.6">${escapeHtml(reporte.novedad)}</p></div>` : ''}
@@ -395,8 +383,8 @@ export async function sendResumenConReporte(
           </div>
         </div>
         <div style="margin-top:20px">
-          <a href="${SITE_URL}/compitas/${compita.id}" style="display:inline-block;background:#FF6B2B;color:white;padding:12px 24px;border-radius:9999px;text-decoration:none;font-weight:700;font-size:14px">
-            Agendar la próxima visita →
+          <a href="${SITE_URL}/dashboard" style="display:inline-block;background:#FF6B2B;color:white;padding:12px 24px;border-radius:9999px;text-decoration:none;font-weight:700;font-size:14px">
+            Coordinar la próxima visita →
           </a>
         </div>
         <p style="color:#6B5C90;font-size:13px;margin-top:32px">Compaz — <em>Cerca aunque estés lejos</em></p>

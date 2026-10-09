@@ -31,6 +31,7 @@ export async function POST(req: NextRequest) {
     .select('*, compita:compitas(*), usuario:usuarios(*)')
     .eq('usuario_id', user.id)
     .in('estado', ['en_curso', 'pre_visita', 'programada'])
+    .order('estado', { ascending: true }) // 'en_curso' primero
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle() as { data: (Visita & { compita: Compita; usuario: Usuario }) | null }
@@ -67,6 +68,8 @@ export async function POST(req: NextRequest) {
     } catch (e) {
       console.error('Error reenviando a Telegram:', e)
     }
+  } else {
+    console.error('[send-message] compita sin Telegram vinculado; mensaje guardado pero no entregado', visita.id)
   }
 
   return NextResponse.json({ ok: true, mensaje })

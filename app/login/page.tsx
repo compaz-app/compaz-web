@@ -25,12 +25,14 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
+        // Acceso solo por invitación: no crear usuarios nuevos desde el formulario de login
+        shouldCreateUser: false,
         emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
     })
 
     if (error) {
-      setError('Error enviando el correo. Intenta de nuevo.')
+      setError('No pudimos enviar el enlace. Verifica que uses el correo con el que fuiste invitado o escríbenos a hola@micompaz.com.')
     } else {
       setEnviado(true)
       setCooldown(30)

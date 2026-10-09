@@ -1,14 +1,12 @@
 import { NextRequest } from 'next/server'
-import { createServerSupabase, createAdminSupabase } from '@/lib/supabase-server'
-import { isAdminEmail } from '@/lib/auth'
+import { createAdminSupabase } from '@/lib/supabase-server'
+import { getAdminUser } from '@/lib/auth'
 import { ok, err, unauthorized, serverError } from '@/lib/api'
 
 export async function DELETE(req: NextRequest) {
-  const supabase = await createServerSupabase()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user || !isAdminEmail(user.email ?? '')) return unauthorized()
+  if (!(await getAdminUser())) return unauthorized()
 
-  const { usuario_id } = await req.json()
+  const { usuario_id } = (await req.json().catch(() => ({})))
   if (!usuario_id) return err('usuario_id requerido')
 
   const admin = createAdminSupabase()

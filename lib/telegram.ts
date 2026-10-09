@@ -1,3 +1,5 @@
+import { secretoValido } from '@/lib/links'
+
 const TELEGRAM_API = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`
 
 type ReplyKeyboard = { keyboard: { text: string }[][]; resize_keyboard: boolean; one_time_keyboard?: boolean }
@@ -110,18 +112,38 @@ export async function sendTelegramPhoto(chatId: string, photoUrl: string, captio
   }
 }
 
-export async function getTelegramFileUrl(fileId: string): Promise<string> {
-  const res = await fetch(`${TELEGRAM_API}/getFile?file_id=${fileId}`)
+/**
+ * Descarga una foto desde Telegram a memoria. NUNCA devolver ni guardar la URL de descarga:
+ * contiene el token del bot. Las fotos se guardan como "tg:<file_id>" y se sirven por /api/foto/[id].
+ */
+export async function descargarFotoTelegram(fileId: string): Promise<{ buffer: ArrayBuffer; contentType: string }> {
+  const res = await fetch(`${TELEGRAM_API}/getFile?file_id=${encodeURIComponent(fileId)}`)
   if (!res.ok) throw new Error('Telegram getFile error')
-  const data = await res.json() as { ok: boolean; result: { file_path: string } }
-  const token = process.env.TELEGRAM_BOT_TOKEN!
-  return `https://api.telegram.org/file/bot${token}/${data.result.file_path}`
+  const data = await res.json() as { ok: boolean; result?: { file_path: string } }
+  const filePath = data.result?.file_path
+  if (!data.ok || !filePath) throw new Error('Telegram getFile sin file_path')
+  const file = await fetch(`https://api.telegram.org/file/bot${process.env.TELEGRAM_BOT_TOKEN}/${filePath}`)
+  if (!file.ok) throw new Error('Telegram descarga de archivo falló')
+  const ext = filePath.split('.').pop()?.toLowerCase()
+  const contentType = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg'
+  return { buffer: await file.arrayBuffer(), contentType }
 }
 
 export function validateTelegramWebhook(secretHeader: string | null): boolean {
-  const secret = process.env.TELEGRAM_WEBHOOK_SECRET
-  if (!secret) return false
-  return secretHeader === secret
+  return secretoValido(secretHeader, process.env.TELEGRAM_WEBHOOK_SECRET)
+}
+
+/** Envía al admin y devuelve si realmente se entregó. Nunca lanza. */
+export async function avisarAdmin(text: string): Promise<boolean> {
+  const adminChat = process.env.TELEGRAM_ADMIN_CHAT_ID
+  if (!adminChat) return false
+  try {
+    await sendTelegramMessage(adminChat, text)
+    return true
+  } catch (e) {
+    console.error('avisarAdmin falló:', e)
+    return false
+  }
 }
 
 export async function registerWebhook(webhookUrl: string): Promise<void> {

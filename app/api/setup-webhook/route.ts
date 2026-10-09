@@ -1,19 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { registerWebhook } from '@/lib/telegram'
-import { isAdminEmail } from '@/lib/auth'
-import { createServerSupabase } from '@/lib/supabase-server'
+import { getAdminUser } from '@/lib/auth'
 
 // Ruta de administración: registra el webhook de Telegram apuntando a este servidor
 // Llamar una sola vez después del deploy: GET /api/setup-webhook
 export async function GET(req: NextRequest) {
-  const supabase = await createServerSupabase()
-  const { data: { user } } = await supabase.auth.getUser()
+  if (!(await getAdminUser())) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-  if (!user || !isAdminEmail(user.email ?? '')) {
-    return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-  }
-
-  const baseUrl = req.nextUrl.origin
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? req.nextUrl.origin
   const webhookUrl = `${baseUrl}/api/telegram-webhook`
 
   try {

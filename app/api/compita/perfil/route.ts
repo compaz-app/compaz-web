@@ -2,7 +2,8 @@
 // PUT  /api/compita/perfil             — guarda los cambios (token en el body)
 import { NextRequest } from 'next/server'
 import { ok, err, unauthorized, notFound, serverError } from '@/lib/api'
-import { validarTokenPerfil, consumirTokenPerfil } from '@/lib/compita-tokens'
+import { validarTokenPerfil, consumirTokenPerfil, restaurarTokenPerfil } from '@/lib/compita-tokens'
+import { validarPerfil } from '@/lib/validar'
 import { getCompitaAdminById, actualizarCompita } from '@/lib/compitas'
 import { sendTelegramMessage } from '@/lib/telegram'
 import { createAdminSupabase } from '@/lib/supabase-server'
@@ -28,57 +29,38 @@ export async function GET(req: NextRequest) {
   })
 }
 
-function validarYoutubeUrl(url: string | null | undefined): boolean {
-  if (!url) return true
-  try {
-    const parsed = new URL(url)
-    return ['youtube.com', 'www.youtube.com', 'youtu.be'].includes(parsed.hostname)
-  } catch { return false }
-}
-
 export async function PUT(req: NextRequest) {
-  const body = await req.json() as {
-    token: string
-    zona?: string
-    descripcion?: string
-    servicios?: string[]
-    youtube_url?: string | null
-    foto_url?: string | null
-    horarios_disponibles?: { dia: string; inicio: string; fin: string }[]
-  }
+  const body = await req.json().catch(() => null) as (Record<string, unknown> & { token?: string }) | null
+  if (!body || typeof body.token !== 'string' || !body.token) return unauthorized()
+  const token = body.token
 
-  const { token, ...campos } = body
-  if (!token) return unauthorized()
+  // Validar ANTES de consumir el token: un error de formato no debe quemar el enlace.
+  // El nombre solo lo cambia el admin; verificado/estado/rating nunca se aceptan aquí.
+  const v = validarPerfil(body, { permitirNombre: false })
+  if (!v.ok) return err(v.error)
 
-  if (!validarYoutubeUrl(campos.youtube_url)) {
-    return err('La URL del video debe ser de YouTube (youtube.com o youtu.be)')
-  }
-
-  // Consumir el token atómicamente — solo funciona una vez
   const compitaId = await consumirTokenPerfil(token)
   if (!compitaId) return err('Token inválido, expirado o ya usado', 401)
 
   try {
-    await actualizarCompita(compitaId, campos)
-
-    // Confirmar por Telegram si el compita está vinculado
-    const admin = createAdminSupabase()
-    const { data: compita } = await admin
-      .from('compitas')
-      .select('nombre, telegram_chat_id')
-      .eq('id', compitaId)
-      .single()
-    if (compita?.telegram_chat_id) {
-      try {
-        await sendTelegramMessage(
-          compita.telegram_chat_id,
-          `✅ <b>¡Tu perfil fue actualizado!</b>\n\nLos cambios ya son visibles para las familias en la plataforma.\n\nEscribe /perfil cuando quieras editarlo de nuevo.`,
-        )
-      } catch (e) { console.error('Telegram confirmación perfil:', e) }
-    }
-
-    return ok({ guardado: true })
+    await actualizarCompita(compitaId, v.datos)
   } catch (e) {
+    await restaurarTokenPerfil(token) // el guardado falló: la compita conserva su enlace
+    console.error('[compita/perfil] error guardando:', e)
     return serverError(e)
   }
+
+  // Confirmar por Telegram si la compita está vinculada
+  const admin = createAdminSupabase()
+  const { data: compita } = await admin.from('compitas').select('telegram_chat_id').eq('id', compitaId).single()
+  if (compita?.telegram_chat_id) {
+    try {
+      await sendTelegramMessage(
+        compita.telegram_chat_id,
+        `✅ <b>¡Tu perfil fue actualizado!</b>\n\nLos cambios ya son visibles para las familias en la plataforma.\n\nEscribe /perfil cuando quieras editarlo de nuevo.`,
+      )
+    } catch (e) { console.error('Telegram confirmación perfil:', e) }
+  }
+
+  return ok({ guardado: true })
 }

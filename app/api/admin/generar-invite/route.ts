@@ -1,12 +1,10 @@
-import { createServerSupabase, createAdminSupabase } from '@/lib/supabase-server'
-import { isAdminEmail } from '@/lib/auth'
+import { createAdminSupabase } from '@/lib/supabase-server'
+import { getAdminUser } from '@/lib/auth'
 import { ok, unauthorized, serverError } from '@/lib/api'
 import { randomBytes } from 'crypto'
 
 export async function POST() {
-  const supabase = await createServerSupabase()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user || !isAdminEmail(user.email ?? '')) return unauthorized()
+  if (!(await getAdminUser())) return unauthorized()
 
   const admin = createAdminSupabase()
   const token = randomBytes(20).toString('hex')

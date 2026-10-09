@@ -1,5 +1,6 @@
 'use client'
 
+import { fotoSrc } from '@/lib/fotos'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createBrowserSupabase } from '@/lib/supabase'
@@ -154,14 +155,14 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
       .on('postgres_changes', { event: '*', schema: 'public', table: 'visitas' }, async () => {
         const { data: activas } = await supabase
           .from('visitas')
-          .select('*, compita:compitas(*), usuario:usuarios(*)')
+          .select('*, compita:compitas(id, nombre, zona, foto_url, estado, verificado), usuario:usuarios(*)')
           .eq('estado', 'en_curso')
           .order('inicio', { ascending: false })
         if (activas) setVisitasActivas(activas as VisitaConRelaciones[])
 
         const { data: previas } = await supabase
           .from('visitas')
-          .select('*, compita:compitas(*), usuario:usuarios(*)')
+          .select('*, compita:compitas(id, nombre, zona, foto_url, estado, verificado), usuario:usuarios(*)')
           .eq('estado', 'pre_visita')
           .order('created_at', { ascending: false })
         if (previas) setVisitasPreVisita(previas as VisitaConRelaciones[])
@@ -494,7 +495,7 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
                           </span>
                           {m.tipo === 'foto'
                             // eslint-disable-next-line @next/next/no-img-element
-                            ? <img src={m.contenido ?? ''} alt="foto" style={{ maxWidth: '120px', borderRadius: '8px' }} />
+                            ? <img src={fotoSrc(m)} alt="foto" style={{ maxWidth: '120px', borderRadius: '8px' }} />
                             : <span style={{ color: '#1A0A3C', fontSize: '14px' }}>{m.contenido}</span>
                           }
                         </div>
@@ -1084,7 +1085,7 @@ function ClientePreview({ usuarioId }: { usuarioId: string }) {
                   <div style={{ background: m.origen === 'compita' ? '#F5F0E8' : '#2D1464', color: m.origen === 'compita' ? '#1A0A3C' : 'white', borderRadius: m.origen === 'compita' ? '4px 16px 16px 16px' : '16px 4px 16px 16px', padding: '10px 14px', maxWidth: '70%', fontSize: '14px' }}>
                     {m.tipo === 'foto'
                       // eslint-disable-next-line @next/next/no-img-element
-                      ? <img src={m.contenido ?? ''} alt="foto" style={{ maxWidth: '200px', borderRadius: '8px', display: 'block' }} />
+                      ? <img src={fotoSrc(m)} alt="foto" style={{ maxWidth: '200px', borderRadius: '8px', display: 'block' }} />
                       : m.contenido}
                   </div>
                   <span style={{ fontSize: '11px', color: '#A09AB8', whiteSpace: 'nowrap' }}>

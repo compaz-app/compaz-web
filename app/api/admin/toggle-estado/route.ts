@@ -1,15 +1,12 @@
 import { NextRequest } from 'next/server'
-import { createServerSupabase } from '@/lib/supabase-server'
-import { isAdminEmail } from '@/lib/auth'
+import { getAdminUser } from '@/lib/auth'
 import { desactivarCompita, reactivarCompita } from '@/lib/compitas'
 import { ok, err, unauthorized, serverError } from '@/lib/api'
 
 export async function POST(req: NextRequest) {
-  const supabase = await createServerSupabase()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user || !isAdminEmail(user.email ?? '')) return unauthorized()
+  if (!(await getAdminUser())) return unauthorized()
 
-  const { compita_id, estado } = await req.json() as { compita_id: string; estado: string }
+  const { compita_id, estado } = (await req.json().catch(() => ({})) as { compita_id: string; estado: string })
   if (!compita_id || !['activo', 'inactivo'].includes(estado)) return err('Parámetros inválidos')
 
   try {

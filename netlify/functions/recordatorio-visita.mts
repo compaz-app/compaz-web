@@ -1,23 +1,9 @@
-// Netlify Scheduled Function — corre cada 30 minutos
+// Netlify Scheduled Function: Cada 30 minutos
 import type { Config } from '@netlify/functions'
+import { llamarCron } from '../lib/cron'
 
-export const config: Config = {
-  schedule: '*/30 * * * *',
-}
+export const config: Config = { schedule: '*/30 * * * *' }
 
 export default async function () {
-  const url = `${process.env.NEXT_PUBLIC_SITE_URL}/api/cron/recordatorio-visita`
-  const secret = process.env.CRON_SECRET
-
-  try {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'x-cron-secret': secret ?? '' },
-    })
-    if (!res.ok) {
-      console.error('Recordatorio visita cron error:', await res.text())
-    }
-  } catch (e) {
-    console.error('Recordatorio visita cron fetch error:', e)
-  }
+  await llamarCron('recordatorio-visita')
 }

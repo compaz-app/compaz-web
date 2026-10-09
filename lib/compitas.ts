@@ -65,8 +65,9 @@ export async function verificarCompita(id: string): Promise<void> {
   const supabase = createAdminSupabase()
   const { error } = await supabase
     .from('compitas')
-    .update({ verificado: true })
+    .update({ verificado: true, estado: 'activo' })
     .eq('id', id)
+    .neq('estado', 'bloqueado') // verificar nunca desbloquea
 
   if (error) throw new Error(error.message)
 }
@@ -93,17 +94,21 @@ export async function reactivarCompita(id: string): Promise<void> {
     .from('compitas')
     .update({ estado: 'activo' })
     .eq('id', id)
+    .neq('estado', 'bloqueado')
 
   if (error) throw new Error(error.message)
 }
 
 export async function bloquearCompita(id: string): Promise<void> {
   const supabase = createAdminSupabase()
+  // Bloqueo efectivo: sale del marketplace, pierde el vínculo de Telegram y se desasigna de sus clientes.
   const { error } = await supabase
     .from('compitas')
-    .update({ estado: 'bloqueado', verificado: false })
+    .update({ estado: 'bloqueado', verificado: false, telegram_chat_id: null })
     .eq('id', id)
   if (error) throw new Error(error.message)
+  const { error: eU } = await supabase.from('usuarios').update({ compita_id: null }).eq('compita_id', id)
+  if (eU) throw new Error(eU.message)
 }
 
 export async function desbloquearCompita(id: string): Promise<void> {
@@ -186,11 +191,20 @@ export type CamposEditablesCompita = {
  * Actualiza campos editables del perfil de una compita.
  * Solo admin puede llamar esto (verificado en la ruta API).
  */
+export const CAMPOS_EDITABLES_COMPITA = [
+  'nombre', 'zona', 'descripcion', 'servicios', 'youtube_url', 'foto_url', 'horarios_disponibles',
+] as const
+
 export async function actualizarCompita(id: string, campos: CamposEditablesCompita): Promise<Compita> {
   const supabase = createAdminSupabase()
+  // Whitelist en runtime: el tipo TS no protege contra un body con { verificado: true, ... }
+  const limpio = Object.fromEntries(
+    Object.entries(campos).filter(([k, v]) => (CAMPOS_EDITABLES_COMPITA as readonly string[]).includes(k) && v !== undefined),
+  )
+  if (Object.keys(limpio).length === 0) throw new Error('Sin campos válidos para actualizar')
   const { data, error } = await supabase
     .from('compitas')
-    .update(campos)
+    .update(limpio)
     .eq('id', id)
     .select('*')
     .single()

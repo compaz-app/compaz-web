@@ -30,7 +30,7 @@ export async function validarTokenPerfil(token: string): Promise<string | null> 
     .from('compita_edit_tokens')
     .select('id, compita_id, expires_at, usado')
     .eq('token', token)
-    .single()
+    .maybeSingle()
 
   if (!data || data.usado || new Date(data.expires_at) < new Date()) return null
   return data.compita_id as string
@@ -43,8 +43,15 @@ export async function consumirTokenPerfil(token: string): Promise<string | null>
     .update({ usado: true })
     .eq('token', token)
     .eq('usado', false)
+    .gt('expires_at', new Date().toISOString())
     .select('compita_id')
-    .single()
+    .maybeSingle()
 
   return data ? (data.compita_id as string) : null
+}
+
+/** Revierte el consumo si el guardado falló, para que la compita no pierda su enlace. */
+export async function restaurarTokenPerfil(token: string): Promise<void> {
+  const supabase = createAdminSupabase()
+  await supabase.from('compita_edit_tokens').update({ usado: false }).eq('token', token)
 }

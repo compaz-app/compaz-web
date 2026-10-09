@@ -26,7 +26,7 @@ const securityHeaders = [
       "img-src 'self' data: https:; " +
       "frame-src https://challenges.cloudflare.com https://www.youtube.com https://*.daily.co; " +
       "connect-src 'self' https://api.airtable.com https://www.facebook.com https://challenges.cloudflare.com https://www.google-analytics.com https://analytics.google.com https://www.clarity.ms https://*.clarity.ms https://qrhkzlzblaknzsxqfney.supabase.co wss://qrhkzlzblaknzsxqfney.supabase.co wss://realtime.supabase.co https://api.daily.co https://*.daily.co https://api.telegram.org; " +
-      "frame-ancestors 'none'",
+      "frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'",
   },
 ];
 

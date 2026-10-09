@@ -2,33 +2,22 @@
 // Fuerza el envío del link de sala al cliente y al compita para una solicitud específica.
 // Solo admins. No modifica slot_confirmado ni ningún campo de estado.
 import { NextRequest } from 'next/server'
-import { requireAdmin } from '@/lib/auth'
+import { getAdminUser } from '@/lib/auth'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { guardarRoomUrl } from '@/lib/solicitudes'
 import { createEntrevistaRoom } from '@/lib/daily'
 import { sendTelegramMessage } from '@/lib/telegram'
-import { Resend } from 'resend'
+import { sendEmail, SITE_URL } from '@/lib/email'
+import { esc } from '@/lib/html'
+import { formatSlotVE } from '@/lib/format'
+import { qRol } from '@/lib/links'
+import { reclamarFlag } from '@/lib/solicitudes'
 import { ok, unauthorized, err, notFound, serverError } from '@/lib/api'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? ''
-
-function formatSlotVE(iso: string): string {
-  return new Date(iso).toLocaleString('es-VE', {
-    timeZone: 'America/Caracas',
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: true,
-  })
-}
-
 export async function POST(req: NextRequest) {
-  try { await requireAdmin() } catch { return unauthorized() }
+  if (!(await getAdminUser())) return unauthorized()
 
-  const { solicitud_id } = await req.json() as { solicitud_id?: string }
+  const { solicitud_id } = (await req.json().catch(() => ({}))) as { solicitud_id?: string }
   if (!solicitud_id) return err('Falta solicitud_id')
 
   const admin = createAdminSupabase()
@@ -54,7 +43,7 @@ export async function POST(req: NextRequest) {
       await guardarRoomUrl(row.id, roomUrl)
     } catch (e) {
       console.error('Error creando sala Daily:', e)
-      return serverError('No se pudo crear la sala Daily')
+      return err('No se pudo crear la sala Daily', 502)
     }
   }
 
@@ -64,23 +53,23 @@ export async function POST(req: NextRequest) {
     .eq('id', row.cliente_id)
     .single()
 
-  const salaClienteUrl = `${SITE_URL}/sala/${row.token_respuesta}?quien=cliente`
-  const salaCompitaUrl = `${SITE_URL}/sala/${row.token_respuesta}?quien=compita`
+  const t = row.token_respuesta as string
+  const salaClienteUrl = `${SITE_URL}/sala/${t}?${qRol(t, 'cliente')}`
+  const salaCompitaUrl = `${SITE_URL}/sala/${t}?${qRol(t, 'compita')}`
   const resultados: string[] = []
 
   // ── Email al cliente ──────────────────────────────────────────────────────
   if (cliente?.email) {
     try {
-      await resend.emails.send({
-        from: 'Compaz <visitas@micompaz.com>',
+      await sendEmail({
         to: cliente.email,
         subject: `⏰ Tu llamada con ${compitaData?.nombre ?? 'tu compita'} — link de acceso`,
         html: `
           <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px">
             <h2 style="color:#2D1464;font-size:22px">Tu link de llamada está listo</h2>
             <p style="color:#4A3B6B;font-size:16px;line-height:1.6">
-              Tu llamada con <strong>${compitaData?.nombre ?? 'tu compita'}</strong> está programada para:<br>
-              <strong>${slotLabel}</strong>
+              Tu llamada con <strong>${esc(compitaData?.nombre ?? 'tu compita')}</strong> está programada para:<br>
+              <strong>${esc(slotLabel)}</strong>
             </p>
             <p style="color:#C84B0E;background:#FFF3E8;border:2px solid #FF6B2B;border-radius:12px;padding:14px;font-size:14px">
               ⏱️ Recuerda: la llamada tiene un límite de 20 minutos. La sala se cierra automáticamente a los 23 min.
@@ -111,7 +100,7 @@ export async function POST(req: NextRequest) {
         [
           `⏰ <b>Link de tu llamada listo</b>`,
           ``,
-          `Con <b>${cliente?.nombre ?? 'el cliente'}</b> — <b>${slotLabel}</b>`,
+          `Con <b>${esc(cliente?.nombre ?? 'el cliente')}</b> — <b>${esc(slotLabel)}</b>`,
           ``,
           `⏱️ La llamada es de <b>20 minutos</b>. La sala se cierra a los 23 min.`,
           ``,
@@ -126,6 +115,9 @@ export async function POST(req: NextRequest) {
   } else {
     resultados.push('telegram_compita: sin chat_id')
   }
+
+  // El admin ya envió los enlaces: evitar que el cron de recordatorios los repita
+  await reclamarFlag(row.id, 'recordatorio_enviado').catch(() => false)
 
   return ok({ room_url: roomUrl, resultados })
 }

@@ -2,9 +2,9 @@ import { NextRequest } from 'next/server'
 import { createServerSupabase, createAdminSupabase } from '@/lib/supabase-server'
 import { ok, err, unauthorized, notFound } from '@/lib/api'
 import { sendTelegramMessage, INLINE_REAGENDAR_VISITA } from '@/lib/telegram'
-import { Resend } from 'resend'
-
-const resend = new Resend(process.env.RESEND_API_KEY)
+import { sendEmail, SITE_URL } from '@/lib/email'
+import { esc } from '@/lib/html'
+import { hoyVE, horaVE, formatFechaVE } from '@/lib/format'
 
 // PUT /api/visita/fecha
 // Guarda fecha + horario acordado Y confirma coordinación en un solo paso: pre_visita → programada.
@@ -14,19 +14,19 @@ export async function PUT(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return unauthorized()
 
-  const { visita_id, fecha_programada, hora_inicio, hora_fin } = await req.json() as {
-    visita_id: string
-    fecha_programada: string  // 'YYYY-MM-DD'
-    hora_inicio: string       // 'HH:MM'
-    hora_fin: string          // 'HH:MM'
-  }
+  const body = await req.json().catch(() => null) as { visita_id?: string; fecha_programada?: string; hora_inicio?: string; hora_fin?: string } | null
+  if (!body) return err('Solicitud inválida')
+  const { visita_id, fecha_programada, hora_inicio, hora_fin } = body as { visita_id: string; fecha_programada: string; hora_inicio: string; hora_fin: string }
 
   if (!visita_id || !fecha_programada || !hora_inicio || !hora_fin) return err('Faltan parámetros')
   if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha_programada)) return err('Fecha inválida')
-  if (!/^\d{2}:\d{2}$/.test(hora_inicio) || !/^\d{2}:\d{2}$/.test(hora_fin)) return err('Hora inválida')
+  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(hora_inicio) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(hora_fin)) return err('Hora inválida')
   if (hora_fin <= hora_inicio) return err('La hora de fin debe ser después de la hora de inicio')
-  const hoy = new Date().toISOString().slice(0, 10)
+  if (Number.isNaN(new Date(`${fecha_programada}T12:00:00Z`).getTime()) || new Date(`${fecha_programada}T12:00:00Z`).toISOString().slice(0, 10) !== fecha_programada) return err('Fecha inválida')
+  const hoy = hoyVE() // día de Venezuela, no UTC
   if (fecha_programada < hoy) return err('La fecha debe ser hoy o en el futuro')
+  if (fecha_programada === hoy && hora_inicio <= horaVE()) return err('La hora de inicio ya pasó')
+  if (fecha_programada > hoyVE(180)) return err('La fecha es demasiado lejana')
 
   const admin = createAdminSupabase()
 
@@ -67,11 +67,12 @@ export async function PUT(req: NextRequest) {
     .update({ fecha_programada, hora_inicio_programada: hora_inicio, hora_fin_programada: hora_fin, estado: 'programada' })
     .eq('id', visita_id)
 
-  if (error) return err(error.message)
+  if (error) {
+    console.error('[visita/fecha] error:', error)
+    return err('No pudimos guardar la fecha. Intenta de nuevo.', 500)
+  }
 
-  const fechaFormateada = new Date(fecha_programada + 'T00:00:00').toLocaleDateString('es-VE', {
-    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
-  })
+  const fechaFormateada = formatFechaVE(fecha_programada, true)
   const horarioLabel = `${hora_inicio} – ${hora_fin}`
 
   const [{ data: compita }, { data: cliente }] = await Promise.all([
@@ -86,12 +87,12 @@ export async function PUT(req: NextRequest) {
         [
           `✅ <b>¡Visita confirmada!</b>`,
           ``,
-          `${cliente?.nombre ?? 'El cliente'} registró el horario de la primera visita:`,
+          `${esc(cliente?.nombre ?? 'El cliente')} registró el horario de la visita:`,
           ``,
-          `📅 <b>${fechaFormateada}</b>`,
-          `🕐 <b>${horarioLabel}</b>`,
+          `📅 <b>${esc(fechaFormateada)}</b>`,
+          `🕐 <b>${esc(horarioLabel)}</b>`,
           ``,
-          `Recibirás un recordatorio el día anterior. Si necesitas reagendar, toca el botón <b>▶️ Iniciar visita</b> — en la pantalla de confirmación verás la opción <b>"🔄 Necesito reagendar"</b>.`,
+          `Recibirás un recordatorio el día anterior. Si necesitas reagendar, toca el botón de abajo.`,
         ].join('\n'),
         INLINE_REAGENDAR_VISITA,
       )
@@ -100,25 +101,24 @@ export async function PUT(req: NextRequest) {
 
   if (cliente?.email) {
     try {
-      await resend.emails.send({
-        from: 'Compaz <visitas@micompaz.com>',
+      await sendEmail({
         to: cliente.email,
         subject: `✅ Visita confirmada: ${fechaFormateada}`,
         html: `
           <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px">
             <h2 style="color:#2D1464;font-size:22px;margin-bottom:12px">✅ Visita confirmada</h2>
             <p style="color:#4A3B6B;font-size:15px;line-height:1.6">
-              La primera visita de <strong>${compita?.nombre ?? 'tu compita'}</strong> con tu familiar está agendada.
+              La visita de <strong>${esc(compita?.nombre ?? 'tu compita')}</strong> con tu familiar está agendada.
             </p>
             <div style="background:#F5F0FF;border:2px solid #7C4DFF;border-radius:12px;padding:16px 20px;margin:20px 0;text-align:center">
               <p style="color:#6B5C90;font-size:13px;margin:0 0 4px">Fecha y horario</p>
-              <p style="color:#2D1464;font-size:18px;font-weight:800;margin:0 0 4px;text-transform:capitalize">${fechaFormateada}</p>
-              <p style="color:#2D1464;font-size:16px;font-weight:700;margin:0">${horarioLabel}</p>
+              <p style="color:#2D1464;font-size:18px;font-weight:800;margin:0 0 4px;text-transform:capitalize">${esc(fechaFormateada)}</p>
+              <p style="color:#2D1464;font-size:16px;font-weight:700;margin:0">${esc(horarioLabel)}</p>
             </div>
             <p style="color:#4A3B6B;font-size:14px;line-height:1.6">
               Te enviaremos un recordatorio el día anterior. Si necesitas cambiar la fecha puedes reagendar desde tu dashboard.
             </p>
-            <a href="${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://micompaz.com'}/dashboard" style="display:inline-block;background:#FF6B2B;color:white;padding:12px 24px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:14px;margin-top:8px">
+            <a href="${SITE_URL}/dashboard" style="display:inline-block;background:#FF6B2B;color:white;padding:12px 24px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:14px;margin-top:8px">
               Ver en el dashboard →
             </a>
             <p style="color:#9990A8;font-size:13px;margin-top:32px">Compaz — <em>Cerca aunque estés lejos</em></p>

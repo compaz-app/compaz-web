@@ -13,9 +13,10 @@ interface Props {
   compitaNombre: string
   clienteNombre: string
   slotLabel: string
+  sig: string // firma del rol (evita que cliente y compita se suplanten)
 }
 
-export default function SalaEntrevista({ token, quien, roomUrl, compitaNombre, clienteNombre, slotLabel }: Props) {
+export default function SalaEntrevista({ token, quien, roomUrl, compitaNombre, clienteNombre, slotLabel, sig }: Props) {
   const [paso, setPaso] = useState<Paso>('antes')
   const [resultado, setResultado] = useState<Resultado | null>(null)
   const [cargando, setCargando] = useState(false)
@@ -23,6 +24,7 @@ export default function SalaEntrevista({ token, quien, roomUrl, compitaNombre, c
   const router = useRouter()
 
   const urlActual = nuevaRoomUrl ?? roomUrl
+  const rolQs = `quien=${quien}&s=${sig}`
 
   function abrirSala(url?: string) {
     window.open(url ?? urlActual, '_blank', 'noopener,noreferrer')
@@ -32,7 +34,7 @@ export default function SalaEntrevista({ token, quien, roomUrl, compitaNombre, c
   async function reconectarAhora() {
     setCargando(true)
     try {
-      const res = await fetch(`/api/solicitud/reconectar-llamada?token=${token}&quien=cliente`)
+      const res = await fetch(`/api/solicitud/reconectar-llamada?token=${token}&${rolQs}`, { method: 'POST' })
       const data = await res.json()
       if (data.room_url) {
         setNuevaRoomUrl(data.room_url)
@@ -57,14 +59,19 @@ export default function SalaEntrevista({ token, quien, roomUrl, compitaNombre, c
         window.location.href = `/api/solicitud/resultado-llamada?token=${token}&resultado=reagendar&quien=cliente`
         return
       }
-      // contratar y no_contratar redirigen vía el servidor (303)
-      if (r === 'contratar' || r === 'no_contratar') {
-        window.location.href = `/api/solicitud/resultado-llamada?token=${token}&resultado=${r}&quien=cliente`
+      // contratar: redirección (la autorización real ocurre en /pago)
+      if (r === 'contratar') {
+        window.location.href = `/api/solicitud/resultado-llamada?token=${token}&resultado=contratar&quien=cliente`
         return
       }
-      const res = await fetch(`/api/solicitud/resultado-llamada?token=${token}&resultado=${r}&quien=${quien}`)
-      if (!res.ok) {
+      // no_contratar / reagendar de la compita cambian estado: POST firmado
+      const res = await fetch(`/api/solicitud/resultado-llamada?token=${token}&resultado=${r}&${rolQs}`, { method: 'POST', redirect: 'manual' })
+      if (res.type !== 'opaqueredirect' && !res.ok) {
         alert('No pudimos registrar tu decisión. Intenta de nuevo o escríbenos a hola@micompaz.com.')
+        return
+      }
+      if (r === 'no_contratar') {
+        window.location.href = '/compitas'
         return
       }
       setPaso('resultado')
@@ -80,7 +87,7 @@ export default function SalaEntrevista({ token, quien, roomUrl, compitaNombre, c
     if (quien === 'compita') {
       setCargando(true)
       try {
-        await fetch(`/api/solicitud/resultado-llamada?token=${token}&resultado=bien&quien=compita`)
+        await fetch(`/api/solicitud/resultado-llamada?token=${token}&resultado=bien&${rolQs}`, { method: 'POST' })
         setPaso('resultado')
       } catch (e) {
         console.error(e)
@@ -96,7 +103,7 @@ export default function SalaEntrevista({ token, quien, roomUrl, compitaNombre, c
   async function reconectarCompita() {
     setCargando(true)
     try {
-      const res = await fetch(`/api/solicitud/reconectar-llamada?token=${token}&quien=compita`)
+      const res = await fetch(`/api/solicitud/reconectar-llamada?token=${token}&${rolQs}`, { method: 'POST' })
       const data = await res.json()
       if (data.room_url) {
         setNuevaRoomUrl(data.room_url)

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createBrowserSupabase } from '@/lib/supabase'
 import type { Mensaje, Visita } from '@/types'
+import { fotoSrc } from '@/lib/fotos'
 
 interface ChatProps {
   visita: Visita & { estado?: string }
@@ -152,7 +153,7 @@ export default function Chat({ visita, mensajesIniciales, compitaNombre }: ChatP
                 >
                   {m.tipo === 'foto' ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={m.contenido ?? ''} alt="Foto" style={{ maxWidth: '100%', borderRadius: '8px', display: 'block' }} />
+                    <img src={fotoSrc(m)} alt="Foto" style={{ maxWidth: '100%', borderRadius: '8px', display: 'block' }} />
                   ) : (
                     <span>{m.contenido}</span>
                   )}

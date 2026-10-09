@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { fotoSrc } from '@/lib/fotos'
 import type { Visita, Mensaje, ReporteVisita } from '@/types'
 
 type VisitaConDatos = Visita & {
@@ -132,7 +133,7 @@ export default function HistorialVisitas({ visitas, compitaId, compitaNombre }: 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                       <p style={{ color: '#6B5C90', fontSize: '12px', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif', margin: 0 }}>Fotos de la visita</p>
                       {fotos.map((f) => (
-                        <FotoVisita key={f.id} url={f.contenido!} />
+                        <FotoVisita key={f.id} url={fotoSrc(f)} />
                       ))}
                     </div>
                   )}

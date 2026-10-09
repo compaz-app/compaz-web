@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminSupabase } from '@/lib/supabase-server'
+import { tipoImagenReal, EXT } from '@/lib/imagen'
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp']
 const MAX_SIZE_BYTES = 5 * 1024 * 1024 // 5 MB
@@ -34,17 +35,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'La foto no puede superar 5 MB' }, { status: 400 })
   }
 
-  // Forzar extensión desde el tipo MIME (no confiar en el nombre del archivo)
-  const EXT_MAP: Record<string, string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' }
-  const ext = EXT_MAP[foto.type]
-  const slug = nombre.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+  // Verificar el contenido real (magic bytes) y forzar extensión desde el tipo detectado
+  const buffer = Buffer.from(await foto.arrayBuffer())
+  const tipo = tipoImagenReal(buffer)
+  if (!tipo) return NextResponse.json({ error: 'El archivo no es una imagen válida' }, { status: 400 })
+  const ext = EXT[tipo]
+  const slug = nombre.slice(0, 40).toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
   const path = `compitas/${slug}-${Date.now()}.${ext}`
 
   const { error } = await admin.storage
     .from('fotos')
-    .upload(path, foto, { contentType: foto.type, upsert: false })
+    .upload(path, buffer, { contentType: tipo, upsert: false })
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    console.error('[onboarding/upload-foto]', error.message)
+    return NextResponse.json({ error: 'Error al subir la imagen' }, { status: 500 })
+  }
 
   const { data: { publicUrl } } = admin.storage.from('fotos').getPublicUrl(path)
   return NextResponse.json({ url: publicUrl })

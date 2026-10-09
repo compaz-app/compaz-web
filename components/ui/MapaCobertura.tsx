@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { createBrowserSupabase } from '@/lib/supabase'
 
 const ESTADO_ALIASES: Record<string, string[]> = {
   'Amazonas': ['amazonas'],
@@ -117,12 +116,10 @@ export default function MapaCobertura({ onEstadoSelect, onMunicipioSelect, hideT
 
   useEffect(() => {
     fetchCobertura()
-    const supabase = createBrowserSupabase()
-    const channel = supabase
-      .channel('compitas-cobertura')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'compitas' }, fetchCobertura)
-      .subscribe()
-    return () => { supabase.removeChannel(channel) }
+    // Sondeo en vez de Realtime: suscribirse a `compitas` con la anon key transmitiría filas completas
+    // (email, telegram_chat_id) a cualquier visitante. /api/cobertura solo expone las zonas.
+    const id = setInterval(fetchCobertura, 60_000)
+    return () => clearInterval(id)
   }, [fetchCobertura])
 
   // Re-estilizar estados cuando cambian los datos

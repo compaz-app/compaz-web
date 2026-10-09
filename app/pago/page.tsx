@@ -60,6 +60,7 @@ function PagoContent() {
   const [planElegido, setPlanElegido] = useState<PlanId | null>(null)
   const [procesando, setProcesando] = useState(false)
   const [error, setError] = useState('')
+  const [pendiente, setPendiente] = useState(false)
 
   useEffect(() => {
     if (!solicitudId) { setCargando(false); return }
@@ -97,6 +98,10 @@ function PagoContent() {
     if (!data.ok) {
       setError(data.error ?? 'Ocurrió un error. Intenta de nuevo.')
       setProcesando(false)
+    } else if (data.data?.pendiente) {
+      // Sin pasarela de pago activa: el equipo coordina el cobro y la asignación
+      setPendiente(true)
+      setProcesando(false)
     } else {
       window.location.href = '/dashboard?contratado=1'
     }
@@ -122,6 +127,19 @@ function PagoContent() {
   }
 
   const primerNombre = info.clienteNombre.split(' ')[0]
+
+  if (pendiente) {
+    return (
+      <div style={{ minHeight: '100vh', background: '#FDFAF6', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+        <div style={{ background: 'white', border: '2px solid #E8E0D4', borderRadius: '24px', padding: '40px 32px', maxWidth: '480px', width: '100%', textAlign: 'center' }}>
+          <h2 style={{ color: '#1A0A3C', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800 }}>¡Recibimos tu solicitud, {primerNombre}!</h2>
+          <p style={{ color: '#4A3B6B', fontFamily: 'Inter, sans-serif', lineHeight: 1.6 }}>
+            El equipo de Compaz se pondrá en contacto contigo muy pronto para coordinar el pago y activar a {info.compitaNombre}.
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: '#FDFAF6', fontFamily: 'Inter, sans-serif' }}>

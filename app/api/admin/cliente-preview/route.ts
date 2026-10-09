@@ -1,14 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerSupabase, createAdminSupabase } from '@/lib/supabase-server'
-
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? '').split(',').map((e) => e.trim())
+import { createAdminSupabase } from '@/lib/supabase-server'
+import { getAdminUser } from '@/lib/auth'
 
 export async function GET(req: NextRequest) {
-  const supabaseAuth = await createServerSupabase()
-  const { data: { user } } = await supabaseAuth.auth.getUser()
-  if (!user || !ADMIN_EMAILS.includes(user.email ?? '')) {
-    return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-  }
+  if (!(await getAdminUser())) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
   const usuarioId = req.nextUrl.searchParams.get('usuario_id')
   if (!usuarioId) return NextResponse.json({ error: 'Falta usuario_id' }, { status: 400 })
@@ -26,6 +21,8 @@ export async function GET(req: NextRequest) {
     .select('*, compita:compitas(*)')
     .eq('usuario_id', usuarioId)
     .eq('estado', 'en_curso')
+    .order('inicio', { ascending: false })
+    .limit(1)
     .maybeSingle()
 
   let mensajes: unknown[] = []

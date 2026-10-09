@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { sendTelegramMessage, makeInlineKeyboard } from '@/lib/telegram'
+import { cronAutorizado, latido } from '@/lib/cron'
 
 // POST /api/cron/recordatorio-cuestionario
 // Corre cada 10 min. Envía un recordatorio al compita si lleva ~15 min sin
@@ -10,10 +11,7 @@ import { sendTelegramMessage, makeInlineKeyboard } from '@/lib/telegram'
 //   reporte:...       → cuestionario activo, aún no fue recordado
 //   reporte_r:...     → ya se envió el recordatorio, no volver a enviar
 export async function POST(req: NextRequest) {
-  const secret = req.headers.get('x-cron-secret')
-  if (secret !== process.env.CRON_SECRET) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  if (!cronAutorizado(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const admin = createAdminSupabase()
   const ahora = new Date()
@@ -38,10 +36,14 @@ export async function POST(req: NextRequest) {
     // Marcar como recordado cambiando el prefijo, para que la próxima
     // corrida del cron no lo vuelva a enviar.
     const accionMarcada = accion.replace('reporte:', 'reporte_r:')
-    await admin
+    const { data: marcado } = await admin
       .from('telegram_estados')
       .update({ pendiente_accion: accionMarcada })
       .eq('chat_id', estado.chat_id)
+      .eq('pendiente_accion', accion)
+      .select('chat_id')
+      .maybeSingle()
+    if (!marcado) continue
 
     try {
       await sendTelegramMessage(
@@ -62,5 +64,6 @@ export async function POST(req: NextRequest) {
       .lt('pendiente_expira', ahora.toISOString())
   }
 
+  await latido('recordatorio-cuestionario')
   return NextResponse.json({ ok: true, enviados })
 }

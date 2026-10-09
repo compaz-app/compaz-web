@@ -1,7 +1,8 @@
 import { NextRequest } from 'next/server'
 import { createServerSupabase, createAdminSupabase } from '@/lib/supabase-server'
 import { getOrCreateDailyRoom } from '@/lib/daily'
-import { sendTelegramMessage } from '@/lib/telegram'
+import { sendTelegramMessage, avisarAdmin } from '@/lib/telegram'
+import { esc } from '@/lib/html'
 import { ok, err, unauthorized, serverError } from '@/lib/api'
 import type { Visita, Compita, Usuario } from '@/types'
 
@@ -16,7 +17,9 @@ export async function POST(req: NextRequest) {
     .select('*, compita:compitas(*), usuario:usuarios(*)')
     .eq('usuario_id', user.id)
     .eq('estado', 'en_curso')
-    .single() as { data: (Visita & { compita: Compita; usuario: Usuario }) | null }
+    .order('inicio', { ascending: false })
+    .limit(1)
+    .maybeSingle() as { data: (Visita & { compita: Compita; usuario: Usuario }) | null }
 
   if (!visita) return err('No hay visita activa')
 
@@ -30,7 +33,8 @@ export async function POST(req: NextRequest) {
     return serverError(e)
   }
 
-  await admin.from('visitas').update({ room_url: room.url }).eq('id', visita.id)
+  const { error: eRoom } = await admin.from('visitas').update({ room_url: room.url }).eq('id', visita.id)
+  if (eRoom) console.error('[create-call] no se pudo guardar room_url:', eRoom)
 
   if (visita.compita.telegram_chat_id) {
     const tipo = soloAudio ? '📞 El cliente quiere hacer una llamada de voz' : '📹 El cliente quiere hacer una videollamada'
@@ -38,17 +42,8 @@ export async function POST(req: NextRequest) {
     catch (e) { console.error('Error Telegram create-call:', e) }
   }
 
-  const adminChatId = process.env.TELEGRAM_ADMIN_CHAT_ID
-  if (adminChatId) {
-    const tipo = soloAudio ? '📞 llamada de voz' : '📹 videollamada'
-    const clienteNombre = visita.usuario?.nombre ?? 'Un cliente'
-    try {
-      await sendTelegramMessage(
-        adminChatId,
-        `${soloAudio ? '📞' : '📹'} <b>${clienteNombre}</b> inició una ${tipo} con <b>${visita.compita.nombre}</b>.\n\n<a href="${room.url}">Unirse →</a>`,
-      )
-    } catch (e) { console.error('Error Telegram admin llamada:', e) }
-  }
+  const tipoAdmin = soloAudio ? 'llamada de voz' : 'videollamada'
+  await avisarAdmin(`${soloAudio ? '📞' : '📹'} <b>${esc(visita.usuario?.nombre ?? 'Un cliente')}</b> inició una ${tipoAdmin} con <b>${esc(visita.compita.nombre)}</b>.\n\n<a href="${room.url}">Unirse →</a>`)
 
   return ok({ url: room.url, room_name: room.name })
 }

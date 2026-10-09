@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import { getSolicitudPorToken } from '@/lib/solicitudes'
 import SalaEntrevista from './SalaEntrevista'
+import { firmaRol, rolValido } from '@/lib/links'
 
 function formatSlotVE(iso: string): string {
   return new Date(iso).toLocaleString('es-VE', {
@@ -15,10 +16,12 @@ export default async function SalaPage({
   searchParams,
 }: {
   params: Promise<{ token: string }>
-  searchParams: Promise<{ quien?: string }>
+  searchParams: Promise<{ quien?: string; s?: string }>
 }) {
   const { token } = await params
-  const { quien: quienParam } = await searchParams
+  const { quien: quienParam, s: sigParam } = await searchParams
+  // El rol viene firmado en el enlace: sin firma válida no hay acceso (evita suplantar a la otra parte)
+  if (!rolValido(token, quienParam ?? null, sigParam ?? null)) notFound()
   const quien = quienParam === 'compita' ? 'compita' : 'cliente'
 
   const solicitud = await getSolicitudPorToken(token)
@@ -53,6 +56,7 @@ export default async function SalaPage({
       compitaNombre={compitaRow?.nombre ?? solicitud.compita_nombre ?? 'Compita'}
       clienteNombre={clienteRow?.nombre ?? 'Cliente'}
       slotLabel={formatSlotVE(solicitud.slot_confirmado)}
+      sig={firmaRol(token, quien)}
     />
   )
 }

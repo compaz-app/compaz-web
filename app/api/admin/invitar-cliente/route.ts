@@ -1,16 +1,16 @@
 import { NextRequest } from 'next/server'
-import { createServerSupabase, createAdminSupabase } from '@/lib/supabase-server'
-import { isAdminEmail } from '@/lib/auth'
+import { createAdminSupabase } from '@/lib/supabase-server'
+import { getAdminUser } from '@/lib/auth'
 import { ok, err, unauthorized, serverError } from '@/lib/api'
 import { sendBienvenidaCliente } from '@/lib/resend'
+import { emailValido } from '@/lib/validar'
 
 export async function POST(req: NextRequest) {
-  const supabase = await createServerSupabase()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user || !isAdminEmail(user.email ?? '')) return unauthorized()
+  if (!(await getAdminUser())) return unauthorized()
 
-  const { nombre, email } = await req.json() as { nombre: string; email: string }
+  const { nombre, email } = (await req.json().catch(() => ({})) as { nombre: string; email: string })
   if (!nombre || !email) return err('Faltan datos')
+  if (!emailValido(email) || typeof nombre !== 'string' || nombre.length > 100) return err('Datos inválidos')
 
   const admin = createAdminSupabase()
 

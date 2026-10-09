@@ -1,15 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerSupabase } from '@/lib/supabase-server'
-import { isAdminEmail } from '@/lib/auth'
+import { getAdminUser } from '@/lib/auth'
 import { ok, err, unauthorized, serverError } from '@/lib/api'
 import { eliminarCompita } from '@/lib/compitas'
 
 export async function DELETE(req: NextRequest) {
-  const supabase = await createServerSupabase()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user || !isAdminEmail(user.email ?? '')) return unauthorized()
+  if (!(await getAdminUser())) return unauthorized()
 
-  const { compita_id, force } = await req.json()
+  const { compita_id, force } = (await req.json().catch(() => ({})))
   if (!compita_id) return err('compita_id requerido')
 
   try {

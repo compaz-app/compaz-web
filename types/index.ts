@@ -111,6 +111,7 @@ export interface TelegramMessage {
   text?: string
   photo?: TelegramPhotoSize[]
   caption?: string
+  reply_to_message?: { message_id: number }
 }
 
 export interface TelegramUser {

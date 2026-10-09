@@ -90,10 +90,10 @@ export async function getSolicitudesAdmin(): Promise<Solicitud[]> {
 export async function getSolicitudesParaRecordatorio(): Promise<Solicitud[]> {
   const supabase = createAdminSupabase()
   const ahora = new Date()
-  const hace30min = new Date(ahora.getTime() - 30 * 60 * 1000).toISOString()
+  const hace30min = new Date(ahora.getTime() - 15 * 60 * 1000).toISOString()
   const en65min = new Date(ahora.getTime() + 65 * 60 * 1000).toISOString()
 
-  // Ventana: slot entre -30 min y +65 min desde ahora, sin recordatorio enviado.
+  // Ventana: slot entre -15 min y +65 min desde ahora, sin recordatorio enviado.
   // El límite inferior cubre retrasos del cron (Netlify latency, cold starts).
   // El flag recordatorio_enviado=false previene duplicados si el cron corre varias veces.
   const { data, error } = await supabase
@@ -155,13 +155,20 @@ export async function crearSolicitud(input: CrearSolicitudInput): Promise<Solici
   return mapRow(data as Record<string, unknown>)
 }
 
+export type ResultadoRespuesta =
+  | { ok: true; solicitud: Solicitud }
+  | { ok: false; motivo: 'no_encontrada' | 'slot_invalido' | 'slot_pasado' | 'no_autorizada' }
+
 /**
  * El compita confirma un slot específico (índice 0-2) o rechaza (-1).
+ * Valida dueño (si se pasa compitaId), que el slot siga en el futuro y transiciona de forma atómica
+ * (solo desde 'pendiente').
  */
-export async function confirmarSlot(
+export async function responderSolicitud(
   token: string,
   slotIndex: number,
-): Promise<Solicitud | null> {
+  compitaId?: string,
+): Promise<ResultadoRespuesta> {
   const supabase = createAdminSupabase()
 
   const { data: row } = await supabase
@@ -169,39 +176,72 @@ export async function confirmarSlot(
     .select(SELECT_FIELDS)
     .eq('token_respuesta', token)
     .eq('estado', 'pendiente')
-    .single()
+    .maybeSingle()
 
-  if (!row) return null
-
+  if (!row) return { ok: false, motivo: 'no_encontrada' }
   const solicitud = mapRow(row as Record<string, unknown>)
+  if (compitaId && solicitud.compita_id !== compitaId) return { ok: false, motivo: 'no_autorizada' }
+
+  const ahora = new Date().toISOString()
 
   if (slotIndex === -1) {
-    // Rechazo
     const { data: updated } = await supabase
       .from('solicitudes')
-      .update({ estado: 'rechazada', respondido_at: new Date().toISOString() })
+      .update({ estado: 'rechazada', respondido_at: ahora })
       .eq('token_respuesta', token)
+      .eq('estado', 'pendiente')
       .select(SELECT_FIELDS)
-      .single()
-    return updated ? mapRow(updated as Record<string, unknown>) : null
+      .maybeSingle()
+    return updated ? { ok: true, solicitud: mapRow(updated as Record<string, unknown>) } : { ok: false, motivo: 'no_encontrada' }
   }
 
-  const slot = solicitud.slots_propuestos[slotIndex]
-  if (!slot) return null
+  const slot = Number.isInteger(slotIndex) ? solicitud.slots_propuestos[slotIndex] : undefined
+  if (!slot) return { ok: false, motivo: 'slot_invalido' }
+  if (new Date(slot).getTime() < Date.now() + 5 * 60_000) return { ok: false, motivo: 'slot_pasado' }
 
   const { data: updated } = await supabase
     .from('solicitudes')
-    .update({
-      estado: 'aceptada',
-      slot_confirmado: slot,
-      respondido_at: new Date().toISOString(),
-    })
+    .update({ estado: 'aceptada', slot_confirmado: slot, respondido_at: ahora })
     .eq('token_respuesta', token)
     .eq('estado', 'pendiente')
     .select(SELECT_FIELDS)
-    .single()
+    .maybeSingle()
 
-  return updated ? mapRow(updated as Record<string, unknown>) : null
+  return updated ? { ok: true, solicitud: mapRow(updated as Record<string, unknown>) } : { ok: false, motivo: 'no_encontrada' }
+}
+
+/** Compatibilidad: devuelve la solicitud o null. */
+export async function confirmarSlot(token: string, slotIndex: number, compitaId?: string): Promise<Solicitud | null> {
+  const r = await responderSolicitud(token, slotIndex, compitaId)
+  return r.ok ? r.solicitud : null
+}
+
+// ── Flags de envío con reclamo atómico ───────────────────────────────────────
+
+export type FlagSolicitud =
+  | 'recordatorio_enviado' | 'seguimiento_enviado' | 'seguimiento2_enviado' | 'confirmacion_llamada_enviada'
+
+/**
+ * Reclama un flag de forma atómica (UPDATE ... WHERE flag = false). Solo una ejecución concurrente
+ * obtiene true. Si el envío posterior falla, llamar liberarFlag() para reintentar en el siguiente ciclo.
+ */
+export async function reclamarFlag(solicitudId: string, flag: FlagSolicitud): Promise<boolean> {
+  const supabase = createAdminSupabase()
+  const { data, error } = await supabase
+    .from('solicitudes')
+    .update({ [flag]: true })
+    .eq('id', solicitudId)
+    .eq(flag, false)
+    .select('id')
+    .maybeSingle()
+  if (error) throw new Error(`reclamarFlag(${flag}): ${error.message}`)
+  return !!data
+}
+
+export async function liberarFlag(solicitudId: string, flag: FlagSolicitud): Promise<void> {
+  const supabase = createAdminSupabase()
+  const { error } = await supabase.from('solicitudes').update({ [flag]: false }).eq('id', solicitudId)
+  if (error) console.error(`liberarFlag(${flag}) falló:`, error.message)
 }
 
 /**
@@ -229,7 +269,7 @@ export async function getSolicitudesParaSeguimiento(): Promise<Solicitud[]> {
   const { data: ambas, error: e1 } = await supabase
     .from('solicitudes')
     .select(SELECT_FIELDS)
-    .eq('estado', 'aceptada')
+    .in('estado', ['aceptada', 'completada'])
     .eq('seguimiento_enviado', false)
     .eq('confirmacion_cliente', true)
     .eq('confirmacion_compita', true)
@@ -240,11 +280,12 @@ export async function getSolicitudesParaSeguimiento(): Promise<Solicitud[]> {
   const { data: timeout, error: e2 } = await supabase
     .from('solicitudes')
     .select(SELECT_FIELDS)
-    .eq('estado', 'aceptada')
+    .in('estado', ['aceptada', 'completada'])
     .eq('seguimiento_enviado', false)
     .eq('confirmacion_llamada_enviada', true)
-    .neq('confirmacion_cliente', false)
-    .neq('confirmacion_compita', false)
+    // PostgREST: neq excluye NULL. Se necesita "null o true" explícito.
+    .or('confirmacion_cliente.is.null,confirmacion_cliente.eq.true')
+    .or('confirmacion_compita.is.null,confirmacion_compita.eq.true')
     .lte('slot_confirmado', hace4h)
 
   if (e2) throw new Error(e2.message)
@@ -264,7 +305,8 @@ export async function getSolicitudesParaSeguimiento(): Promise<Solicitud[]> {
  */
 export async function marcarSeguimientoEnviado(solicitudId: string): Promise<void> {
   const supabase = createAdminSupabase()
-  await supabase.from('solicitudes').update({ seguimiento_enviado: true }).eq('id', solicitudId)
+  const { error } = await supabase.from('solicitudes').update({ seguimiento_enviado: true }).eq('id', solicitudId)
+  if (error) throw new Error(error.message)
 }
 
 /**
@@ -279,7 +321,7 @@ export async function getSolicitudesParaSegundoSeguimiento(): Promise<Solicitud[
   const { data, error } = await supabase
     .from('solicitudes')
     .select(SELECT_FIELDS)
-    .eq('estado', 'aceptada')
+    .in('estado', ['aceptada', 'completada'])
     .eq('seguimiento_enviado', true)
     .eq('seguimiento2_enviado', false)
     .lte('slot_confirmado', hace24h)
@@ -318,7 +360,8 @@ export async function marcarResultadoLlamada(
   const supabase = createAdminSupabase()
   const updates: Record<string, unknown> = { confirmacion_llamada_enviada: true }
   if (resultado === 'contratar') updates.estado = 'contratada'
-  await supabase.from('solicitudes').update(updates).eq('id', solicitudId)
+  const { error } = await supabase.from('solicitudes').update(updates).eq('id', solicitudId)
+  if (error) throw new Error(error.message)
 }
 
 export async function getSolicitudPorToken(token: string): Promise<Solicitud | null> {
@@ -370,10 +413,11 @@ export async function getSolicitudesParaConfirmacion(): Promise<Solicitud[]> {
  */
 export async function marcarConfirmacionEnviada(solicitudId: string): Promise<void> {
   const supabase = createAdminSupabase()
-  await supabase
+  const { error } = await supabase
     .from('solicitudes')
     .update({ confirmacion_llamada_enviada: true })
     .eq('id', solicitudId)
+  if (error) throw new Error(error.message)
 }
 
 /**
@@ -393,9 +437,10 @@ export async function registrarConfirmacion(
     .from('solicitudes')
     .update({ [campo]: ocurrio })
     .eq('id', solicitudId)
+    .eq('estado', 'aceptada')
     .is(campo, null)
     .select(SELECT_FIELDS)
-    .single()
+    .maybeSingle()
 
   if (error || !data) {
     // El campo ya tenía valor — devolver la solicitud sin modificar
@@ -410,9 +455,8 @@ export async function registrarConfirmacion(
 }
 
 /**
- * Inicia reagendado desde el compita: resetea la solicitud aceptada a pendiente
- * para que el compita pueda sugerir nuevos horarios por Telegram.
- * Acepta solicitudes en estado 'aceptada'.
+ * Inicia reagendado desde el compita: marca la solicitud como 'rechazada' (a la espera de nuevos
+ * horarios) y limpia slot/sala/flags. Solo desde 'aceptada' o 'pendiente'.
  */
 export async function iniciarReagendadoPorCompita(
   token: string,
@@ -441,8 +485,9 @@ export async function iniciarReagendadoPorCompita(
       confirmacion_compita: null,
     })
     .eq('token_respuesta', token)
+    .in('estado', ['aceptada', 'pendiente'])
     .select(SELECT_FIELDS)
-    .single()
+    .maybeSingle()
 
   return updated ? mapRow(updated as Record<string, unknown>) : null
 }
@@ -456,7 +501,7 @@ export async function guardarSlotsReagendado(
   slots: string[],
 ): Promise<void> {
   const supabase = createAdminSupabase()
-  await supabase
+  const { data, error } = await supabase
     .from('solicitudes')
     .update({
       reagendado_slots: slots,
@@ -472,4 +517,9 @@ export async function guardarSlotsReagendado(
       confirmacion_compita: null,
     })
     .eq('id', solicitudId)
+    .in('estado', ['rechazada', 'pendiente', 'aceptada'])
+    .select('id')
+    .maybeSingle()
+  if (error) throw new Error(error.message)
+  if (!data) throw new Error('La solicitud ya no admite reagendado')
 }

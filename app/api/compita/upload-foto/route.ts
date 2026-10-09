@@ -3,6 +3,7 @@
 // El token NO se consume aquí — se consume al guardar el perfil completo.
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminSupabase } from '@/lib/supabase-server'
+import { tipoImagenReal, EXT } from '@/lib/imagen'
 import { validarTokenPerfil } from '@/lib/compita-tokens'
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp']
@@ -27,13 +28,14 @@ export async function POST(req: NextRequest) {
   }
 
   const supabase = createAdminSupabase()
-  const ext = foto.type === 'image/png' ? 'png' : foto.type === 'image/webp' ? 'webp' : 'jpg'
-  const path = `compitas/${compitaId}/perfil-${Date.now()}.${ext}`
   const buffer = Buffer.from(await foto.arrayBuffer())
+  const tipo = tipoImagenReal(buffer)
+  if (!tipo) return NextResponse.json({ error: 'El archivo no es una imagen válida' }, { status: 400 })
+  const path = `compitas/${compitaId}/perfil-${Date.now()}.${EXT[tipo]}`
 
   const { error } = await supabase.storage.from('fotos').upload(path, buffer, {
-    contentType: foto.type,
-    upsert: true,
+    contentType: tipo,
+    upsert: false,
   })
   if (error) return NextResponse.json({ error: 'Error al subir la imagen' }, { status: 500 })
 

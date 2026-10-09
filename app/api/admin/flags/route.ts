@@ -1,14 +1,9 @@
 import { NextRequest } from 'next/server'
-import { createServerSupabase, createAdminSupabase } from '@/lib/supabase-server'
-import { isAdminEmail } from '@/lib/auth'
+import { createAdminSupabase } from '@/lib/supabase-server'
+import { getAdminUser } from '@/lib/auth'
 import { ok, err, unauthorized, serverError } from '@/lib/api'
 
-async function requireAdmin() {
-  const supabase = await createServerSupabase()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user || !isAdminEmail(user.email ?? '')) return null
-  return user
-}
+const requireAdmin = getAdminUser
 
 // GET /api/admin/flags — listar flags abiertos
 export async function GET(req: NextRequest) {
@@ -34,17 +29,17 @@ export async function POST(req: NextRequest) {
   const user = await requireAdmin()
   if (!user) return unauthorized()
 
-  const body = await req.json() as {
+  const body = await req.json().catch(() => null) as {
     entidad_tipo: 'visita' | 'compita' | 'cliente'
     entidad_id: string
     entidad_nombre: string
     nota: string
-    reportado_por: string
-  }
+  } | null
 
-  if (!body.entidad_tipo || !body.entidad_id || !body.nota?.trim() || !body.reportado_por?.trim()) {
+  if (!body || !['visita', 'compita', 'cliente'].includes(body.entidad_tipo) || !body.entidad_id || !body.nota?.trim()) {
     return err('Faltan campos requeridos')
   }
+  if (body.nota.length > 2000) return err('La nota es demasiado larga')
 
   const admin = createAdminSupabase()
   const { data, error } = await admin
@@ -54,7 +49,7 @@ export async function POST(req: NextRequest) {
       entidad_id: body.entidad_id,
       entidad_nombre: body.entidad_nombre ?? '',
       nota: body.nota.trim(),
-      reportado_por: body.reportado_por.trim(),
+      reportado_por: user.email ?? 'admin', // identidad de la sesión, no del body
       resuelto: false,
     })
     .select()
@@ -62,7 +57,7 @@ export async function POST(req: NextRequest) {
 
   if (error) {
     console.error('[flags POST]', JSON.stringify(error))
-    return err(error.message, 500)
+    return serverError(error)
   }
   return ok(data)
 }
@@ -72,7 +67,7 @@ export async function PATCH(req: NextRequest) {
   const user = await requireAdmin()
   if (!user) return unauthorized()
 
-  const { flag_id } = await req.json() as { flag_id: string }
+  const { flag_id } = (await req.json().catch(() => ({}))) as { flag_id: string }
   if (!flag_id) return err('flag_id requerido')
 
   const admin = createAdminSupabase()

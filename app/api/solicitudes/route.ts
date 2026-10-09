@@ -5,44 +5,41 @@ import { crearSolicitud } from '@/lib/solicitudes'
 import { sendTelegramMessage, makeInlineKeyboard } from '@/lib/telegram'
 import { ok, err, unauthorized, serverError } from '@/lib/api'
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? ''
+import { esc } from '@/lib/html'
+import { formatSlotVE, esSlotFuturo } from '@/lib/format'
+import { avisarAdmin } from '@/lib/telegram'
 
-// Venezuela UTC-4: formatea un ISO datetime a texto legible local
-function formatSlotVE(iso: string): string {
-  const date = new Date(iso)
-  return date.toLocaleString('es-VE', {
-    timeZone: 'America/Caracas',
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: true,
-  })
-}
+const MENSAJES_NEGOCIO = ['Límite de', 'Ya tienes una solicitud']
 
 export async function POST(req: NextRequest) {
   const supabase = await createServerSupabase()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return unauthorized()
 
-  const body = await req.json() as {
-    compita_id: string
-    mensaje: string
+  const body = await req.json().catch(() => null) as {
+    compita_id?: string
+    mensaje?: string
     sobre_cliente?: string | null
-    slots_propuestos: string[]
+    slots_propuestos?: unknown
     franja_horaria?: string
-  }
+  } | null
+  if (!body) return err('Solicitud inválida')
 
-  const { compita_id, mensaje, sobre_cliente, slots_propuestos, franja_horaria } = body
+  const compita_id = body.compita_id
+  const mensaje = typeof body.mensaje === 'string' ? body.mensaje.trim() : ''
+  const sobre_cliente = typeof body.sobre_cliente === 'string' ? body.sobre_cliente.trim() : null
+  const franja_horaria = typeof body.franja_horaria === 'string' ? body.franja_horaria.trim().slice(0, 200) : undefined
+  const slotsRaw = body.slots_propuestos
 
-  if (!compita_id || !mensaje?.trim()) return err('Faltan campos requeridos')
-  if (!Array.isArray(slots_propuestos) || slots_propuestos.length === 0 || slots_propuestos.length > 3) {
+  if (!compita_id || !mensaje) return err('Faltan campos requeridos')
+  if (mensaje.length > 1500) return err('El mensaje es demasiado largo (máximo 1500 caracteres)')
+  if (sobre_cliente && sobre_cliente.length > 1000) return err('La descripción del cliente es demasiado larga (máximo 1000 caracteres)')
+  if (!Array.isArray(slotsRaw) || slotsRaw.length === 0 || slotsRaw.length > 3) {
     return err('Debes proponer entre 1 y 3 horarios')
   }
-  const ahora = Date.now()
-  const slotsPasados = slots_propuestos.filter((s) => new Date(s).getTime() <= ahora)
-  if (slotsPasados.length > 0) return err('Todos los horarios propuestos deben ser en el futuro')
+  if (!slotsRaw.every((s) => esSlotFuturo(s, 30))) return err('Todos los horarios deben ser válidos y estar al menos 30 minutos en el futuro')
+  if ((slotsRaw as string[]).some((s) => new Date(s).getTime() > Date.now() + 60 * 86400_000)) return err('Los horarios deben estar dentro de los próximos 60 días')
+  const slots_propuestos = [...new Set((slotsRaw as string[]).map((s) => new Date(s).toISOString()))]
 
   // Traer datos del cliente y del compita
   const admin = createAdminSupabase()
@@ -77,29 +74,25 @@ export async function POST(req: NextRequest) {
       cliente_id: user.id,
       compita_id,
       mensaje,
-      sobre_cliente: sobre_cliente ?? null,
+      sobre_cliente: sobre_cliente || null,
       slots_propuestos,
       franja_horaria,
     })
   } catch (e) {
     console.error('[solicitudes] error:', e)
-    const msg = e instanceof Error ? e.message : 'Error'
-    return err(msg)
+    const msg = e instanceof Error ? e.message : ''
+    if (/duplicate|unique/i.test(msg)) return err('Ya tienes una solicitud pendiente con este compita')
+    // Solo se muestran los mensajes de negocio; los errores de BD no se filtran al cliente
+    return MENSAJES_NEGOCIO.some((m) => msg.startsWith(m)) ? err(msg) : err('No pudimos crear la solicitud. Intenta de nuevo.', 500)
   }
 
-  // Alertar al admin si el compita no tiene Telegram vinculado
+  // Compita sin Telegram vinculado: avisar al admin para que la contacte
   if (!compita.telegram_chat_id) {
-    const adminTg = process.env.TELEGRAM_ADMIN_CHAT_ID
-    if (adminTg) {
-      const { sendTelegramMessage: tg } = await import('@/lib/telegram')
-      tg(adminTg, [
-        `⚠️ <b>Solicitud sin Telegram</b>`,
-        ``,
-        `El cliente <b>${cliente?.nombre ?? '—'}</b> solicitó a <b>${compita.nombre}</b>, pero esa compita no tiene Telegram vinculado.`,
-        ``,
-        `La solicitud fue creada pero la compita no fue notificada. Contáctala directamente.`,
-      ].join('\n')).catch(() => {})
-    }
+    await avisarAdmin([
+      `⚠️ <b>Solicitud sin Telegram</b>`, ``,
+      `El cliente <b>${esc(cliente?.nombre ?? '—')}</b> solicitó a <b>${esc(compita.nombre)}</b>, pero esa compita no tiene Telegram vinculado.`, ``,
+      `La solicitud fue creada pero la compita no fue notificada. Contáctala directamente.`,
+    ].join('\n'))
     return ok({ solicitud_id: solicitud.id, estado: solicitud.estado })
   }
 
@@ -110,7 +103,7 @@ export async function POST(req: NextRequest) {
       .map((s, i) => `${['1️⃣', '2️⃣', '3️⃣'][i]} ${formatSlotVE(s)}`)
       .join('\n')
 
-    const escapeHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    const escapeHtml = esc
 
     const partesSobre: string[] = []
     if (sobre_cliente?.trim()) {
@@ -148,7 +141,9 @@ export async function POST(req: NextRequest) {
     try {
       await sendTelegramMessage(compita.telegram_chat_id, mensajeTelegram, teclado)
     } catch (e) {
+      // La solicitud existe pero la compita no fue notificada: avisar al admin para no perderla en silencio
       console.error('Error Telegram solicitud:', e)
+      await avisarAdmin(`🚨 <b>No se pudo notificar una solicitud</b>\n\n<b>${esc(clienteNombre)}</b> → <b>${esc(compita.nombre)}</b> (Telegram falló). Contacta a la compita; el cierre automático la cerrará a las 72 h si no responde.`)
     }
   }
 

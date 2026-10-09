@@ -2,12 +2,10 @@ import { NextRequest } from 'next/server'
 import { createServerSupabase, createAdminSupabase } from '@/lib/supabase-server'
 import { ok, err, unauthorized, notFound } from '@/lib/api'
 import { sendTelegramMessage, INLINE_INICIO } from '@/lib/telegram'
-import { Resend } from 'resend'
-
-const resend = new Resend(process.env.RESEND_API_KEY)
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://micompaz.com'
-
-const ADMIN_TG = process.env.TELEGRAM_ADMIN_CHAT_ID ?? ''
+import { sendEmail, SITE_URL } from '@/lib/email'
+import { esc } from '@/lib/html'
+import { formatFechaVE } from '@/lib/format'
+import { avisarAdmin } from '@/lib/telegram'
 
 // POST /api/visita/reagendar
 // Cancela la fecha acordada y vuelve al estado pre_visita para recoordinar
@@ -16,7 +14,7 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return unauthorized()
 
-  const { visita_id } = await req.json() as { visita_id: string }
+  const { visita_id } = (await req.json().catch(() => ({}))) as { visita_id: string }
   if (!visita_id) return err('Falta visita_id')
 
   const admin = createAdminSupabase()
@@ -31,18 +29,21 @@ export async function POST(req: NextRequest) {
   if (visita.usuario_id !== user.id) return err('Sin acceso', 403)
   if (!['pre_visita', 'programada'].includes(visita.estado)) return err('Solo se puede reagendar desde pre_visita o programada')
 
-  const { error } = await admin
+  const { data: reseteada, error } = await admin
     .from('visitas')
     .update({ estado: 'pre_visita', fecha_programada: null })
     .eq('id', visita_id)
+    .in('estado', ['pre_visita', 'programada'])
+    .select('id')
+    .maybeSingle()
 
-  if (error) return err(error.message)
+  if (error) {
+    console.error('[visita/reagendar] error:', error)
+    return err('No pudimos reagendar. Intenta de nuevo.', 500)
+  }
+  if (!reseteada) return err('La visita cambió de estado y ya no se puede reagendar', 409)
 
-  const fechaAnterior = visita.fecha_programada
-    ? new Date(visita.fecha_programada + 'T00:00:00').toLocaleDateString('es-VE', {
-        weekday: 'long', day: 'numeric', month: 'long',
-      })
-    : null
+  const fechaAnterior = visita.fecha_programada ? formatFechaVE(visita.fecha_programada) : null
 
   const [{ data: compita }, { data: cliente }] = await Promise.all([
     admin.from('compitas').select('telegram_chat_id, nombre').eq('id', visita.compita_id).single(),
@@ -56,7 +57,7 @@ export async function POST(req: NextRequest) {
         [
           `🔄 <b>La visita necesita reagendarse</b>`,
           ``,
-          `${cliente?.nombre ?? 'El cliente'} canceló la fecha${fechaAnterior ? ` del ${fechaAnterior}` : ''} y necesita acordar un nuevo día.`,
+          `${esc(cliente?.nombre ?? 'El cliente')} canceló la fecha${fechaAnterior ? ` del ${esc(fechaAnterior)}` : ''} y necesita acordar un nuevo día.`,
           ``,
           `Escríbele desde este mismo chat para coordinar una nueva fecha. Ellos lo verán en su portal.`,
         ].join('\n'),
@@ -67,15 +68,14 @@ export async function POST(req: NextRequest) {
 
   if (cliente?.email) {
     try {
-      await resend.emails.send({
-        from: 'Compaz <visitas@micompaz.com>',
+      await sendEmail({
         to: cliente.email,
         subject: 'Visita reagendada — coordina la nueva fecha con tu compita',
         html: `
           <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px">
             <h2 style="color:#2D1464;font-size:22px;margin-bottom:12px">🔄 Visita reagendada</h2>
             <p style="color:#4A3B6B;font-size:15px;line-height:1.6">
-              Cancelaste la fecha${fechaAnterior ? ` del <strong>${fechaAnterior}</strong>` : ''}. Le avisamos a <strong>${compita?.nombre ?? 'tu compita'}</strong> para que coordinen un nuevo día.
+              Cancelaste la fecha${fechaAnterior ? ` del <strong>${esc(fechaAnterior)}</strong>` : ''}. Le avisamos a <strong>${esc(compita?.nombre ?? 'tu compita')}</strong> para que coordinen un nuevo día.
             </p>
             <p style="color:#4A3B6B;font-size:14px;line-height:1.6">
               Entra al dashboard, escríbele por el chat y acuerden la nueva fecha.
@@ -100,14 +100,13 @@ export async function POST(req: NextRequest) {
       .like('contenido', 'reagendado:%')
     const nuevo = (totalReagendados ?? 0) + 1
     await admin.from('mensajes').insert({ visit_id: visita_id, origen: 'admin', tipo: 'texto', contenido: `reagendado:cliente` })
-    if (nuevo >= 3 && ADMIN_TG) {
-      await sendTelegramMessage(
-        ADMIN_TG,
+    if (nuevo >= 3) {
+      await avisarAdmin(
         [
           `⚠️ <b>Visita con ${nuevo} reagendados</b>`,
           ``,
-          `<b>Cliente:</b> ${cliente?.nombre ?? visita.usuario_id}`,
-          `<b>Compita:</b> ${compita?.nombre ?? visita.compita_id}`,
+          `<b>Cliente:</b> ${esc(cliente?.nombre ?? visita.usuario_id)}`,
+          `<b>Compita:</b> ${esc(compita?.nombre ?? visita.compita_id)}`,
           `<b>Iniciador:</b> cliente`,
           ``,
           `Puede indicar un problema de coordinación. Considera intervenir.`,
