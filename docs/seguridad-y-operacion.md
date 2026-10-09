@@ -30,5 +30,5 @@ Reintentos de Telegram deduplicados por `update_id` (fila `upd:<id>` en `telegra
 3. Reemplazar la página/flujo de pago por Stripe cuando se contrate.
 
 ## Pruebas de flujos
-`npm run test:flows` ejecuta 113 pruebas contra una BD en memoria y mocks de Telegram, Resend y Daily (`tests/`). Cubren registro de compita, solicitudes, crons, webhook de Daily, enlaces, pago, ciclo de la visita, perfil y panel admin, incluyendo cruces entre flujos.
+`npm run test:flows` ejecuta 125 pruebas contra una BD en memoria y mocks de Telegram, Resend y Daily (`tests/`). Cubren registro de compita, solicitudes, crons, webhook de Daily, enlaces, pago, ciclo de la visita, perfil y panel admin, incluyendo cruces entre flujos.
 Límite: la BD falsa no emula RLS ni concurrencia real; esas dos cosas se verifican en el SQL y en staging.
