@@ -32,7 +32,15 @@ export default function LoginPage() {
     })
 
     if (error) {
-      setError('No pudimos enviar el enlace. Verifica que uses el correo con el que fuiste invitado o escríbenos a hola@micompaz.com.')
+      console.error('[login] signInWithOtp falló:', error.status, error.code, error.message)
+      const m = `${error.code ?? ''} ${error.message ?? ''}`.toLowerCase()
+      if (error.status === 429 || m.includes('rate limit') || m.includes('over_email_send_rate_limit')) {
+        setError('Se enviaron demasiados enlaces en poco tiempo. Espera unos minutos y vuelve a intentar.')
+      } else if (m.includes('signup') || m.includes('not allowed') || m.includes('otp_disabled') || m.includes('user not found')) {
+        setError('Este correo no está registrado. Usa el correo con el que fuiste invitado o escríbenos a hola@micompaz.com.')
+      } else {
+        setError('No pudimos enviar el enlace. Intenta de nuevo en unos minutos o escríbenos a hola@micompaz.com.')
+      }
     } else {
       setEnviado(true)
       setCooldown(30)
