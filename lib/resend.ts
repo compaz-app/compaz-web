@@ -142,7 +142,7 @@ export async function sendBienvenidaCompita(
             Cuando una familia quiera conocerte, recibirás un mensaje de Telegram con todos los detalles. Desde ahí puedes <strong>aceptar o rechazar</strong> la solicitud y coordinar el horario de la videollamada.
           </p>
           <p style="color:#4A3B6B;font-size:15px;line-height:1.6;margin:0">
-            Mientras tanto, recuerda que las familias comparan varios perfiles antes de elegir. Una foto clara, una descripción que transmita tu personalidad y un video de presentación pueden ser lo que te haga destacar. Mientras más cuidado esté tu perfil, más probabilidades tienes de que te escojan a ti.
+            Antes de aparecer ante las familias, nuestro equipo revisa y verifica tu perfil. Te avisaremos por Telegram y por correo en cuanto esté listo. Mientras tanto, recuerda que las familias comparan varios perfiles antes de elegir. Una foto clara, una descripción que transmita tu personalidad y un video de presentación pueden ser lo que te haga destacar. Mientras más cuidado esté tu perfil, más probabilidades tienes de que te escojan a ti.
           </p>
         </div>
 
@@ -152,7 +152,6 @@ export async function sendBienvenidaCompita(
           <table style="width:100%;border-collapse:collapse">
             <tr><td style="color:#FF6B2B;font-weight:700;font-size:14px;padding:4px 8px;white-space:nowrap">/menu</td><td style="color:#4A3B6B;font-size:14px;padding:4px 8px">Ver todas las opciones disponibles</td></tr>
             <tr><td style="color:#FF6B2B;font-weight:700;font-size:14px;padding:4px 8px;white-space:nowrap">/perfil</td><td style="color:#4A3B6B;font-size:14px;padding:4px 8px">Obtener tu enlace para editar tu perfil</td></tr>
-            <tr><td style="color:#FF6B2B;font-weight:700;font-size:14px;padding:4px 8px;white-space:nowrap">/menu</td><td style="color:#4A3B6B;font-size:14px;padding:4px 8px">Ver todas las opciones disponibles</td></tr>
             <tr><td style="color:#FF6B2B;font-weight:700;font-size:14px;padding:4px 8px;white-space:nowrap">/ayuda</td><td style="color:#4A3B6B;font-size:14px;padding:4px 8px">Ver comandos y guía de uso</td></tr>
           </table>
         </div>
