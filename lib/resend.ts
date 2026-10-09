@@ -320,7 +320,7 @@ export async function sendVisitaResumen(
         </div>
         <div style="margin-top:20px">
           <a href="${SITE_URL}/dashboard" style="display:inline-block;background:#FF6B2B;color:white;padding:12px 24px;border-radius:9999px;text-decoration:none;font-weight:700;font-size:14px">
-            Coordinar la próxima visita →
+            Agendar otra visita →
           </a>
         </div>
         <p style="color: #6B5C90; font-size: 14px; margin-top: 32px;">
@@ -384,7 +384,7 @@ export async function sendResumenConReporte(
         </div>
         <div style="margin-top:20px">
           <a href="${SITE_URL}/dashboard" style="display:inline-block;background:#FF6B2B;color:white;padding:12px 24px;border-radius:9999px;text-decoration:none;font-weight:700;font-size:14px">
-            Coordinar la próxima visita →
+            Agendar otra visita →
           </a>
         </div>
         <p style="color:#6B5C90;font-size:13px;margin-top:32px">Compaz — <em>Cerca aunque estés lejos</em></p>

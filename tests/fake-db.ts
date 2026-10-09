@@ -62,6 +62,7 @@ export class FakeDB {
     if (t === 'usuarios' && row.email && others.some((r) => r.email === row.email)) return dupError('usuarios_email_key')
     // Índices de la migración 20261009
     if (t === 'visitas' && row.estado === 'en_curso' && others.some((r) => r.compita_id === row.compita_id && r.estado === 'en_curso')) return dupError('visitas_una_en_curso_por_compita')
+    if (t === 'visitas' && ['pre_visita', 'programada', 'en_curso'].includes(row.estado) && others.some((r) => r.usuario_id === row.usuario_id && ['pre_visita', 'programada', 'en_curso'].includes(r.estado))) return dupError('visitas_una_activa_por_cliente')
     if (t === 'solicitudes' && row.estado === 'pendiente' && others.some((r) => r.cliente_id === row.cliente_id && r.compita_id === row.compita_id && r.estado === 'pendiente')) return dupError('solicitudes_una_pendiente_por_par')
     if (t === 'reportes_visita' && others.some((r) => r.visita_id === row.visita_id)) return dupError('reportes_visita_unico_por_visita')
     for (const col of ['token']) if ((t === 'compita_edit_tokens' || t === 'onboarding_tokens' || t === 'action_tokens') && others.some((r) => r[col] === row[col])) return dupError(`${t}_token_key`)

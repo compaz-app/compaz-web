@@ -18,6 +18,10 @@ Cada envío reclama su flag de forma atómica (`reclamarFlag`) y lo libera si fa
 **Telegram**
 Reintentos de Telegram deduplicados por `update_id` (fila `upd:<id>` en `telegram_estados`). El webhook nunca devuelve 5xx. Confirmaciones de iniciar/terminar viven en su propia fila (`conf:<chat>`), así no pisan el cuestionario.
 
+## Visitas recurrentes (2ª, 3ª, 4ª...)
+La primera visita nace al contratar. Desde la segunda, el cliente pulsa **"Agendar otra visita"** en su dashboard (`POST /api/visita/nueva`, `lib/visitas.ts`). Se crea una visita en coordinación con su compita asignada y se repite el mismo flujo: chat, fecha, recordatorio, iniciar, terminar, cuestionario y valoración. Reglas: compita activa y verificada, cliente no bloqueado, al menos una visita terminada y ninguna otra visita activa. Requiere el índice `visitas_una_activa_por_cliente` de la migración (punto 2e, con consulta previa de duplicados).
+Pendiente de negocio: no hay tope de visitas por plan (4 al mes, etc.) porque el plan elegido no se guarda en una columna; hoy el admin lo ve en el aviso de cada nueva visita.
+
 ## Variables de entorno
 1. `PAGO_SIMULADO=true`: permite que `/api/pago/confirmar` contrate sin cobrar en producción (modo piloto). Sin esta variable, en producción solo registra el interés y avisa al admin. Se elimina cuando entre Stripe.
 2. `LINK_SECRET` (opcional): clave para firmar enlaces. Si falta se usa `CRON_SECRET`.
@@ -30,5 +34,5 @@ Reintentos de Telegram deduplicados por `update_id` (fila `upd:<id>` en `telegra
 3. Reemplazar la página/flujo de pago por Stripe cuando se contrate.
 
 ## Pruebas de flujos
-`npm run test:flows` ejecuta 125 pruebas contra una BD en memoria y mocks de Telegram, Resend y Daily (`tests/`). Cubren registro de compita, solicitudes, crons, webhook de Daily, enlaces, pago, ciclo de la visita, perfil y panel admin, incluyendo cruces entre flujos.
+`npm run test:flows` ejecuta 132 pruebas contra una BD en memoria y mocks de Telegram, Resend y Daily (`tests/`). Cubren registro de compita, solicitudes, crons, webhook de Daily, enlaces, pago, ciclo de la visita, perfil y panel admin, incluyendo cruces entre flujos.
 Límite: la BD falsa no emula RLS ni concurrencia real; esas dos cosas se verifican en el SQL y en staging.

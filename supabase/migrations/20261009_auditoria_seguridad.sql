@@ -27,6 +27,14 @@ alter table public.compitas drop constraint if exists compitas_estado_check;
 alter table public.compitas add constraint compitas_estado_check
   check (estado in ('activo', 'inactivo', 'bloqueado'));
 
+-- 2e) Una sola visita activa (en coordinación, programada o en curso) por cliente: el dashboard asume una.
+--     ANTES de crear el índice, verifica que no haya duplicados:
+--       select usuario_id, count(*) from public.visitas
+--        where estado in ('pre_visita','programada','en_curso') group by 1 having count(*) > 1;
+--     Si devuelve filas, corrige/cierra esas visitas primero.
+create unique index if not exists visitas_una_activa_por_cliente
+  on public.visitas (usuario_id) where estado in ('pre_visita', 'programada', 'en_curso');
+
 -- 3) RLS: usuarios solo pueden editar datos de su perfil; plan, compita_id y email los controla el servidor
 drop policy if exists "usuarios_self" on public.usuarios;
 drop policy if exists "usuarios_own_read" on public.usuarios;

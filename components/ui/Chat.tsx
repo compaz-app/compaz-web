@@ -126,7 +126,7 @@ export default function Chat({ visita, mensajesIniciales, compitaNombre }: ChatP
         {mensajes.length === 0 && (
           <p style={{ color: '#6B5C90', textAlign: 'center', fontFamily: 'Inter, sans-serif', marginTop: '20px', fontSize: '14px' }}>
             {visita.estado === 'pre_visita'
-              ? `Usa este chat para coordinar con ${compitaNombre} la fecha y hora de la primera visita.`
+              ? `Usa este chat para coordinar con ${compitaNombre} la fecha y hora de la visita.`
               : 'La visita acaba de comenzar. Los mensajes aparecerán aquí.'}
           </p>
         )}

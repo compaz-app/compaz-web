@@ -12,6 +12,7 @@ import FechaProgramada from '@/components/ui/FechaProgramada'
 import PreVisitaActions from '@/components/ui/PreVisitaActions'
 import ChatColapsable from '@/components/ui/ChatColapsable'
 import ReagendarButton from '@/components/ui/ReagendarButton'
+import AgendarOtraVisita from '@/components/ui/AgendarOtraVisita'
 import LimpiarParamContratado from '@/components/ui/LimpiarParamContratado'
 import type { Visita, Compita, Mensaje, Usuario, ReporteVisita } from '@/types'
 
@@ -142,6 +143,10 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     ? new Date(ultimaVisitaPasada.fin ?? ultimaVisitaPasada.created_at).toDateString() === new Date().toDateString()
     : false
   const hayVisitaActivaOCercana = !!(visitaActiva || visitaPreVisita || visitaProgramada)
+  const esPrimeraVisita = (visitasPasadas?.length ?? 0) === 0
+  // Visitas 2, 3, 4...: con compita activa y verificada, sin otra visita en curso, y cuenta no bloqueada
+  const puedeAgendarOtra = !previewUid && !!compita && compita.estado === 'activo' && compita.verificado
+    && !hayVisitaActivaOCercana && !esPrimeraVisita && usuario?.plan !== 'bloqueado'
 
   return (
     <div style={{ minHeight: '100vh', background: '#FDFAF6', fontFamily: 'Inter, sans-serif' }}>
@@ -205,6 +210,13 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           )
         })()}
 
+        {/* Agendar otra visita (2ª, 3ª, 4ª...) */}
+        {puedeAgendarOtra && compita && (
+          <section style={{ marginBottom: '28px' }}>
+            <AgendarOtraVisita compitaNombre={compita.nombre} />
+          </section>
+        )}
+
         {/* Banner post-pago */}
         {recienContratado && visitaPreVisita && (
           <>
@@ -259,7 +271,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         {!visitaActiva && visitaPreVisita && (
           <section style={{ marginBottom: '40px' }}>
             <h2 style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '13px', color: '#9B8AB8', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 16px' }}>
-              Coordinando primera visita
+              {esPrimeraVisita ? 'Coordinando primera visita' : 'Coordinando próxima visita'}
             </h2>
             <div id="fecha-programada">
               {!previewUid && (
@@ -276,10 +288,10 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               <span style={{ fontSize: '20px', flexShrink: 0 }}>🗓️</span>
               <div>
                 <p style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, color: '#15803d', fontSize: '15px', margin: '0 0 4px' }}>
-                  ¡Contratación confirmada! Coordina la primera visita
+                  {esPrimeraVisita ? '¡Contratación confirmada! Coordina la primera visita' : 'Coordina la próxima visita'}
                 </p>
                 <p style={{ color: '#166534', fontSize: '13px', margin: '0 0 8px', lineHeight: '1.5' }}>
-                  Usa este chat para ponerte de acuerdo con <strong>{visitaPreVisita.compita.nombre}</strong> en la fecha y hora de la primera visita.
+                  Usa este chat para ponerte de acuerdo con <strong>{visitaPreVisita.compita.nombre}</strong> en la fecha y hora de {esPrimeraVisita ? 'la primera visita' : 'la próxima visita'}.
                 </p>
                 <p style={{ color: '#15803d', fontSize: '12px', margin: 0, background: 'rgba(34,197,94,0.1)', borderRadius: '8px', padding: '8px 12px', lineHeight: '1.5' }}>
                   🛡️ <strong>Mantén la conversación aquí.</strong> Las comunicaciones dentro de Compaz están protegidas y garantizamos el servicio. Acuerdos fuera de la plataforma quedan fuera de nuestra cobertura.
