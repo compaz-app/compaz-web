@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { createBrowserSupabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
 
@@ -23,8 +22,8 @@ export default function LoginPage() {
     const motivo = p.get('motivo')
     setError(
       e === 'no-invitado'
-        ? 'Esta cuenta aún no tiene acceso. Si fuiste invitado, abre el correo de bienvenida y pulsa "Activar mi cuenta", o escríbenos a hola@micompaz.com.'
-        : `No pudimos completar tu ingreso con ese enlace. Es posible que ya se haya usado o que se abriera en otro navegador. Pide uno nuevo y ábrelo en el mismo navegador.${motivo ? ` (motivo: ${motivo})` : ''}`,
+        ? 'Esta cuenta aún no tiene acceso. Escribe tu correo aquí abajo para recibir un enlace nuevo, o escríbenos a hola@micompaz.com.'
+        : `Ese enlace ya se usó o venció. Escribe tu correo aquí abajo y te enviamos uno nuevo al instante.${motivo ? ` (motivo: ${motivo})` : ''}`,
     )
   }, [])
 
@@ -33,33 +32,26 @@ export default function LoginPage() {
     setLoading(true)
     setError('')
 
-    const supabase = createBrowserSupabase()
-
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        // Acceso solo por invitación: no crear usuarios nuevos desde el formulario de login
-        shouldCreateUser: false,
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-      },
-    })
-
-    if (error) {
-      console.error('[login] signInWithOtp falló:', error.status, error.code, error.message)
-      const m = `${error.code ?? ''} ${error.message ?? ''}`.toLowerCase()
-      if (error.status === 429 || m.includes('rate limit') || m.includes('over_email_send_rate_limit')) {
-        setError('Se enviaron demasiados enlaces en poco tiempo. Espera unos minutos y vuelve a intentar.')
-      } else if (m.includes('signup') || m.includes('not allowed') || m.includes('otp_disabled') || m.includes('user not found')) {
-        setError('No pudimos enviarte el enlace. Si fuiste invitado, abre el correo de bienvenida y pulsa "Activar mi cuenta". Si ya venció o usas otro correo, escríbenos a hola@micompaz.com y te ayudamos.')
+    // El acceso se pide al servidor: funciona también para invitaciones vencidas o sin activar,
+    // y el enlace se abre desde cualquier navegador o dispositivo.
+    try {
+      const res = await fetch('/api/auth/solicitar-acceso', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
+      const d = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setError(d.error ?? 'No pudimos enviar el enlace. Intenta de nuevo en unos minutos o escríbenos a hola@micompaz.com.')
       } else {
-        setError(`No pudimos enviar el enlace. Intenta de nuevo en unos minutos o escríbenos a hola@micompaz.com. (código: ${error.code ?? error.status ?? 'desconocido'})`)
+        setEnviado(true)
+        setCooldown(60)
+        const interval = setInterval(() => {
+          setCooldown((s) => { if (s <= 1) { clearInterval(interval); return 0 } return s - 1 })
+        }, 1000)
       }
-    } else {
-      setEnviado(true)
-      setCooldown(30)
-      const interval = setInterval(() => {
-        setCooldown((s) => { if (s <= 1) { clearInterval(interval); return 0 } return s - 1 })
-      }, 1000)
+    } catch {
+      setError('Error de conexión. Intenta de nuevo.')
     }
     setLoading(false)
   }

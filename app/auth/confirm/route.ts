@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createRouteSupabase, type CookieASetear } from '@/lib/supabase-server'
 import { destinoTrasLogin } from '@/lib/login-destino'
 import { rutaInterna } from '@/lib/html'
+import { urlPublica } from '@/lib/site'
 import { puertaConfirmacion } from '@/lib/confirm'
 
 const TIPOS = ['email', 'magiclink', 'invite', 'recovery', 'signup'] as const
@@ -21,7 +22,7 @@ function leer(req: NextRequest) {
 }
 
 const aLogin = (req: NextRequest, motivo: string) =>
-  NextResponse.redirect(new URL(`/login?error=auth&motivo=${motivo}`, req.nextUrl.origin), 303)
+  NextResponse.redirect(urlPublica(`/login?error=auth&motivo=${motivo}`, req), 303)
 
 export async function GET(req: NextRequest) {
   if (!leer(req)) return aLogin(req, 'enlace_invalido')
@@ -43,10 +44,10 @@ export async function POST(req: NextRequest) {
   const destino = await destinoTrasLogin(data.user.id, data.user.email, p.next)
   if (!destino) {
     await supabase.auth.signOut()
-    return NextResponse.redirect(new URL('/login?error=no-invitado', req.nextUrl.origin), 303)
+    return NextResponse.redirect(urlPublica('/login?error=no-invitado', req), 303)
   }
 
-  const res = NextResponse.redirect(new URL(destino, req.nextUrl.origin), 303)
+  const res = NextResponse.redirect(urlPublica(destino, req), 303)
   cookies.forEach(({ name, value, options }) => res.cookies.set(name, value, options as Parameters<typeof res.cookies.set>[2]))
   return res
 }

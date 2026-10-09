@@ -166,6 +166,22 @@ export async function sendBienvenidaCompita(
   })
 }
 
+export async function sendAccesoEmail(email: string, nombre: string, enlaceAcceso: string): Promise<void> {
+  await sendEmail({
+    to: email,
+    subject: 'Tu acceso a Compaz',
+    html: `
+      <div style="font-family:Inter,sans-serif;max-width:560px;margin:0 auto;padding:32px;background:#FDFAF6">
+        <h2 style="color:#2D1464;font-size:24px;margin-bottom:8px">Hola, ${escapeHtml(nombre.split(' ')[0])}</h2>
+        <p style="color:#4A3B6B;font-size:16px;line-height:1.6;margin-bottom:20px">Pulsa el botón para entrar a tu portal de Compaz.</p>
+        <a href="${escapeHtml(enlaceAcceso)}" style="display:inline-block;background:#FF6B2B;color:white;padding:16px 32px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:17px">Entrar a Compaz →</a>
+        <p style="color:#6B5C90;font-size:13px;line-height:1.6;margin:16px 0 0">El enlace es personal, funciona una sola vez y <strong>vence en 1 hora</strong>. Si vence, vuelve a micompaz.com/login y pide uno nuevo. Si no lo pediste, ignora este correo.</p>
+        <p style="color:#9990A8;font-size:13px;margin-top:20px">Compaz, <em>Cerca aunque estés lejos</em></p>
+      </div>
+    `,
+  })
+}
+
 export async function sendBienvenidaCliente(email: string, nombre: string, enlaceAcceso: string, reenvio = false): Promise<void> {
   const primero = escapeHtml(nombre.split(' ')[0])
   await sendEmail({
@@ -182,7 +198,7 @@ export async function sendBienvenidaCliente(email: string, nombre: string, enlac
           ${reenvio ? 'Entrar a mi portal →' : 'Activar mi cuenta y entrar →'}
         </a>
         <p style="color:#6B5C90;font-size:13px;line-height:1.6;margin:12px 0 28px">
-          Este enlace es personal, funciona una sola vez y <strong>vence en 1 hora</strong>. Después podrás entrar siempre desde micompaz.com/login: escribes tu correo y te enviamos un enlace nuevo. Si este enlace venció, escríbenos a hola@micompaz.com y te mandamos otro.
+          Este enlace es personal, funciona una sola vez y <strong>vence en 1 hora</strong>. Después podrás entrar siempre desde micompaz.com/login: escribes tu correo y te enviamos un enlace nuevo. Si este enlace venció, entra a micompaz.com/login, escribe tu correo y te enviamos uno nuevo al instante.
         </p>
 
         <div style="background:white;border:2px solid #E8E0D4;border-radius:16px;padding:24px;margin-bottom:16px">

@@ -8,6 +8,7 @@ import { sendEmail, SITE_URL } from '@/lib/email'
 import { esc } from '@/lib/html'
 import { asignarCompita } from '@/lib/usuarios'
 import { pagina, puertaConfirmacion } from '@/lib/confirm'
+import { urlPublica } from '@/lib/site'
 
 export async function GET(req: NextRequest) {
   if (!req.nextUrl.searchParams.get('token')) return pagina('No autorizado', 'Falta el token.', 401)
@@ -77,5 +78,5 @@ export async function POST(req: NextRequest) {
     } catch (e) { console.error('Error email asignación:', e) }
   }
 
-  return NextResponse.redirect(new URL('/admin?tab=clientes', req.url), 303)
+  return NextResponse.redirect(urlPublica('/admin?tab=clientes', req), 303)
 }

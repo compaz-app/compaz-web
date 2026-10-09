@@ -1,10 +1,11 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextRequest, NextResponse } from 'next/server'
 import { destinoTrasLogin } from '@/lib/login-destino'
+import { urlPublica } from '@/lib/site'
 import { rutaInterna } from '@/lib/html'
 
 export async function GET(req: NextRequest) {
-  const { searchParams, origin } = req.nextUrl
+  const { searchParams } = req.nextUrl
   const code = searchParams.get('code')
   const redirectTo = rutaInterna(searchParams.get('redirect'), '/dashboard') // evita open redirect (//evil.com)
 
@@ -34,10 +35,10 @@ export async function GET(req: NextRequest) {
       const destination = await destinoTrasLogin(data.user.id, data.user.email, redirectTo)
       if (!destination) {
         await supabase.auth.signOut()
-        return NextResponse.redirect(new URL('/login?error=no-invitado', origin))
+        return NextResponse.redirect(urlPublica('/login?error=no-invitado', req))
       }
 
-      const response = NextResponse.redirect(new URL(destination, origin))
+      const response = NextResponse.redirect(urlPublica(destination, req))
       cookiesToSet.forEach(({ name, value, options }) =>
         response.cookies.set(name, value, options as Parameters<typeof response.cookies.set>[2])
       )
@@ -46,5 +47,5 @@ export async function GET(req: NextRequest) {
   }
 
   console.error('[auth/callback] sin code o sin sesión; code presente:', !!code)
-  return NextResponse.redirect(new URL(`/login?error=auth&motivo=${code ? 'intercambio' : 'sin_code'}`, origin))
+  return NextResponse.redirect(urlPublica(`/login?error=auth&motivo=${code ? 'intercambio' : 'sin_code'}`, req))
 }

@@ -24,6 +24,10 @@ La primera visita nace al contratar. Desde la segunda, el cliente pulsa **"Agend
 Cómo se registra un pago: panel admin, pestaña Clientes, botón **Pagos y plan** (Zelle, transferencia, Stripe u otro; se puede ajustar el monto, anular un pago equivocado y ver el historial). El cliente recibe un correo de confirmación. Rutas: `POST /api/admin/registrar-pago`, `POST /api/admin/anular-pago`, `GET /api/admin/pagos`. El cron `recordatorio-pago` avisa al cliente a los 30 días de un plan mensual que toca renovar y manda un resumen al admin. Cuentas anteriores sin pagos registrados: si tienen `plan_contratado` se aplica el cupo antiguo por ciclo; sin ninguno no hay límite.
 Migración: `supabase/migrations/20261010_pagos_plan.sql` (ejecutar antes del deploy que la usa; el código tolera su ausencia y usa el cupo antiguo).
 
+## Acceso de clientes y admin (sin depender del navegador ni de Supabase)
+El login pide un enlace a `POST /api/auth/solicitar-acceso`, que genera el acceso con `generateLink` y lo envía con nuestro propio correo (Resend). Funciona también para invitaciones vencidas o sin activar, sin escribirle a nadie. Responde siempre igual para no revelar qué correos existen, y solo genera enlaces para el admin o para cuentas invitadas (fila en `usuarios`). Límites: 1 correo por minuto por dirección y 10 solicitudes por hora por IP. El enlace entra por `/auth/confirm` (botón que hace un POST) y dura 1 hora (Email OTP Expiration = 3600).
+**Regla de oro de las redirecciones:** detrás de Netlify `req.url` y `req.nextUrl.origin` devuelven la dirección interna del despliegue (`main--compaz-beta.netlify.app`). Redirigir allí rompe la sesión y la CSP `form-action 'self'` bloquea el salto en silencio. Todo redirect debe construirse con `urlPublica()` / `baseUrl()` de `lib/site.ts`.
+
 ## Variables de entorno
 1. `PAGO_SIMULADO=true`: permite que `/api/pago/confirmar` contrate sin cobrar en producción (modo piloto). Sin esta variable, en producción solo registra el interés y avisa al admin. Se elimina cuando entre Stripe.
 2. `LINK_SECRET` (opcional): clave para firmar enlaces. Si falta se usa `CRON_SECRET`.
@@ -36,5 +40,5 @@ Migración: `supabase/migrations/20261010_pagos_plan.sql` (ejecutar antes del de
 3. Reemplazar la página/flujo de pago por Stripe cuando se contrate.
 
 ## Pruebas de flujos
-`npm run test:flows` ejecuta 164 pruebas contra una BD en memoria y mocks de Telegram, Resend y Daily (`tests/`). Cubren registro de compita, solicitudes, crons, webhook de Daily, enlaces, pago, ciclo de la visita, perfil y panel admin, incluyendo cruces entre flujos.
+`npm run test:flows` ejecuta 179 pruebas contra una BD en memoria y mocks de Telegram, Resend y Daily (`tests/`). Cubren registro de compita, solicitudes, crons, webhook de Daily, enlaces, pago, ciclo de la visita, perfil y panel admin, incluyendo cruces entre flujos.
 Límite: la BD falsa no emula RLS ni concurrencia real; esas dos cosas se verifican en el SQL y en staging.
