@@ -60,8 +60,15 @@ export async function registrarPago(i: PagoInput): Promise<{ ok: true; pago: Pag
     .select('*')
     .single()
   if (error || !data) {
-    console.error('[registrarPago] error:', error?.message)
-    return { ok: false, error: 'No se pudo registrar el pago (¿falta ejecutar la migración de pagos?)' }
+    console.error('[registrarPago] error:', error?.code, error?.message)
+    // Solo lo ve el admin: se muestra la causa real para poder corregirla rápido
+    const tablaFalta = error?.code === '42P01' || error?.code === 'PGRST205' || /does not exist|schema cache/i.test(error?.message ?? '')
+    return {
+      ok: false,
+      error: tablaFalta
+        ? 'La tabla de pagos no existe o Supabase aún no la ve. Ejecuta la migración de pagos y luego: notify pgrst, \'reload schema\';'
+        : `No se pudo registrar el pago: ${error?.message ?? 'error desconocido'}${error?.code ? ` (código ${error.code})` : ''}`,
+    }
   }
 
   // Campos informativos del plan vigente (el cupo real se calcula con los paquetes)
