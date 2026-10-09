@@ -49,7 +49,7 @@ describe('RECORRIDO 1: de la invitación de la compita hasta la valoración, tod
   test('admin → compita → cliente → entrevista → contratación → visita → cuestionario → rating → churn', async () => {
     // ── 1. Admin invita; la compita se registra con el enlace de un solo uso
     admin()
-    const inv = await (await generarInvite(req('/api/admin/generar-invite', { method: 'POST' }))).json()
+    const inv = await (await (generarInvite as any)()).json()
     const token = inv.data.token
     session.user = null
     const reg = await registrar(req('/api/onboarding/registrar', { json: { token, nombre: 'Lucía Fernández', email: 'lucia@mail.test', zona: 'Zulia', descripcion: 'Cuidadora', servicios: ['Compañía'], foto_url: foto } }))
