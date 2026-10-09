@@ -12,3 +12,12 @@ export const PLAN_INFO: Record<string, { nombre: string; descripcion: string }> 
   unica:     { nombre: 'Visita puntual',  descripcion: 'Una visita de 2 horas.' },
   mensual:   { nombre: 'Membresía',       descripcion: 'Visitas regulares de 2 horas cada una.' },
 }
+
+/** Visitas incluidas por plan. 'unico' = total del plan; '30d' = por ciclo de 30 días desde plan_inicio. */
+export const LIMITES_PLAN: Record<string, { visitas: number; ciclo: 'unico' | '30d' }> = {
+  carta: { visitas: 1, ciclo: 'unico' },
+  unica: { visitas: 1, ciclo: 'unico' },
+  quincenal: { visitas: 2, ciclo: '30d' },
+  semanal: { visitas: 4, ciclo: '30d' },
+  mensual: { visitas: 4, ciclo: '30d' },
+}

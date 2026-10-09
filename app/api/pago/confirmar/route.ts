@@ -64,6 +64,14 @@ export async function POST(req: NextRequest) {
   // Revertir si falla algún paso: no dejar la solicitud "contratada" sin visita ni asignación.
   const revertir = async () => { await admin.from('solicitudes').update({ estado: sol.estado }).eq('id', solicitud_id) }
 
+  // Guardar el plan comprado ANTES de crear la visita: esa primera visita cuenta dentro del cupo.
+  const { error: ePlan } = await admin
+    .from('usuarios').update({ plan_contratado: plan, plan_inicio: new Date().toISOString() }).eq('id', sol.cliente_id)
+  if (ePlan) {
+    console.error('[pago/confirmar] no se pudo guardar el plan (¿migración de planes pendiente?):', ePlan.message)
+    await avisarAdmin(`⚠️ <b>${esc(clienteNombre)}</b> contrató el plan <b>${esc(planInfo.nombre)}</b> pero no se pudo guardar el plan (sin límite de visitas). Ejecuta la migración de planes.`)
+  }
+
   // La visita de coordinación solo se crea si no hay ya una activa con esta compita
   const { data: existente } = await admin
     .from('visitas').select('id')
@@ -85,7 +93,7 @@ export async function POST(req: NextRequest) {
   if (eAsig) { await revertir(); return serverError(eAsig) }
 
   // Dejar constancia del plan elegido (no existe columna dedicada; usuarios.plan se reserva para 'bloqueado')
-  await admin.from('mensajes').insert({ visit_id: visitaId, origen: 'admin', tipo: 'texto', contenido: `plan:${plan}` })
+  await admin.from('mensajes').insert({ visit_id: visitaId, origen: 'admin', tipo: 'texto', contenido: `plan:${plan}` }) // histórico; la fuente de verdad es usuarios.plan_contratado
 
   const u = sol.usuarios
   if (sol.compitas?.telegram_chat_id) {

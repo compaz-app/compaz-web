@@ -17,7 +17,7 @@ const REL_INVERSA: Record<string, Record<string, string>> = {}
 
 const DEFAULTS: Record<string, () => Row> = {
   compitas: () => ({ id: randomUUID(), estado: 'activo', verificado: false, visitas_realizadas: 0, total_ratings: 0, rating_promedio: null, telegram_chat_id: null, email: null, foto_url: null, youtube_url: null, servicios: [], horarios_disponibles: [], created_at: nowIso() }),
-  usuarios: () => ({ plan: null, compita_id: null, familiar_nombre: null, familiar_edad: null, familiar_condicion: null, familiar_notas: null, zona: null, created_at: nowIso() }),
+  usuarios: () => ({ plan: null, plan_contratado: null, plan_inicio: null, compita_id: null, familiar_nombre: null, familiar_edad: null, familiar_condicion: null, familiar_notas: null, zona: null, created_at: nowIso() }),
   visitas: () => ({ id: randomUUID(), estado: 'programada', fecha_programada: null, hora_inicio_programada: null, hora_fin_programada: null, inicio: null, fin: null, room_url: null, rating_cliente: null, created_at: nowIso() }),
   mensajes: () => ({ id: randomUUID(), tipo: 'texto', created_at: nowIso() }),
   solicitudes: () => ({ id: randomUUID(), estado: 'pendiente', token_respuesta: randomUUID(), recordatorio_enviado: false, seguimiento_enviado: false, seguimiento2_enviado: false, confirmacion_llamada_enviada: false, confirmacion_cliente: null, confirmacion_compita: null, reagendado_slots: [], slots_propuestos: [], slot_confirmado: null, room_url: null, respondido_at: null, sobre_cliente: null, franja_horaria: null, created_at: nowIso() }),

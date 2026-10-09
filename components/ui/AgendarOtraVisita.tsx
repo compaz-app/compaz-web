@@ -6,9 +6,11 @@ import { colors } from '@/lib/design'
 
 interface Props {
   compitaNombre: string
+  /** Cupo del plan: null = sin límite registrado */
+  cupo?: { limite: number; usadas: number; restantes: number; planNombre: string; renueva: string | null } | null
 }
 
-export default function AgendarOtraVisita({ compitaNombre }: Props) {
+export default function AgendarOtraVisita({ compitaNombre, cupo }: Props) {
   const [cargando, setCargando] = useState(false)
   const [error, setError] = useState('')
   const router = useRouter()
@@ -32,6 +34,20 @@ export default function AgendarOtraVisita({ compitaNombre }: Props) {
     }
   }
 
+  if (cupo && cupo.restantes <= 0) {
+    const renueva = cupo.renueva ? new Date(cupo.renueva).toLocaleDateString('es-VE', { day: 'numeric', month: 'long' }) : null
+    return (
+      <div style={{ background: colors.fondoClaro, border: `2px solid ${colors.fondoCard}`, borderRadius: '16px', padding: '20px 24px' }}>
+        <p style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '17px', color: colors.moradoMedio, margin: '0 0 4px' }}>
+          Ya usaste las {cupo.limite} {cupo.limite === 1 ? 'visita' : 'visitas'} de tu plan {cupo.planNombre}
+        </p>
+        <p style={{ color: colors.textoMedio, fontSize: '14px', margin: 0, lineHeight: 1.5 }}>
+          {renueva ? `Tu plan se renueva el ${renueva}. ` : ''}Para agendar más visitas con {compitaNombre}, escríbenos a <strong>hola@micompaz.com</strong> y renovamos o ampliamos tu plan.
+        </p>
+      </div>
+    )
+  }
+
   return (
     <div style={{ background: colors.blanco, border: `2px solid ${colors.fondoCard}`, borderRadius: '16px', padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
       <div style={{ flex: '1 1 240px' }}>
@@ -40,6 +56,7 @@ export default function AgendarOtraVisita({ compitaNombre }: Props) {
         </p>
         <p style={{ color: colors.textoMedio, fontSize: '14px', margin: 0, lineHeight: 1.5 }}>
           Abre el chat con {compitaNombre} para ponerse de acuerdo en la fecha y la hora.
+          {cupo ? ` Te quedan ${cupo.restantes} de ${cupo.limite} visitas de tu plan ${cupo.planNombre}.` : ''}
         </p>
         {error && <p style={{ color: colors.rojo, fontSize: '13px', margin: '8px 0 0' }}>{error}</p>}
       </div>

@@ -49,7 +49,7 @@ export async function actualizarUsuario(
  * Asigna (o desasigna con null) una compita a un cliente. Al asignar, garantiza que exista una visita
  * 'pre_visita' para el chat de coordinación y que la compita esté activa y verificada.
  */
-export async function asignarCompita(usuarioId: string, compitaId: string | null): Promise<void> {
+export async function asignarCompita(usuarioId: string, compitaId: string | null, plan?: string | null): Promise<void> {
   const supabase = createAdminSupabase()
   if (!compitaId) {
     const { error } = await supabase.from('usuarios').update({ compita_id: null }).eq('id', usuarioId)
@@ -60,7 +60,9 @@ export async function asignarCompita(usuarioId: string, compitaId: string | null
   if (!compita) throw new Error('La compita no existe')
   if (compita.estado !== 'activo' || !compita.verificado) throw new Error('La compita no está activa y verificada')
 
-  const { error } = await supabase.from('usuarios').update({ compita_id: compitaId }).eq('id', usuarioId)
+  const campos: Record<string, unknown> = { compita_id: compitaId }
+  if (plan) { campos.plan_contratado = plan; campos.plan_inicio = new Date().toISOString() }
+  const { error } = await supabase.from('usuarios').update(campos).eq('id', usuarioId)
   if (error) throw new Error(error.message)
 
   const { data: existente } = await supabase

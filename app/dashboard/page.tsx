@@ -13,6 +13,7 @@ import PreVisitaActions from '@/components/ui/PreVisitaActions'
 import ChatColapsable from '@/components/ui/ChatColapsable'
 import ReagendarButton from '@/components/ui/ReagendarButton'
 import AgendarOtraVisita from '@/components/ui/AgendarOtraVisita'
+import { cupoDelPlan } from '@/lib/visitas'
 import LimpiarParamContratado from '@/components/ui/LimpiarParamContratado'
 import type { Visita, Compita, Mensaje, Usuario, ReporteVisita } from '@/types'
 
@@ -144,6 +145,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     : false
   const hayVisitaActivaOCercana = !!(visitaActiva || visitaPreVisita || visitaProgramada)
   const esPrimeraVisita = (visitasPasadas?.length ?? 0) === 0
+  const cupo = await cupoDelPlan(targetUid)
   // Visitas 2, 3, 4...: con compita activa y verificada, sin otra visita en curso, y cuenta no bloqueada
   const puedeAgendarOtra = !previewUid && !!compita && compita.estado === 'activo' && compita.verificado
     && !hayVisitaActivaOCercana && !esPrimeraVisita && usuario?.plan !== 'bloqueado'
@@ -213,7 +215,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         {/* Agendar otra visita (2ª, 3ª, 4ª...) */}
         {puedeAgendarOtra && compita && (
           <section style={{ marginBottom: '28px' }}>
-            <AgendarOtraVisita compitaNombre={compita.nombre} />
+            <AgendarOtraVisita compitaNombre={compita.nombre} cupo={cupo} />
           </section>
         )}
 

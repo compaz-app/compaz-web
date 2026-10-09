@@ -103,3 +103,5 @@ alter table public.action_tokens enable row level security;
 
 -- 8) Realtime: ya NO se suscribe a `compitas` desde el navegador. Si existe en la publicación, quitarla:
 -- alter publication supabase_realtime drop table public.compitas;
+
+-- 9) Planes con límite de visitas (ver 20261009b_plan_limites.sql si ya ejecutaste esta migración)

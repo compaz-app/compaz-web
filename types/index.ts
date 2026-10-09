@@ -51,7 +51,9 @@ export interface Usuario {
   nombre: string
   email: string
   zona: string | null
-  plan: string | null
+  plan: string | null            // reservado: 'bloqueado' marca cuentas suspendidas
+  plan_contratado?: string | null // plan comprado (carta, quincenal, semanal, ...)
+  plan_inicio?: string | null     // inicio del plan / ciclo vigente
   compita_id: string | null
   familiar_nombre: string | null
   familiar_edad: number | null
