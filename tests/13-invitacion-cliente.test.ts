@@ -20,6 +20,7 @@ test('la invitación envía UN solo correo con el botón que activa la cuenta y 
   assert.equal(net.emails.length, 1, 'un solo correo (antes eran dos)')
   const mail = emailsA('carlos@mail.test')[0]
   assert.ok(mail.html.includes('Activar mi cuenta') && !mail.html.includes('Ver compitas disponibles'))
+  assert.ok(mail.html.includes('vence en 1 hora'), 'el correo dice cuánto dura el enlace')
   assert.equal(db.rows('usuarios').length, 1)
   assert.equal(db.rows('usuarios')[0].email, 'carlos@mail.test', 'el correo se normaliza a minúsculas')
 

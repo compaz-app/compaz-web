@@ -182,7 +182,7 @@ export async function sendBienvenidaCliente(email: string, nombre: string, enlac
           ${reenvio ? 'Entrar a mi portal →' : 'Activar mi cuenta y entrar →'}
         </a>
         <p style="color:#6B5C90;font-size:13px;line-height:1.6;margin:12px 0 28px">
-          Este enlace es personal y funciona una sola vez. Después podrás entrar siempre desde micompaz.com/login: escribes tu correo y te enviamos un enlace nuevo. Si este enlace venció, escríbenos y te mandamos otro.
+          Este enlace es personal, funciona una sola vez y <strong>vence en 1 hora</strong>. Después podrás entrar siempre desde micompaz.com/login: escribes tu correo y te enviamos un enlace nuevo. Si este enlace venció, escríbenos a hola@micompaz.com y te mandamos otro.
         </p>
 
         <div style="background:white;border:2px solid #E8E0D4;border-radius:16px;padding:24px;margin-bottom:16px">
