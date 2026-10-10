@@ -237,7 +237,7 @@ async function logToSheets(sessionId: string, ip: string, message: string, reply
 
     const fecha = new Date().toLocaleString("es-VE", { timeZone: "America/Caracas" });
     const res = await fetch(
-      `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Sheet1%21A1:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`,
+      `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Sheet1%21A1:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,
       {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },

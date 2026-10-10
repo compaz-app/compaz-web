@@ -371,7 +371,15 @@ export async function getSolicitudPorToken(token: string): Promise<Solicitud | n
     .select(SELECT_FIELDS)
     .eq('token_respuesta', token)
     .single()
-  return data ? mapRow(data as Record<string, unknown>) : null
+  if (!data) return null
+  // Los enlaces de una solicitud dejan de valer si el cliente o la compita fueron bloqueados
+  const fila = data as Record<string, unknown>
+  const [{ data: cli }, { data: comp }] = await Promise.all([
+    supabase.from('usuarios').select('plan').eq('id', fila.cliente_id as string).maybeSingle(),
+    supabase.from('compitas').select('estado').eq('id', fila.compita_id as string).maybeSingle(),
+  ])
+  if (cli?.plan === 'bloqueado' || comp?.estado === 'bloqueado') return null
+  return mapRow(fila)
 }
 
 /**

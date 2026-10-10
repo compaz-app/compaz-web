@@ -312,12 +312,47 @@ function enmascarar(email: string): string {
   return `${u.slice(0, 2)}${'*'.repeat(Math.max(1, u.length - 2))}@${d}`
 }
 
+const MAX_FALLOS_VINCULO = 10          // fallos acumulados por compita (no por chat)
+const VENTANA_FALLOS_MS = 24 * 3600_000
+
+/** Fallos de código acumulados contra una compita en las últimas 24 h (fila `codfail:<id>`: pendiente_accion = "n:<fallos>"). */
+async function fallosDeVinculo(supabase: ReturnType<typeof createAdminSupabase>, compitaId: string): Promise<number> {
+  const { data } = await supabase.from('telegram_estados').select('pendiente_accion, pendiente_expira').eq('chat_id', `codfail:${compitaId}`).maybeSingle()
+  if (!data?.pendiente_expira || new Date(data.pendiente_expira).getTime() < Date.now()) return 0
+  return parseInt((data.pendiente_accion ?? 'n:0').split(':')[1] ?? '0', 10) || 0
+}
+
+async function registrarFalloVinculo(supabase: ReturnType<typeof createAdminSupabase>, compitaId: string, nombre: string): Promise<void> {
+  const n = (await fallosDeVinculo(supabase, compitaId)) + 1
+  const { data: prev } = await supabase.from('telegram_estados').select('pendiente_expira').eq('chat_id', `codfail:${compitaId}`).maybeSingle()
+  const vigente = prev?.pendiente_expira && new Date(prev.pendiente_expira).getTime() > Date.now()
+  await supabase.from('telegram_estados').upsert({
+    chat_id: `codfail:${compitaId}`, registro_pendiente: false, pendiente_accion: `n:${n}`,
+    pendiente_expira: vigente ? prev!.pendiente_expira : new Date(Date.now() + VENTANA_FALLOS_MS).toISOString(),
+    updated_at: new Date().toISOString(),
+  }, { onConflict: 'chat_id' })
+  if (n === MAX_FALLOS_VINCULO) {
+    await avisarAdmin(`🚨 Posible intento de suplantar a <b>${esc(nombre)}</b>: ${MAX_FALLOS_VINCULO} códigos de vinculación incorrectos en 24 h. La vinculación de Telegram de esa compita queda bloqueada hasta que pase la ventana o la liberes.`)
+  }
+}
+
 /** Genera y envía el código de verificación. Límite: 1 código por minuto y compita. */
 async function iniciarVerificacion(
   supabase: ReturnType<typeof createAdminSupabase>,
   chatId: string,
   c: Pick<Compita, 'id' | 'nombre' | 'email'>,
 ): Promise<void> {
+  // Una compita ya vinculada no se re-vincula desde otro chat (solo el admin puede liberarla)
+  const { data: yaVinc } = await supabase.from('compitas').select('telegram_chat_id').eq('id', c.id).maybeSingle()
+  if (yaVinc?.telegram_chat_id) {
+    await sendTelegramMessage(chatId, `Esa cuenta ya está vinculada a un Telegram. Si cambiaste de teléfono o es un error, escríbenos a hola@micompaz.com.`, QUITAR_TECLADO)
+    await avisarAdmin(`⚠️ Alguien intentó vincular a <b>${esc(c.nombre)}</b>, que ya tiene Telegram vinculado.`)
+    return
+  }
+  if ((await fallosDeVinculo(supabase, c.id)) >= MAX_FALLOS_VINCULO) {
+    await sendTelegramMessage(chatId, `Por seguridad, la vinculación de esta cuenta está bloqueada temporalmente. Escríbenos a hola@micompaz.com.`, QUITAR_TECLADO)
+    return
+  }
   const key = `cod:${c.id}`
   const { data: prev } = await supabase.from('telegram_estados').select('updated_at').eq('chat_id', key).maybeSingle()
   if (prev && Date.now() - new Date(prev.updated_at).getTime() < 60_000) {
@@ -546,7 +581,14 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
       await sendTelegramMessage(chatId, `El código expiró. ✍️ Escribe tu nombre de nuevo para obtener uno nuevo:`)
       return NextResponse.json({ ok: true })
     }
+    if ((await fallosDeVinculo(supabase, compitaId)) >= MAX_FALLOS_VINCULO) {
+      await clearPendiente(supabase, chatId)
+      await sendTelegramMessage(chatId, `Por seguridad, la vinculación de esta cuenta está bloqueada temporalmente. Escríbenos a hola@micompaz.com.`, QUITAR_TECLADO)
+      return NextResponse.json({ ok: true })
+    }
     if (text.trim() !== codigo) {
+      const { data: cf } = await supabase.from('compitas').select('nombre').eq('id', compitaId).maybeSingle()
+      await registrarFalloVinculo(supabase, compitaId, cf?.nombre ?? 'una compita')
       const nuevosIntentos = intentosFallidos + 1
       if (nuevosIntentos >= 5) {
         // Bloquear: invalidar el código y pedir que empiece de nuevo
@@ -574,7 +616,11 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
     // Código correcto — vincular
     await clearPendiente(supabase, chatId)
     const { data: encontrada } = await supabase.from('compitas').select('nombre').eq('id', compitaId).single() as { data: Compita | null }
-    const { error: errVinculo } = await supabase.from('compitas').update({ telegram_chat_id: chatId }).eq('id', compitaId)
+    const { data: vinculada, error: errVinculo } = await supabase.from('compitas').update({ telegram_chat_id: chatId }).eq('id', compitaId).is('telegram_chat_id', null).select('id').maybeSingle()
+    if (!errVinculo && !vinculada) {
+      await sendTelegramMessage(chatId, `Esa cuenta ya está vinculada a un Telegram. Escríbenos a hola@micompaz.com.`, QUITAR_TECLADO)
+      return NextResponse.json({ ok: true })
+    }
     if (errVinculo) {
       console.error('Error vinculando Telegram:', errVinculo)
       await sendTelegramMessage(chatId, `No pudimos vincular tu cuenta. Escríbenos a hola@micompaz.com.`, QUITAR_TECLADO)

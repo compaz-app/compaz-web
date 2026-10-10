@@ -15,6 +15,6 @@ export function escLike(value: string): string {
 
 /** Solo permite rutas internas ("/algo"), nunca "//host" ni esquemas. */
 export function rutaInterna(destino: string | null | undefined, fallback = '/dashboard'): string {
-  if (!destino || !/^\/(?![/\\])/.test(destino)) return fallback
+  if (!destino || /[\u0000-\u001f\u007f]/.test(destino) || !/^\/(?![/\\])/.test(destino)) return fallback
   return destino
 }

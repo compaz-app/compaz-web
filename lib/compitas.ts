@@ -107,6 +107,7 @@ export async function bloquearCompita(id: string): Promise<void> {
     .update({ estado: 'bloqueado', verificado: false, telegram_chat_id: null })
     .eq('id', id)
   if (error) throw new Error(error.message)
+  await supabase.from('compita_edit_tokens').delete().eq('compita_id', id) // su enlace de edición de perfil deja de valer
   const { error: eU } = await supabase.from('usuarios').update({ compita_id: null }).eq('compita_id', id)
   if (eU) throw new Error(eU.message)
 }
