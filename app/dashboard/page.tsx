@@ -138,6 +138,15 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     })
     .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
 
+  // Reseñas pendientes de aprobación del cliente
+  const { data: resenasPendientes } = await adminDb
+    .from('resenas')
+    .select('id, compita_id, publicada, compitas(nombre)')
+    .eq('cliente_id', targetUid)
+    .eq('publicada', false)
+
+  const resenasPendientesCount = resenasPendientes?.length ?? 0
+
   // Visitas pasadas con fotos y reportes
   const { data: visitasPasadas } = await adminDb
     .from('visitas')
@@ -664,6 +673,16 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             </h2>
             {!previewUid ? <PerfilFamiliar usuario={usuario} /> : <PerfilFamiliar usuario={usuario} readonly />}
           </section>
+        )}
+
+        {/* Aviso reseña pendiente de aprobación */}
+        {resenasPendientesCount > 0 && (
+          <div style={{ background: '#F0FDF4', border: '2px solid #22c55e', borderRadius: '16px', padding: '16px 20px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontSize: '22px' }}>⭐</span>
+            <p style={{ margin: 0, color: '#15803d', fontSize: '14px', lineHeight: '1.5' }}>
+              <strong>Tu reseña está en revisión.</strong> En cuanto la aprobemos aparecerá en el perfil público de {(() => { const r = resenasPendientes?.[0] as unknown as { compitas?: { nombre: string }[] } | null; return r?.compitas?.[0]?.nombre ?? 'tu compita' })()} . Gracias por tomarte el tiempo.
+            </p>
+          </div>
         )}
 
         {/* ─────────────────────────────────────────────
