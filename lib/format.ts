@@ -2,10 +2,10 @@
 const TZ = 'America/Caracas'
 
 export function formatSlotVE(iso: string): string {
-  return new Date(iso).toLocaleString('es-VE', {
+  return `${new Date(iso).toLocaleString('es-VE', {
     timeZone: TZ, weekday: 'long', day: 'numeric', month: 'long',
     hour: '2-digit', minute: '2-digit', hour12: true,
-  })
+  })} (hora de Venezuela)`
 }
 
 /** Etiqueta de un día "YYYY-MM-DD" sin desfase de zona horaria. */

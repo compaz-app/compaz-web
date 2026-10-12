@@ -2,14 +2,7 @@ import { notFound } from 'next/navigation'
 import { getSolicitudPorToken } from '@/lib/solicitudes'
 import SalaEntrevista from './SalaEntrevista'
 import { firmaRol, rolValido } from '@/lib/links'
-
-function formatSlotVE(iso: string): string {
-  return new Date(iso).toLocaleString('es-VE', {
-    timeZone: 'America/Caracas',
-    weekday: 'long', day: 'numeric', month: 'long',
-    hour: '2-digit', minute: '2-digit', hour12: true,
-  })
-}
+import { formatSlotVE } from '@/lib/format'
 
 export default async function SalaPage({
   params,
@@ -56,6 +49,7 @@ export default async function SalaPage({
       compitaNombre={compitaRow?.nombre ?? solicitud.compita_nombre ?? 'Compita'}
       clienteNombre={clienteRow?.nombre ?? 'Cliente'}
       slotLabel={formatSlotVE(solicitud.slot_confirmado)}
+      slotIso={solicitud.slot_confirmado}
       sig={firmaRol(token, quien)}
     />
   )

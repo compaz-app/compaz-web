@@ -12,11 +12,14 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [cooldown, setCooldown] = useState(0)
+  const [returnTo, setReturnTo] = useState('')
   const router = useRouter()
 
-  // Mensaje cuando el callback de autenticación devolvió al usuario aquí con un error
+  // Leer returnTo y mensaje de error del URL
   useEffect(() => {
     const p = new URLSearchParams(window.location.search)
+    const rt = p.get('returnTo')
+    if (rt) setReturnTo(rt)
     const e = p.get('error')
     if (!e) return
     const motivo = p.get('motivo')
@@ -40,7 +43,7 @@ export default function LoginPage() {
       const res = await fetch('/api/auth/solicitar-acceso', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, ...(returnTo ? { returnTo } : {}) }),
       })
       const d = await res.json().catch(() => ({}))
       if (!res.ok) {

@@ -16,7 +16,9 @@ import AgendarOtraVisita from '@/components/ui/AgendarOtraVisita'
 import { cupoDelPlan } from '@/lib/visitas'
 import PlanesPago from '@/components/ui/PlanesPago'
 import { solicitudPendiente, instruccionesPago, referenciaDe, type MetodoDirecto } from '@/lib/solicitudes-pago'
+import { qRol } from '@/lib/links'
 import LimpiarParamContratado from '@/components/ui/LimpiarParamContratado'
+import AutoRefresh from '@/components/ui/AutoRefresh'
 import type { Visita, Compita, Mensaje, Usuario, ReporteVisita } from '@/types'
 
 export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ preview?: string; contratado?: string }> }) {
@@ -440,22 +442,32 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                       const fecha = sol.slot_confirmado
                         ? new Date(sol.slot_confirmado).toLocaleString('es-VE', { timeZone: 'America/Caracas', weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', hour12: true })
                         : '—'
+                      // Llamada "en curso": el slot ya llegó (con 10 min de gracia antes) y hay sala
+                      const ahora = Date.now()
+                      const slotMs = sol.slot_confirmado ? new Date(sol.slot_confirmado).getTime() : Infinity
+                      const enCurso = sol.room_url && sol.token_respuesta && ahora >= slotMs - 10 * 60_000
+                      const salaUrl = enCurso && sol.token_respuesta
+                        ? `/sala/${sol.token_respuesta}?${qRol(sol.token_respuesta, 'cliente')}`
+                        : null
                       return (
-                        <div key={sol.id} style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '14px', background: '#F0FDF4', border: '1.5px solid #86EFAC', borderRadius: '12px', flexWrap: 'wrap' }}>
+                        <div key={sol.id} style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '14px', background: enCurso ? '#FFF3E8' : '#F0FDF4', border: `1.5px solid ${enCurso ? '#FF6B2B' : '#86EFAC'}`, borderRadius: '12px', flexWrap: 'wrap' }}>
                           {c?.foto_url
                             // eslint-disable-next-line @next/next/no-img-element
                             ? <img src={c.foto_url} alt={c.nombre} style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-                            : <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#DCFCE7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', flexShrink: 0 }}>👤</div>
+                            : <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: enCurso ? '#FFE4D6' : '#DCFCE7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', flexShrink: 0 }}>👤</div>
                           }
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, color: '#1A0A3C', fontSize: '15px' }}>{c?.nombre ?? '—'}</div>
-                            <div style={{ color: '#166534', fontSize: '13px', marginTop: '2px' }}>📅 {fecha}</div>
+                            {enCurso
+                              ? <div style={{ color: '#C84B0E', fontSize: '13px', fontWeight: 700, marginTop: '2px' }}>🟠 Llamada en curso ahora</div>
+                              : <div style={{ color: '#166534', fontSize: '13px', marginTop: '2px' }}>📅 {fecha} (hora de Venezuela)</div>
+                            }
                             <div style={{ color: '#6B5C90', fontSize: '12px', marginTop: '2px' }}>⏱️ Llamada de 20 minutos</div>
                           </div>
-                          {sol.room_url && (
-                            <a href={sol.room_url} target="_blank" rel="noreferrer"
-                              style={{ background: '#22C55E', color: 'white', borderRadius: '9999px', padding: '10px 20px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '14px', textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                              Entrar →
+                          {salaUrl && (
+                            <a href={salaUrl}
+                              style={{ background: '#FF6B2B', color: 'white', borderRadius: '9999px', padding: '10px 20px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '14px', textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                              Entrar a la llamada →
                             </a>
                           )}
                         </div>
@@ -680,6 +692,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
       {/* Actualiza la página cuando cambia el estado de la visita */}
       {usuario && <VisitaWatcher usuarioId={targetUid} visitaActivaId={visitaActiva?.id ?? null} />}
+      {/* Refresca cada 30 s para mostrar cambios en llamadas y solicitudes */}
+      <AutoRefresh intervaloSeg={30} />
     </div>
   )
 }

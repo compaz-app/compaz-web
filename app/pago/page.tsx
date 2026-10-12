@@ -44,8 +44,15 @@ function PagoContent() {
   useEffect(() => {
     if (!solicitudId) { setCargando(false); return }
     fetch(`/api/pago/info?solicitud=${solicitudId}`)
-      .then(r => r.json())
-      .then(d => { if (d.ok) setInfo(d.data) })
+      .then(r => {
+        // Sin sesión: redirigir a login para que el usuario se autentique y vuelva aquí
+        if (r.status === 401) {
+          window.location.href = `/login?returnTo=${encodeURIComponent(window.location.pathname + window.location.search)}`
+          return null
+        }
+        return r.json()
+      })
+      .then(d => { if (d?.ok) setInfo(d.data) })
       .finally(() => setCargando(false))
   }, [solicitudId])
 

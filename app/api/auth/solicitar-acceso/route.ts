@@ -32,8 +32,9 @@ async function ipExcedida(ip: string): Promise<boolean> {
 }
 
 export async function POST(req: NextRequest) {
-  const body = await req.json().catch(() => null) as { email?: unknown } | null
+  const body = await req.json().catch(() => null) as { email?: unknown; returnTo?: unknown } | null
   const email = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : ''
+  const returnTo = typeof body?.returnTo === 'string' ? body.returnTo.trim() : ''
   if (!emailValido(email)) return err('Escribe un correo válido', 400)
 
   const ip = req.headers.get('x-nf-client-connection-ip') ?? req.headers.get('x-forwarded-for')?.split(',')[0].trim() ?? 'desconocida'
@@ -59,8 +60,12 @@ export async function POST(req: NextRequest) {
       console.error('[solicitar-acceso] generateLink falló:', link.error?.code, link.error?.message)
       return ok(GENERICO)
     }
+    // generateLink crea el usuario de auth y el trigger lo registra como cliente: un admin nuevo no debe quedar como cliente
+    if (!u && isAdminEmail(email)) await admin.from('usuarios').delete().eq('email', email)
     const tipo = link.data.properties.verification_type ?? 'magiclink'
-    await sendAccesoEmail(email, u?.nombre ?? 'Administrador', `${baseUrl(req)}/auth/confirm?token_hash=${encodeURIComponent(hash)}&type=${tipo}`)
+    // Si el cliente venía de una página protegida, el link lo lleva allá tras el login
+    const nextParam = returnTo ? `&next=${encodeURIComponent(returnTo)}` : ''
+    await sendAccesoEmail(email, u?.nombre ?? 'Administrador', `${baseUrl(req)}/auth/confirm?token_hash=${encodeURIComponent(hash)}&type=${tipo}${nextParam}`)
   } catch (e) {
     console.error('[solicitar-acceso] fallo enviando el acceso:', e)
   }

@@ -172,26 +172,35 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
     return () => { supabase.removeChannel(canal) }
   }, [])
 
-  // Suscripción Realtime a mensajes — sin filtro, filtramos en cliente
+  // Suscripción Realtime a mensajes — auth ANTES de suscribir para respetar RLS de admin
   useEffect(() => {
     const supabase = createBrowserSupabase()
+    let canal: ReturnType<typeof supabase.channel> | null = null
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.access_token) supabase.realtime.setAuth(session.access_token)
+      canal = supabase
+        .channel('admin-mensajes-live')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensajes' }, (payload) => {
+          const m = payload.new as Mensaje
+          setMensajes((prev) => ({
+            ...prev,
+            [m.visit_id]: [...(prev[m.visit_id] ?? []), m],
+          }))
+        })
+        .subscribe()
     })
-    const canal = supabase
-      .channel('admin-mensajes-live')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensajes' }, (payload) => {
-        const m = payload.new as Mensaje
-        setMensajes((prev) => ({
-          ...prev,
-          [m.visit_id]: [...(prev[m.visit_id] ?? []), m],
-        }))
-      })
-      .subscribe()
-    return () => { supabase.removeChannel(canal) }
+
+    return () => { if (canal) supabase.removeChannel(canal) }
   }, [])
 
   // Cargar mensajes de visita seleccionada
+  // Auto-refresh cada 30 s para mantener la vista actualizada
+  useEffect(() => {
+    const t = setInterval(() => router.refresh(), 30_000)
+    return () => clearInterval(t)
+  }, [router])
+
   useEffect(() => {
     if (!visitaSeleccionada || mensajes[visitaSeleccionada]) return
     const supabase = createBrowserSupabase()

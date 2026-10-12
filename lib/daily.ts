@@ -57,11 +57,11 @@ export async function createDailyRoom(visitId: string): Promise<DailyRoom> {
 
 /**
  * Sala de entrevista de presentación: 3 participantes, expira a los 23 min del slot confirmado.
- * El campo `nbf` (not before) permite entrar 5 min antes del slot.
+ * Sin `nbf` de Daily: la sala existe desde que se crea y la ventana de entrada (10 min antes del slot)
+ * la controla la página /sala, para que un desfase de reloj o de zona nunca deje la sala "no disponible".
  */
 export async function createEntrevistaRoom(solicitudId: string, slotConfirmado: Date): Promise<DailyRoom> {
   const name = `ent-${solicitudId.slice(0, 8)}-${Date.now()}`
-  const nbf = Math.floor(slotConfirmado.getTime() / 1000) - 5 * 60   // 5 min antes
   const exp = Math.floor(slotConfirmado.getTime() / 1000) + 23 * 60  // 23 min después
 
   const res = await fetch(`${DAILY_API}/rooms`, {
@@ -75,7 +75,6 @@ export async function createEntrevistaRoom(solicitudId: string, slotConfirmado: 
       properties: {
         enable_chat: false,
         enable_screenshare: false,
-        nbf,
         exp,
         max_participants: 3, // cliente + compita + admin supervisor
         start_video_off: false,

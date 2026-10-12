@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
                 <h2 style="color:#2D1464;font-size:22px">Tu llamada empieza ${esc(tiempoLabel)}</h2>
                 <p style="color:#4A3B6B;font-size:16px;line-height:1.6">Tienes una llamada con <strong>${esc(solicitud.compita_nombre)}</strong>: <strong>${esc(slotLabel)}</strong>.</p>
                 <p style="color:#C84B0E;background:#FFF3E8;border:2px solid #FF6B2B;border-radius:12px;padding:14px;font-size:14px">${recordatorio20}</p>
-                <p style="color:#4A3B6B;font-size:14px;line-height:1.6">La sala se abre <strong>5 minutos antes</strong> de la hora pautada. Si entras antes y ves un error, espera un momento y vuelve a intentarlo.</p>
+                <p style="color:#4A3B6B;font-size:14px;line-height:1.6">La sala se abre <strong>10 minutos antes</strong> de la hora pautada (hora de Venezuela). Si entras antes, la página te mostrará la cuenta atrás.</p>
                 <a href="${salaClienteUrl}" style="display:inline-block;background:#FF6B2B;color:white;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:16px;margin-top:8px">Entrar a la llamada →</a>
                 <p style="color:#6B5C90;font-size:13px;margin-top:24px">Compaz — <em>Cerca aunque estés lejos</em></p>
               </div>`,

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 type Paso = 'antes' | 'en_llamada' | 'terminado' | 'problema_tecnico' | 'reconectando' | 'resultado'
@@ -13,15 +13,33 @@ interface Props {
   compitaNombre: string
   clienteNombre: string
   slotLabel: string
+  slotIso: string // instante UTC de la llamada
   sig: string // firma del rol (evita que cliente y compita se suplanten)
 }
 
-export default function SalaEntrevista({ token, quien, roomUrl, compitaNombre, clienteNombre, slotLabel, sig }: Props) {
+export default function SalaEntrevista({ token, quien, roomUrl, compitaNombre, clienteNombre, slotLabel, slotIso, sig }: Props) {
   const [paso, setPaso] = useState<Paso>('antes')
   const [resultado, setResultado] = useState<Resultado | null>(null)
   const [cargando, setCargando] = useState(false)
   const [nuevaRoomUrl, setNuevaRoomUrl] = useState<string | null>(null)
   const router = useRouter()
+
+  // La sala se abre 10 min antes de la hora pautada
+  const aperturaMs = new Date(slotIso).getTime() - 10 * 60_000
+  const [ahora, setAhora] = useState(() => Date.now())
+  useEffect(() => {
+    if (Date.now() >= aperturaMs) return
+    const t = setInterval(() => {
+      setAhora(Date.now())
+      if (Date.now() >= aperturaMs) clearInterval(t)
+    }, 1000)
+    return () => clearInterval(t)
+  }, [aperturaMs])
+  const faltanSeg = Math.max(0, Math.ceil((aperturaMs - ahora) / 1000))
+  const salaAbierta = faltanSeg === 0
+  const cuentaAtras = faltanSeg >= 3600
+    ? `${Math.floor(faltanSeg / 3600)} h ${Math.floor((faltanSeg % 3600) / 60)} min`
+    : `${Math.floor(faltanSeg / 60)}:${String(faltanSeg % 60).padStart(2, '0')}`
 
   const urlActual = nuevaRoomUrl ?? roomUrl
   const rolQs = `quien=${quien}&s=${sig}`
@@ -134,13 +152,22 @@ export default function SalaEntrevista({ token, quien, roomUrl, compitaNombre, c
           <>
             <div style={{ fontSize: '48px', marginBottom: '16px' }}>📞</div>
             <h2 style={{ color: '#1A0A3C', fontWeight: 800, fontSize: '22px', marginBottom: '8px' }}>
-              Tu llamada con {nombreCorto} está lista
+              Tu llamada con {nombreCorto}
             </h2>
             <p style={{ color: '#4A3B6B', fontSize: '15px', lineHeight: 1.6, marginBottom: '8px' }}>{slotLabel}</p>
             <p style={{ color: '#C84B0E', background: '#FFF3E8', border: '2px solid #FF6B2B', borderRadius: '12px', padding: '12px', fontSize: '13px', margin: '16px 0' }}>
               ⏱️ La llamada dura 20 minutos. La sala se cierra automáticamente a los 23 min.
             </p>
-            <button onClick={() => abrirSala()} style={btnPrimario}>Entrar a la llamada →</button>
+            {salaAbierta ? (
+              <button onClick={() => abrirSala()} style={btnPrimario}>Entrar a la llamada →</button>
+            ) : (
+              <>
+                <button disabled style={{ ...btnPrimario, opacity: 0.5, cursor: 'not-allowed' }}>La sala abre en {cuentaAtras}</button>
+                <p style={{ color: '#6B5C90', fontSize: '13px', marginTop: '12px', lineHeight: 1.5 }}>
+                  Podrás entrar desde 10 minutos antes de la hora pautada. Esta página se activa sola, no necesitas recargarla.
+                </p>
+              </>
+            )}
           </>
         )}
 
