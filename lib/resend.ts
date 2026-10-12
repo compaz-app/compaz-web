@@ -286,7 +286,11 @@ export async function sendVisitaResumen(
   const minutos = duracionMin % 60
   const duracion = horas > 0 ? `${horas}h ${minutos}min` : `${minutos} minutos`
 
-  const mensajesTexto = mensajes
+  // Solo mensajes desde que la visita empezó (pre_visita usa el mismo visit_id)
+  const inicioMs = visita.inicio ? new Date(visita.inicio).getTime() : 0
+  const mensajesDeLaVisita = mensajes.filter((m) => new Date(m.created_at).getTime() >= inicioMs)
+
+  const mensajesTexto = mensajesDeLaVisita
     .filter((m) => m.tipo === 'texto' && m.origen !== 'admin')
     .map((m) => {
       const hora = new Date(m.created_at).toLocaleTimeString('es-VE', {
@@ -302,7 +306,7 @@ export async function sendVisitaResumen(
     })
     .join('')
 
-  const fotoUrls = mensajes.filter((m) => m.tipo === 'foto').map(fotoParaEmail).filter((u): u is string => !!u)
+  const fotoUrls = mensajesDeLaVisita.filter((m) => m.tipo === 'foto').map(fotoParaEmail).filter((u): u is string => !!u)
   const fotosHtml = fotoUrls.length > 0
     ? `<div style="margin-top: 24px;">
         <p style="color: #4A3B6B; font-size: 15px; font-weight: 600; margin-bottom: 12px;">Fotos de la visita</p>
@@ -368,7 +372,9 @@ export async function sendResumenConReporte(
 
   const resumenIA = await generarResumenIA(compita, usuario, reporte, historial)
 
-  const fotoUrls = mensajes.filter((m) => m.tipo === 'foto').map(fotoParaEmail).filter((u): u is string => !!u)
+  // Solo fotos desde que la visita empezó (pre_visita usa el mismo visit_id)
+  const inicioMs2 = visita.inicio ? new Date(visita.inicio).getTime() : 0
+  const fotoUrls = mensajes.filter((m) => m.tipo === 'foto' && new Date(m.created_at).getTime() >= inicioMs2).map(fotoParaEmail).filter((u): u is string => !!u)
   const fotosHtml = fotoUrls.length > 0
     ? `<div style="margin-top:20px">${fotoUrls.map((u) => `<img src="${escapeHtml(u)}" alt="Foto de la visita" style="max-width:100%;border-radius:12px;margin-bottom:12px;display:block" />`).join('')}</div>`
     : ''
