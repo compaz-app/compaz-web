@@ -16,7 +16,7 @@ import AgendarOtraVisita from '@/components/ui/AgendarOtraVisita'
 import { cupoDelPlan } from '@/lib/visitas'
 import PlanesPago from '@/components/ui/PlanesPago'
 import { solicitudPendiente, instruccionesPago, referenciaDe, type MetodoDirecto } from '@/lib/solicitudes-pago'
-import { qRol } from '@/lib/links'
+import { qRol, firmaRol } from '@/lib/links'
 import LimpiarParamContratado from '@/components/ui/LimpiarParamContratado'
 import AutoRefresh from '@/components/ui/AutoRefresh'
 import type { Visita, Compita, Mensaje, Usuario, ReporteVisita } from '@/types'
@@ -90,7 +90,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const hace30dias = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
   const { data: solicitudesRaw } = await adminDb
     .from('solicitudes')
-    .select('id, compita_id, estado, slot_confirmado, room_url, created_at, slots_propuestos, token_respuesta, compitas(nombre, foto_url, zona)')
+    .select('id, compita_id, estado, slot_confirmado, room_url, created_at, slots_propuestos, token_respuesta, seguimiento_enviado, compitas(nombre, foto_url, zona)')
     .eq('cliente_id', targetUid)
     .gte('created_at', hace30dias)
     .order('created_at', { ascending: false })
@@ -104,11 +104,16 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     created_at: string
     slots_propuestos: string[]
     token_respuesta: string | null
+    seguimiento_enviado: boolean
     compitas: { nombre: string; foto_url: string | null; zona: string } | null
   }
   const solicitudes = ((solicitudesRaw ?? []) as unknown[]).map((r) => r as SolicitudRow)
   const solicitudesPendientes = solicitudes.filter((s) => s.estado === 'pendiente')
   const entrevistasConfirmadas = solicitudes.filter((s) => s.estado === 'aceptada' && s.slot_confirmado)
+  // Llamada ocurrió y está esperando que el cliente decida si contrata
+  const pendientesDecision = solicitudes.filter((s) =>
+    (s.estado === 'completada' || (s.estado === 'aceptada' && s.seguimiento_enviado)) && s.token_respuesta
+  )
   const solicitudesHistorial = solicitudes.filter((s) => s.estado === 'rechazada' || s.estado === 'completada')
   const todasRechazadas = solicitudes.length > 0
     && solicitudesPendientes.length === 0
@@ -251,6 +256,53 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             </div>
           </>
         )}
+
+        {/* ─────────────────────────────────────────────
+            SECCIÓN 1.5: DECISIÓN PENDIENTE POST-LLAMADA
+            Alta visibilidad — si hay una llamada completada sin decisión,
+            esta sección aparece primero para no perder la venta.
+        ───────────────────────────────────────────── */}
+        {pendientesDecision.length > 0 && pendientesDecision.map((sol) => {
+          const t = sol.token_respuesta!
+          const compitaNombre = (sol.compitas as { nombre: string } | null)?.nombre ?? 'tu compita'
+          const contratoUrl = `/pago?solicitud=${sol.id}`
+          const noContratoUrl = `/api/solicitud/resultado-llamada?token=${t}&resultado=no_contratar&${qRol(t, 'cliente')}`
+          return (
+            <section key={sol.id} style={{ marginBottom: '32px', background: 'linear-gradient(135deg, #FFF7ED 0%, #FFF3E8 100%)', border: '3px solid #FF6B2B', borderRadius: '20px', padding: '28px 24px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+                <span style={{ fontSize: '28px' }}>📞</span>
+                <div>
+                  <h2 style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 900, fontSize: '20px', color: '#1A0A3C', margin: 0 }}>
+                    ¿Contratas a {compitaNombre}?
+                  </h2>
+                  <p style={{ color: '#C84B0E', fontSize: '14px', margin: '4px 0 0', fontWeight: 600 }}>
+                    Tu llamada terminó — decide ahora para no perder este cupo
+                  </p>
+                </div>
+              </div>
+              <p style={{ color: '#4A3B6B', fontSize: '15px', lineHeight: '1.6', margin: '0 0 24px' }}>
+                Tuviste una llamada con <strong>{compitaNombre}</strong>. Si quieres contratarle, hazlo ahora.
+                Este botón también llegó a tu correo — si ya lo usaste, esta sección desaparecerá sola.
+              </p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
+                <a
+                  href={contratoUrl}
+                  style={{ background: '#FF6B2B', color: 'white', borderRadius: '9999px', padding: '14px 28px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 900, fontSize: '17px', textDecoration: 'none', display: 'inline-block', boxShadow: '0 4px 16px rgba(255,107,43,0.4)' }}
+                >
+                  ✅ Sí, quiero contratar a {compitaNombre}
+                </a>
+                <form method="GET" action={noContratoUrl} style={{ display: 'inline' }}>
+                  <button
+                    type="submit"
+                    style={{ background: 'transparent', color: '#6B5C90', border: '2px solid #C4B5D4', borderRadius: '9999px', padding: '12px 22px', fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: '14px', cursor: 'pointer' }}
+                  >
+                    No por ahora
+                  </button>
+                </form>
+              </div>
+            </section>
+          )
+        })}
 
         {/* ─────────────────────────────────────────────
             SECCIÓN 2: ESTADO ACTUAL DE LA VISITA
