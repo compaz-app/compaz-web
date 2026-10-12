@@ -815,15 +815,31 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
 
     const aviso = [`🚨 <b>EMERGENCIA</b>`, ``, `<b>${esc(compita.nombre)}</b> activó el botón de emergencia durante una visita.`, ``, infoCliente, ``, `Contáctalos de inmediato.`].join('\n')
 
-    // Telegram primero; si falla, email al admin como respaldo. Solo se dice "enviada" si realmente salió.
-    let notificado = await avisarAdmin(aviso)
-    if (!notificado) {
-      const admins = (process.env.ADMIN_EMAILS ?? '').split(',').map((e) => e.trim()).filter(Boolean)
-      if (admins.length) {
-        try { await sendEmail({ to: admins, subject: '🚨 EMERGENCIA en una visita de Compaz', html: `<pre style="font-family:inherit;white-space:pre-wrap">${esc(aviso.replace(/<[^>]+>/g, ''))}</pre>` }); notificado = true }
-        catch (e) { console.error('Emergencia: email respaldo falló:', e) }
-      }
-    }
+    // Telegram + email siempre (en paralelo); insertar flag visible en el dashboard admin
+    const admins = (process.env.ADMIN_EMAILS ?? '').split(',').map((e) => e.trim()).filter(Boolean)
+    const [telegramOk] = await Promise.allSettled([
+      avisarAdmin(aviso),
+      admins.length
+        ? sendEmail({
+            to: admins,
+            subject: '🚨 EMERGENCIA en una visita de Compaz',
+            html: `<div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:24px;background:#FEF2F2;border:2px solid #dc2626;border-radius:16px">
+              <h2 style="color:#991b1b;font-size:22px;margin:0 0 12px">🚨 EMERGENCIA</h2>
+              <p style="color:#7f1d1d;font-size:15px;line-height:1.6;white-space:pre-wrap">${esc(aviso.replace(/<[^>]+>/g, ''))}</p>
+            </div>`,
+          })
+        : Promise.resolve(),
+      // Flag en la DB para el dashboard en tiempo real
+      supabase.from('admin_flags').insert({
+        entidad_tipo: 'visita',
+        entidad_id: visitaEmergencia?.id ?? 'sin-visita',
+        entidad_nombre: `🚨 EMERGENCIA — ${compita.nombre}`,
+        nota: aviso.replace(/<[^>]+>/g, ''),
+        reportado_por: 'sistema',
+        resuelto: false,
+      }),
+    ])
+    const notificado = telegramOk.status === 'fulfilled' && telegramOk.value === true
 
     await sendTelegramMessage(
       chatId,

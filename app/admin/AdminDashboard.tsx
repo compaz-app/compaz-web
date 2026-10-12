@@ -69,11 +69,39 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
   const [flagNota, setFlagNota] = useState('')
   const [flagReportadoPor, setFlagReportadoPor] = useState('')
   const [flagGuardando, setFlagGuardando] = useState(false)
+  const [emergencias, setEmergencias] = useState<AdminFlag[]>([])
+  const [emergenciaAcknowledged, setEmergenciaAcknowledged] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     fetch('/api/admin/flags')
       .then((r) => r.json())
-      .then((d) => { if (Array.isArray(d.data)) setFlags(d.data) })
+      .then((d) => {
+        if (!Array.isArray(d.data)) return
+        setFlags(d.data)
+        // Emergencias no resueltas al cargar
+        const emgs = (d.data as AdminFlag[]).filter((f) => f.entidad_nombre?.startsWith('🚨') && !f.resuelto)
+        if (emgs.length) setEmergencias(emgs)
+      })
+  }, [])
+
+  // Realtime: nuevos flags de emergencia
+  useEffect(() => {
+    const supabase = createBrowserSupabase()
+    let canal: ReturnType<typeof supabase.channel> | null = null
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.access_token) supabase.realtime.setAuth(session.access_token)
+      canal = supabase
+        .channel('admin-flags-live')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'admin_flags' }, (payload) => {
+          const flag = payload.new as AdminFlag
+          if (flag.entidad_nombre?.startsWith('🚨') && !flag.resuelto) {
+            setEmergencias((prev) => [...prev, flag])
+          }
+          setFlags((prev) => [flag, ...prev])
+        })
+        .subscribe()
+    })
+    return () => { if (canal) supabase.removeChannel(canal) }
   }, [])
 
   const [flagError, setFlagError] = useState('')
@@ -308,8 +336,55 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
     cursor: 'pointer',
   })
 
+  const emergenciasVisibles = emergencias.filter((e) => !emergenciaAcknowledged.has(e.id))
+
+  async function resolverEmergencia(id: string) {
+    setEmergenciaAcknowledged((prev) => new Set([...prev, id]))
+    await fetch(`/api/admin/flags/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ resuelto: true }) }).catch(() => {})
+  }
+
   return (
     <div style={{ minHeight: '100vh', background: '#FDFAF6', fontFamily: 'Inter, sans-serif' }}>
+
+      {/* Alarma de emergencia */}
+      {emergenciasVisibles.length > 0 && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 9999,
+          background: 'rgba(180, 0, 0, 0.96)',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          padding: '24px',
+          animation: 'pulsoRojo 1s ease-in-out infinite',
+        }}>
+          <style>{`
+            @keyframes pulsoRojo {
+              0%, 100% { background: rgba(180,0,0,0.96); }
+              50% { background: rgba(220,0,0,0.99); }
+            }
+          `}</style>
+          <div style={{ fontSize: '64px', marginBottom: '16px' }}>🚨</div>
+          <h1 style={{ color: 'white', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 900, fontSize: 'clamp(28px, 6vw, 48px)', textAlign: 'center', marginBottom: '12px' }}>
+            EMERGENCIA
+          </h1>
+          {emergenciasVisibles.map((e) => (
+            <div key={e.id} style={{ background: 'rgba(255,255,255,0.15)', borderRadius: '12px', padding: '16px 24px', marginBottom: '12px', maxWidth: '600px', width: '100%', textAlign: 'center' }}>
+              <p style={{ color: 'white', fontWeight: 700, fontSize: '18px', marginBottom: '6px' }}>{e.entidad_nombre}</p>
+              <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: '15px' }}>{e.nota}</p>
+              <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '12px', marginTop: '4px' }}>{new Date(e.created_at).toLocaleTimeString('es-VE', { timeZone: 'America/Caracas', hour: '2-digit', minute: '2-digit' })}</p>
+            </div>
+          ))}
+          <button
+            onClick={() => emergenciasVisibles.forEach((e) => resolverEmergencia(e.id))}
+            style={{
+              marginTop: '24px', background: 'white', color: '#B40000', border: 'none',
+              borderRadius: '9999px', padding: '16px 40px', fontSize: '18px',
+              fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 900, cursor: 'pointer',
+            }}
+          >
+            Atendido — cerrar alarma
+          </button>
+        </div>
+      )}
+
       <nav style={{ background: '#1A0A3C', padding: '16px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <span style={{ color: 'white', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '20px' }}>
           Compaz Admin
