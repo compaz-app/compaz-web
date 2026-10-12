@@ -43,6 +43,35 @@ interface Props {
 
 import type { Solicitud } from '@/types'
 
+type ResenaPublica = { id: string; texto: string; estrellas: number; created_at: string }
+
+function ResenasCompita({ compitaId }: { compitaId: string }) {
+  const [resenas, setResenas] = useState<ResenaPublica[] | null>(null)
+  useEffect(() => {
+    fetch(`/api/compita/resenas?compita_id=${compitaId}`)
+      .then(r => r.json())
+      .then(d => { if (Array.isArray(d.data)) setResenas(d.data) })
+      .catch(() => setResenas([]))
+  }, [compitaId])
+
+  if (!resenas || resenas.length === 0) return null
+  return (
+    <div style={{ marginBottom: '20px' }}>
+      <p style={{ fontWeight: 700, color: '#1A0A3C', fontFamily: 'Bricolage Grotesque, sans-serif', marginBottom: '12px' }}>Reseñas de clientes</p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        {resenas.map((r) => (
+          <div key={r.id} style={{ background: '#F5F0FF', borderRadius: '12px', padding: '14px 16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+              <span style={{ color: '#F59E0B', fontSize: '13px' }}>{'★'.repeat(r.estrellas)}{'☆'.repeat(5 - r.estrellas)}</span>
+            </div>
+            <p style={{ color: '#1A0A3C', fontSize: '14px', lineHeight: '1.6', margin: 0 }}>{r.texto}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEmail, backHref = '/dashboard', backLabel = '← Mi portal' }: Props) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -571,6 +600,8 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
                   />
                 </div>
               )}
+
+              <ResenasCompita compitaId={seleccionada.id} />
 
               {!reagendando && idsYaSolicitados.has(seleccionada.id) ? (
                 <div style={{ background: '#FFF3E8', border: '2px solid #FF6B2B', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>

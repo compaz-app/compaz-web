@@ -63,3 +63,12 @@ export function ratingValido(visitaId: string, valor: number, sig: string | null
   if (!sig) return false
   try { return iguales(sig, tokenRating(visitaId, valor)) } catch { return false }
 }
+
+export function tokenFeedback(visitaId: string): string {
+  return firmar(`feedback:${visitaId}`)
+}
+
+export function feedbackValido(visitaId: string, sig: string | null): boolean {
+  if (!sig) return false
+  try { return iguales(sig, tokenFeedback(visitaId)) } catch { return false }
+}

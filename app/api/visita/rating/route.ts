@@ -1,9 +1,9 @@
 // /api/visita/rating?visita_id=&valor=1..5&t=<firma>
 // GET muestra la confirmación (los escáneres de correo abren los 5 enlaces y falsearían la calificación);
-// POST registra el rating una sola vez, de forma atómica.
-import { NextRequest } from 'next/server'
+// POST registra el rating una sola vez, de forma atómica, y redirige al formulario de feedback.
+import { NextRequest, NextResponse } from 'next/server'
 import { createAdminSupabase } from '@/lib/supabase-server'
-import { ratingValido } from '@/lib/links'
+import { ratingValido, tokenFeedback } from '@/lib/links'
 import { SITE_URL } from '@/lib/email'
 import { pagina, puertaConfirmacion } from '@/lib/confirm'
 
@@ -55,5 +55,6 @@ export async function POST(req: NextRequest) {
     await admin.from('compitas').update({ rating_promedio: Math.round((suma / ratings.length) * 100) / 100, total_ratings: ratings.length }).eq('id', visita.compita_id)
   }
 
-  return pagina(`${'⭐'.repeat(p.valor)} ¡Gracias por calificar!`, MENSAJES[p.valor], 200, { texto: 'Ir al dashboard', href: `${SITE_URL}/dashboard` })
+  const feedbackUrl = `${SITE_URL}/feedback/${p.visita_id}?t=${tokenFeedback(p.visita_id)}&estrellas=${p.valor}`
+  return NextResponse.redirect(feedbackUrl, 303)
 }

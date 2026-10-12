@@ -24,7 +24,19 @@ interface Props {
   clientesInactivos?: Set<string>
 }
 
-type Tab = 'visitas' | 'clientes' | 'compitas' | 'desactivadas' | 'historial' | 'solicitudes' | 'cliente' | 'accesos' | 'perfil' | 'atencion'
+type Tab = 'visitas' | 'clientes' | 'compitas' | 'desactivadas' | 'historial' | 'solicitudes' | 'cliente' | 'accesos' | 'perfil' | 'atencion' | 'resenas'
+
+type Resena = {
+  id: string
+  visita_id: string
+  compita_id: string
+  texto: string
+  estrellas: number
+  publicada: boolean
+  created_at: string
+  compita: { nombre: string } | null
+  cliente: { nombre: string; email: string } | null
+}
 
 type AdminFlag = {
   id: string
@@ -71,6 +83,8 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
   const [flagGuardando, setFlagGuardando] = useState(false)
   const [emergencias, setEmergencias] = useState<AdminFlag[]>([])
   const [emergenciaAcknowledged, setEmergenciaAcknowledged] = useState<Set<string>>(new Set())
+  const [resenas, setResenas] = useState<Resena[]>([])
+  const [resenasCargadas, setResenasCargadas] = useState(false)
 
   useEffect(() => {
     fetch('/api/admin/flags')
@@ -433,6 +447,9 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
           )}
         </button>
         <button style={tabStyle('accesos')} onClick={() => setTab('accesos')}>Accesos rápidos</button>
+        <button style={tabStyle('resenas')} onClick={() => { setTab('resenas'); if (!resenasCargadas) { fetch('/api/admin/resenas').then(r => r.json()).then(d => { if (Array.isArray(d.data)) { setResenas(d.data); setResenasCargadas(true) } }) } }}>
+          Reseñas {resenas.filter(r => !r.publicada).length > 0 && <span style={{ background: '#7C4DFF', color: 'white', borderRadius: '9999px', padding: '1px 7px', fontSize: '11px', fontWeight: 800, marginLeft: '4px' }}>{resenas.filter(r => !r.publicada).length}</span>}
+        </button>
         <button style={tabStyle('atencion')} onClick={() => setTab('atencion')}>
           ⚑ Atención {flagsAbiertos.length > 0 && <span style={{ background: '#dc2626', color: 'white', borderRadius: '9999px', padding: '1px 7px', fontSize: '11px', fontWeight: 800, marginLeft: '4px' }}>{flagsAbiertos.length}</span>}
         </button>
@@ -802,6 +819,60 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
         {/* ── Solicitudes ───────────────────────────────────────────────────── */}
         {tab === 'solicitudes' && (
           <SolicitudesTab solicitudes={todasSolicitudes} />
+        )}
+
+        {/* ── Reseñas ───────────────────────────────────────────────────────── */}
+        {tab === 'resenas' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {!resenasCargadas ? (
+              <div style={{ background: 'white', border: '2px solid #E8E0D4', borderRadius: '16px', padding: '48px', textAlign: 'center' }}>
+                <p style={{ color: '#6B5C90' }}>Cargando reseñas…</p>
+              </div>
+            ) : resenas.length === 0 ? (
+              <div style={{ background: 'white', border: '2px solid #E8E0D4', borderRadius: '16px', padding: '48px', textAlign: 'center' }}>
+                <p style={{ color: '#6B5C90', fontSize: '15px' }}>Aún no hay reseñas de clientes.</p>
+              </div>
+            ) : resenas.map((r) => (
+              <div key={r.id} style={{ background: 'white', border: `2px solid ${r.publicada ? '#86efac' : '#E8E0D4'}`, borderRadius: '16px', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px' }}>
+                  <div>
+                    <span style={{ fontWeight: 700, color: '#1A0A3C', fontSize: '15px' }}>{r.compita?.nombre ?? '—'}</span>
+                    <span style={{ color: '#9B8AB8', fontSize: '13px', marginLeft: '8px' }}>por {r.cliente?.nombre ?? '—'}</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '14px' }}>{'⭐'.repeat(r.estrellas)}</span>
+                    <span style={{ background: r.publicada ? '#dcfce7' : '#F5F0FF', color: r.publicada ? '#16a34a' : '#7C4DFF', borderRadius: '9999px', padding: '2px 10px', fontSize: '12px', fontWeight: 700 }}>
+                      {r.publicada ? 'Publicada' : 'Pendiente'}
+                    </span>
+                  </div>
+                </div>
+                <p style={{ color: '#4A3B6B', fontSize: '14px', lineHeight: '1.6', margin: 0 }}>{r.texto}</p>
+                <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                  {!r.publicada ? (
+                    <button
+                      onClick={async () => {
+                        const res = await fetch('/api/admin/resenas', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: r.id, publicada: true }) })
+                        if (res.ok) setResenas(prev => prev.map(x => x.id === r.id ? { ...x, publicada: true } : x))
+                      }}
+                      style={{ background: '#16a34a', color: 'white', border: 'none', borderRadius: '9999px', padding: '6px 16px', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}
+                    >
+                      ✓ Publicar
+                    </button>
+                  ) : (
+                    <button
+                      onClick={async () => {
+                        const res = await fetch('/api/admin/resenas', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: r.id, publicada: false }) })
+                        if (res.ok) setResenas(prev => prev.map(x => x.id === r.id ? { ...x, publicada: false } : x))
+                      }}
+                      style={{ background: 'none', color: '#6B5C90', border: '2px solid #D4C9E8', borderRadius: '9999px', padding: '6px 16px', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}
+                    >
+                      Ocultar
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
         )}
 
         {/* ── Atención ──────────────────────────────────────────────────────── */}
