@@ -431,10 +431,23 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           ) : (
             <div>
               {/* Entrevistas confirmadas */}
-              {entrevistasConfirmadas.length > 0 && (
-                <div style={{ background: 'white', border: '2px solid #22C55E', borderRadius: '16px', padding: '24px', marginBottom: '16px' }}>
-                  <h3 style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '15px', color: '#1A0A3C', margin: '0 0 14px' }}>
-                    📅 Llamadas confirmadas
+              {entrevistasConfirmadas.length > 0 && (() => {
+                const hayActiva = entrevistasConfirmadas.some((sol) => {
+                  const slotMs = sol.slot_confirmado ? new Date(sol.slot_confirmado).getTime() : Infinity
+                  return sol.room_url && sol.token_respuesta && Date.now() >= slotMs - 10 * 60_000
+                })
+                return (
+                <div style={{ background: hayActiva ? '#FFF3E8' : 'white', border: `2px solid ${hayActiva ? '#FF6B2B' : '#22C55E'}`, borderRadius: '16px', padding: '24px', marginBottom: '16px', ...(hayActiva ? { animation: 'none' } : {}) }}>
+                  {hayActiva && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                      <span style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', background: '#FF6B2B', boxShadow: '0 0 0 3px rgba(255,107,43,0.3)', flexShrink: 0 }} />
+                      <span style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 900, fontSize: '15px', color: '#C84B0E', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        Llamada activa ahora
+                      </span>
+                    </div>
+                  )}
+                  <h3 style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '15px', color: hayActiva ? '#C84B0E' : '#1A0A3C', margin: '0 0 14px' }}>
+                    {hayActiva ? '🟠 Tienes una llamada en este momento' : '📅 Llamadas confirmadas'}
                   </h3>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     {entrevistasConfirmadas.map((sol) => {
@@ -475,7 +488,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                     })}
                   </div>
                 </div>
-              )}
+                )
+              })()}
 
               {/* Solicitudes pendientes */}
               {solicitudesPendientes.length > 0 && (

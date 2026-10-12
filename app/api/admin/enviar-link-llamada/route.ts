@@ -24,14 +24,14 @@ export async function POST(req: NextRequest) {
 
   const { data: row } = await admin
     .from('solicitudes')
-    .select('id, cliente_id, compita_id, slot_confirmado, room_url, token_respuesta, compitas(nombre, telegram_chat_id)')
+    .select('id, cliente_id, compita_id, slot_confirmado, room_url, token_respuesta, compitas(nombre, telegram_chat_id, email)')
     .eq('id', solicitud_id)
     .single()
 
   if (!row) return notFound('Solicitud no encontrada')
   if (!row.slot_confirmado) return err('La solicitud no tiene slot confirmado')
 
-  const compitaData = row.compitas as unknown as { nombre: string; telegram_chat_id: string | null } | null
+  const compitaData = row.compitas as unknown as { nombre: string; telegram_chat_id: string | null; email: string | null } | null
   const slotLabel = formatSlotVE(row.slot_confirmado)
 
   // Crear sala si no existe, reusar si ya existe
@@ -114,6 +114,38 @@ export async function POST(req: NextRequest) {
     }
   } else {
     resultados.push('telegram_compita: sin chat_id')
+  }
+
+  // ── Email al compita ──────────────────────────────────────────────────────
+  if (compitaData?.email) {
+    try {
+      await sendEmail({
+        to: compitaData.email,
+        subject: `⏰ Tu llamada con ${esc(cliente?.nombre ?? 'el cliente')} — link de acceso`,
+        html: `
+          <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px">
+            <h2 style="color:#2D1464;font-size:22px">Tu link de llamada está listo</h2>
+            <p style="color:#4A3B6B;font-size:16px;line-height:1.6">
+              Tu llamada con <strong>${esc(cliente?.nombre ?? 'el cliente')}</strong> está programada para:<br>
+              <strong>${esc(slotLabel)}</strong>
+            </p>
+            <p style="color:#C84B0E;background:#FFF3E8;border:2px solid #FF6B2B;border-radius:12px;padding:14px;font-size:14px">
+              ⏱️ Recuerda: la llamada tiene un límite de 20 minutos. La sala se cierra automáticamente a los 23 min.
+            </p>
+            <a href="${salaCompitaUrl}" style="display:inline-block;background:#FF6B2B;color:white;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:16px;margin-top:8px">
+              Entrar a la llamada →
+            </a>
+            <p style="color:#6B5C90;font-size:13px;margin-top:24px">Compaz — <em>Cerca aunque estés lejos</em></p>
+          </div>
+        `,
+      })
+      resultados.push('email_compita: ok')
+    } catch (e) {
+      console.error('Email compita:', e)
+      resultados.push('email_compita: error')
+    }
+  } else {
+    resultados.push('email_compita: sin email')
   }
 
   // El admin ya envió los enlaces: evitar que el cron de recordatorios los repita
