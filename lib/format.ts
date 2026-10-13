@@ -8,6 +8,13 @@ export function formatSlotVE(iso: string): string {
   })} (hora de Venezuela)`
 }
 
+/** Solo la hora "03:00 p. m." en Venezuela, para recordatorios. */
+export function horaSlotVE(iso: string): string {
+  return new Date(iso).toLocaleTimeString('es-VE', {
+    timeZone: TZ, hour: '2-digit', minute: '2-digit', hour12: true,
+  })
+}
+
 /** Etiqueta de un día "YYYY-MM-DD" sin desfase de zona horaria. */
 export function formatFechaVE(fecha: string, conAnio = false): string {
   return new Date(`${fecha}T12:00:00-04:00`).toLocaleDateString('es-VE', {

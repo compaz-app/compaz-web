@@ -7,7 +7,7 @@ import { sendTelegramMessage, avisarAdmin } from '@/lib/telegram'
 import { createEntrevistaRoom } from '@/lib/daily'
 import { sendEmail, SITE_URL } from '@/lib/email'
 import { esc } from '@/lib/html'
-import { formatSlotVE } from '@/lib/format'
+import { formatSlotVE, horaSlotVE } from '@/lib/format'
 import { qRol } from '@/lib/links'
 import { cronAutorizado, latido, vigilarLatidos, reclamarUnaVez } from '@/lib/cron'
 import { ok, err } from '@/lib/api'
@@ -23,8 +23,7 @@ export async function POST(req: NextRequest) {
     try {
       const slotMs = new Date(solicitud.slot_confirmado!).getTime()
       const slotLabel = formatSlotVE(solicitud.slot_confirmado!)
-      const minutos = Math.round((slotMs - Date.now()) / 60000)
-      const tiempoLabel = minutos <= 1 ? 'ahora mismo' : `en ${minutos} minutos`
+      const horaLabel = `a las ${horaSlotVE(solicitud.slot_confirmado!)} (hora de Venezuela)`
       const recordatorio20 = '⏱️ Recuerda: la llamada tiene un límite de 20 minutos. La sala se cierra automáticamente a los 23 min.'
 
       let roomUrl = solicitud.room_url ?? ''
@@ -57,10 +56,10 @@ export async function POST(req: NextRequest) {
         try {
           await sendEmail({
             to: cliente.email,
-            subject: `⏰ Tu llamada con ${solicitud.compita_nombre} empieza ${tiempoLabel}`,
+            subject: `⏰ Tu llamada con ${solicitud.compita_nombre} empieza ${horaLabel}`,
             html: `
               <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px">
-                <h2 style="color:#2D1464;font-size:22px">Tu llamada empieza ${esc(tiempoLabel)}</h2>
+                <h2 style="color:#2D1464;font-size:22px">Tu llamada empieza ${esc(horaLabel)}</h2>
                 <p style="color:#4A3B6B;font-size:16px;line-height:1.6">Tienes una llamada con <strong>${esc(solicitud.compita_nombre)}</strong>: <strong>${esc(slotLabel)}</strong>.</p>
                 <p style="color:#C84B0E;background:#FFF3E8;border:2px solid #FF6B2B;border-radius:12px;padding:14px;font-size:14px">${recordatorio20}</p>
                 <p style="color:#4A3B6B;font-size:14px;line-height:1.6">La sala se abre <strong>10 minutos antes</strong> de la hora pautada (hora de Venezuela). Si entras antes, la página te mostrará la cuenta atrás.</p>
@@ -81,7 +80,7 @@ export async function POST(req: NextRequest) {
           await sendTelegramMessage(
             compita.telegram_chat_id,
             [
-              `⏰ <b>Tu llamada empieza ${esc(tiempoLabel)}</b>`, ``,
+              `⏰ <b>Tu llamada empieza ${esc(horaLabel)}</b>`, ``,
               `Con <b>${esc(cliente?.nombre ?? 'el cliente')}</b>: <b>${esc(slotLabel)}</b>.`, ``,
               `⏱️ La llamada es de <b>20 minutos</b>. La sala se cierra automáticamente a los 23 min.`, ``,
               `🔓 La sala ya está lista. Puedes entrar cuando quieras.`, ``,
@@ -93,7 +92,7 @@ export async function POST(req: NextRequest) {
       }
 
       await avisarAdmin([
-        `⏰ <b>Llamada ${esc(tiempoLabel)}</b>`, ``,
+        `⏰ <b>Llamada ${esc(horaLabel)}</b>`, ``,
         `<b>Cliente:</b> ${esc(cliente?.nombre ?? '')} (${esc(cliente?.email ?? '')})`,
         `<b>Compita:</b> ${esc(solicitud.compita_nombre)}${compitaAvisada ? '' : ' ⚠️ NO se pudo avisar por Telegram'}`,
         `<b>Hora:</b> ${esc(slotLabel)}`, ``,
