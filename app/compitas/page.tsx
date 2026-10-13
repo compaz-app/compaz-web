@@ -60,6 +60,7 @@ export default async function CompitasPage() {
       compitas={compitas ?? []}
       usuarioNombre={usuario?.nombre ?? ''}
       usuarioEmail={usuario?.email ?? ''}
+      compitaAsignadaId={usuario?.compita_id ?? null}
       backHref={esAdmin ? '/admin?tab=accesos' : '/dashboard'}
       backLabel={esAdmin ? '← Panel admin' : '← Mi portal'}
     />

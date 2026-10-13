@@ -37,6 +37,7 @@ interface Props {
   compitas: Compita[]
   usuarioNombre: string
   usuarioEmail: string
+  compitaAsignadaId?: string | null
   backHref?: string
   backLabel?: string
 }
@@ -72,7 +73,7 @@ function ResenasCompita({ compitaId }: { compitaId: string }) {
   )
 }
 
-export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEmail, backHref = '/dashboard', backLabel = '← Mi portal' }: Props) {
+export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEmail, compitaAsignadaId, backHref = '/dashboard', backLabel = '← Mi portal' }: Props) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [estado, setEstadoState] = useState(searchParams.get('estado') ?? '')
@@ -88,7 +89,28 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
   const reagendarId = searchParams.get('reagendar')
   const [reagendando, setReagendando] = useState(false)
   const [diasAbiertos, setDiasAbiertos] = useState<Record<string, boolean>>({})
+  const [agendando, setAgendando] = useState(false)
+  const [errorAgendar, setErrorAgendar] = useState('')
   const resultadosRef = useRef<HTMLDivElement>(null)
+
+  async function agendarOtraVisita() {
+    if (agendando) return
+    setAgendando(true)
+    setErrorAgendar('')
+    try {
+      const res = await fetch('/api/visita/nueva', { method: 'POST' })
+      const data = await res.json().catch(() => ({}))
+      if (res.ok && data.ok) {
+        router.push('/dashboard')
+      } else {
+        setErrorAgendar(data.error ?? 'No se pudo agendar. Intenta desde tu portal.')
+        setAgendando(false)
+      }
+    } catch {
+      setErrorAgendar('Error de conexión. Intenta de nuevo.')
+      setAgendando(false)
+    }
+  }
 
   useEffect(() => {
     fetch('/api/mis-solicitudes')
@@ -608,7 +630,22 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
 
               <ResenasCompita compitaId={seleccionada.id} />
 
-              {!reagendando && idsYaSolicitados.has(seleccionada.id) ? (
+              {seleccionada.id === compitaAsignadaId ? (
+                /* Cliente que ya tiene esta compita asignada — ir directo al agendamiento */
+                <div>
+                  <p style={{ color: '#6B5C90', fontSize: '14px', marginBottom: '12px', lineHeight: 1.5 }}>
+                    Ya trabajas con {seleccionada.nombre}. Abre el chat en tu portal y coordinen la fecha de la próxima visita juntos.
+                  </p>
+                  {errorAgendar && <p style={{ color: '#E05520', fontSize: '13px', marginBottom: '8px' }}>{errorAgendar}</p>}
+                  <button
+                    onClick={agendarOtraVisita}
+                    disabled={agendando}
+                    style={{ width: '100%', background: agendando ? '#D4C9E8' : '#FF6B2B', color: 'white', border: 'none', borderRadius: '9999px', padding: '16px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '16px', cursor: agendando ? 'not-allowed' : 'pointer' }}
+                  >
+                    {agendando ? 'Agendando…' : `Agendar otra visita con ${seleccionada.nombre}`}
+                  </button>
+                </div>
+              ) : !reagendando && idsYaSolicitados.has(seleccionada.id) ? (
                 <div style={{ background: '#FFF3E8', border: '2px solid #FF6B2B', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
                   <p style={{ color: '#C84B0E', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif', margin: '0 0 6px' }}>⏳ Solicitud enviada</p>
                   <p style={{ color: '#6B5C90', fontSize: '13px', margin: 0 }}>Ya solicitaste conocer a {seleccionada.nombre}. Te avisaremos cuando confirme un horario.</p>
