@@ -415,12 +415,30 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           const fechaFormateada = fecha
             ? new Date(fecha + 'T00:00:00').toLocaleDateString('es-VE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
             : null
+          // Detectar retraso: la visita era hoy y ya pasó la hora de inicio
+          const horaInicio = visitaProgramada.hora_inicio_programada
+          const horaActualVE = new Date(Date.now() - 4 * 3600_000).toISOString().slice(11, 16)
+          const esHoy = fecha === new Date(Date.now() - 4 * 3600_000).toISOString().slice(0, 10)
+          const hayRetraso = esHoy && !!horaInicio && horaActualVE > horaInicio
           return (
             <section style={{ marginBottom: '40px' }}>
               <h2 style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '13px', color: '#9B8AB8', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 16px' }}>
                 Próxima visita
               </h2>
-              <div style={{ background: '#F5F0FF', border: '2px solid #7C4DFF', borderRadius: '16px', padding: '28px', marginBottom: '16px', textAlign: 'center' }}>
+              {hayRetraso && (
+                <div style={{ background: '#FEF3C7', border: '2px solid #F59E0B', borderRadius: '16px', padding: '16px 20px', marginBottom: '16px', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                  <span style={{ fontSize: '20px', flexShrink: 0 }}>⚠️</span>
+                  <div>
+                    <p style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, color: '#92400E', fontSize: '15px', margin: '0 0 4px' }}>
+                      La visita debería haber empezado
+                    </p>
+                    <p style={{ color: '#78350F', fontSize: '13px', margin: 0, lineHeight: 1.5 }}>
+                      {visitaProgramada.compita.nombre} aún no ha iniciado la visita. Ya le enviamos un aviso. Si no te contacta pronto, escríbele por el chat o contáctanos a hola@micompaz.com.
+                    </p>
+                  </div>
+                </div>
+              )}
+              <div style={{ background: hayRetraso ? '#FFFBEB' : '#F5F0FF', border: `2px solid ${hayRetraso ? '#F59E0B' : '#7C4DFF'}`, borderRadius: '16px', padding: '28px', marginBottom: '16px', textAlign: 'center' }}>
                 <p style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '22px', color: '#2D1464', margin: '0 0 6px' }}>
                   🗓️ {fechaFormateada ? `Tu visita es el ${fechaFormateada}` : 'Visita próximamente'}
                 </p>
