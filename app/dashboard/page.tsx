@@ -607,8 +607,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                 </div>
               )}
 
-              {/* CTA sin compita ni solicitudes */}
-              {!todasRechazadas && solicitudesPendientes.length === 0 && entrevistasConfirmadas.length === 0 && (
+              {/* CTA sin compita asignado y con cupo para más solicitudes */}
+              {!compita && solicitudesPendientes.length < 3 && (
                 <div style={{ background: 'white', border: '2px solid #FF6B2B', borderRadius: '16px', padding: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
                   <div>
                     <h3 style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '18px', color: '#1A0A3C', margin: '0 0 6px' }}>¿Aún no tienes compita?</h3>
