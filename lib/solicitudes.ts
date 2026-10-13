@@ -436,11 +436,11 @@ export async function registrarConfirmacion(
   solicitudId: string,
   quien: 'cliente' | 'compita',
   ocurrio: boolean,
-): Promise<Solicitud | null> {
+): Promise<{ solicitud: Solicitud; escrita: boolean } | null> {
   const supabase = createAdminSupabase()
   const campo = quien === 'cliente' ? 'confirmacion_cliente' : 'confirmacion_compita'
 
-  // Solo actualiza si el campo aún es null — previene que un segundo clic sobreescriba la respuesta original
+  // Solo actualiza si el campo aún es null — primer clic registra, los siguientes son no-op
   const { data, error } = await supabase
     .from('solicitudes')
     .update({ [campo]: ocurrio })
@@ -450,16 +450,17 @@ export async function registrarConfirmacion(
     .select(SELECT_FIELDS)
     .maybeSingle()
 
-  if (error || !data) {
-    // El campo ya tenía valor — devolver la solicitud sin modificar
-    const { data: existing } = await supabase
-      .from('solicitudes')
-      .select(SELECT_FIELDS)
-      .eq('id', solicitudId)
-      .single()
-    return existing ? mapRow(existing as Record<string, unknown>) : null
-  }
-  return mapRow(data as Record<string, unknown>)
+  if (error) return null
+
+  if (data) return { solicitud: mapRow(data as Record<string, unknown>), escrita: true }
+
+  // El campo ya tenía valor: devolver la solicitud sin modificar, escrita=false
+  const { data: existing } = await supabase
+    .from('solicitudes')
+    .select(SELECT_FIELDS)
+    .eq('id', solicitudId)
+    .single()
+  return existing ? { solicitud: mapRow(existing as Record<string, unknown>), escrita: false } : null
 }
 
 /**

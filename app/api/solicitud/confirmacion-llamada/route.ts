@@ -42,13 +42,40 @@ export async function POST(req: NextRequest) {
   }
 
   const ocurrio = respuesta === 'si'
-  const actualizada = await registrarConfirmacion(solicitud.id, quien, ocurrio)
-  if (!actualizada) return pagina('Error', 'No pudimos registrar tu respuesta. Intenta de nuevo.', 500)
+  const resultado = await registrarConfirmacion(solicitud.id, quien, ocurrio)
+  if (!resultado) return pagina('Error', 'No pudimos registrar tu respuesta. Intenta de nuevo.', 500)
+
+  const { solicitud: sol, escrita } = resultado
+
+  // Segundo clic o reintento: ya estaba registrado, no re-notificar
+  if (!escrita) {
+    if (!ocurrio) {
+      if (quien === 'cliente') return NextResponse.redirect(`${SITE_URL}/reagendar/${encodeURIComponent(token)}`, 303)
+      return pagina('Gracias por avisarnos', 'Ya habíamos registrado tu respuesta.')
+    }
+    return pagina('Ya registramos tu respuesta', '¡Gracias! Ya habíamos registrado tu confirmación.')
+  }
+
+  const admin = createAdminSupabase()
+  const { data: cliente } = await admin.from('usuarios').select('nombre, email').eq('id', solicitud.cliente_id).single()
+
+  // Detectar conflicto: una parte dice sí y la otra dice no
+  const cc = sol.confirmacion_cliente
+  const cp = sol.confirmacion_compita
+  if (cc !== null && cp !== null && cc !== cp) {
+    await avisarAdmin([
+      `⚠️ <b>Conflicto en confirmación de llamada</b>`, ``,
+      `<b>Compita:</b> ${esc(solicitud.compita_nombre)} dice <b>${cp ? 'SÍ ocurrió' : 'NO ocurrió'}</b>`,
+      `<b>Cliente:</b> ${esc(cliente?.nombre ?? '')} dice <b>${cc ? 'SÍ ocurrió' : 'NO ocurrió'}</b>`, ``,
+      `Revisar manualmente qué pasó.`,
+    ].join('\n'))
+    return pagina(
+      'Gracias por avisarnos',
+      'Recibimos tu respuesta. Nuestro equipo revisará lo que pasó y se pondrá en contacto contigo pronto.',
+    )
+  }
 
   if (!ocurrio) {
-    const admin = createAdminSupabase()
-    const { data: cliente } = await admin.from('usuarios').select('nombre, email').eq('id', solicitud.cliente_id).single()
-
     await avisarAdmin([
       `⚠️ <b>Llamada no ocurrió</b>`, ``,
       `<b>${quien === 'cliente' ? 'El cliente' : 'La compita'}</b> reportó que la llamada con <b>${esc(solicitud.compita_nombre)}</b>${quien === 'compita' ? ` y <b>${esc(cliente?.nombre ?? 'el cliente')}</b>` : ''} no se realizó.`, ``,
@@ -74,7 +101,7 @@ export async function POST(req: NextRequest) {
         })
       } catch (e) {
         console.error('Email reagendar al cliente:', e)
-        await avisarAdmin(`⚠️ No se pudo enviar al cliente <b>${esc(cliente.nombre)}</b> el enlace para reagendar. Avísale manualmente.`)
+        await avisarAdmin(`⚠️ No se pudo enviar al cliente <b>${esc(cliente?.nombre ?? '')}</b> el enlace para reagendar. Avísale manualmente.`)
       }
     }
 
