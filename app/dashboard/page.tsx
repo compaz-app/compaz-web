@@ -216,20 +216,24 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             ? { label: '✅ Compita asignado', bg: '#F0FDF4', color: '#15803d', border: '#22c55e' }
             : { label: '🔍 Buscando compita', bg: '#F5F0E8', color: '#6B5C90', border: '#D4CAE8' }
           return (
-            <div style={{ background: 'white', border: '2px solid #E8E0D4', borderRadius: '16px', padding: '20px 24px', marginBottom: '32px', display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-              <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: '#2D1464', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <span style={{ color: 'white', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '22px' }}>{inicial}</span>
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '18px', color: '#1A0A3C' }}>{usuario.nombre}</div>
-                <div style={{ fontSize: '13px', color: '#9B8AB8', marginTop: '2px' }}>
-                  Cliente desde {clienteDesde} · {totalVisitas} {totalVisitas === 1 ? 'visita' : 'visitas'}
-                  {usuario.plan ? ` · Plan ${usuario.plan}` : ''}
+            <div style={{ background: 'white', border: '2px solid #E8E0D4', borderRadius: '16px', padding: '20px 24px', marginBottom: '32px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: '#2D1464', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <span style={{ color: 'white', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '22px' }}>{inicial}</span>
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '18px', color: '#1A0A3C' }}>{usuario.nombre}</div>
+                  <div style={{ fontSize: '13px', color: '#9B8AB8', marginTop: '2px' }}>
+                    Cliente desde {clienteDesde} · {totalVisitas} {totalVisitas === 1 ? 'visita' : 'visitas'}
+                    {usuario.plan ? ` · Plan ${usuario.plan}` : ''}
+                  </div>
                 </div>
               </div>
-              <span style={{ background: badge.bg, color: badge.color, border: `1.5px solid ${badge.border}`, borderRadius: '9999px', padding: '6px 14px', fontSize: '13px', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                {badge.label}
-              </span>
+              <div style={{ marginTop: '12px' }}>
+                <span style={{ background: badge.bg, color: badge.color, border: `1.5px solid ${badge.border}`, borderRadius: '9999px', padding: '6px 14px', fontSize: '13px', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif', whiteSpace: 'nowrap' }}>
+                  {badge.label}
+                </span>
+              </div>
             </div>
           )
         })()}
