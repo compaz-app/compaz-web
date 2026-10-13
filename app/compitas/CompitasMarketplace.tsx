@@ -329,6 +329,11 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
         <h1 style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '28px', color: '#1A0A3C', marginBottom: '8px' }}>
           Encuentra tu Compita
         </h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+          <span style={{ background: '#F0FDF4', border: '1.5px solid #22c55e', color: '#15803d', borderRadius: '9999px', padding: '3px 12px', fontSize: '13px', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif' }}>
+            ✓ {compitas.length} {compitas.length === 1 ? 'Compita disponible' : 'Compitas disponibles'}
+          </span>
+        </div>
         <p style={{ color: '#6B5C90', marginBottom: '32px', lineHeight: '1.6' }}>
           Selecciona la zona donde está tu familiar y te mostramos los compitas disponibles en esa área.
         </p>
