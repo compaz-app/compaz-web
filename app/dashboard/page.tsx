@@ -19,7 +19,6 @@ import { solicitudPendiente, instruccionesPago, referenciaDe, type MetodoDirecto
 import { qRol, firmaRol } from '@/lib/links'
 import LimpiarParamContratado from '@/components/ui/LimpiarParamContratado'
 import AutoRefresh from '@/components/ui/AutoRefresh'
-import VisitasSection from '@/components/ui/VisitasSection'
 import ConfirmarInicioVisita from '@/components/ui/ConfirmarInicioVisita'
 import type { Visita, Compita, Mensaje, Usuario, ReporteVisita } from '@/types'
 
@@ -162,20 +161,6 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     .order('created_at', { ascending: false })
     .limit(10)
 
-  // Todas las visitas para VisitasSection (agrupadas por estado)
-  const { data: todasVisitas } = await adminDb
-    .from('visitas')
-    .select('id, estado, fecha_programada, hora_inicio_programada, hora_fin_programada, inicio, fin, room_url, created_at, compita:compitas(id, nombre, foto_url, zona)')
-    .eq('usuario_id', targetUid)
-    .order('created_at', { ascending: false })
-  type VisitaRes = { id: string; estado: string; fecha_programada: string | null; hora_inicio_programada: string | null; hora_fin_programada: string | null; inicio: string | null; fin: string | null; room_url: string | null; created_at: string; compita: { id: string; nombre: string; foto_url: string | null; zona: string } | null }
-  const tv = (todasVisitas ?? []) as unknown as VisitaRes[]
-  const visitasGrupos = {
-    en_curso:  tv.filter(v => v.estado === 'en_curso'),
-    agendadas: tv.filter(v => v.estado === 'pre_visita' || v.estado === 'programada'),
-    cerradas:  tv.filter(v => v.estado === 'terminada'),
-  }
-
   const totalVisitas = (visitasPasadas?.length ?? 0) + (visitaActiva ? 1 : 0)
   const compita = usuario?.compita ?? null
 
@@ -257,20 +242,6 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             </div>
           )
         })()}
-
-        {/* Planes y pago directo (sin pasar antes por una compita) */}
-        {!previewUid && (
-          <section style={{ marginBottom: '28px' }}>
-            <PlanesPago pendiente={pendientePago} />
-          </section>
-        )}
-
-        {/* Agendar otra visita (2ª, 3ª, 4ª...) */}
-        {puedeAgendarOtra && compita && (
-          <section style={{ marginBottom: '28px' }}>
-            <AgendarOtraVisita compitaNombre={compita.nombre} cupo={cupo} />
-          </section>
-        )}
 
         {/* Banner post-pago */}
         {recienContratado && visitaPreVisita && (
@@ -710,6 +681,13 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           )}
         </section>
 
+        {/* Agendar otra visita — justo después de ver al compita */}
+        {puedeAgendarOtra && compita && (
+          <section style={{ marginBottom: '32px' }}>
+            <AgendarOtraVisita compitaNombre={compita.nombre} cupo={cupo} />
+          </section>
+        )}
+
         {/* ─────────────────────────────────────────────
             SECCIÓN 4: TU FAMILIAR
         ───────────────────────────────────────────── */}
@@ -730,13 +708,6 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               <strong>Tu reseña está en revisión.</strong> En cuanto la aprobemos aparecerá en el perfil público de {(() => { const r = resenasPendientes?.[0] as unknown as { compitas?: { nombre: string }[] } | null; return r?.compitas?.[0]?.nombre ?? 'tu compita' })()} . Gracias por tomarte el tiempo.
             </p>
           </div>
-        )}
-
-        {/* ─────────────────────────────────────────────
-            SECCIÓN 4.5: VISITAS — resumen en tiempo real
-        ───────────────────────────────────────────── */}
-        {usuario && (
-          <VisitasSection usuarioId={targetUid} inicial={visitasGrupos} />
         )}
 
         {/* ─────────────────────────────────────────────
@@ -797,6 +768,12 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           </section>
         )}
 
+        {/* Planes y pago — al fondo, acción secundaria */}
+        {!previewUid && (
+          <section style={{ marginBottom: '40px' }}>
+            <PlanesPago pendiente={pendientePago} />
+          </section>
+        )}
 
       </div>
 
