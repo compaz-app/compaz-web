@@ -817,7 +817,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
 
     // Telegram + email siempre (en paralelo); insertar flag visible en el dashboard admin
     const admins = (process.env.ADMIN_EMAILS ?? '').split(',').map((e) => e.trim()).filter(Boolean)
-    const [telegramOk] = await Promise.allSettled([
+    const [telegramOk, emailOk] = await Promise.allSettled([
       avisarAdmin(aviso),
       admins.length
         ? sendEmail({
@@ -839,7 +839,8 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
         resuelto: false,
       }),
     ])
-    const notificado = telegramOk.status === 'fulfilled' && telegramOk.value === true
+    const notificado = (telegramOk.status === 'fulfilled' && telegramOk.value === true)
+      || (emailOk.status === 'fulfilled')
 
     await sendTelegramMessage(
       chatId,

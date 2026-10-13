@@ -13,6 +13,8 @@ import { GET as respGet, POST as respPost } from '@/app/api/solicitud/responder/
 import { GET as reagGet, POST as reagPost } from '@/app/api/solicitud/reagendar-compita/route'
 import { POST as proponer } from '@/app/api/solicitud/proponer-reagendado/route'
 import { POST as seguimientoCron } from '@/app/api/cron/seguimiento/route'
+import { POST as feedbackPost } from '@/app/api/visita/feedback/route'
+import { tokenFeedback } from '@/lib/links'
 
 beforeEach(limpiar)
 const hace = (min: number) => new Date(Date.now() - min * 60_000).toISOString()
@@ -199,6 +201,41 @@ describe('Enlaces de correo/Telegram: GET no cambia estado (escáneres), POST s�
     await ratPost(req(link(2), { method: 'POST' }))
     assert.equal(v.rating_cliente, guardado, 'una vez calificada no cambia')
     assert.equal(db.rows('compitas').find((c) => c.id === compita.id)!.total_ratings, 1)
+  })
+
+  test('feedback post-visita: guarda comentario, crea reseña y actualiza rating', async () => {
+    const compita = mkCompita()
+    const cli = mkCliente()
+    const v = db.seed('visitas', { usuario_id: cli.id, compita_id: compita.id, estado: 'terminada', rating_cliente: 4 })
+    const t = tokenFeedback(v.id)
+
+    // Token inválido → 403
+    assert.equal((await feedbackPost(req('/api/visita/feedback', { json: { visita_id: v.id, comentario: 'Muy buena atención', quiere_resena: false, t: 'firma-falsa' } }))).status, 403)
+
+    // Comentario vacío → 400
+    assert.equal((await feedbackPost(req('/api/visita/feedback', { json: { visita_id: v.id, comentario: '', quiere_resena: false, t } }))).status, 400)
+
+    // Feedback válido sin reseña pública
+    const r1 = await feedbackPost(req('/api/visita/feedback', { json: { visita_id: v.id, comentario: 'Muy buena atención', quiere_resena: false, t } }))
+    assert.equal(r1.status, 200)
+    assert.equal(v.comentario_cliente, 'Muy buena atención', 'el comentario se guarda en la visita')
+    assert.equal(db.rows('resenas').length, 0, 'sin reseña pública si no la pidió')
+
+    // Idempotente: segundo envío no sobreescribe el comentario
+    await feedbackPost(req('/api/visita/feedback', { json: { visita_id: v.id, comentario: 'Otro comentario', quiere_resena: false, t } }))
+    assert.equal(v.comentario_cliente, 'Muy buena atención', 'el comentario no se sobreescribe')
+
+    // Feedback con reseña pública en otra visita
+    const v2 = db.seed('visitas', { usuario_id: cli.id, compita_id: compita.id, estado: 'terminada', rating_cliente: 5 })
+    const t2 = tokenFeedback(v2.id)
+    const r2 = await feedbackPost(req('/api/visita/feedback', { json: { visita_id: v2.id, comentario: 'Excelente compita, muy puntual', quiere_resena: true, t: t2 } }))
+    assert.equal(r2.status, 200)
+    const resena = db.rows('resenas').find((r) => r.visita_id === v2.id)
+    assert.ok(resena, 'se creó la reseña')
+    assert.equal(resena!.publicada, false, 'empieza no publicada')
+    assert.equal(resena!.texto, 'Excelente compita, muy puntual')
+    assert.equal(resena!.estrellas, 5, 'usa el rating de la visita')
+    assert.ok(db.rows('admin_flags').some((f) => f.entidad_id === v2.id), 'se notificó al admin')
   })
 
   test('responder (botones URL del reagendado): requiere firma de compita', async () => {

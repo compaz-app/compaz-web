@@ -146,7 +146,9 @@ describe('RECORRIDO 1: de la invitación de la compita hasta la valoración, tod
     // ── 12. Valoración desde el correo; el promedio de la compita se actualiza
     const resumen = emailsA('carlos@mail.test').find((e) => e.subject.startsWith('Actualización') || e.subject.startsWith('Resumen'))!
     assert.ok(resumen)
-    assert.equal((await ratingPost(req(`/api/visita/rating?visita_id=${visita.id}&valor=5&t=${tokenRating(visita.id, 5)}`, { method: 'POST' }))).status, 200)
+    const ratingRes = await ratingPost(req(`/api/visita/rating?visita_id=${visita.id}&valor=5&t=${tokenRating(visita.id, 5)}`, { method: 'POST' }))
+    assert.equal(ratingRes.status, 303, 'rating redirige al formulario de feedback')
+    assert.ok(ratingRes.headers.get('location')?.includes(`/feedback/${visita.id}`), 'location apunta al feedback')
     assert.equal(lucia.rating_promedio, 5); assert.equal(lucia.visitas_realizadas, 1)
     assert.ok(!JSON.stringify([db.rows('mensajes'), net.emails, net.tg]).includes('TESTBOTTOKEN'))
 

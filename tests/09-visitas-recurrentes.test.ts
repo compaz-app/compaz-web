@@ -53,7 +53,9 @@ async function visitaCompleta(carlos: any, lucia: any, n: number) {
   await webhook(tgBtn(3000, 'rn:skip'))
   assert.equal(v.estado, 'terminada', `visita ${n}: termina`)
   assert.equal(db.rows('reportes_visita').filter((r) => r.visita_id === v.id).length, 1, `visita ${n}: un cuestionario`)
-  assert.equal((await ratingPost(req(`/api/visita/rating?visita_id=${v.id}&valor=5&t=${tokenRating(v.id, 5)}`, { method: 'POST' }))).status, 200)
+  const ratingRes = await ratingPost(req(`/api/visita/rating?visita_id=${v.id}&valor=5&t=${tokenRating(v.id, 5)}`, { method: 'POST' }))
+  assert.equal(ratingRes.status, 303, `visita ${n}: rating redirige al formulario de feedback`)
+  assert.ok(ratingRes.headers.get('location')?.includes(`/feedback/${v.id}`), `visita ${n}: location apunta al feedback`)
   return v
 }
 
