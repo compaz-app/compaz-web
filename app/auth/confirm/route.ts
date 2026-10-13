@@ -4,7 +4,7 @@
 // GET muestra un botón (los escáneres de correo no consumen el enlace); POST verifica y crea la sesión.
 // Plantilla de Supabase:  {{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email
 import { NextRequest, NextResponse } from 'next/server'
-import { createRouteSupabase, type CookieASetear } from '@/lib/supabase-server'
+import { createRouteSupabase, createAdminSupabase, type CookieASetear } from '@/lib/supabase-server'
 import { destinoTrasLogin, BLOQUEADO } from '@/lib/login-destino'
 import { rutaInterna } from '@/lib/html'
 import { urlPublica } from '@/lib/site'
@@ -40,6 +40,13 @@ export async function POST(req: NextRequest) {
     console.error('[auth/confirm] verifyOtp falló:', error?.status, error?.code, error?.message)
     return aLogin(req, 'verificacion')
   }
+
+  // Marcar cliente como activado (primera vez que entra al portal)
+  await createAdminSupabase()
+    .from('usuarios')
+    .update({ activado: true })
+    .eq('id', data.user.id)
+    .eq('activado', false)
 
   const destino = await destinoTrasLogin(data.user.id, data.user.email, p.next)
   if (destino === BLOQUEADO) {

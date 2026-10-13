@@ -414,7 +414,7 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
       {/* Métricas */}
       <div style={{ background: '#2D1464', padding: '12px 24px', display: 'flex', gap: '0', overflowX: 'auto' }}>
         {[
-          { label: 'Clientes', valor: usuarios.length },
+          { label: 'Clientes', valor: usuarios.filter((u) => u.activado && u.plan !== 'bloqueado').length },
           { label: 'Compitas activos', valor: compitasVerificadas.length },
           { label: 'Visitas este mes', valor: visitasMes },
           { label: 'Sol. pendientes', valor: todasSolicitudes.filter((s) => s.estado === 'pendiente').length },
@@ -430,7 +430,7 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
       {/* Tabs */}
       <div style={{ background: 'white', borderBottom: '2px solid #E8E0D4', display: 'flex', padding: '0 24px', overflowX: 'auto' }}>
         <button style={tabStyle('visitas')} onClick={() => setTab('visitas')}>Visitas activas</button>
-        <button style={tabStyle('clientes')} onClick={() => setTab('clientes')}>Clientes ({usuarios.length})</button>
+        <button style={tabStyle('clientes')} onClick={() => setTab('clientes')}>Clientes ({usuarios.filter((u) => u.activado && u.plan !== 'bloqueado').length})</button>
         <button style={tabStyle('compitas')} onClick={() => setTab('compitas')}>
           Compitas ({compitasVerificadas.length}) {compitasPendientes.length > 0 && <span style={{ background: '#FF6B2B', color: 'white', borderRadius: '9999px', padding: '1px 7px', fontSize: '11px', fontWeight: 800, marginLeft: '4px' }}>{compitasPendientes.length}</span>}
         </button>
@@ -1031,12 +1031,13 @@ function ClientesTab({ usuarios, compitas, onAsignar, onEliminar, onMarcar, clie
   clientesInactivos?: Set<string>
 }) {
   const [busqueda, setBusqueda] = useState('')
-  const [filtro, setFiltro] = useState<'todos' | 'activos' | 'bloqueados'>('todos')
+  const [filtro, setFiltro] = useState<'todos' | 'activos' | 'invitados' | 'bloqueados'>('todos')
 
-  const activos = usuarios.filter((u) => u.plan !== 'bloqueado')
+  const activos = usuarios.filter((u) => u.activado && u.plan !== 'bloqueado')
+  const invitados = usuarios.filter((u) => !u.activado && u.plan !== 'bloqueado')
   const bloqueados = usuarios.filter((u) => u.plan === 'bloqueado')
 
-  const base = filtro === 'bloqueados' ? bloqueados : filtro === 'activos' ? activos : usuarios
+  const base = filtro === 'bloqueados' ? bloqueados : filtro === 'activos' ? activos : filtro === 'invitados' ? invitados : usuarios
   const lista = busqueda.trim()
     ? base.filter((u) =>
         u.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
@@ -1072,6 +1073,7 @@ function ClientesTab({ usuarios, compitas, onAsignar, onEliminar, onMarcar, clie
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
           {btnFiltro('todos', 'Todos', usuarios.length)}
           {btnFiltro('activos', 'Activos', activos.length)}
+          {btnFiltro('invitados', '⏳ Invitados', invitados.length)}
           {btnFiltro('bloqueados', '🚫 Bloqueados', bloqueados.length)}
         </div>
       </div>

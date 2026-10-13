@@ -42,6 +42,7 @@ create table usuarios (
   email       text not null unique,
   zona        text,                         -- Estado/municipio donde vive su familiar
   plan        text,                         -- Reservado para planes futuros
+  activado    boolean not null default false, -- true solo cuando el cliente entra al portal por primera vez
   compita_id  uuid references compitas(id), -- Compita asignada (post-entrevista)
   created_at  timestamptz not null default now()
 );
