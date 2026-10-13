@@ -19,6 +19,7 @@ import {
 import { generarTokenPerfil } from '@/lib/compita-tokens'
 import { sendVisitaInicio, sendVisitaResumen, sendResumenConReporte, sendCodigoTelegram } from '@/lib/resend'
 import { responderSolicitud } from '@/lib/solicitudes'
+import { qRol } from '@/lib/links'
 import { sendEmail, SITE_URL as SITE_URL_PUBLICA } from '@/lib/email'
 import { esc, escLike } from '@/lib/html'
 import { formatSlotVE, formatFechaVE, hoyVE } from '@/lib/format'
@@ -973,6 +974,8 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
               <p style="color:#4A3B6B;background:#F5F0E8;border:2px solid #D4C9E8;border-radius:12px;padding:14px;font-size:14px">
                 📩 Te enviaremos el link de acceso a la llamada <strong>1 hora antes</strong>.
               </p>
+              <p style="color:#6B5C90;font-size:14px;line-height:1.6;margin-top:24px">¿Surgió algo y necesitas cambiar la fecha? Puedes proponer nuevos horarios desde aquí:</p>
+              <a href="${SITE_URL_PUBLICA}/reagendar/${encodeURIComponent(solicitud.token_respuesta)}" style="display:inline-block;background:#6B5C90;color:white;padding:12px 24px;border-radius:9999px;text-decoration:none;font-weight:700;font-size:14px;margin-top:4px">🔄 Reagendar llamada</a>
               <p style="color:#6B5C90;font-size:13px;margin-top:24px">Compaz — <em>Cerca aunque estés lejos</em></p>
             </div>
           `,
@@ -991,8 +994,8 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
 
     await sendTelegramMessage(
       chatId,
-      `✅ <b>Llamada confirmada</b>\n\n<b>Cliente:</b> ${esc(cliente?.nombre ?? 'Cliente')}\n<b>Fecha y hora:</b> ${esc(slotLabel)}\n\n📩 Te enviaremos el link de acceso <b>1 hora antes</b> de la llamada.`,
-      INLINE_INICIO,
+      `✅ <b>Llamada confirmada</b>\n\n<b>Cliente:</b> ${esc(cliente?.nombre ?? 'Cliente')}\n<b>Fecha y hora:</b> ${esc(slotLabel)}\n\n📩 Te enviaremos el link de acceso <b>1 hora antes</b> de la llamada.\n\nSi necesitas cambiar la fecha, toca el botón de abajo.`,
+      { inline_keyboard: [[{ text: '🔄 Reagendar llamada', url: `${SITE_URL}/api/solicitud/reagendar-compita?token=${solicitud.token_respuesta}&${qRol(solicitud.token_respuesta, 'compita')}` }], [{ text: '▶️ Iniciar visita', callback_data: '▶️ Iniciar visita' }]] },
     )
     return NextResponse.json({ ok: true })
   }
