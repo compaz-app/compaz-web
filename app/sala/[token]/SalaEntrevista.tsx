@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 type Paso = 'antes' | 'en_llamada' | 'terminado' | 'problema_tecnico' | 'reconectando' | 'resultado'
@@ -23,6 +23,8 @@ export default function SalaEntrevista({ token, quien, roomUrl, compitaNombre, c
   const [cargando, setCargando] = useState(false)
   const [nuevaRoomUrl, setNuevaRoomUrl] = useState<string | null>(null)
   const router = useRouter()
+  const pasoRef = useRef(paso)
+  useEffect(() => { pasoRef.current = paso }, [paso])
 
   // La sala se abre 10 min antes de la hora pautada
   const aperturaMs = new Date(slotIso).getTime() - 10 * 60_000
@@ -43,6 +45,37 @@ export default function SalaEntrevista({ token, quien, roomUrl, compitaNombre, c
 
   const urlActual = nuevaRoomUrl ?? roomUrl
   const rolQs = `quien=${quien}&s=${sig}`
+
+  // Polling: cuando el Daily webhook ya procesó la llamada, avanzar automáticamente
+  useEffect(() => {
+    if (paso !== 'en_llamada' && paso !== 'reconectando') return
+
+    async function verificar() {
+      const p = pasoRef.current
+      if (p !== 'en_llamada' && p !== 'reconectando') return
+      try {
+        const res = await fetch(`/api/solicitud/estado?token=${token}`)
+        if (!res.ok) return
+        const data = await res.json()
+        if (data.procesado) {
+          if (quien === 'compita') {
+            setPaso('resultado')
+          } else {
+            setPaso('terminado')
+          }
+        }
+      } catch { /* red no disponible, ignorar */ }
+    }
+
+    const onFocus = () => verificar()
+    window.addEventListener('focus', onFocus)
+    const interval = setInterval(verificar, 30_000)
+    return () => {
+      window.removeEventListener('focus', onFocus)
+      clearInterval(interval)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paso, token, quien])
 
   function abrirSala(url?: string) {
     window.open(url ?? urlActual, '_blank', 'noopener,noreferrer')
