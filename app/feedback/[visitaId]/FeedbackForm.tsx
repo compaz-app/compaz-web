@@ -118,7 +118,7 @@ export default function FeedbackForm({ visitaId, compitaNombre, estrellas, yaCom
               </span>
             </div>
             <p style={{ color: '#6B5C90', fontSize: '13px', margin: '0 0 10px', lineHeight: 1.5 }}>
-              Cualquier persona que busque compitas en Compaz podrá verla.
+              La verán otras familias al buscar compitas. <strong style={{ color: '#2D1464' }}>Ayuda a {compitaNombre} a conseguir más trabajo.</strong>
             </p>
             <textarea
               value={resena}
