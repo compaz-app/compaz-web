@@ -19,7 +19,10 @@ import { solicitudPendiente, instruccionesPago, referenciaDe, type MetodoDirecto
 import { qRol, firmaRol } from '@/lib/links'
 import LimpiarParamContratado from '@/components/ui/LimpiarParamContratado'
 import AutoRefresh from '@/components/ui/AutoRefresh'
+import VisitasSection from '@/components/ui/VisitasSection'
 import type { Visita, Compita, Mensaje, Usuario, ReporteVisita } from '@/types'
+
+export const dynamic = 'force-dynamic'
 
 export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ preview?: string; contratado?: string }> }) {
   const session = await requireAuth()
@@ -155,6 +158,20 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     .eq('estado', 'terminada')
     .order('created_at', { ascending: false })
     .limit(10)
+
+  // Todas las visitas para VisitasSection (agrupadas por estado)
+  const { data: todasVisitas } = await adminDb
+    .from('visitas')
+    .select('id, estado, fecha_programada, hora_inicio_programada, hora_fin_programada, inicio, fin, room_url, created_at, compita:compitas(id, nombre, foto_url, zona)')
+    .eq('usuario_id', targetUid)
+    .order('created_at', { ascending: false })
+  type VisitaRes = { id: string; estado: string; fecha_programada: string | null; hora_inicio_programada: string | null; hora_fin_programada: string | null; inicio: string | null; fin: string | null; room_url: string | null; created_at: string; compita: { id: string; nombre: string; foto_url: string | null; zona: string } | null }
+  const tv = (todasVisitas ?? []) as unknown as VisitaRes[]
+  const visitasGrupos = {
+    en_curso:  tv.filter(v => v.estado === 'en_curso'),
+    agendadas: tv.filter(v => v.estado === 'pre_visita' || v.estado === 'programada'),
+    cerradas:  tv.filter(v => v.estado === 'terminada'),
+  }
 
   const totalVisitas = (visitasPasadas?.length ?? 0) + (visitaActiva ? 1 : 0)
   const compita = usuario?.compita ?? null
@@ -690,6 +707,13 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         )}
 
         {/* ─────────────────────────────────────────────
+            SECCIÓN 4.5: VISITAS — resumen en tiempo real
+        ───────────────────────────────────────────── */}
+        {usuario && (
+          <VisitasSection usuarioId={targetUid} inicial={visitasGrupos} />
+        )}
+
+        {/* ─────────────────────────────────────────────
             SECCIÓN 5: BIENESTAR E HISTORIAL
             Solo si hay visitas terminadas
         ───────────────────────────────────────────── */}
@@ -781,8 +805,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
       {/* Actualiza la página cuando cambia el estado de la visita */}
       {usuario && <VisitaWatcher usuarioId={targetUid} visitaActivaId={visitaActiva?.id ?? null} />}
-      {/* Refresca cada 30 s para mostrar cambios en llamadas y solicitudes */}
-      <AutoRefresh intervaloSeg={30} />
+      {/* Refresca cada 15 s para mostrar cambios en llamadas y solicitudes */}
+      <AutoRefresh intervaloSeg={15} />
     </div>
   )
 }
