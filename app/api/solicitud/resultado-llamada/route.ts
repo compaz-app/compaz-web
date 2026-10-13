@@ -73,8 +73,13 @@ async function ejecutar(req: NextRequest, p: NonNullable<ReturnType<typeof leer>
 
   // ── La compita reporta que estuvo bien ────────────────────────────────────
   if (quien === 'compita' && resultado === 'bien') {
-    await admin.from('solicitudes').update({ estado: 'completada' }).eq('id', solicitud.id).eq('estado', 'aceptada')
-    if (compita?.telegram_chat_id) {
+    const { data: marcada } = await admin.from('solicitudes')
+      .update({ estado: 'completada' })
+      .eq('id', solicitud.id)
+      .eq('estado', 'aceptada')
+      .select('id')
+      .maybeSingle()
+    if (marcada && compita?.telegram_chat_id) {
       try {
         await sendTelegramMessage(compita.telegram_chat_id, `✅ <b>Llamada registrada</b>\n\nGracias por tu tiempo. Ahora esperamos que la familia nos confirme su decisión. Te avisamos en cuanto sepamos. ¡Gracias por ser parte de Compaz!`)
       } catch (e) { console.error('Telegram bien compita:', e) }

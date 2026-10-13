@@ -4,6 +4,7 @@ import { crearSiguienteVisita } from '@/lib/visitas'
 import { sendTelegramMessage, avisarAdmin } from '@/lib/telegram'
 import { esc } from '@/lib/html'
 import { ok, err, unauthorized } from '@/lib/api'
+import { reclamarUnaVez } from '@/lib/cron'
 
 export async function POST() {
   const user = await getClienteActivo()
@@ -12,8 +13,10 @@ export async function POST() {
   const r = await crearSiguienteVisita(user.id)
   if (!r.ok) {
     if (r.motivo === 'limite_plan') {
-      // Oportunidad comercial: el cliente quiere más visitas de las que contrató
-      await avisarAdmin(`📈 <b>Plan agotado</b>\n\n<b>${esc(r.clienteNombre)}</b> intentó agendar otra visita con <b>${esc(r.compitaNombre)}</b>, pero ya usó las ${r.cupo.limite} de su plan <b>${esc(r.cupo.planNombre)}</b>. Contáctalo para renovar o ampliar.`)
+      // Oportunidad comercial — alertar al admin solo una vez cada 24h por usuario
+      if (await reclamarUnaVez(`limite_plan:${user.id}`)) {
+        await avisarAdmin(`📈 <b>Plan agotado</b>\n\n<b>${esc(r.clienteNombre)}</b> intentó agendar otra visita con <b>${esc(r.compitaNombre)}</b>, pero ya usó las ${r.cupo.limite} de su plan <b>${esc(r.cupo.planNombre)}</b>. Contáctalo para renovar o ampliar.`)
+      }
     }
     return err(r.mensaje, r.motivo === 'error' ? 500 : 409)
   }
