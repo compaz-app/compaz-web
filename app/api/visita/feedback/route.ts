@@ -7,12 +7,13 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null)
   const visita_id = typeof body?.visita_id === 'string' ? body.visita_id.trim() : ''
   const comentario = typeof body?.comentario === 'string' ? body.comentario.trim().slice(0, 600) : ''
+  const nota_interna = typeof body?.nota_interna === 'string' ? body.nota_interna.trim().slice(0, 600) : ''
   const quiere_resena = body?.quiere_resena === true
   const t = typeof body?.t === 'string' ? body.t : null
 
   if (!visita_id || !/^[0-9a-f-]{36}$/i.test(visita_id)) return err('Parámetros inválidos', 400)
   if (!feedbackValido(visita_id, t)) return err('Enlace inválido', 403)
-  if (!comentario) return err('El comentario no puede estar vacío', 400)
+  if (!comentario && !nota_interna) return err('El comentario no puede estar vacío', 400)
 
   const admin = createAdminSupabase()
   const { data: visita } = await admin
@@ -24,17 +25,20 @@ export async function POST(req: NextRequest) {
   if (!visita) return notFound('Visita no encontrada')
   if (visita.estado !== 'terminada') return err('La visita no ha terminado', 400)
 
-  // Guardar comentario interno (solo si no tenía uno — idempotente)
-  if (!visita.comentario_cliente) {
+  // Guardar comentario (idempotente — solo si no tenía uno)
+  if (!visita.comentario_cliente && (comentario || nota_interna)) {
     const { error } = await admin
       .from('visitas')
-      .update({ comentario_cliente: comentario })
+      .update({
+        ...(comentario ? { comentario_cliente: comentario } : {}),
+        ...(nota_interna ? { nota_interna_cliente: nota_interna } : {}),
+      })
       .eq('id', visita_id)
     if (error) return serverError('No se pudo guardar el comentario')
   }
 
   // Crear reseña pública pendiente de aprobación
-  if (quiere_resena) {
+  if (quiere_resena && comentario) {
     await admin.from('resenas').upsert(
       {
         visita_id,
