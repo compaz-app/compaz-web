@@ -143,7 +143,7 @@ export default function FeedbackForm({ visitaId, compitaNombre, estrellas, yaCom
               </span>
             </div>
             <p style={{ color: '#78350F', fontSize: '13px', margin: '0 0 10px', lineHeight: 1.5 }}>
-              Algo que quieras que sepamos nosotros, sin que aparezca en ningún perfil.
+              Solo la lee el equipo de Compaz. No aparece en ningún perfil ni se comparte con {compitaNombre}.
             </p>
             <textarea
               value={notaInterna}
