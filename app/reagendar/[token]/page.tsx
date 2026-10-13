@@ -13,13 +13,11 @@ interface SolicitudInfo {
   estado: string
 }
 
-const HORAS_VE = [8, 9, 10, 11, 14, 15, 16, 17, 18]
-
 function generarSlots(): { diaLabel: string; slots: Slot[] }[] {
   const dias: { diaLabel: string; slots: Slot[] }[] = []
   const ahora = new Date()
 
-  for (let d = 1; d <= 14; d++) {
+  for (let d = 0; d <= 14; d++) {
     const refVE = new Date(ahora.getTime() + d * 24 * 60 * 60 * 1000)
 
     const partsVE = new Intl.DateTimeFormat('en-CA', {
@@ -35,15 +33,21 @@ function generarSlots(): { diaLabel: string; slots: Slot[] }[] {
       weekday: 'long', day: 'numeric', month: 'long',
     })
 
-    const slots: Slot[] = HORAS_VE.map(h => {
-      const slotUTC = new Date(Date.UTC(anoVE, mesVE, diaVE, h + 4, 0, 0))
-      return {
-        iso: slotUTC.toISOString(),
-        label: `${String(h).padStart(2, '0')}:00`,
+    const slotsDelDia: Slot[] = []
+    for (let hVE = 8; hVE < 20; hVE++) {
+      for (const m of [0, 20, 40]) {
+        const slotUTC = new Date(Date.UTC(anoVE, mesVE, diaVE, hVE + 4, m, 0))
+        if (slotUTC <= ahora) continue
+        slotsDelDia.push({
+          iso: slotUTC.toISOString(),
+          label: slotUTC.toLocaleTimeString('es-VE', {
+            timeZone: 'America/Caracas', hour: '2-digit', minute: '2-digit', hour12: true,
+          }),
+        })
       }
-    })
+    }
 
-    dias.push({ diaLabel: fechaLabel, slots })
+    if (slotsDelDia.length > 0) dias.push({ diaLabel: fechaLabel, slots: slotsDelDia })
   }
 
   return dias
