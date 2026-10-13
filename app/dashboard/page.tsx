@@ -20,6 +20,7 @@ import { qRol, firmaRol } from '@/lib/links'
 import LimpiarParamContratado from '@/components/ui/LimpiarParamContratado'
 import AutoRefresh from '@/components/ui/AutoRefresh'
 import VisitasSection from '@/components/ui/VisitasSection'
+import ConfirmarInicioVisita from '@/components/ui/ConfirmarInicioVisita'
 import type { Visita, Compita, Mensaje, Usuario, ReporteVisita } from '@/types'
 
 export const dynamic = 'force-dynamic'
@@ -50,12 +51,14 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
   if (!usuario && !previewUid) redirect('/login')
 
-  // Visita activa (en curso)
+  // Visita activa (en curso) o esperando confirmación del cliente
   const { data: visitaActiva } = await db
     .from('visitas')
     .select('*, compita:compitas(id, nombre, zona, estado, verificado, foto_url, descripcion, servicios, youtube_url, visitas_realizadas, created_at)')
     .eq('usuario_id', targetUid)
-    .eq('estado', 'en_curso')
+    .in('estado', ['en_curso', 'confirmando_inicio'])
+    .order('updated_at', { ascending: false })
+    .limit(1)
     .maybeSingle() as { data: (Visita & { compita: Compita }) | null }
 
   // Visita en coordinación pre-visita (chat para agendar fecha)
@@ -339,20 +342,28 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             Muestra solo el estado activo. Sin duplicados.
         ───────────────────────────────────────────── */}
 
-        {/* 2a. Visita en curso */}
+        {/* 2a. Visita en curso (o esperando confirmación del cliente) */}
         {visitaActiva && (
           <section id="visita-en-curso" style={{ marginBottom: '40px' }}>
             <h2 style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '13px', color: '#9B8AB8', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 16px' }}>
-              Visita en curso
+              {visitaActiva.estado === 'confirmando_inicio' ? '¡Tu compita llegó!' : 'Visita en curso'}
             </h2>
-            {!previewUid && (
+
+            {visitaActiva.estado === 'confirmando_inicio' && !previewUid && (
+              <ConfirmarInicioVisita
+                visitaId={visitaActiva.id}
+                compitaNombre={visitaActiva.compita.nombre}
+              />
+            )}
+
+            {visitaActiva.estado === 'en_curso' && !previewUid && (
               <VideoCall
                 visitaId={visitaActiva.id}
                 compitaNombre={visitaActiva.compita.nombre}
                 roomUrlInicial={visitaActiva.room_url ?? null}
               />
             )}
-            {previewUid && visitaActiva.room_url && (
+            {visitaActiva.estado === 'en_curso' && previewUid && visitaActiva.room_url && (
               <div style={{ marginBottom: '16px' }}>
                 <a href={visitaActiva.room_url} target="_blank" rel="noreferrer"
                   style={{ background: '#2D1464', color: 'white', borderRadius: '9999px', padding: '10px 20px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '14px', textDecoration: 'none' }}>
@@ -360,9 +371,11 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                 </a>
               </div>
             )}
-            <div style={{ background: 'white', border: '2px solid #22c55e', borderRadius: '16px', overflow: 'hidden', height: '500px', display: 'flex', flexDirection: 'column' }}>
-              <Chat visita={visitaActiva} mensajesIniciales={mensajes} compitaNombre={visitaActiva.compita.nombre} />
-            </div>
+            {visitaActiva.estado === 'en_curso' && (
+              <div style={{ background: 'white', border: '2px solid #22c55e', borderRadius: '16px', overflow: 'hidden', height: '500px', display: 'flex', flexDirection: 'column' }}>
+                <Chat visita={visitaActiva} mensajesIniciales={mensajes} compitaNombre={visitaActiva.compita.nombre} />
+              </div>
+            )}
           </section>
         )}
 

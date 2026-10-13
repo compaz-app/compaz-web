@@ -10,7 +10,7 @@ export interface HorarioDisponible {
   inicio: string // "09:00" en hora Venezuela (UTC-4)
   fin: string    // "17:00" — bloques de 20 min, máximo 20:00
 }
-export type VisitaEstado = 'pre_visita' | 'programada' | 'en_curso' | 'terminada'
+export type VisitaEstado = 'pre_visita' | 'programada' | 'confirmando_inicio' | 'en_curso' | 'terminada'
 export type MensajeOrigen = 'compita' | 'cliente' | 'admin'
 export type MensajeTipo = 'texto' | 'foto'
 

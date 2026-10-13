@@ -56,7 +56,7 @@ create table visitas (
   compita_id  uuid not null references compitas(id),
   usuario_id  uuid not null references usuarios(id),
   estado      text not null default 'programada'
-              check (estado in ('pre_visita', 'programada', 'en_curso', 'terminada')),
+              check (estado in ('pre_visita', 'programada', 'confirmando_inicio', 'en_curso', 'terminada')),
   fecha_programada        date,        -- Día agendado para la visita de cuidado
   hora_inicio_programada  time,        -- Hora de inicio acordada (Venezuela UTC-4)
   hora_fin_programada     time,        -- Hora de fin acordada (Venezuela UTC-4)

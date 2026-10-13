@@ -1041,11 +1041,10 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
 
     // ── Confirmar inicio ───────────────────────────────────────────────────────
     if (conf.accion === 'iniciar') {
-      const ahora = new Date().toISOString()
-      // Reclamo atómico: solo pasa si sigue programada/pre_visita, con fecha confirmada y de esta compita.
+      // Pasa a confirmando_inicio: el cliente debe confirmar en el dashboard (max 5 min).
       const { data: visita, error: errInicio } = await supabase
         .from('visitas')
-        .update({ estado: 'en_curso', inicio: ahora })
+        .update({ estado: 'confirmando_inicio' })
         .eq('id', conf.visitaId)
         .eq('compita_id', compita.id)
         .in('estado', ['programada', 'pre_visita'])
@@ -1064,29 +1063,11 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
         )
         return NextResponse.json({ ok: true })
       }
-      const usuario = visita.usuario
-
-      const perfilLineas: string[] = []
-      if (usuario.familiar_nombre) perfilLineas.push(`<b>Nombre:</b> ${esc(usuario.familiar_nombre)}`)
-      if (usuario.familiar_edad) perfilLineas.push(`<b>Edad:</b> ${esc(usuario.familiar_edad)} años`)
-      if (usuario.familiar_condicion) perfilLineas.push(`<b>Condición:</b> ${esc(usuario.familiar_condicion)}`)
-      if (usuario.familiar_notas) perfilLineas.push(`<b>Notas:</b> ${esc(usuario.familiar_notas)}`)
-      const perfilTexto = perfilLineas.length > 0 ? `\n\n👤 <b>Perfil del familiar:</b>\n${perfilLineas.join('\n')}` : ''
 
       await sendTelegramMessage(
         chatId,
-        `✅ <b>¡Visita iniciada!</b>\n\nEstás con <b>${esc(usuario.nombre)}</b>. La familia ya sabe que llegaste.${perfilTexto}\n\n📸 <b>Puedes mandar fotos y mensajes</b> desde aquí durante la visita — la familia los verá en tiempo real.\n\nCuando termines, toca el botón rojo de abajo. 👇`,
-        INLINE_DURANTE,
+        `⏳ <b>Esperando confirmación del cliente</b>\n\nLe avisamos a <b>${esc(visita.usuario.nombre)}</b> que llegaste. En cuanto confirme, la visita arranca.\n\nSi no confirma en 5 minutos, la visita se inicia sola.`,
       )
-
-      try { await sendVisitaInicio(usuario, compita, visita) }
-      catch (e) {
-        console.error('Error correo inicio:', e)
-        await avisarAdmin(`⚠️ No se pudo enviar el correo de inicio de visita a <b>${esc(usuario.nombre)}</b> (${esc(usuario.email)}).`)
-      }
-
-      const horaInicio = new Date(ahora).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Caracas', hour12: true })
-      await avisarAdmin(`▶️ <b>Visita iniciada</b>\n\n<b>Compita:</b> ${esc(compita.nombre)}\n<b>Cliente:</b> ${esc(usuario.nombre)}\n<b>Hora:</b> ${horaInicio}`)
     }
 
     // ── Confirmar fin ─────────────────────────────────────────────────────────
