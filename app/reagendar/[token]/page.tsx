@@ -153,8 +153,11 @@ export default function ReagendarPage({ params }: { params: Promise<{ token: str
           <h1 style={{ color: '#1A0A3C', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '22px', margin: '0 0 8px' }}>
             Reagendar con {info?.compita_nombre}
           </h1>
-          <p style={{ color: '#6B5C90', fontFamily: 'Inter, sans-serif', fontSize: '15px', lineHeight: 1.6, margin: 0 }}>
+          <p style={{ color: '#6B5C90', fontFamily: 'Inter, sans-serif', fontSize: '15px', lineHeight: 1.6, margin: '0 0 6px' }}>
             Elige hasta 3 horarios. {info?.compita_nombre} confirmará el que mejor le quede.
+          </p>
+          <p style={{ color: '#9B8AB8', fontFamily: 'Inter, sans-serif', fontSize: '12px', margin: 0 }}>
+            🕐 Horarios en hora de Venezuela (UTC−4) — ahora son las {new Date().toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Caracas' })} VET
           </p>
         </div>
 

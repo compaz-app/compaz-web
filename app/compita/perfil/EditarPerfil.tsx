@@ -373,7 +373,10 @@ export default function EditarPerfil({ token, inicial }: Props) {
       {/* Horarios */}
       <div>
         <label style={s.label}>¿Cuándo puedes recibir llamadas de presentación? *</label>
-        <p style={s.hint}>Los clientes elegirán una hora dentro de tu disponibilidad para coordinar una llamada de 20 minutos. Horario Venezuela (hora local). Bloques de 20 min, hasta las 8:00 PM.</p>
+        <p style={s.hint}>Los clientes elegirán una hora dentro de tu disponibilidad para coordinar una llamada de 20 minutos. Bloques de 20 min, hasta las 8:00 PM.</p>
+        <p style={{ ...s.hint, color: '#9B8AB8', marginTop: '-6px' }}>
+          🕐 Horarios en hora de Venezuela (UTC−4) — ahora son las {new Date().toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Caracas' })} VET
+        </p>
 
         {horarios.length > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>

@@ -690,8 +690,11 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
                     <label style={{ display: 'block', fontWeight: 600, fontSize: '13px', color: '#1A0A3C', marginBottom: '4px' }}>
                       Elige uno o varios horarios *
                     </label>
-                    <p style={{ color: '#6B5C90', fontSize: '12px', marginBottom: '10px' }}>
+                    <p style={{ color: '#6B5C90', fontSize: '12px', marginBottom: '4px' }}>
                       {seleccionada.nombre} confirmará uno. Puedes proponer hasta 3 para darle más opciones. La llamada es de 20 minutos.
+                    </p>
+                    <p style={{ color: '#9B8AB8', fontSize: '11px', marginBottom: '10px' }}>
+                      🕐 Horarios en hora de Venezuela (UTC−4) — ahora son las {new Date().toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Caracas' })} VET
                     </p>
                     {(() => {
                       const diasConSlots = generarSlotsSinLimite()

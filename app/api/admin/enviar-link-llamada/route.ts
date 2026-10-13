@@ -77,6 +77,8 @@ export async function POST(req: NextRequest) {
             <a href="${salaClienteUrl}" style="display:inline-block;background:#FF6B2B;color:white;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:16px;margin-top:8px">
               Entrar a la llamada →
             </a>
+            <p style="color:#6B5C90;font-size:14px;line-height:1.6;margin-top:24px">¿Surgió algo y no puedes a esa hora? Propón nuevos horarios aquí:</p>
+            <a href="${SITE_URL}/reagendar/${encodeURIComponent(t)}" style="display:inline-block;background:#6B5C90;color:white;padding:12px 24px;border-radius:9999px;text-decoration:none;font-weight:700;font-size:14px;margin-top:4px">🔄 Reagendar llamada</a>
             <p style="color:#6B5C90;font-size:13px;margin-top:24px">
               Compaz — <em>Cerca aunque estés lejos</em>
             </p>
@@ -104,8 +106,9 @@ export async function POST(req: NextRequest) {
           ``,
           `⏱️ La llamada es de <b>20 minutos</b>. La sala se cierra a los 23 min.`,
           ``,
-          `<a href="${salaCompitaUrl}">Entrar a la llamada →</a>`,
+          `Si no puedes a esa hora, toca Reagendar abajo.`,
         ].join('\n'),
+        { inline_keyboard: [[{ text: '▶️ Entrar a la llamada', url: salaCompitaUrl }, { text: '🔄 Reagendar', url: `${SITE_URL}/api/solicitud/reagendar-compita?token=${t}&${qRol(t, 'compita')}` }]] },
       )
       resultados.push('telegram_compita: ok')
     } catch (e) {
