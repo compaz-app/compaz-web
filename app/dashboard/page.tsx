@@ -490,11 +490,6 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                   El resumen completo llegará a tu correo en breve.
                 </p>
               </div>
-              {compita && (
-                <a href="/compitas" style={{ background: '#2D1464', color: 'white', borderRadius: '9999px', padding: '12px 24px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '14px', textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                  Agendar otra visita →
-                </a>
-              )}
             </div>
           </section>
         )}
@@ -802,35 +797,6 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           </section>
         )}
 
-        {/* ─────────────────────────────────────────────
-            SECCIÓN 6: AGENDAR OTRA VISITA
-            Solo si tiene compita y no hay visita activa/en curso
-        ───────────────────────────────────────────── */}
-        {compita && !hayVisitaActivaOCercana && !visitaTerminoHoy && (visitasPasadas?.length ?? 0) > 0 && (
-          <section style={{ marginBottom: '40px' }}>
-            <h2 style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '13px', color: '#9B8AB8', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 16px' }}>
-              Próxima visita
-            </h2>
-            <div style={{ background: 'white', border: '2px solid #E8E0D4', borderRadius: '16px', padding: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
-              <div>
-                <p style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '17px', color: '#1A0A3C', margin: '0 0 4px' }}>
-                  ¿Agendar otra visita?
-                </p>
-                <p style={{ color: '#6B5C90', fontSize: '14px', margin: 0 }}>
-                  Con {compita.nombre} →
-                </p>
-              </div>
-              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                <a href={`/compitas/${compita.id}`} style={{ background: '#2D1464', color: 'white', borderRadius: '9999px', padding: '12px 24px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '14px', textDecoration: 'none', whiteSpace: 'nowrap' }}>
-                  Con {compita.nombre} →
-                </a>
-                <a href="/compitas" style={{ background: 'white', color: '#2D1464', border: '2px solid #2D1464', borderRadius: '9999px', padding: '12px 24px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '14px', textDecoration: 'none', whiteSpace: 'nowrap' }}>
-                  Buscar otro compita
-                </a>
-              </div>
-            </div>
-          </section>
-        )}
 
       </div>
 
