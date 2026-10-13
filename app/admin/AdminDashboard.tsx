@@ -158,6 +158,13 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
 
   const flagsAbiertos = flags.filter((f) => !f.resuelto)
 
+  const llamadasEnCurso = todasSolicitudes.filter((s) => {
+    if (s.estado !== 'aceptada' || !s.slot_confirmado) return false
+    const inicio = new Date(s.slot_confirmado).getTime()
+    const ahora = Date.now()
+    return ahora >= inicio && ahora <= inicio + 23 * 60 * 1000
+  })
+
   const compitasPendientes = compitas.filter((c) => c.estado === 'activo' && !c.verificado)
   const compitasEnMapa = compitas.filter((c) => c.estado === 'activo' && c.verificado && !!c.telegram_chat_id)
   const compitasSinTelegram = compitas.filter((c) => c.estado === 'activo' && c.verificado && !c.telegram_chat_id)
@@ -396,6 +403,27 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
           >
             Atendido — cerrar alarma
           </button>
+        </div>
+      )}
+
+      {/* Llamadas de entrevista en curso */}
+      {llamadasEnCurso.length > 0 && (
+        <div style={{ background: '#EFF6FF', borderBottom: '2px solid #93C5FD', padding: '10px 24px', display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
+          <span style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', color: '#1d4ed8', whiteSpace: 'nowrap' }}>
+            📞 {llamadasEnCurso.length === 1 ? 'Llamada en curso' : `${llamadasEnCurso.length} llamadas en curso`}
+          </span>
+          {llamadasEnCurso.map((s) => {
+            const cliente = (s as unknown as { usuarios?: { nombre: string } }).usuarios
+            const compita = (s as unknown as { compitas?: { nombre: string } }).compitas
+            return (
+              <span key={s.id} style={{ background: 'white', border: '1.5px solid #93C5FD', borderRadius: '9999px', padding: '3px 12px', fontSize: '12px', color: '#1e40af', fontFamily: 'Inter, sans-serif', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                {compita?.nombre ?? '—'} ↔ {cliente?.nombre ?? '—'}
+                {s.room_url && (
+                  <a href={s.room_url} target="_blank" rel="noreferrer" style={{ color: '#FF6B2B', fontWeight: 700, textDecoration: 'none', fontSize: '11px' }}>Unirse →</a>
+                )}
+              </span>
+            )
+          })}
         </div>
       )}
 
