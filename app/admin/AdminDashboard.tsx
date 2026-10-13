@@ -1326,11 +1326,13 @@ function CompitaCard({ c, onToggleVerificado, onToggleEstado, onVerPerfil, onTog
         </div>
         <div style={{ color: '#6B5C90', fontSize: '13px', marginBottom: '4px' }}>
           {c.zona} · {c.visitas_realizadas} visitas
-          {c.rating_promedio != null && c.total_ratings > 0 && (
+          {c.rating_promedio != null && c.total_ratings > 0 ? (
             <span style={{ marginLeft: '8px', color: '#F59E0B', fontWeight: 700 }}>
               ★ {Number(c.rating_promedio).toFixed(1)}{' '}
               <span style={{ color: '#9B8AB8', fontWeight: 400 }}>({c.total_ratings})</span>
             </span>
+          ) : (
+            <span style={{ marginLeft: '8px', color: '#9B8AB8' }}>☆ Sin calificaciones</span>
           )}
         </div>
         {c.email && (
