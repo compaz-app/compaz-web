@@ -341,7 +341,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
         {/* 2a. Visita en curso */}
         {visitaActiva && (
-          <section style={{ marginBottom: '40px' }}>
+          <section id="visita-en-curso" style={{ marginBottom: '40px' }}>
             <h2 style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '13px', color: '#9B8AB8', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 16px' }}>
               Visita en curso
             </h2>

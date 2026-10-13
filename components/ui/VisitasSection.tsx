@@ -186,9 +186,9 @@ function VisitaCard({ visita, tab }: { visita: VisitaResumen; tab: Tab }) {
         </div>
         <p style={{ color: '#6B5C90', fontSize: '13px', margin: 0, textTransform: 'capitalize' }}>{fechaLabel}</p>
       </div>
-      {tab === 'en_curso' && visita.room_url && (
-        <a href="/dashboard" style={{ background: '#22c55e', color: 'white', borderRadius: '9999px', padding: '10px 20px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0 }}>
-          Ver visita →
+      {tab === 'en_curso' && (
+        <a href="#visita-en-curso" style={{ background: '#22c55e', color: 'white', borderRadius: '9999px', padding: '10px 20px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0 }}>
+          Ver visita ↓
         </a>
       )}
     </div>
