@@ -91,6 +91,7 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
   const [agendando, setAgendando] = useState(false)
   const [errorAgendar, setErrorAgendar] = useState('')
   const [compitaAsignadaId, setCompitaAsignadaId] = useState<string | null>(null)
+  const [compitasConHistorial, setCompitasConHistorial] = useState<string[]>([])
   const resultadosRef = useRef<HTMLDivElement>(null)
 
   async function agendarOtraVisita() {
@@ -115,7 +116,10 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
   useEffect(() => {
     fetch('/api/usuario/yo')
       .then((r) => r.json())
-      .then((d) => { if (d.data?.compita_id) setCompitaAsignadaId(d.data.compita_id) })
+      .then((d) => {
+        if (d.data?.compita_id) setCompitaAsignadaId(d.data.compita_id)
+        if (Array.isArray(d.data?.compitas_con_historial)) setCompitasConHistorial(d.data.compitas_con_historial)
+      })
       .catch(() => {})
   }, [])
 
@@ -637,7 +641,7 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
 
               <ResenasCompita compitaId={seleccionada.id} />
 
-              {seleccionada.id === compitaAsignadaId ? (
+              {(seleccionada.id === compitaAsignadaId || compitasConHistorial.includes(seleccionada.id)) ? (
                 /* Cliente que ya tiene esta compita asignada — ir directo al agendamiento */
                 <div>
                   <p style={{ color: '#6B5C90', fontSize: '14px', marginBottom: '12px', lineHeight: 1.5 }}>
