@@ -1099,7 +1099,11 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
         try {
           const { data: mensajes } = await supabase
             .from('mensajes').select('*').eq('visit_id', visita.id).order('created_at', { ascending: true }) as { data: Mensaje[] | null }
-          await sendVisitaResumen(visita.usuario, compita, { ...visita, fin }, mensajes ?? [])
+          const { count: visitasAnteriores } = await supabase
+            .from('visitas').select('id', { count: 'exact', head: true })
+            .eq('usuario_id', visita.usuario_id).eq('compita_id', compita.id)
+            .eq('estado', 'terminada').neq('id', visita.id)
+          await sendVisitaResumen(visita.usuario, compita, { ...visita, fin }, mensajes ?? [], (visitasAnteriores ?? 0) > 0)
         } catch (e) {
           console.error('Error correo básico al terminar:', e)
           await avisarAdmin(`⚠️ No se pudo enviar el resumen de visita a <b>${esc(visita.usuario.nombre)}</b> (${esc(visita.usuario.email)}). Reenvíalo manualmente.`)

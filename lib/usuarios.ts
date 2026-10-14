@@ -63,6 +63,15 @@ export async function asignarCompita(usuarioId: string, compitaId: string | null
   const { error } = await supabase.from('usuarios').update({ compita_id: compitaId }).eq('id', usuarioId)
   if (error) throw new Error(error.message)
 
+  // Cerrar cualquier solicitud pendiente de este cliente con esta compita para que el cron
+  // de seguimiento no les mande el email de "¿quieres contratar?" una vez que ya contrataron.
+  await supabase
+    .from('solicitudes')
+    .update({ estado: 'contratada', seguimiento_enviado: true, seguimiento2_enviado: true })
+    .eq('cliente_id', usuarioId)
+    .eq('compita_id', compitaId)
+    .in('estado', ['pendiente', 'aceptada', 'completada'])
+
   const { data: existente } = await supabase
     .from('visitas').select('id').eq('compita_id', compitaId).eq('usuario_id', usuarioId)
     .in('estado', ['pre_visita', 'programada', 'en_curso']).limit(1).maybeSingle()

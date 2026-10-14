@@ -276,7 +276,8 @@ export async function sendVisitaResumen(
   usuario: Usuario,
   compita: Compita,
   visita: Visita,
-  mensajes: Mensaje[]
+  mensajes: Mensaje[],
+  esRecurrente = false,
 ): Promise<void> {
   const inicio = new Date(visita.inicio!)
   const fin = new Date(visita.fin!)
@@ -341,11 +342,22 @@ export async function sendVisitaResumen(
             ${[1,2,3,4,5].map(n => `<a href="${SITE_URL}/api/visita/rating?visita_id=${visita.id}&valor=${n}&t=${ratingToken(visita.id, n)}" style="display:inline-block;background:#F5F0FF;border:2px solid #D4C9E8;color:#2D1464;padding:8px 14px;border-radius:9999px;text-decoration:none;font-weight:700;font-size:16px">${'⭐'.repeat(n)}</a>`).join('')}
           </div>
         </div>
+        ${esRecurrente ? `
+        <div style="margin-top:28px;padding-top:24px;border-top:1.5px solid #E8E0D4">
+          <p style="color:#4A3B6B;font-size:15px;font-weight:600;margin:0 0 16px">¿Qué quieres hacer para la próxima visita?</p>
+          <a href="${SITE_URL}/dashboard" style="display:inline-block;background:#FF6B2B;color:white;padding:12px 24px;border-radius:9999px;text-decoration:none;font-weight:700;font-size:14px;margin-bottom:10px">
+            Continuar con ${escapeHtml(compita.nombre)} →
+          </a>
+          <br>
+          <a href="${SITE_URL}/compitas" style="display:inline-block;background:#F5F0FF;color:#2D1464;padding:12px 24px;border-radius:9999px;text-decoration:none;font-weight:600;font-size:14px;border:2px solid #D4C9E8;margin-top:4px">
+            Elegir otro compita
+          </a>
+        </div>` : `
         <div style="margin-top:20px">
           <a href="${SITE_URL}/dashboard" style="display:inline-block;background:#FF6B2B;color:white;padding:12px 24px;border-radius:9999px;text-decoration:none;font-weight:700;font-size:14px">
             Agendar otra visita →
           </a>
-        </div>
+        </div>`}
         <p style="color: #6B5C90; font-size: 14px; margin-top: 32px;">
           Compaz — <em>Cerca aunque estés lejos</em>
         </p>
