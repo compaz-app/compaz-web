@@ -37,7 +37,6 @@ interface Props {
   compitas: Compita[]
   usuarioNombre: string
   usuarioEmail: string
-  compitaAsignadaId?: string | null
   backHref?: string
   backLabel?: string
 }
@@ -73,7 +72,7 @@ function ResenasCompita({ compitaId }: { compitaId: string }) {
   )
 }
 
-export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEmail, compitaAsignadaId, backHref = '/dashboard', backLabel = '← Mi portal' }: Props) {
+export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEmail, backHref = '/dashboard', backLabel = '← Mi portal' }: Props) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [estado, setEstadoState] = useState(searchParams.get('estado') ?? '')
@@ -91,6 +90,7 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
   const [diasAbiertos, setDiasAbiertos] = useState<Record<string, boolean>>({})
   const [agendando, setAgendando] = useState(false)
   const [errorAgendar, setErrorAgendar] = useState('')
+  const [compitaAsignadaId, setCompitaAsignadaId] = useState<string | null>(null)
   const resultadosRef = useRef<HTMLDivElement>(null)
 
   async function agendarOtraVisita() {
@@ -111,6 +111,13 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
       setAgendando(false)
     }
   }
+
+  useEffect(() => {
+    fetch('/api/usuario/yo')
+      .then((r) => r.json())
+      .then((d) => { if (d.data?.compita_id) setCompitaAsignadaId(d.data.compita_id) })
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     fetch('/api/mis-solicitudes')
