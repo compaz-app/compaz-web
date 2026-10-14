@@ -202,7 +202,7 @@ async function guardarReporteYEnviarEmail(
   // Reportes anteriores del mismo cliente (vía sus visitas)
   const { data: visitasCliente } = await adminReporte
     .from('visitas')
-    .select('id')
+    .select('id, compita_id')
     .eq('usuario_id', visita.usuario_id)
     .neq('id', visitaId)
     .eq('estado', 'terminada')
@@ -244,6 +244,7 @@ async function guardarReporteYEnviarEmail(
     const { data: mensajes } = await adminReporte
       .from('mensajes').select('*').eq('visit_id', visitaId).order('created_at', { ascending: true }) as { data: import('@/types').Mensaje[] | null }
 
+    const esRecurrenteReporte = (visitasCliente ?? []).some((v) => (v as { compita_id?: string }).compita_id === compita.id)
     const resumenIA = await sendResumenConReporte(
       visita.usuario,
       compita,
@@ -252,6 +253,7 @@ async function guardarReporteYEnviarEmail(
       reporte,
       historial,
       true, // esActualizacion — el email básico ya fue enviado al terminar
+      esRecurrenteReporte,
     )
 
     // Guardar resumen IA en el reporte
