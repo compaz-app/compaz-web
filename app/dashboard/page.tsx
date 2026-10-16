@@ -295,14 +295,12 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                 >
                   ✅ Sí, quiero contratar a {compitaNombre}
                 </a>
-                <form method="GET" action={noContratoUrl} style={{ display: 'inline' }}>
-                  <button
-                    type="submit"
-                    style={{ background: 'transparent', color: '#6B5C90', border: '2px solid #C4B5D4', borderRadius: '9999px', padding: '12px 22px', fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: '14px', cursor: 'pointer' }}
-                  >
-                    No por ahora
-                  </button>
-                </form>
+                <a
+                  href={noContratoUrl}
+                  style={{ background: 'transparent', color: '#6B5C90', border: '2px solid #C4B5D4', borderRadius: '9999px', padding: '12px 22px', fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: '14px', textDecoration: 'none', display: 'inline-block' }}
+                >
+                  No por ahora
+                </a>
               </div>
             </section>
           )
