@@ -41,7 +41,7 @@ export function validarPerfil(e: PerfilEntrada | Record<string, unknown>, opts: 
   if (e.nombre !== undefined && opts.permitirNombre) {
     const n = texto(e.nombre, 80)
     if (!n || n.length < 2) return { ok: false, error: 'Nombre inválido' }
-    out.nombre = n
+    out.nombre = n.split(' ').map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')
   }
   if (e.zona !== undefined) {
     const z = texto(e.zona, 100)
