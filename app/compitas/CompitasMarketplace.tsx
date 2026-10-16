@@ -631,7 +631,17 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
                 <div style={{ marginBottom: '20px' }}>
                   <p style={{ fontWeight: 700, color: '#1A0A3C', fontFamily: 'Bricolage Grotesque, sans-serif', marginBottom: '10px' }}>Video de presentación</p>
                   <iframe
-                    src={seleccionada.youtube_url.replace('watch?v=', 'embed/').replace('youtu.be/', 'www.youtube.com/embed/')}
+                    src={(() => {
+                      const u = seleccionada.youtube_url
+                      try {
+                        const parsed = new URL(u)
+                        const v = parsed.searchParams.get('v')
+                        if (v) return `https://www.youtube.com/embed/${v}`
+                        const parts = parsed.pathname.split('/').filter(Boolean)
+                        const id = parts[parts.length - 1]
+                        return `https://www.youtube.com/embed/${id}`
+                      } catch { return u }
+                    })()}
                     style={{ width: '100%', height: '200px', borderRadius: '12px', border: 'none' }}
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowFullScreen
