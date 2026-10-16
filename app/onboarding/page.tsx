@@ -306,6 +306,10 @@ function OnboardingForm() {
                 Recibirás un mensaje de confirmación y ya estarás conectado.
               </li>
             </ol>
+            <div style={{ marginTop: '16px', padding: '14px 16px', background: '#FFF3CD', borderLeft: '4px solid #FF6B2B', borderRadius: '8px' }}>
+              <p style={{ fontSize: '13px', fontWeight: 700, color: '#1A0A3C', margin: '0 0 4px 0' }}>⚠️ Importante</p>
+              <p style={{ fontSize: '13px', color: '#1A0A3C', margin: 0 }}>El código llega únicamente por correo. Compaz nunca te llamará por teléfono. No compartas este código con nadie.</p>
+            </div>
           </div>
 
           <a href="https://t.me/CompazVisitasBot?start=onboarding" target="_blank" rel="noopener noreferrer" style={s.btnPrimary}>

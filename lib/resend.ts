@@ -80,6 +80,10 @@ export async function sendCodigoTelegram(email: string, nombre: string, codigo: 
         <p style="font-size: 16px; color: #1A0A3C;">Tu código para activar tu cuenta en el bot de Telegram es:</p>
         <div style="font-size: 40px; font-weight: bold; letter-spacing: 8px; color: #FF6B2B; text-align: center; padding: 24px 0;">${codigo}</div>
         <p style="font-size: 14px; color: #6B5C90;">Expira en 15 minutos. Ingrésalo en el chat de Telegram con el bot de Compaz.</p>
+        <div style="margin-top: 24px; padding: 16px; background: #FFF3CD; border-left: 4px solid #FF6B2B; border-radius: 8px;">
+          <p style="font-size: 14px; font-weight: 700; color: #1A0A3C; margin: 0 0 6px 0;">⚠️ Importante</p>
+          <p style="font-size: 14px; color: #1A0A3C; margin: 0;">El código llega únicamente por correo. Compaz nunca te llamará por teléfono. No compartas este código con nadie.</p>
+        </div>
       </div>
     `,
   })
@@ -116,6 +120,7 @@ export async function sendBienvenidaCompita(
             <li>El bot te pedirá tu nombre completo. Escríbelo tal como apareces aquí.</li>
             <li>Te enviará un código de 6 dígitos a este correo.</li>
             <li>Ingresa ese código en el chat para activar tu cuenta.</li>
+            <li style="color:#B91C1C;font-weight:700;">⚠️ El código llega únicamente por correo. Compaz nunca te llamará por teléfono. No compartas este código con nadie.</li>
           </ol>
           <a href="${botUrl}" style="display:inline-block;background:#FF6B2B;color:white;padding:12px 24px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:15px">
             Abrir bot de Telegram →

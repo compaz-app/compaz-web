@@ -378,7 +378,7 @@ async function iniciarVerificacion(
       await sendTelegramMessage(chatId, `No pudimos enviar el correo con tu código. Escríbenos a hola@micompaz.com y te activamos la cuenta. ✍️ O intenta de nuevo escribiendo tu nombre:`, QUITAR_TECLADO)
       return
     }
-    await sendTelegramMessage(chatId, `Encontré tu cuenta 👀\n\nTe enviamos un <b>código de 6 dígitos</b> al correo <b>${esc(enmascarar(c.email))}</b>.\n\n✍️ Escríbelo aquí cuando lo recibas:`, QUITAR_TECLADO)
+    await sendTelegramMessage(chatId, `Encontré tu cuenta 👀\n\nTe enviamos un <b>código de 6 dígitos</b> al correo <b>${esc(enmascarar(c.email))}</b>.\n\n✍️ Escríbelo aquí cuando lo recibas.\n\n⚠️ <b>Importante:</b> el código llega únicamente por correo. Compaz nunca te llamará por teléfono. No compartas este código con nadie.`, QUITAR_TECLADO)
   } else {
     const entregado = await avisarAdmin(`🔐 <b>Verificación de Compita</b>\n\n<b>${esc(c.nombre)}</b> quiere activar su cuenta.\n\nCódigo: <code>${codigo}</code>\n\nExpira en 15 minutos.`)
     if (!entregado) {
