@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
   const { token } = body as { token: string }
   const slots = body.slots as unknown[]
   if (slots.length > 3) return err('Máximo 3 horarios')
-  if (!slots.every((s) => esSlotFuturo(s, 30))) return err('Todos los horarios deben ser válidos y estar al menos 30 minutos en el futuro')
+  if (!slots.every((s) => esSlotFuturo(s, 10))) return err('Todos los horarios deben ser válidos y estar al menos 10 minutos en el futuro')
   const limite = Date.now() + 60 * 86400_000
   if ((slots as string[]).some((s) => new Date(s).getTime() > limite)) return err('Los horarios deben estar dentro de los próximos 60 días')
   const unicos = [...new Set((slots as string[]).map((s) => new Date(s).toISOString()))]
