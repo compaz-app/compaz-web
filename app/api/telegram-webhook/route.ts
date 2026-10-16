@@ -1066,6 +1066,23 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
         return NextResponse.json({ ok: true })
       }
 
+      // Avisar al cliente por correo que el compita llegó y está esperando su confirmación.
+      if (visita.usuario.email) {
+        const nombreCorto = esc(compita.nombre.split(' ')[0])
+        sendEmail({
+          to: visita.usuario.email,
+          subject: `${compita.nombre} ya llegó — confirma el inicio`,
+          html: `
+            <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px">
+              <h2 style="color:#2D1464;font-size:22px">¡${nombreCorto} ya llegó! 👋</h2>
+              <p style="color:#4A3B6B;font-size:15px;line-height:1.6"><strong>${esc(compita.nombre)}</strong> está lista para empezar la visita. Entra al dashboard y confirma el inicio.</p>
+              <a href="${SITE_URL_PUBLICA}/dashboard" style="display:inline-block;background:#FF6B2B;color:white;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:15px;margin-top:8px">Confirmar inicio →</a>
+              <p style="color:#9990A8;font-size:13px;margin-top:24px">Si no confirmas en 5 minutos, la visita arranca sola.</p>
+              <p style="color:#9990A8;font-size:13px">Compaz — <em>Cerca aunque estés lejos</em></p>
+            </div>`,
+        }).catch(e => console.error('[telegram-webhook] email confirmando_inicio cliente:', e))
+      }
+
       await sendTelegramMessage(
         chatId,
         `⏳ <b>Esperando confirmación del cliente</b>\n\nLe avisamos a <b>${esc(visita.usuario.nombre)}</b> que llegaste. En cuanto confirme, la visita arranca.\n\nSi no confirma en 5 minutos, la visita se inicia sola.`,
