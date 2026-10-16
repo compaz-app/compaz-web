@@ -397,11 +397,15 @@ export async function marcarRecordatorioEnviado(solicitudId: string): Promise<vo
 // ── Confirmación post-llamada ─────────────────────────────────────────────────
 
 /**
- * Solicitudes cuya llamada terminó hace 25+ minutos y aún no se envió la confirmación.
+ * Solicitudes cuya llamada debería haber ocurrido y aún no se envió la confirmación.
+ * Dispara a partir de slot+5min para ser respaldo rápido del webhook de Daily.
+ * La sala abre 10 min antes del slot y dura max 23 min, así que a los 5 min del slot
+ * la llamada puede aún estar en curso si empezó en el momento exacto; pero como el
+ * webhook es el trigger principal, el cron solo llega aquí cuando el webhook no disparó.
  */
 export async function getSolicitudesParaConfirmacion(): Promise<Solicitud[]> {
   const supabase = createAdminSupabase()
-  const hace25min = new Date(Date.now() - 25 * 60 * 1000).toISOString()
+  const hace5min = new Date(Date.now() - 5 * 60 * 1000).toISOString()
   const hace7d = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
 
   const { data, error } = await supabase
@@ -409,7 +413,7 @@ export async function getSolicitudesParaConfirmacion(): Promise<Solicitud[]> {
     .select(SELECT_FIELDS)
     .eq('estado', 'aceptada')
     .eq('confirmacion_llamada_enviada', false)
-    .lte('slot_confirmado', hace25min)
+    .lte('slot_confirmado', hace5min)
     .gte('slot_confirmado', hace7d)
 
   if (error) throw new Error(error.message)

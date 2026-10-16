@@ -115,15 +115,26 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   }
   const solicitudes = ((solicitudesRaw ?? []) as unknown[]).map((r) => r as SolicitudRow)
   const solicitudesPendientes = solicitudes.filter((s) => s.estado === 'pendiente')
-  const entrevistasConfirmadas = solicitudes.filter((s) => s.estado === 'aceptada' && s.slot_confirmado)
-  // Llamada ocurrió y está esperando que el cliente decida si contrata.
-  // Excluir si el compita de la solicitud ya está asignado al cliente — ya contrató.
-  const compitaAsignadoId = usuario?.compita_id ?? null
-  const pendientesDecision = solicitudes.filter((s) =>
-    (s.estado === 'completada' || (s.estado === 'aceptada' && s.seguimiento_enviado))
-    && s.token_respuesta
-    && s.compita_id !== compitaAsignadoId
+  // Entrevistas confirmadas: solo las que el slot NO ha llegado todavía
+  const ahoraDash = Date.now()
+  const entrevistasConfirmadas = solicitudes.filter((s) =>
+    s.estado === 'aceptada' && s.slot_confirmado
+    && ahoraDash < new Date(s.slot_confirmado).getTime() + 5 * 60_000
   )
+  // Llamada ocurrió: el slot pasó hace más de 5 min, o el webhook/cron ya marcó el seguimiento.
+  // Excluir si el compita ya está asignado al cliente (ya contrató).
+  const compitaAsignadoId = usuario?.compita_id ?? null
+  const pendientesDecision = solicitudes.filter((s) => {
+    if (s.compita_id === compitaAsignadoId) return false
+    if (!s.token_respuesta) return false
+    if (s.estado === 'completada') return true
+    if (s.estado === 'aceptada' && s.seguimiento_enviado) return true
+    // Slot ya pasó hace más de 5 min aunque el webhook/cron no hayan disparado aún
+    if (s.estado === 'aceptada' && s.slot_confirmado) {
+      return ahoraDash >= new Date(s.slot_confirmado).getTime() + 5 * 60_000
+    }
+    return false
+  })
   const solicitudesHistorial = solicitudes.filter((s) => s.estado === 'rechazada' || s.estado === 'completada')
   const todasRechazadas = solicitudes.length > 0
     && solicitudesPendientes.length === 0
