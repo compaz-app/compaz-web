@@ -74,10 +74,11 @@ export async function POST(req: NextRequest) {
     await avisarAdmin(`⚠️ <b>${esc(clienteNombre)}</b> contrató el plan <b>${esc(planInfo.nombre)}</b> pero no se pudo registrar el pago (sin límite de visitas). Ejecuta la migración de pagos y regístralo desde el panel.`)
   }
 
-  // La visita de coordinación solo se crea si no hay ya una activa con esta compita
+  // La visita de coordinación: buscar cualquier visita activa del cliente (el constraint es por cliente, no por compita).
+  // Si existe con otra compita, reasignarla a la nueva; si no existe, crearla.
   const { data: existente } = await admin
-    .from('visitas').select('id')
-    .eq('compita_id', sol.compita_id).eq('usuario_id', sol.cliente_id)
+    .from('visitas').select('id, compita_id')
+    .eq('usuario_id', sol.cliente_id)
     .in('estado', ['pre_visita', 'programada', 'en_curso']).limit(1).maybeSingle()
 
   let visitaId = existente?.id as string | undefined
@@ -88,6 +89,9 @@ export async function POST(req: NextRequest) {
       .select('id').single()
     if (eVisita || !nueva) { await revertir(); return serverError(eVisita) }
     visitaId = nueva.id
+  } else if (existente?.compita_id !== sol.compita_id) {
+    // Reasignar la visita activa a la nueva compita contratada
+    await admin.from('visitas').update({ compita_id: sol.compita_id, estado: 'pre_visita' }).eq('id', visitaId)
   }
 
   // Asignar la compita al cliente (sin esto el bot no encuentra al cliente de la compita)
