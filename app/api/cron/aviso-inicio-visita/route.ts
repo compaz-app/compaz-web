@@ -16,8 +16,8 @@ export async function POST(req: NextRequest) {
 
   const admin = createAdminSupabase()
 
-  // ── 1. Avisar al compita 30 min antes ──────────────────────────────────────
-  const desde = horaVE(Date.now() + 15 * 60_000)
+  // ── 1. Avisar al compita hasta 30 min antes (ventana 0-30 min para no perder visitas recién agendadas) ──
+  const desde = horaVE(Date.now())
   const hasta = horaVE(Date.now() + 30 * 60_000)
   const hoy = hoyVE()
 
