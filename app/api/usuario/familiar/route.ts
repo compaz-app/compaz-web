@@ -12,17 +12,21 @@ export async function PUT(req: NextRequest) {
     familiar_edad?: number | null
     familiar_condicion?: string
     familiar_notas?: string
+    telefono?: string
   }
 
   const supabase = createAdminSupabase()
+  const update: Record<string, unknown> = {
+    familiar_nombre: body.familiar_nombre?.trim() || null,
+    familiar_edad: body.familiar_edad || null,
+    familiar_condicion: body.familiar_condicion?.trim() || null,
+    familiar_notas: body.familiar_notas?.trim() || null,
+  }
+  if (body.telefono !== undefined) update.telefono = body.telefono.trim() || null
+
   const { error } = await supabase
     .from('usuarios')
-    .update({
-      familiar_nombre: body.familiar_nombre?.trim() || null,
-      familiar_edad: body.familiar_edad || null,
-      familiar_condicion: body.familiar_condicion?.trim() || null,
-      familiar_notas: body.familiar_notas?.trim() || null,
-    })
+    .update(update)
     .eq('id', user.id)
 
   if (error) return serverError(error)

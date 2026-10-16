@@ -60,6 +60,7 @@ export interface Usuario {
   familiar_edad: number | null
   familiar_condicion: string | null
   familiar_notas: string | null
+  telefono: string | null
   created_at: string
   compita?: Compita
 }

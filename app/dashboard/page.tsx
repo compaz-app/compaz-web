@@ -20,6 +20,7 @@ import { qRol, firmaRol } from '@/lib/links'
 import LimpiarParamContratado from '@/components/ui/LimpiarParamContratado'
 import AutoRefresh from '@/components/ui/AutoRefresh'
 import ConfirmarInicioVisita from '@/components/ui/ConfirmarInicioVisita'
+import PrimerAccesoModal from '@/components/ui/PrimerAccesoModal'
 import type { Visita, Compita, Mensaje, Usuario, ReporteVisita } from '@/types'
 
 export const dynamic = 'force-dynamic'
@@ -44,7 +45,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
   const { data: usuario } = await db
     .from('usuarios')
-    .select('*, compita:compitas(id, nombre, zona, estado, verificado, foto_url, descripcion, servicios, youtube_url, visitas_realizadas, created_at), familiar_nombre, familiar_edad, familiar_condicion, familiar_notas')
+    .select('*, compita:compitas(id, nombre, zona, estado, verificado, foto_url, descripcion, servicios, youtube_url, visitas_realizadas, created_at), familiar_nombre, familiar_edad, familiar_condicion, familiar_notas, telefono')
     .eq('id', targetUid)
     .single() as { data: Usuario | null }
 
@@ -183,6 +184,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
   return (
     <div style={{ minHeight: '100vh', background: '#FDFAF6', fontFamily: 'Inter, sans-serif' }}>
+
+      {/* Modal de primer acceso — se muestra hasta que el cliente llene sus datos */}
+      {!previewUid && !usuario?.familiar_nombre && <PrimerAccesoModal />}
 
       {/* Banner admin preview */}
       {previewUid && isAdmin && (
