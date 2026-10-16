@@ -115,9 +115,13 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const solicitudes = ((solicitudesRaw ?? []) as unknown[]).map((r) => r as SolicitudRow)
   const solicitudesPendientes = solicitudes.filter((s) => s.estado === 'pendiente')
   const entrevistasConfirmadas = solicitudes.filter((s) => s.estado === 'aceptada' && s.slot_confirmado)
-  // Llamada ocurrió y está esperando que el cliente decida si contrata
+  // Llamada ocurrió y está esperando que el cliente decida si contrata.
+  // Excluir si el compita de la solicitud ya está asignado al cliente — ya contrató.
+  const compitaAsignadoId = usuario?.compita_id ?? null
   const pendientesDecision = solicitudes.filter((s) =>
-    (s.estado === 'completada' || (s.estado === 'aceptada' && s.seguimiento_enviado)) && s.token_respuesta
+    (s.estado === 'completada' || (s.estado === 'aceptada' && s.seguimiento_enviado))
+    && s.token_respuesta
+    && s.compita_id !== compitaAsignadoId
   )
   const solicitudesHistorial = solicitudes.filter((s) => s.estado === 'rechazada' || s.estado === 'completada')
   const todasRechazadas = solicitudes.length > 0
