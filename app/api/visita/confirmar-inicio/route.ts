@@ -2,7 +2,7 @@
 // Transiciona confirmando_inicio → en_curso y notifica al compita por Telegram.
 import { getClienteActivo } from '@/lib/auth'
 import { createAdminSupabase } from '@/lib/supabase-server'
-import { sendTelegramMessage, avisarAdmin, INLINE_DURANTE } from '@/lib/telegram'
+import { sendTelegramMessage, avisarAdmin, TECLADO_DURANTE_VISITA } from '@/lib/telegram'
 import { sendVisitaInicio } from '@/lib/resend'
 import { esc } from '@/lib/html'
 import { ok, err, unauthorized } from '@/lib/api'
@@ -44,8 +44,8 @@ export async function POST(req: Request) {
     try {
       await sendTelegramMessage(
         compita.telegram_chat_id,
-        `✅ <b>¡${esc(usuario.nombre)} confirmó tu llegada!</b>\n\nLa visita está activa.${perfilTexto}\n\n📸 Puedes mandar fotos y mensajes desde aquí — la familia los verá en tiempo real.\n\nCuando termines, toca el botón rojo de abajo. 👇`,
-        INLINE_DURANTE,
+        `✅ <b>¡${esc(usuario.nombre)} confirmó tu llegada!</b>\n\nLa visita está activa.${perfilTexto}\n\n📸 Puedes mandar fotos y mensajes desde aquí — la familia los verá en tiempo real.\n\nCuando termines, toca el botón 🔴 de tu teclado. 👇`,
+        TECLADO_DURANTE_VISITA,
       )
     } catch (e) { console.error('[confirmar-inicio] Telegram compita:', e) }
   }

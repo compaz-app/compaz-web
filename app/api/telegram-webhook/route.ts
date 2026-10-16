@@ -14,6 +14,7 @@ import {
   INLINE_REAGENDAR_VISITA,
   INLINE_INICIAR_O_REAGENDAR,
   QUITAR_TECLADO,
+  TECLADO_DURANTE_VISITA,
   makeInlineKeyboard,
 } from '@/lib/telegram'
 import { generarTokenPerfil } from '@/lib/compita-tokens'
@@ -703,7 +704,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
     const { data: visitaEnCurso } = await supabase
       .from('visitas').select('id').eq('compita_id', compita.id).eq('estado', 'en_curso').limit(1).maybeSingle()
     if (visitaEnCurso) {
-      await sendTelegramMessage(chatId, `Ya tienes una visita en curso. Cuando termines, toca el botón rojo. 👇`, INLINE_DURANTE)
+      await sendTelegramMessage(chatId, `Ya tienes una visita en curso. Cuando termines, toca el botón 🔴 de tu teclado. 👇`, TECLADO_DURANTE_VISITA)
       return NextResponse.json({ ok: true })
     }
 
@@ -790,7 +791,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
     await sendTelegramMessage(
       chatId,
       `Cancelado. No se hizo ningún cambio.`,
-      visitaActiva ? INLINE_DURANTE : INLINE_INICIO,
+      visitaActiva ? TECLADO_DURANTE_VISITA : INLINE_INICIO,
     )
     return NextResponse.json({ ok: true })
   }
@@ -850,7 +851,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
       notificado
         ? `🚨 <b>Alerta enviada.</b>\n\nEl equipo de Compaz fue notificado ahora mismo y te contactará de inmediato.\n\nSi hay peligro inmediato, llama al <b>911</b>.`
         : `⚠️ <b>No pudimos avisar al equipo.</b>\n\nLlama ahora al <b>911</b> y escribe a hola@micompaz.com. Intenta tocar el botón de nuevo en unos segundos.`,
-      INLINE_DURANTE,
+      TECLADO_DURANTE_VISITA,
     )
     return NextResponse.json({ ok: true })
   }

@@ -4,7 +4,7 @@
 //    confirmación del cliente (para no bloquear al compita si el cliente no responde).
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminSupabase } from '@/lib/supabase-server'
-import { sendTelegramMessage, avisarAdmin, INLINE_INICIO, INLINE_DURANTE } from '@/lib/telegram'
+import { sendTelegramMessage, avisarAdmin, INLINE_INICIO, INLINE_DURANTE, TECLADO_DURANTE_VISITA } from '@/lib/telegram'
 import { sendVisitaInicio } from '@/lib/resend'
 import { esc } from '@/lib/html'
 import { hoyVE, horaVE } from '@/lib/format'
@@ -90,8 +90,8 @@ export async function POST(req: NextRequest) {
       try {
         await sendTelegramMessage(
           compita.telegram_chat_id,
-          `✅ <b>¡Visita iniciada automáticamente!</b>\n\nEl cliente no confirmó a tiempo, pero la visita arrancó igual.${perfilTexto}\n\n📸 Puedes mandar fotos y mensajes desde aquí.\n\nCuando termines, toca el botón rojo de abajo. 👇`,
-          INLINE_DURANTE,
+          `✅ <b>¡Visita iniciada automáticamente!</b>\n\nEl cliente no confirmó a tiempo, pero la visita arrancó igual.${perfilTexto}\n\n📸 Puedes mandar fotos y mensajes desde aquí.\n\nCuando termines, toca el botón 🔴 de tu teclado. 👇`,
+          TECLADO_DURANTE_VISITA,
         )
       } catch (e) { console.error('[aviso-inicio-visita] Telegram auto-confirma:', e) }
     }
