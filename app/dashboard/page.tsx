@@ -176,6 +176,13 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const hayVisitaActivaOCercana = !!(visitaActiva || visitaPreVisita || visitaProgramada)
   const esPrimeraVisita = (visitasPasadas?.length ?? 0) === 0
   const cupo = await cupoDelPlan(targetUid)
+
+  // Mensajes no leídos (proxy: mensajes de compita/admin después del último mensaje del cliente)
+  const ultimoMsgCliente = [...mensajes].reverse().find(m => m.origen === 'cliente')
+  const unreadCount = mensajes.filter(m =>
+    m.origen !== 'cliente' &&
+    (!ultimoMsgCliente || m.created_at > ultimoMsgCliente.created_at)
+  ).length
   const sp = previewUid ? null : await solicitudPendiente(targetUid)
   const pendientePago = sp ? { id: sp.id, tipo: sp.tipo, plan: sp.plan, horas: sp.horas, monto_usd: sp.monto_usd, metodo: sp.metodo, referencia: referenciaDe(sp.id), ...(() => { const i = instruccionesPago(sp.metodo as MetodoDirecto); return { lineas: i.lineas, configurado: i.configurado } })() } : null
   // Visitas 2, 3, 4...: con compita activa y verificada, sin otra visita en curso, y cuenta no bloqueada
@@ -208,45 +215,114 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       <div style={{ maxWidth: '860px', margin: '0 auto', padding: '32px 20px' }}>
 
         {/* ─────────────────────────────────────────────
-            SECCIÓN 1: CABECERA DE CUENTA
+            HERO: tarjeta de estado principal
+            Una sola tarjeta que siempre dice exactamente
+            dónde está el cliente y qué debe hacer ahora.
         ───────────────────────────────────────────── */}
         {usuario && (() => {
           const inicial = usuario.nombre?.charAt(0).toUpperCase() ?? '?'
-          const clienteDesde = new Date(usuario.created_at ?? '').toLocaleDateString('es-VE', { month: 'long', year: 'numeric' })
-          const hayEntrevista = entrevistasConfirmadas.length > 0
-          const hayPendiente = solicitudesPendientes.length > 0
-          const badge = visitaActiva
-            ? { label: '🟢 Visita en curso', bg: '#F0FDF4', color: '#15803d', border: '#22c55e' }
+          const esNuevo = !compita && !hayVisitaActivaOCercana && pendientesDecision.length === 0 && entrevistasConfirmadas.length === 0
+
+          // Pasos del onboarding (solo relevantes cuando esNuevo)
+          const paso1Hecho = solicitudes.length > 0
+          const paso2Hecho = entrevistasConfirmadas.length > 0 || pendientesDecision.length > 0 || solicitudesHistorial.some(s => s.estado === 'completada')
+          const paso3Hecho = !!compita
+
+          // Estado con badge + descripción
+          const estado = visitaActiva?.estado === 'en_curso'
+            ? { badge: '🟢 Visita en curso', desc: `${visitaActiva.compita.nombre} está con tu familiar`, badgeBg: '#DCFCE7', badgeColor: '#15803d' }
+            : visitaActiva?.estado === 'confirmando_inicio'
+            ? { badge: '🔔 Tu compita llegó', desc: 'Confirma su llegada para iniciar la visita', badgeBg: '#DBEAFE', badgeColor: '#1d4ed8' }
             : visitaPreVisita
-            ? { label: '📋 Coordinando visita', bg: '#F0FDF4', color: '#15803d', border: '#86EFAC' }
+            ? { badge: unreadCount > 0 ? `💬 ${unreadCount} mensaje${unreadCount > 1 ? 's' : ''} nuevo${unreadCount > 1 ? 's' : ''}` : '📋 Coordinando visita', desc: `Coordina la fecha con ${visitaPreVisita.compita.nombre}`, badgeBg: unreadCount > 0 ? '#FEE2E2' : '#DCFCE7', badgeColor: unreadCount > 0 ? '#DC2626' : '#15803d' }
             : visitaProgramada
-            ? { label: '🗓️ Visita programada', bg: '#F5F0FF', color: '#2D1464', border: '#7C4DFF' }
-            : hayEntrevista
-            ? { label: '📅 Entrevista confirmada', bg: '#EFF6FF', color: '#1d4ed8', border: '#60a5fa' }
-            : hayPendiente
-            ? { label: '⏳ Esperando respuesta', bg: '#FFF3E8', color: '#C84B0E', border: '#FF6B2B' }
+            ? { badge: '🗓️ Visita programada', desc: `${visitaProgramada.compita.nombre} · ${visitaProgramada.fecha_programada ? new Date(visitaProgramada.fecha_programada + 'T00:00:00').toLocaleDateString('es-VE', { weekday: 'long', day: 'numeric', month: 'long' }) : 'fecha por confirmar'}`, badgeBg: '#EDE9FE', badgeColor: '#2D1464' }
+            : pendientesDecision.length > 0
+            ? { badge: '📞 Llamada completada', desc: 'Decide si quieres contratar', badgeBg: '#FEF3C7', badgeColor: '#92400E' }
+            : entrevistasConfirmadas.length > 0
+            ? { badge: '📅 Entrevista confirmada', desc: `Con ${entrevistasConfirmadas[0].compitas?.nombre ?? 'tu compita'}`, badgeBg: '#DBEAFE', badgeColor: '#1d4ed8' }
+            : solicitudesPendientes.length > 0
+            ? { badge: '⏳ Esperando respuesta', desc: `${solicitudesPendientes.length} compita${solicitudesPendientes.length > 1 ? 's' : ''} recibió tu solicitud`, badgeBg: '#FEF3C7', badgeColor: '#92400E' }
             : compita
-            ? { label: '✅ Compita asignado', bg: '#F0FDF4', color: '#15803d', border: '#22c55e' }
-            : { label: '🔍 Buscando compita', bg: '#F5F0E8', color: '#6B5C90', border: '#D4CAE8' }
+            ? { badge: '✅ Con compita', desc: compita.nombre, badgeBg: '#DCFCE7', badgeColor: '#15803d' }
+            : { badge: '👋 Bienvenido', desc: 'Encuentra a tu compita', badgeBg: '#F5F0FF', badgeColor: '#6B5C90' }
+
           return (
-            <div style={{ background: 'white', border: '2px solid #E8E0D4', borderRadius: '16px', padding: '20px 24px', marginBottom: '32px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <div style={{ background: 'white', border: '2px solid #E8E0D4', borderRadius: '20px', padding: '24px', marginBottom: '28px' }}>
+              {/* Fila superior: avatar + nombre + badges */}
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
                 <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: '#2D1464', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <span style={{ color: 'white', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '22px' }}>{inicial}</span>
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '18px', color: '#1A0A3C' }}>{usuario.nombre}</div>
-                  <div style={{ fontSize: '13px', color: '#9B8AB8', marginTop: '2px' }}>
-                    Cliente desde {clienteDesde} · {totalVisitas} {totalVisitas === 1 ? 'visita' : 'visitas'}
-                    {usuario.plan ? ` · Plan ${usuario.plan}` : ''}
+                  <div style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '18px', color: '#1A0A3C', marginBottom: '6px' }}>
+                    {usuario.nombre}
                   </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center' }}>
+                    <span style={{ background: estado.badgeBg, color: estado.badgeColor, borderRadius: '9999px', padding: '4px 12px', fontSize: '13px', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif', whiteSpace: 'nowrap' }}>
+                      {estado.badge}
+                    </span>
+                    {/* Cupo del plan */}
+                    {cupo && cupo.restantes > 0 && (
+                      <span style={{ background: '#F5F0FF', color: '#2D1464', borderRadius: '9999px', padding: '4px 12px', fontSize: '13px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                        🎫 {cupo.restantes} visita{cupo.restantes !== 1 ? 's' : ''} disponible{cupo.restantes !== 1 ? 's' : ''}
+                      </span>
+                    )}
+                    {cupo && cupo.restantes === 0 && (
+                      <span style={{ background: '#FEE2E2', color: '#DC2626', borderRadius: '9999px', padding: '4px 12px', fontSize: '13px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                        ⚠️ Sin visitas disponibles
+                      </span>
+                    )}
+                  </div>
+                  {estado.desc && (
+                    <div style={{ color: '#6B5C90', fontSize: '13px', marginTop: '6px', lineHeight: 1.4 }}>{estado.desc}</div>
+                  )}
                 </div>
               </div>
-              <div style={{ marginTop: '12px' }}>
-                <span style={{ background: badge.bg, color: badge.color, border: `1.5px solid ${badge.border}`, borderRadius: '9999px', padding: '6px 14px', fontSize: '13px', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif', whiteSpace: 'nowrap' }}>
-                  {badge.label}
-                </span>
-              </div>
+
+              {/* Barra de progreso — solo para clientes nuevos buscando compita */}
+              {esNuevo && (
+                <div style={{ borderTop: '1.5px solid #F0EBF8', marginTop: '20px', paddingTop: '20px' }}>
+                  <p style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '12px', color: '#9B8AB8', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 16px' }}>
+                    Cómo funciona
+                  </p>
+                  <div style={{ display: 'flex', alignItems: 'flex-start' }}>
+                    {([
+                      { label: 'Pide una entrevista', sub: 'Elige un compita y propón horarios', done: paso1Hecho },
+                      { label: 'Conócelo en llamada', sub: '20 minutos para saber si encajan', done: paso2Hecho },
+                      { label: 'Contrata y comienza', sub: 'Coordina la primera visita', done: paso3Hecho },
+                    ] as const).map((paso, i, arr) => (
+                      <div key={i} style={{ display: 'flex', alignItems: 'flex-start', flex: 1 }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
+                          <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: paso.done ? '#15803d' : (i === arr.findIndex(p => !p.done) ? '#FF6B2B' : '#E8E0D4'), color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 900, fontSize: '13px', flexShrink: 0, marginBottom: '8px' }}>
+                            {paso.done ? '✓' : i + 1}
+                          </div>
+                          <span style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '12px', color: paso.done ? '#15803d' : (i === arr.findIndex(p => !p.done) ? '#C84B0E' : '#9B8AB8'), textAlign: 'center', lineHeight: 1.3, marginBottom: '2px' }}>{paso.label}</span>
+                          <span style={{ fontSize: '11px', color: '#9B8AB8', textAlign: 'center', lineHeight: 1.3 }}>{paso.sub}</span>
+                        </div>
+                        {i < arr.length - 1 && (
+                          <div style={{ height: '2px', flex: 0.4, background: paso.done ? '#22c55e' : '#E8E0D4', marginTop: '15px', flexShrink: 0 }} />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ marginTop: '20px', textAlign: 'center' }}>
+                    <a href="/compitas" style={{ display: 'inline-block', background: '#FF6B2B', color: 'white', borderRadius: '9999px', padding: '13px 32px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 900, fontSize: '16px', textDecoration: 'none', boxShadow: '0 4px 20px rgba(255,107,43,0.35)' }}>
+                      {paso1Hecho ? 'Ver más compitas →' : 'Ver compitas disponibles →'}
+                    </a>
+                  </div>
+                </div>
+              )}
+
+              {/* Info de familiar incompleta — aviso */}
+              {!esNuevo && !usuario.familiar_nombre && (
+                <div style={{ marginTop: '16px', background: '#FEF3C7', borderRadius: '12px', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span style={{ fontSize: '16px', flexShrink: 0 }}>⚠️</span>
+                  <p style={{ margin: 0, fontSize: '13px', color: '#92400E', lineHeight: 1.4 }}>
+                    <strong>Falta información de tu familiar.</strong> Tu compita la necesita para prepararse. <a href="#familiar" style={{ color: '#C84B0E', fontWeight: 700 }}>Completar →</a>
+                  </p>
+                </div>
+              )}
             </div>
           )
         })()}
@@ -315,6 +391,86 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         })}
 
         {/* ─────────────────────────────────────────────
+            SECCIÓN 1.7: ENTREVISTA CONFIRMADA
+            Visible siempre que haya una llamada próxima,
+            sin importar si ya hay compita asignado o no.
+        ───────────────────────────────────────────── */}
+        {entrevistasConfirmadas.length > 0 && (() => {
+          const hayActiva = entrevistasConfirmadas.some((sol) => {
+            const slotMs = sol.slot_confirmado ? new Date(sol.slot_confirmado).getTime() : Infinity
+            return sol.room_url && sol.token_respuesta && Date.now() >= slotMs - 10 * 60_000
+          })
+          return (
+            <section style={{ marginBottom: '32px' }}>
+              <h2 style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '13px', color: '#9B8AB8', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 16px' }}>
+                {hayActiva ? '🟠 Llamada en curso' : '📞 Tu próxima entrevista'}
+              </h2>
+              <div style={{ background: hayActiva ? '#FFF3E8' : 'linear-gradient(135deg, #EFF6FF 0%, #F0FDF4 100%)', border: `2px solid ${hayActiva ? '#FF6B2B' : '#22C55E'}`, borderRadius: '20px', padding: '24px 24px 20px' }}>
+                {hayActiva && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
+                    <span style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', background: '#FF6B2B', boxShadow: '0 0 0 3px rgba(255,107,43,0.3)', flexShrink: 0 }} />
+                    <span style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 900, fontSize: '15px', color: '#C84B0E', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      Llamada activa ahora — entra ya
+                    </span>
+                  </div>
+                )}
+                {!hayActiva && (
+                  <p style={{ color: '#166534', fontSize: '14px', fontWeight: 600, margin: '0 0 16px', lineHeight: 1.5 }}>
+                    Tienes una llamada de 20 minutos agendada para conocer a tu compita. El enlace para entrar aparecerá aquí cuando sea la hora.
+                  </p>
+                )}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {entrevistasConfirmadas.map((sol) => {
+                    const c = sol.compitas
+                    const fechaLabel = sol.slot_confirmado
+                      ? new Date(sol.slot_confirmado).toLocaleString('es-VE', { timeZone: 'America/Caracas', weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', hour12: true })
+                      : '—'
+                    const ahora = Date.now()
+                    const slotMs = sol.slot_confirmado ? new Date(sol.slot_confirmado).getTime() : Infinity
+                    const enCurso = !!(sol.room_url && sol.token_respuesta && ahora >= slotMs - 10 * 60_000)
+                    const salaUrl = enCurso && sol.token_respuesta
+                      ? `/sala/${sol.token_respuesta}?${qRol(sol.token_respuesta, 'cliente')}`
+                      : null
+                    return (
+                      <div key={sol.id} style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px', background: enCurso ? '#FFF3E8' : 'white', border: `1.5px solid ${enCurso ? '#FF6B2B' : '#86EFAC'}`, borderRadius: '14px', flexWrap: 'wrap' }}>
+                        {c?.foto_url
+                          // eslint-disable-next-line @next/next/no-img-element
+                          ? <img src={c.foto_url} alt={c.nombre} style={{ width: '56px', height: '56px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                          : <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: enCurso ? '#FFE4D6' : '#DCFCE7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '26px', flexShrink: 0 }}>👤</div>
+                        }
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, color: '#1A0A3C', fontSize: '17px' }}>{c?.nombre ?? '—'}</div>
+                          {enCurso
+                            ? <div style={{ color: '#C84B0E', fontSize: '14px', fontWeight: 700, marginTop: '4px' }}>🟠 Llamada en curso ahora</div>
+                            : <div style={{ color: '#166534', fontSize: '14px', fontWeight: 600, marginTop: '4px' }}>📅 {fechaLabel} (hora Venezuela)</div>
+                          }
+                          <div style={{ color: '#6B5C90', fontSize: '12px', marginTop: '4px' }}>⏱️ Llamada de 20 minutos</div>
+                        </div>
+                        {salaUrl ? (
+                          <a href={salaUrl}
+                            style={{ background: '#FF6B2B', color: 'white', borderRadius: '9999px', padding: '12px 24px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 900, fontSize: '15px', textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0, boxShadow: '0 4px 16px rgba(255,107,43,0.4)' }}>
+                            Entrar a la llamada →
+                          </a>
+                        ) : (
+                          <span style={{ background: '#DCFCE7', color: '#166534', border: '1.5px solid #86EFAC', borderRadius: '9999px', padding: '8px 16px', fontSize: '13px', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                            ✅ Confirmada
+                          </span>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+                {!hayActiva && (
+                  <p style={{ color: '#9B8AB8', fontSize: '12px', margin: '14px 0 0', lineHeight: 1.5 }}>
+                    El enlace para entrar a la llamada también llegó a tu correo. Si no lo encuentras, actualiza esta página cuando sea la hora.
+                  </p>
+                )}
+              </div>
+            </section>
+          )
+        })()}
+
+        {/* ─────────────────────────────────────────────
             SECCIÓN 2: ESTADO ACTUAL DE LA VISITA
             Muestra solo el estado activo. Sin duplicados.
         ───────────────────────────────────────────── */}
@@ -359,8 +515,13 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         {/* 2b. Coordinando la primera visita (pre_visita) */}
         {!visitaActiva && visitaPreVisita && (
           <section style={{ marginBottom: '40px' }}>
-            <h2 style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '13px', color: '#9B8AB8', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 16px' }}>
+            <h2 style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '13px', color: '#9B8AB8', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
               {esPrimeraVisita ? 'Coordinando primera visita' : 'Coordinando próxima visita'}
+              {unreadCount > 0 && (
+                <span style={{ background: '#DC2626', color: 'white', borderRadius: '9999px', padding: '2px 8px', fontSize: '11px', fontWeight: 900, fontFamily: 'Inter, sans-serif', textTransform: 'none', letterSpacing: 0 }}>
+                  {unreadCount} nuevo{unreadCount > 1 ? 's' : ''}
+                </span>
+              )}
             </h2>
             <div id="fecha-programada">
               {!previewUid && (
@@ -480,200 +641,132 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           </h2>
 
           {compita ? (
-            <div style={{ background: 'white', border: '2px solid #E8E0D4', borderRadius: '16px', padding: '24px', display: 'flex', gap: '20px', alignItems: 'center' }}>
-              {compita.foto_url && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={compita.foto_url} alt={compita.nombre}
-                  style={{ width: '72px', height: '72px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-              )}
-              <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px', flexWrap: 'wrap' }}>
-                  <h3 style={{ color: '#1A0A3C', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '20px', margin: 0 }}>
-                    {compita.nombre}
-                  </h3>
-                  {compita.verificado && (
-                    <span style={{ background: 'white', border: '2px solid #E8E0D4', borderRadius: '9999px', padding: '2px 10px', fontSize: '12px', color: '#2D1464', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <span style={{ color: '#FF6B2B' }}>✓</span> Verificado
-                    </span>
-                  )}
-                  {usuario?.plan && (
-                    <span style={{ background: '#F5F0E8', color: '#2D1464', borderRadius: '9999px', padding: '2px 10px', fontSize: '12px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700 }}>
-                      Plan {usuario.plan}
-                    </span>
-                  )}
-                </div>
-                <p style={{ color: '#6B5C90', fontSize: '14px', margin: '0 0 10px' }}>{compita.zona}</p>
-                <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
-                  <span style={{ color: '#4A3B6B', fontSize: '13px' }}>
+            /* Compita asignado: tarjeta con acciones rápidas */
+            <div style={{ background: 'white', border: '2px solid #E8E0D4', borderRadius: '20px', padding: '24px' }}>
+              <div style={{ display: 'flex', gap: '20px', alignItems: 'center', marginBottom: '16px' }}>
+                {compita.foto_url
+                  // eslint-disable-next-line @next/next/no-img-element
+                  ? <img src={compita.foto_url} alt={compita.nombre} style={{ width: '72px', height: '72px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                  : <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: '#F5F0E8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', flexShrink: 0 }}>👤</div>
+                }
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '4px' }}>
+                    <h3 style={{ color: '#1A0A3C', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '20px', margin: 0 }}>
+                      {compita.nombre}
+                    </h3>
+                    {compita.verificado && (
+                      <span style={{ background: '#F0FDF4', border: '1.5px solid #86EFAC', borderRadius: '9999px', padding: '2px 10px', fontSize: '12px', color: '#15803d', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700 }}>
+                        ✓ Verificado
+                      </span>
+                    )}
+                  </div>
+                  <p style={{ color: '#9B8AB8', fontSize: '13px', margin: '0 0 6px' }}>{compita.zona}</p>
+                  <p style={{ color: '#4A3B6B', fontSize: '13px', margin: 0 }}>
                     {totalVisitas} {totalVisitas === 1 ? 'visita realizada' : 'visitas realizadas'}
-                  </span>
-                  <a href="/compitas" style={{ color: '#FF6B2B', fontSize: '13px', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif', textDecoration: 'none' }}>
-                    Ver otros compitas →
-                  </a>
+                    {usuario?.plan ? ` · Plan ${usuario.plan}` : ''}
+                  </p>
                 </div>
+              </div>
+              {/* Acciones rápidas */}
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', borderTop: '1.5px solid #F0EBF8', paddingTop: '16px' }}>
+                {puedeAgendarOtra && (
+                  <a href="#agendar" style={{ background: '#FF6B2B', color: 'white', borderRadius: '9999px', padding: '10px 20px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '14px', textDecoration: 'none' }}>
+                    📅 Agendar visita
+                  </a>
+                )}
+                <a href="/compitas" style={{ background: '#F5F0FF', color: '#4A3B6B', borderRadius: '9999px', padding: '10px 20px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '14px', textDecoration: 'none' }}>
+                  Ver otros compitas
+                </a>
               </div>
             </div>
           ) : (
-            <div>
-              {/* Entrevistas confirmadas */}
-              {entrevistasConfirmadas.length > 0 && (() => {
-                const hayActiva = entrevistasConfirmadas.some((sol) => {
-                  const slotMs = sol.slot_confirmado ? new Date(sol.slot_confirmado).getTime() : Infinity
-                  return sol.room_url && sol.token_respuesta && Date.now() >= slotMs - 10 * 60_000
-                })
-                return (
-                <div style={{ background: hayActiva ? '#FFF3E8' : 'white', border: `2px solid ${hayActiva ? '#FF6B2B' : '#22C55E'}`, borderRadius: '16px', padding: '24px', marginBottom: '16px', ...(hayActiva ? { animation: 'none' } : {}) }}>
-                  {hayActiva && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                      <span style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', background: '#FF6B2B', boxShadow: '0 0 0 3px rgba(255,107,43,0.3)', flexShrink: 0 }} />
-                      <span style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 900, fontSize: '15px', color: '#C84B0E', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                        Llamada activa ahora
-                      </span>
-                    </div>
-                  )}
-                  <h3 style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '15px', color: hayActiva ? '#C84B0E' : '#1A0A3C', margin: '0 0 14px' }}>
-                    {hayActiva ? '🟠 Tienes una llamada en este momento' : '📅 Llamadas confirmadas'}
-                  </h3>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {entrevistasConfirmadas.map((sol) => {
-                      const c = sol.compitas
-                      const fecha = sol.slot_confirmado
-                        ? new Date(sol.slot_confirmado).toLocaleString('es-VE', { timeZone: 'America/Caracas', weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', hour12: true })
-                        : '—'
-                      // Llamada "en curso": el slot ya llegó (con 10 min de gracia antes) y hay sala
-                      const ahora = Date.now()
-                      const slotMs = sol.slot_confirmado ? new Date(sol.slot_confirmado).getTime() : Infinity
-                      const enCurso = sol.room_url && sol.token_respuesta && ahora >= slotMs - 10 * 60_000
-                      const salaUrl = enCurso && sol.token_respuesta
-                        ? `/sala/${sol.token_respuesta}?${qRol(sol.token_respuesta, 'cliente')}`
-                        : null
-                      return (
-                        <div key={sol.id} style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '14px', background: enCurso ? '#FFF3E8' : '#F0FDF4', border: `1.5px solid ${enCurso ? '#FF6B2B' : '#86EFAC'}`, borderRadius: '12px', flexWrap: 'wrap' }}>
-                          {c?.foto_url
-                            // eslint-disable-next-line @next/next/no-img-element
-                            ? <img src={c.foto_url} alt={c.nombre} style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-                            : <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: enCurso ? '#FFE4D6' : '#DCFCE7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', flexShrink: 0 }}>👤</div>
-                          }
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, color: '#1A0A3C', fontSize: '15px' }}>{c?.nombre ?? '—'}</div>
-                            {enCurso
-                              ? <div style={{ color: '#C84B0E', fontSize: '13px', fontWeight: 700, marginTop: '2px' }}>🟠 Llamada en curso ahora</div>
-                              : <div style={{ color: '#166534', fontSize: '13px', marginTop: '2px' }}>📅 {fecha} (hora de Venezuela)</div>
-                            }
-                            <div style={{ color: '#6B5C90', fontSize: '12px', marginTop: '2px' }}>⏱️ Llamada de 20 minutos</div>
-                          </div>
-                          {salaUrl && (
-                            <a href={salaUrl}
-                              style={{ background: '#FF6B2B', color: 'white', borderRadius: '9999px', padding: '10px 20px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '14px', textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                              Entrar a la llamada →
-                            </a>
-                          )}
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-                )
-              })()}
+            /* Sin compita: solicitudes en curso + CTA */
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
 
               {/* Solicitudes pendientes */}
               {solicitudesPendientes.length > 0 && (
-                <div style={{ background: 'white', border: '2px solid #E8E0D4', borderRadius: '16px', padding: '24px', marginBottom: '16px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
-                    <h3 style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '15px', color: '#1A0A3C', margin: 0 }}>
+                <div style={{ background: 'white', border: '2px solid #E8E0D4', borderRadius: '16px', padding: '20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+                    <h3 style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '14px', color: '#1A0A3C', margin: 0 }}>
                       ⏳ Esperando respuesta
                     </h3>
-                    <span style={{ color: '#9B8AB8', fontSize: '13px' }}>{solicitudesPendientes.length}/3 solicitudes enviadas</span>
+                    <span style={{ color: '#9B8AB8', fontSize: '12px' }}>{solicitudesPendientes.length}/3 solicitudes</span>
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {solicitudesPendientes.map((sol) => {
                       const c = sol.compitas
                       return (
-                        <div key={sol.id} style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '12px', background: '#FDFAF6', border: '1.5px solid #E8E0D4', borderRadius: '12px' }}>
+                        <div key={sol.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', background: '#FDFAF6', border: '1.5px solid #E8E0D4', borderRadius: '10px' }}>
                           {c?.foto_url
                             // eslint-disable-next-line @next/next/no-img-element
-                            ? <img src={c.foto_url} alt={c.nombre} style={{ width: '44px', height: '44px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-                            : <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: '#F5F0E8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', flexShrink: 0 }}>👤</div>
+                            ? <img src={c.foto_url} alt={c.nombre} style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                            : <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#F5F0E8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0 }}>👤</div>
                           }
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, color: '#1A0A3C', fontSize: '15px' }}>{c?.nombre ?? '—'}</div>
-                            {c?.zona && <div style={{ color: '#9B8AB8', fontSize: '12px', marginTop: '2px' }}>{c.zona}</div>}
+                            <div style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, color: '#1A0A3C', fontSize: '14px' }}>{c?.nombre ?? '—'}</div>
+                            {c?.zona && <div style={{ color: '#9B8AB8', fontSize: '11px', marginTop: '1px' }}>{c.zona}</div>}
                           </div>
-                          <span style={{ background: '#FFF3E8', color: '#C84B0E', border: '1.5px solid #FF6B2B', borderRadius: '9999px', padding: '4px 12px', fontSize: '12px', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                            ⏳ Pendiente
+                          <span style={{ background: '#FEF3C7', color: '#92400E', borderRadius: '9999px', padding: '3px 10px', fontSize: '11px', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                            Pendiente
                           </span>
                         </div>
                       )
                     })}
                   </div>
-                  <p style={{ color: '#9B8AB8', fontSize: '12px', marginTop: '14px', marginBottom: 0 }}>
-                    El compita elegirá el horario que le funcione y te llegará una confirmación por email.
+                  <p style={{ color: '#9B8AB8', fontSize: '12px', marginTop: '12px', marginBottom: 0, lineHeight: 1.4 }}>
+                    El compita elige el horario que le funcione. Recibirás un correo de confirmación.
                   </p>
                 </div>
               )}
 
-              {/* CTA todas rechazadas */}
-              {todasRechazadas && (
-                <div style={{ background: 'white', border: '2px solid #FF6B2B', borderRadius: '16px', padding: '24px', marginBottom: '16px' }}>
-                  <p style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '17px', color: '#1A0A3C', margin: '0 0 8px' }}>
-                    Ningún compita pudo atenderte esta vez
-                  </p>
-                  <p style={{ color: '#6B5C90', fontSize: '14px', margin: '0 0 16px', lineHeight: '1.6' }}>
-                    No te preocupes. Hay más compitas disponibles en tu zona. Intenta con otros perfiles que se adapten mejor a lo que necesitas.
-                  </p>
-                  <a href="/compitas" style={{ display: 'inline-block', background: '#FF6B2B', color: 'white', borderRadius: '9999px', padding: '12px 24px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '14px', textDecoration: 'none' }}>
-                    Ver otros compitas →
-                  </a>
-                </div>
-              )}
-
-              {/* CTA sin compita asignado y con cupo para más solicitudes */}
-              {!compita && solicitudesPendientes.length < 3 && (
-                <div style={{ background: 'white', border: '2px solid #FF6B2B', borderRadius: '16px', padding: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
+              {/* CTA: buscar compita (si aún puede enviar solicitudes) */}
+              {solicitudesPendientes.length < 3 && (
+                <div style={{ background: todasRechazadas ? 'white' : '#FDFAF6', border: `2px solid ${todasRechazadas ? '#FF6B2B' : '#E8E0D4'}`, borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
                   <div>
-                    <h3 style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '18px', color: '#1A0A3C', margin: '0 0 6px' }}>¿Aún no tienes compita?</h3>
-                    <p style={{ color: '#6B5C90', fontSize: '14px', margin: 0 }}>Explora los perfiles disponibles y elige el que mejor se adapte a tu familiar.</p>
+                    <h3 style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '16px', color: '#1A0A3C', margin: '0 0 4px' }}>
+                      {todasRechazadas ? 'Ningún compita pudo esta vez' : solicitudesPendientes.length > 0 ? 'Solicita a otro compita también' : 'Aún no tienes compita'}
+                    </h3>
+                    <p style={{ color: '#6B5C90', fontSize: '13px', margin: 0, lineHeight: 1.4 }}>
+                      {todasRechazadas ? 'Hay más compitas disponibles. Intenta con otros perfiles.' : 'Explora los perfiles y elige el que mejor encaje con tu familiar.'}
+                    </p>
                   </div>
-                  <a href="/compitas" style={{ background: '#FF6B2B', color: 'white', borderRadius: '9999px', padding: '12px 24px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '15px', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+                  <a href="/compitas" style={{ background: '#FF6B2B', color: 'white', borderRadius: '9999px', padding: '11px 22px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '14px', textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0 }}>
                     Ver compitas →
                   </a>
                 </div>
               )}
 
-              {/* Historial de solicitudes (deemphasized) */}
+              {/* Historial de solicitudes (colapsado visualmente) */}
               {solicitudesHistorial.length > 0 && (
-                <div style={{ marginTop: '16px' }}>
-                  <p style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', color: '#9B8AB8', margin: '0 0 10px' }}>Solicitudes anteriores</p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <details style={{ background: 'white', border: '1.5px solid #E8E0D4', borderRadius: '12px', padding: '0' }}>
+                  <summary style={{ padding: '12px 16px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', color: '#9B8AB8', cursor: 'pointer', listStyle: 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span>Solicitudes anteriores ({solicitudesHistorial.length})</span>
+                    <span style={{ fontSize: '11px' }}>▾</span>
+                  </summary>
+                  <div style={{ borderTop: '1.5px solid #F0EBF8', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {solicitudesHistorial.map((sol) => {
                       const c = sol.compitas
                       const esCompletada = sol.estado === 'completada'
                       const esRechazada = sol.estado === 'rechazada'
                       const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://micompaz.com'
                       return (
-                        <div key={sol.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', background: 'white', border: '1.5px solid #E8E0D4', borderRadius: '12px', flexWrap: 'wrap' }}>
+                        <div key={sol.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 10px', background: '#FDFAF6', border: '1.5px solid #E8E0D4', borderRadius: '10px', flexWrap: 'wrap' }}>
                           {c?.foto_url
                             // eslint-disable-next-line @next/next/no-img-element
-                            ? <img src={c.foto_url} alt={c.nombre} style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0, opacity: 0.6 }} />
-                            : <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#F5F0E8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>👤</div>
+                            ? <img src={c.foto_url} alt={c.nombre} style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                            : <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#F5F0E8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', flexShrink: 0 }}>👤</div>
                           }
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, color: '#9B8AB8', fontSize: '13px' }}>{c?.nombre ?? '—'}</div>
                           </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0, flexWrap: 'wrap' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
                             {esRechazada && sol.token_respuesta && !previewUid && (
                               <a href={`${SITE}/reagendar/${sol.token_respuesta}`}
-                                style={{ fontSize: '11px', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif', color: '#FF6B2B', border: '1.5px solid #FF6B2B', borderRadius: '9999px', padding: '3px 10px', textDecoration: 'none', whiteSpace: 'nowrap' }}>
-                                🔄 Proponer horarios
+                                style={{ fontSize: '11px', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif', color: '#FF6B2B', border: '1.5px solid #FF6B2B', borderRadius: '9999px', padding: '2px 9px', textDecoration: 'none' }}>
+                                🔄 Reagendar
                               </a>
                             )}
-                            <span style={{
-                              borderRadius: '9999px', padding: '3px 10px', fontSize: '11px', fontWeight: 700,
-                              fontFamily: 'Bricolage Grotesque, sans-serif', whiteSpace: 'nowrap',
-                              background: esCompletada ? '#DCFCE7' : '#F1F0F5',
-                              color: esCompletada ? '#166534' : '#9B8AB8',
-                              border: esCompletada ? '1.5px solid #86EFAC' : '1.5px solid #D4CAE8',
-                            }}>
+                            <span style={{ borderRadius: '9999px', padding: '2px 9px', fontSize: '11px', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif', background: esCompletada ? '#DCFCE7' : '#F1F0F5', color: esCompletada ? '#166534' : '#9B8AB8', border: esCompletada ? '1.5px solid #86EFAC' : '1.5px solid #D4CAE8' }}>
                               {esCompletada ? '✅ Contratado' : '✗ No continuó'}
                             </span>
                           </div>
@@ -681,7 +774,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                       )
                     })}
                   </div>
-                </div>
+                </details>
               )}
             </div>
           )}
@@ -689,7 +782,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
         {/* Agendar otra visita — justo después de ver al compita */}
         {puedeAgendarOtra && compita && (
-          <section style={{ marginBottom: '32px' }}>
+          <section id="agendar" style={{ marginBottom: '32px', scrollMarginTop: '24px' }}>
             <AgendarOtraVisita compitaNombre={compita.nombre} cupo={cupo} />
           </section>
         )}
@@ -698,7 +791,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             SECCIÓN 4: TU FAMILIAR
         ───────────────────────────────────────────── */}
         {usuario && (
-          <section style={{ marginBottom: '40px' }}>
+          <section id="familiar" style={{ marginBottom: '40px', scrollMarginTop: '24px' }}>
             <h2 style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '13px', color: '#9B8AB8', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 16px' }}>
               Tu familiar
             </h2>
