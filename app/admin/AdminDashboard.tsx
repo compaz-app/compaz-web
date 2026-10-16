@@ -244,9 +244,9 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
   }, [])
 
   // Cargar mensajes de visita seleccionada
-  // Auto-refresh cada 60 s para mantener la vista actualizada
+  // Auto-refresh cada 2 min para mantener la vista actualizada
   useEffect(() => {
-    const t = setInterval(() => router.refresh(), 60_000)
+    const t = setInterval(() => router.refresh(), 120_000)
     return () => clearInterval(t)
   }, [router])
 
