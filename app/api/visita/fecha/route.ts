@@ -3,6 +3,7 @@ import { createAdminSupabase } from '@/lib/supabase-server'
 import { getClienteActivo } from '@/lib/auth'
 import { ok, err, unauthorized, notFound } from '@/lib/api'
 import { sendTelegramMessage, TECLADO_INICIO } from '@/lib/telegram'
+import { reclamarUnaVez } from '@/lib/cron'
 import { sendEmail, SITE_URL } from '@/lib/email'
 import { esc } from '@/lib/html'
 import { hoyVE, horaVE, formatFechaVE } from '@/lib/format'
@@ -80,22 +81,40 @@ export async function PUT(req: NextRequest) {
     admin.from('usuarios').select('nombre, email').eq('id', visita.usuario_id).single(),
   ])
 
+  // Si la visita es hoy en menos de 30 min, el cron no llegará a tiempo — avisar ahora mismo.
+  const minutosParaInicio = fecha_programada === hoyVE()
+    ? (hora_inicio.split(':').map(Number).reduce((h, m) => h * 60 + m) - horaVE().split(':').map(Number).reduce((h, m) => h * 60 + m))
+    : Infinity
+  const esInminente = minutosParaInicio <= 30 && minutosParaInicio >= 0
+
   if (compita?.telegram_chat_id) {
     try {
-      await sendTelegramMessage(
-        compita.telegram_chat_id,
-        [
-          `✅ <b>¡Visita confirmada!</b>`,
-          ``,
-          `${esc(cliente?.nombre ?? 'El cliente')} registró el horario de la visita:`,
-          ``,
-          `📅 <b>${esc(fechaFormateada)}</b>`,
-          `🕐 <b>${esc(horarioLabel)}</b>`,
-          ``,
-          `Recibirás un recordatorio el día anterior. Si necesitas reagendar, toca el botón de abajo.`,
-        ].join('\n'),
-        TECLADO_INICIO,
-      )
+      const mensajeConfirmacion = esInminente
+        ? [
+            `⚡ <b>¡Visita agendada para ahora!</b>`,
+            ``,
+            `${esc(cliente?.nombre ?? 'El cliente')} registró el horario:`,
+            ``,
+            `📅 <b>${esc(fechaFormateada)}</b>`,
+            `🕐 <b>${esc(horarioLabel)}</b>`,
+            ``,
+            `La visita empieza pronto. Cuando llegues, toca el botón ▶️ de tu teclado.`,
+          ].join('\n')
+        : [
+            `✅ <b>¡Visita confirmada!</b>`,
+            ``,
+            `${esc(cliente?.nombre ?? 'El cliente')} registró el horario de la visita:`,
+            ``,
+            `📅 <b>${esc(fechaFormateada)}</b>`,
+            `🕐 <b>${esc(horarioLabel)}</b>`,
+            ``,
+            `Recibirás un recordatorio antes de la visita. Si necesitas reagendar, escríbenos.`,
+          ].join('\n')
+
+      await sendTelegramMessage(compita.telegram_chat_id, mensajeConfirmacion, TECLADO_INICIO)
+
+      // Marcar el flag del cron para que no duplique el aviso si la visita es inminente
+      if (esInminente) await reclamarUnaVez(`aviso_inicio:${visita_id}`).catch(() => null)
     } catch (e) { console.error('Telegram fecha/confirmar compita:', e) }
   }
 
