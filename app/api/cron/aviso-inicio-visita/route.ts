@@ -4,7 +4,7 @@
 //    confirmación del cliente (para no bloquear al compita si el cliente no responde).
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminSupabase } from '@/lib/supabase-server'
-import { sendTelegramMessage, avisarAdmin, INLINE_INICIO, INLINE_DURANTE, TECLADO_DURANTE_VISITA } from '@/lib/telegram'
+import { sendTelegramMessage, avisarAdmin, TECLADO_INICIO, TECLADO_DURANTE_VISITA } from '@/lib/telegram'
 import { sendVisitaInicio } from '@/lib/resend'
 import { esc } from '@/lib/html'
 import { hoyVE, horaVE } from '@/lib/format'
@@ -41,8 +41,8 @@ export async function POST(req: NextRequest) {
       try {
         await sendTelegramMessage(
           compita.telegram_chat_id,
-          [`⏰ <b>Tu visita empieza en ~30 minutos</b>`, ``, `Cuando llegues donde <b>${esc(cliente?.nombre ?? 'el cliente')}</b> y vayas a comenzar, toca el botón de abajo.`].join('\n'),
-          INLINE_INICIO,
+          [`⏰ <b>Tu visita empieza en ~30 minutos</b>`, ``, `Cuando llegues donde <b>${esc(cliente?.nombre ?? 'el cliente')}</b> y vayas a comenzar, toca el botón <b>▶️ Iniciar visita</b> de tu teclado.`].join('\n'),
+          TECLADO_INICIO,
         )
         enviados++
       } catch (e) {

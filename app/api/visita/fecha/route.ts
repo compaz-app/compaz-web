@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { getClienteActivo } from '@/lib/auth'
 import { ok, err, unauthorized, notFound } from '@/lib/api'
-import { sendTelegramMessage, INLINE_REAGENDAR_VISITA } from '@/lib/telegram'
+import { sendTelegramMessage, TECLADO_INICIO } from '@/lib/telegram'
 import { sendEmail, SITE_URL } from '@/lib/email'
 import { esc } from '@/lib/html'
 import { hoyVE, horaVE, formatFechaVE } from '@/lib/format'
@@ -94,7 +94,7 @@ export async function PUT(req: NextRequest) {
           ``,
           `Recibirás un recordatorio el día anterior. Si necesitas reagendar, toca el botón de abajo.`,
         ].join('\n'),
-        INLINE_REAGENDAR_VISITA,
+        TECLADO_INICIO,
       )
     } catch (e) { console.error('Telegram fecha/confirmar compita:', e) }
   }
