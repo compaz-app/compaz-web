@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { getClienteActivo } from '@/lib/auth'
-import { sendTelegramMessage, avisarAdmin, TECLADO_INICIO } from '@/lib/telegram'
+import { sendTelegramMessage, avisarAdmin, TECLADO_SIN_VISITA } from '@/lib/telegram'
 import { sendEmail, SITE_URL } from '@/lib/email'
 import { emailAdminPago } from '@/lib/aviso-pago'
 import { esc } from '@/lib/html'
@@ -122,7 +122,7 @@ export async function POST(req: NextRequest) {
           `Una vez que queden de acuerdo, el cliente registra la fecha en el sistema y tú podrás iniciar la visita desde aquí.`, ``,
           `💙 Toda la comunicación con tu cliente debe mantenerse dentro de Compaz. Coordinar por fuera va contra nuestras condiciones de uso y puede resultar en la suspensión de tu cuenta.`,
         ].join('\n'),
-        TECLADO_INICIO,
+        TECLADO_SIN_VISITA,
       )
     } catch (e) {
       console.error('Telegram compita contratado:', e)

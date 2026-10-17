@@ -4,7 +4,7 @@
 // 3. Solicitudes 'pendiente' sin respuesta de la compita: recordatorio a las 24 h, cierre a las 72 h.
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminSupabase } from '@/lib/supabase-server'
-import { sendTelegramMessage, avisarAdmin, INLINE_INICIO } from '@/lib/telegram'
+import { sendTelegramMessage, avisarAdmin, TECLADO_SIN_VISITA } from '@/lib/telegram'
 import { sendEmail, SITE_URL } from '@/lib/email'
 import { esc } from '@/lib/html'
 import { cronAutorizado, latido, reclamarUnaVez } from '@/lib/cron'
@@ -101,7 +101,7 @@ export async function POST(req: NextRequest) {
       await sendTelegramMessage(
         estado.chat_id,
         `La solicitud de <b>${esc(clienteNombre)}</b> fue cerrada automáticamente.\n\nEl cliente fue notificado de que no pudiste coordinarte con ellos en esta oportunidad.`,
-        INLINE_INICIO,
+        TECLADO_SIN_VISITA,
       )
     } catch (e) { console.error('Telegram cierre rechazo compita:', e) }
     cierres++

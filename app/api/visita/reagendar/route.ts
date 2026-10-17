@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { getClienteActivo } from '@/lib/auth'
 import { ok, err, unauthorized, notFound } from '@/lib/api'
-import { sendTelegramMessage, INLINE_INICIO } from '@/lib/telegram'
+import { sendTelegramMessage, TECLADO_SIN_VISITA } from '@/lib/telegram'
 import { sendEmail, SITE_URL } from '@/lib/email'
 import { esc } from '@/lib/html'
 import { formatFechaVE } from '@/lib/format'
@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
           ``,
           `Escríbele desde este mismo chat para coordinar una nueva fecha. Ellos lo verán en su portal.`,
         ].join('\n'),
-        INLINE_INICIO,
+        TECLADO_SIN_VISITA,
       )
     } catch (e) { console.error('Telegram reagendar compita:', e) }
   }

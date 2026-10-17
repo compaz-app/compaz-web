@@ -3,7 +3,7 @@
 // (máx. 6 recordatorios por visita) y alerta al admin una vez si pasan de 8 h (probable olvido de "Terminar").
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminSupabase } from '@/lib/supabase-server'
-import { sendTelegramMessage, avisarAdmin, INLINE_DURANTE } from '@/lib/telegram'
+import { sendTelegramMessage, avisarAdmin, TECLADO_DURANTE_VISITA } from '@/lib/telegram'
 import { esc } from '@/lib/html'
 import { cronAutorizado, latido, reclamarUnaVez } from '@/lib/cron'
 
@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
     if ((previos ?? 0) >= 6) continue
 
     try {
-      await sendTelegramMessage(tg, `📸 ¿Cómo va la visita? Manda una foto o un mensaje corto para que la familia sepa cómo está su familiar.`, INLINE_DURANTE)
+      await sendTelegramMessage(tg, `📸 ¿Cómo va la visita? Manda una foto o un mensaje corto para que la familia sepa cómo está su familiar.`, TECLADO_DURANTE_VISITA)
       enviados++
       await supabase.from('mensajes').insert({ visit_id: visita.id, origen: 'admin', tipo: 'texto', contenido: 'recordatorio_visita' })
     } catch (e) { console.error('Error recordatorio visita:', e) }

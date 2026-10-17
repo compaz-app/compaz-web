@@ -70,13 +70,21 @@ export const INLINE_INICIAR_O_REAGENDAR = makeInlineKeyboard([
 ])
 
 // Teclados reutilizables
-export const TECLADO_INICIO = {
-  keyboard: [[{ text: '▶️ Iniciar visita' }]],
+// Sin visita: solo Menú
+export const TECLADO_SIN_VISITA = {
+  keyboard: [[{ text: '📋 Menú' }]],
   resize_keyboard: true,
 } satisfies ReplyKeyboard
 
+// Visita programada (fecha agendada, no iniciada aún): Iniciar + Terminar + Menú
+export const TECLADO_INICIO = {
+  keyboard: [[{ text: '▶️ Iniciar visita' }, { text: '🔴 Terminar visita' }, { text: '📋 Menú' }]],
+  resize_keyboard: true,
+} satisfies ReplyKeyboard
+
+// Visita en curso: Terminar + Menú
 export const TECLADO_DURANTE_VISITA = {
-  keyboard: [[{ text: '🔴 Terminar visita' }]],
+  keyboard: [[{ text: '🔴 Terminar visita' }, { text: '📋 Menú' }]],
   resize_keyboard: true,
 } satisfies ReplyKeyboard
 

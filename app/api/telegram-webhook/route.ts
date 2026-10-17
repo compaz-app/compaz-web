@@ -6,7 +6,6 @@ import {
   avisarAdmin,
   answerCallbackQuery,
   editMessageReplyMarkup,
-  INLINE_INICIO,
   INLINE_DURANTE,
   INLINE_CONFIRMAR_INICIO,
   INLINE_CONFIRMAR_FIN,
@@ -14,6 +13,8 @@ import {
   INLINE_REAGENDAR_VISITA,
   INLINE_INICIAR_O_REAGENDAR,
   QUITAR_TECLADO,
+  TECLADO_SIN_VISITA,
+  TECLADO_INICIO,
   TECLADO_DURANTE_VISITA,
   makeInlineKeyboard,
 } from '@/lib/telegram'
@@ -183,7 +184,7 @@ async function guardarReporteYEnviarEmail(
   await clearPendiente(supabase, chatId)
 
   if (visita && visita.compita_id !== compita.id) {
-    await sendTelegramMessage(chatId, `Ese cuestionario no corresponde a tu cuenta.`, INLINE_INICIO)
+    await sendTelegramMessage(chatId, `Ese cuestionario no corresponde a tu cuenta.`, TECLADO_SIN_VISITA)
     return
   }
 
@@ -191,12 +192,12 @@ async function guardarReporteYEnviarEmail(
   const { count: yaExiste } = await adminReporte
     .from('reportes_visita').select('id', { count: 'exact', head: true }).eq('visita_id', visitaId)
   if ((yaExiste ?? 0) > 0) {
-    await sendTelegramMessage(chatId, `Ese cuestionario ya fue registrado. ¡Gracias! 💙`, INLINE_INICIO)
+    await sendTelegramMessage(chatId, `Ese cuestionario ya fue registrado. ¡Gracias! 💙`, TECLADO_SIN_VISITA)
     return
   }
 
   if (!visita || !visita.usuario) {
-    await sendTelegramMessage(chatId, `Hubo un problema al recuperar los datos de la visita. No pudimos guardar el cuestionario ni enviar el resumen a la familia. Escríbenos a hola@micompaz.com y lo resolvemos.`, INLINE_INICIO)
+    await sendTelegramMessage(chatId, `Hubo un problema al recuperar los datos de la visita. No pudimos guardar el cuestionario ni enviar el resumen a la familia. Escríbenos a hola@micompaz.com y lo resolvemos.`, TECLADO_SIN_VISITA)
     return
   }
 
@@ -229,13 +230,13 @@ async function guardarReporteYEnviarEmail(
 
   if (reporteError?.code === '23505') {
     // Otro toque simultáneo ya registró el cuestionario: no es un error para la compita
-    await sendTelegramMessage(chatId, `Ese cuestionario ya fue registrado. ¡Gracias! 💙`, INLINE_INICIO)
+    await sendTelegramMessage(chatId, `Ese cuestionario ya fue registrado. ¡Gracias! 💙`, TECLADO_SIN_VISITA)
     return
   }
 
   if (reporteError || !reporteGuardado) {
     console.error('Error guardando reporte_visita:', reporteError)
-    await sendTelegramMessage(chatId, `Hubo un problema guardando el cuestionario. Por favor escríbenos a hola@micompaz.com para que lo registremos manualmente.`, INLINE_INICIO)
+    await sendTelegramMessage(chatId, `Hubo un problema guardando el cuestionario. Por favor escríbenos a hola@micompaz.com para que lo registremos manualmente.`, TECLADO_SIN_VISITA)
     return
   }
 
@@ -272,7 +273,7 @@ async function guardarReporteYEnviarEmail(
     emailEnviado
       ? `✅ <b>¡Listo!</b> El cuestionario fue guardado y se le envió el resumen a la familia.\n\n¡Gracias por tu trabajo, ${esc(compita.nombre)}! 💙`
       : `✅ El cuestionario fue guardado. Tuvimos un problema enviando el correo a la familia; el equipo de Compaz lo enviará.\n\n¡Gracias por tu trabajo, ${esc(compita.nombre)}! 💙`,
-    INLINE_INICIO,
+    TECLADO_SIN_VISITA,
   )
 }
 
@@ -453,13 +454,24 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
     return NextResponse.json({ ok: true })
   }
 
+  // Teclado correcto según estado actual de la visita (se usa en /menu y /perfil).
+  async function tecladoSegunEstado(): Promise<typeof TECLADO_SIN_VISITA | typeof TECLADO_INICIO | typeof TECLADO_DURANTE_VISITA> {
+    if (!compita) return TECLADO_SIN_VISITA
+    const { data: v } = await supabase
+      .from('visitas').select('id, estado').eq('compita_id', compita.id)
+      .in('estado', ['programada', 'confirmando_inicio', 'en_curso']).limit(1).maybeSingle()
+    if (v?.estado === 'en_curso' || v?.estado === 'confirmando_inicio') return TECLADO_DURANTE_VISITA
+    if (v?.estado === 'programada') return TECLADO_INICIO
+    return TECLADO_SIN_VISITA
+  }
+
   // ── /menu — guía de funcionalidades ─────────────────────────────────────────
   if (text === '/menu' || text === '/ayuda' || text === 'cmd_menu') {
     if (!compita) {
       await sendTelegramMessage(chatId, `Tu cuenta no está vinculada. Toca el botón para comenzar. 👇`, INLINE_START)
       return NextResponse.json({ ok: true })
     }
-    await sendTelegramMessage(chatId, GUIA_COMPITA, INLINE_INICIO)
+    await sendTelegramMessage(chatId, GUIA_COMPITA, await tecladoSegunEstado())
     return NextResponse.json({ ok: true })
   }
 
@@ -469,6 +481,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
       await sendTelegramMessage(chatId, `Tu cuenta no está vinculada. Toca el botón para comenzar. 👇`, INLINE_START)
       return NextResponse.json({ ok: true })
     }
+    const tecladoPerfil = await tecladoSegunEstado()
     try {
       const token = await generarTokenPerfil(compita.id)
       const url = `${SITE_URL}/compita/perfil?token=${token}`
@@ -481,11 +494,11 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
       await sendTelegramMessage(
         chatId,
         `✏️ <b>Edita tu perfil</b>\n\nAquí tienes tu enlace personal:\n\n<a href="${url}">${url}</a>\n\n⏳ Este enlace vence el <b>${venceLabel}</b> y solo funciona una vez. Si lo abres y lo dejas a medias, vuelve a escribir /perfil para obtener uno nuevo.\n\nSi tienes algún problema, escríbenos a hola@micompaz.com.`,
-        INLINE_INICIO,
+        tecladoPerfil,
       )
     } catch (e) {
       console.error('Error generando token de perfil:', e)
-      await sendTelegramMessage(chatId, `Hubo un error al generar tu enlace. Intenta de nuevo en un momento.`, INLINE_INICIO)
+      await sendTelegramMessage(chatId, `Hubo un error al generar tu enlace. Intenta de nuevo en un momento.`, tecladoPerfil)
     }
     return NextResponse.json({ ok: true })
   }
@@ -517,13 +530,13 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
         await sendTelegramMessage(
           chatId,
           `¡Hola de nuevo, <b>${esc(compita.nombre)}</b>! 👋\n\nTodo está listo. Cuando llegues a casa de tu cliente y vayas a comenzar, toca el botón <b>▶️ Iniciar visita</b>. Cuando termines, toca <b>🔴 Terminar visita</b>.`,
-          INLINE_INICIO,
+          await tecladoSegunEstado(),
         )
       } else {
         await sendTelegramMessage(
           chatId,
           `¡Hola de nuevo, <b>${esc(compita.nombre)}</b>! 👋\n\nTu cuenta está activa. Todavía no tienes un cliente asignado, pero cuando eso cambie te avisaremos aquí.\n\nMientras tanto, puedes actualizar tu perfil con <b>/perfil</b> para que las familias te conozcan mejor.`,
-          INLINE_INICIO,
+          TECLADO_SIN_VISITA,
         )
       }
     } else {
@@ -636,7 +649,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
       `✅ <b>¡Listo, ${nombre}!</b> Tu cuenta ya está activa en Compaz. ¡Ya eres parte del equipo! 🎉\n\nAhora te explico todo lo que puedes hacer desde este chat:`,
       QUITAR_TECLADO,
     )
-    await sendTelegramMessage(chatId, GUIA_COMPITA, INLINE_INICIO)
+    await sendTelegramMessage(chatId, GUIA_COMPITA, TECLADO_SIN_VISITA)
     const adminChatId = process.env.TELEGRAM_ADMIN_CHAT_ID
     if (adminChatId) {
       try {
@@ -699,6 +712,12 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
     return NextResponse.json({ ok: true })
   }
 
+  // ── Botón: Menú ─────────────────────────────────────────────────────────────
+  if (text === '📋 Menú') {
+    await sendTelegramMessage(chatId, GUIA_COMPITA, await tecladoSegunEstado())
+    return NextResponse.json({ ok: true })
+  }
+
   // ── Botón: Iniciar visita ────────────────────────────────────────────────────
   if (text === '▶️ Iniciar visita') {
     const { data: visitaEnCurso } = await supabase
@@ -713,7 +732,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
       await sendTelegramMessage(
         chatId,
         `No encontré ninguna visita programada para ti en este momento.\n\nEsto ocurre cuando el cliente todavía no ha registrado la fecha de la visita en el sistema. Una vez que lo haga, podrás iniciarla desde aquí.\n\nSi crees que es un error, escríbenos a hola@micompaz.com.`,
-        INLINE_INICIO,
+        TECLADO_SIN_VISITA,
       )
       return NextResponse.json({ ok: true })
     }
@@ -723,7 +742,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
       await sendTelegramMessage(
         chatId,
         `⚠️ <b>La fecha de la visita aún no está confirmada</b>\n\n${clienteNombre} todavía no registró la fecha en el sistema. Escríbele desde este mismo chat para coordinarla. Una vez que la confirme, podrás iniciar la visita desde aquí.`,
-        INLINE_INICIO,
+        TECLADO_SIN_VISITA,
       )
       return NextResponse.json({ ok: true })
     }
@@ -770,7 +789,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
       .order('inicio', { ascending: false }).limit(1).maybeSingle()
 
     if (!visita) {
-      await sendTelegramMessage(chatId, `No tienes ninguna visita en curso en este momento.`, INLINE_INICIO)
+      await sendTelegramMessage(chatId, `No tienes ninguna visita en curso en este momento.`, TECLADO_SIN_VISITA)
       return NextResponse.json({ ok: true })
     }
 
@@ -786,13 +805,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
   // ── Botón: Cancelar ──────────────────────────────────────────────────────────
   if (text === '❌ Cancelar') {
     await clearConfirmacion(supabase, chatId)
-    const { data: visitaActiva } = await supabase
-      .from('visitas').select('id').eq('compita_id', compita.id).eq('estado', 'en_curso').limit(1).maybeSingle()
-    await sendTelegramMessage(
-      chatId,
-      `Cancelado. No se hizo ningún cambio.`,
-      visitaActiva ? TECLADO_DURANTE_VISITA : INLINE_INICIO,
-    )
+    await sendTelegramMessage(chatId, `Cancelado. No se hizo ningún cambio.`, await tecladoSegunEstado())
     return NextResponse.json({ ok: true })
   }
 
@@ -860,7 +873,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
   if (isCallback && text === 'reagendar_visita') {
     const objetivo = await visitaObjetivo(supabase, compita.id)
     if (!objetivo) {
-      await sendTelegramMessage(chatId, `No encontré ninguna visita activa para reagendar.`, INLINE_INICIO)
+      await sendTelegramMessage(chatId, `No encontré ninguna visita activa para reagendar.`, TECLADO_SIN_VISITA)
       return NextResponse.json({ ok: true })
     }
 
@@ -874,7 +887,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
       .maybeSingle()
     if (errReset || !reseteada) {
       console.error('Error reagendando visita:', errReset)
-      await sendTelegramMessage(chatId, `No pudimos reagendar la visita. Intenta de nuevo en un momento.`, INLINE_INICIO)
+      await sendTelegramMessage(chatId, `No pudimos reagendar la visita. Intenta de nuevo en un momento.`, TECLADO_SIN_VISITA)
       return NextResponse.json({ ok: true })
     }
 
@@ -917,7 +930,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
         ``,
         `Escríbele desde este mismo chat para acordar un nuevo día. Ellos lo verán en su portal.`,
       ].join('\n'),
-      INLINE_INICIO,
+      TECLADO_SIN_VISITA,
     )
 
     // Alerta al admin si esta visita acumula 3+ reagendados
@@ -950,7 +963,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
           : r.motivo === 'no_autorizada'
             ? `Esta solicitud no es tuya.`
             : `Este enlace ya fue usado o no existe.`,
-        INLINE_INICIO,
+        TECLADO_SIN_VISITA,
       )
       return NextResponse.json({ ok: true })
     }
@@ -1008,7 +1021,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
     const token = text.slice('rechazar:'.length)
     const r = await responderSolicitud(token, -1, compita.id)
     if (!r.ok) {
-      await sendTelegramMessage(chatId, `Este enlace ya fue usado o no existe.`, INLINE_INICIO)
+      await sendTelegramMessage(chatId, `Este enlace ya fue usado o no existe.`, TECLADO_SIN_VISITA)
       return NextResponse.json({ ok: true })
     }
     const solicitud = r.solicitud
@@ -1038,7 +1051,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
     const esperada = text === '✅ Sí, iniciar' ? 'iniciar' : 'terminar'
     const conf = await takeConfirmacion(supabase, chatId, esperada)
     if (!conf) {
-      await sendTelegramMessage(chatId, `El tiempo para confirmar expiró o ya se procesó. Si hace falta, intenta de nuevo.`, INLINE_INICIO)
+      await sendTelegramMessage(chatId, `El tiempo para confirmar expiró o ya se procesó. Si hace falta, intenta de nuevo.`, TECLADO_SIN_VISITA)
       return NextResponse.json({ ok: true })
     }
 
@@ -1062,7 +1075,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
           errInicio?.code === '23505'
             ? `Ya tienes una visita en curso. Termínala antes de iniciar otra.`
             : `No pudimos iniciar la visita (puede que la fecha ya no esté confirmada). Intenta de nuevo o escríbenos a hola@micompaz.com.`,
-          INLINE_INICIO,
+          TECLADO_SIN_VISITA,
         )
         return NextResponse.json({ ok: true })
       }
@@ -1103,7 +1116,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
         .maybeSingle() as { data: (Visita & { usuario: Usuario | null }) | null; error: unknown }
 
       if (errFin || !visita) {
-        await sendTelegramMessage(chatId, `No hay ninguna visita en curso que puedas terminar ahora mismo.\n\nSi crees que es un error, escríbenos a hola@micompaz.com.`, INLINE_INICIO)
+        await sendTelegramMessage(chatId, `No hay ninguna visita en curso que puedas terminar ahora mismo.\n\nSi crees que es un error, escríbenos a hola@micompaz.com.`, TECLADO_SIN_VISITA)
         return NextResponse.json({ ok: true })
       }
 
@@ -1138,6 +1151,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
       await sendTelegramMessage(
         chatId,
         `🔴 <b>Visita terminada.</b>\n\n¡Gracias por tu trabajo de hoy, ${esc(compita.nombre)}! 🤝\n\nYa le enviamos el resumen básico a la familia. Ahora tómate un minuto para registrar cómo estuvo el familiar — ellos lo verán como una actualización. 📋`,
+        TECLADO_SIN_VISITA,
       )
       await sendTelegramMessage(
         chatId,
@@ -1173,7 +1187,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
     await clearPendiente(supabase, chatId)
 
     if (expirado) {
-      await sendTelegramMessage(chatId, `El tiempo para sugerir horarios expiró. Contacta al equipo de Compaz si necesitas ayuda.`, INLINE_INICIO)
+      await sendTelegramMessage(chatId, `El tiempo para sugerir horarios expiró. Contacta al equipo de Compaz si necesitas ayuda.`, TECLADO_SIN_VISITA)
       return NextResponse.json({ ok: true })
     }
 
@@ -1216,7 +1230,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
       await sendTelegramMessage(
         chatId,
         `⚠️ No pudimos enviarle tus horarios al cliente (sin correo registrado o el envío falló). Por favor escríbenos a hola@micompaz.com y lo resolvemos manualmente.`,
-        INLINE_INICIO,
+        TECLADO_SIN_VISITA,
       )
     }
     return NextResponse.json({ ok: true })
@@ -1227,7 +1241,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
     const estadoReanuda = await getEstado(supabase, chatId)
     const accionReanuda = estadoReanuda?.pendiente_accion ?? ''
     if (!accionReanuda.startsWith('reporte:') && !accionReanuda.startsWith('reporte_r:') && !accionReanuda.startsWith('reporte_novedad:')) {
-      await sendTelegramMessage(chatId, `Ya no hay un cuestionario pendiente.`, INLINE_INICIO)
+      await sendTelegramMessage(chatId, `Ya no hay un cuestionario pendiente.`, TECLADO_SIN_VISITA)
       return NextResponse.json({ ok: true })
     }
     // Extender expiración otros 30 min y restaurar prefijo reporte: (si estaba como reporte_r:)
@@ -1247,7 +1261,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
         )
       } else {
         await clearPendiente(supabase, chatId)
-        await sendTelegramMessage(chatId, `Ya no hay un cuestionario pendiente.`, INLINE_INICIO)
+        await sendTelegramMessage(chatId, `Ya no hay un cuestionario pendiente.`, TECLADO_SIN_VISITA)
       }
     }
     return NextResponse.json({ ok: true })
@@ -1259,7 +1273,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
     const accionRaw = estadoActualRR?.pendiente_accion ?? ''
     const accion = accionRaw.replace('reporte_r:', 'reporte:') // normalizar si llegó marcado
     if (!accion.startsWith('reporte:')) {
-      await sendTelegramMessage(chatId, `Ya no hay un cuestionario activo.`, INLINE_INICIO)
+      await sendTelegramMessage(chatId, `Ya no hay un cuestionario activo.`, TECLADO_SIN_VISITA)
       return NextResponse.json({ ok: true })
     }
     const partes = accion.split(':')
@@ -1306,7 +1320,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
     if (accion.startsWith('reporte_novedad:')) {
       await guardarReporteYEnviarEmail(supabase, chatId, compita, accion, null)
     } else {
-      await sendTelegramMessage(chatId, `Ya no hay un cuestionario activo.`, INLINE_INICIO)
+      await sendTelegramMessage(chatId, `Ya no hay un cuestionario activo.`, TECLADO_SIN_VISITA)
     }
     return NextResponse.json({ ok: true })
   }
@@ -1318,7 +1332,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
       const expiradoNov = estadoNov.pendiente_expira ? new Date(estadoNov.pendiente_expira) < new Date() : true
       if (expiradoNov) {
         await clearPendiente(supabase, chatId)
-        await sendTelegramMessage(chatId, `El tiempo para completar el cuestionario expiró. Si quieres registrarlo de todas formas, escríbenos a hola@micompaz.com.`, INLINE_INICIO)
+        await sendTelegramMessage(chatId, `El tiempo para completar el cuestionario expiró. Si quieres registrarlo de todas formas, escríbenos a hola@micompaz.com.`, TECLADO_SIN_VISITA)
         return NextResponse.json({ ok: true })
       }
       await guardarReporteYEnviarEmail(supabase, chatId, compita, estadoNov.pendiente_accion, text)
@@ -1342,7 +1356,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
       await sendTelegramMessage(
         chatId,
         `No hay ninguna visita activa ahora mismo.\n\nCuando llegues donde tu cliente, toca el botón de abajo. 👇`,
-        INLINE_INICIO,
+        TECLADO_SIN_VISITA,
       )
       return NextResponse.json({ ok: true })
     }
@@ -1365,19 +1379,9 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
       return NextResponse.json({ ok: true })
     }
 
-    // Texto — ignorar comandos desconocidos (excepto /perfil y /menu)
+    // Texto — comando desconocido (/menu y /perfil ya se interceptaron arriba, antes de este bloque)
     if (text.startsWith('/')) {
-      if (text === '/menu' || text === '/ayuda' || text === 'cmd_menu') {
-        await sendTelegramMessage(chatId, GUIA_COMPITA, INLINE_DURANTE)
-      } else if (text === '/perfil') {
-        try {
-          const token = await generarTokenPerfil(compita.id)
-          const url = `${SITE_URL}/compita/perfil?token=${token}`
-          await sendTelegramMessage(chatId, `✏️ <a href="${url}">Editar mi perfil</a> — válido 24 h, un solo uso.`, INLINE_DURANTE)
-        } catch { await sendTelegramMessage(chatId, `Error generando enlace. Intenta de nuevo.`, INLINE_DURANTE) }
-      } else {
-        await sendTelegramMessage(chatId, `No reconozco ese comando. Usa los botones de abajo. 👇`, INLINE_DURANTE)
-      }
+      await sendTelegramMessage(chatId, `No reconozco ese comando. Usa los botones de abajo. 👇`, await tecladoSegunEstado())
       return NextResponse.json({ ok: true })
     }
 

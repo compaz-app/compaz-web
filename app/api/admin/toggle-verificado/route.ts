@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server'
 import { getAdminUser } from '@/lib/auth'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { verificarCompita, desactivarCompita } from '@/lib/compitas'
-import { sendTelegramMessage, INLINE_INICIO } from '@/lib/telegram'
+import { sendTelegramMessage, TECLADO_SIN_VISITA } from '@/lib/telegram'
 import { sendEmail } from '@/lib/email'
 import { esc } from '@/lib/html'
 import { ok, err, unauthorized, serverError } from '@/lib/api'
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
           await sendTelegramMessage(
             c.telegram_chat_id,
             `✅ <b>¡Tu cuenta fue verificada, ${esc(c.nombre)}!</b>\n\nYa apareces ante las familias. Cuando una quiera conocerte, te llegará aquí un mensaje con los horarios para elegir. Si quieres mejorar tu perfil, escribe /perfil. Para ver todo lo que puedes hacer, escribe /menu.`,
-            INLINE_INICIO,
+            TECLADO_SIN_VISITA,
           )
           notificada = 'telegram'
         } catch (e) { console.error('[toggle-verificado] Telegram a la compita falló:', e) }
