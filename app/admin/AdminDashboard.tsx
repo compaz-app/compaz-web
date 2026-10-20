@@ -216,6 +216,9 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
           .eq('estado', 'pre_visita')
           .order('created_at', { ascending: false })
         if (previas) setVisitasPreVisita(previas as VisitaConRelaciones[])
+
+        // Refresca los datos del servidor (visitasPasadas, contadores) sin perder el scroll
+        router.refresh()
       })
       .subscribe()
     return () => { supabase.removeChannel(canal) }
