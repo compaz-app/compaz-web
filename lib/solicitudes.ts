@@ -31,6 +31,7 @@ function mapRow(row: Record<string, unknown>): Solicitud {
     confirmacion_cliente: row.confirmacion_cliente as boolean | null ?? null,
     confirmacion_compita: row.confirmacion_compita as boolean | null ?? null,
     reagendado_slots: (row.reagendado_slots as string[]) ?? [],
+    mensaje_compita_reagendar: (row.mensaje_compita_reagendar as string | null) ?? null,
     token_respuesta: row.token_respuesta as string,
     created_at: row.created_at as string,
     respondido_at: (row.respondido_at as string | null) ?? null,
@@ -44,7 +45,7 @@ const SELECT_FIELDS = `
   id, cliente_id, compita_id, mensaje, sobre_cliente, estado, franja_horaria,
   slots_propuestos, slot_confirmado, room_url, recordatorio_enviado, seguimiento_enviado,
   seguimiento2_enviado, confirmacion_llamada_enviada, confirmacion_cliente, confirmacion_compita,
-  reagendado_slots, token_respuesta, created_at, respondido_at,
+  reagendado_slots, mensaje_compita_reagendar, token_respuesta, created_at, respondido_at,
   compitas ( nombre, foto_url, zona )
 `
 

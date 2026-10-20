@@ -174,6 +174,7 @@ export interface Solicitud {
   confirmacion_cliente: boolean | null   // null=sin respuesta, true=✅, false=❌
   confirmacion_compita: boolean | null   // null=sin respuesta, true=✅, false=❌
   reagendado_slots: string[]             // slots propuestos en reagendado
+  mensaje_compita_reagendar?: string | null  // mensaje libre del compita al sugerir nuevos horarios
   created_at: string
   respondido_at?: string | null
 }

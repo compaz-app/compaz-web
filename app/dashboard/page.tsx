@@ -760,27 +760,45 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                       const esCompletada = sol.estado === 'completada'
                       const esRechazada = sol.estado === 'rechazada'
                       const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://micompaz.com'
+                      const mensajeCompita = esRechazada ? (sol as unknown as { mensaje_compita_reagendar?: string | null }).mensaje_compita_reagendar : null
                       return (
-                        <div key={sol.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 10px', background: '#FDFAF6', border: '1.5px solid #E8E0D4', borderRadius: '10px', flexWrap: 'wrap' }}>
-                          {c?.foto_url
-                            // eslint-disable-next-line @next/next/no-img-element
-                            ? <img src={c.foto_url} alt={c.nombre} style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-                            : <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#F5F0E8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', flexShrink: 0 }}>👤</div>
-                          }
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, color: '#9B8AB8', fontSize: '13px' }}>{c?.nombre ?? '—'}</div>
+                        <div key={sol.id} style={{ padding: '10px 12px', background: '#FDFAF6', border: '1.5px solid #E8E0D4', borderRadius: '10px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                            {c?.foto_url
+                              // eslint-disable-next-line @next/next/no-img-element
+                              ? <img src={c.foto_url} alt={c.nombre} style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                              : <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#F5F0E8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', flexShrink: 0 }}>👤</div>
+                            }
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, color: '#9B8AB8', fontSize: '13px' }}>{c?.nombre ?? '—'}</div>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                              {esRechazada && sol.token_respuesta && !previewUid && (
+                                <a href={`${SITE}/reagendar/${sol.token_respuesta}`}
+                                  style={{ fontSize: '11px', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif', color: '#FF6B2B', border: '1.5px solid #FF6B2B', borderRadius: '9999px', padding: '2px 9px', textDecoration: 'none' }}>
+                                  🔄 Reagendar
+                                </a>
+                              )}
+                              <span style={{ borderRadius: '9999px', padding: '2px 9px', fontSize: '11px', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif', background: esCompletada ? '#DCFCE7' : '#FEF2F2', color: esCompletada ? '#166534' : '#991b1b', border: esCompletada ? '1.5px solid #86EFAC' : '1.5px solid #fca5a5' }}>
+                                {esCompletada ? '✅ Contratado' : mensajeCompita ? '🔄 Propuso otro horario' : '✗ No pudo esta vez'}
+                              </span>
+                            </div>
                           </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-                            {esRechazada && sol.token_respuesta && !previewUid && (
-                              <a href={`${SITE}/reagendar/${sol.token_respuesta}`}
-                                style={{ fontSize: '11px', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif', color: '#FF6B2B', border: '1.5px solid #FF6B2B', borderRadius: '9999px', padding: '2px 9px', textDecoration: 'none' }}>
-                                🔄 Reagendar
-                              </a>
-                            )}
-                            <span style={{ borderRadius: '9999px', padding: '2px 9px', fontSize: '11px', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif', background: esCompletada ? '#DCFCE7' : '#F1F0F5', color: esCompletada ? '#166534' : '#9B8AB8', border: esCompletada ? '1.5px solid #86EFAC' : '1.5px solid #D4CAE8' }}>
-                              {esCompletada ? '✅ Contratado' : '✗ No continuó'}
-                            </span>
-                          </div>
+                          {mensajeCompita && (
+                            <div style={{ marginTop: '10px', background: '#F5F0FF', border: '1.5px solid rgba(124,77,255,0.25)', borderRadius: '8px', padding: '10px 14px' }}>
+                              <p style={{ margin: '0 0 4px', fontFamily: 'Inter, sans-serif', fontSize: '11px', fontWeight: 700, color: '#7C4DFF', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                Mensaje de {c?.nombre ?? 'el compita'}
+                              </p>
+                              <p style={{ margin: 0, fontFamily: 'Inter, sans-serif', fontSize: '13px', color: '#1A0A3C', lineHeight: '1.5', whiteSpace: 'pre-wrap' }}>
+                                {mensajeCompita}
+                              </p>
+                              {sol.token_respuesta && !previewUid && (
+                                <p style={{ margin: '8px 0 0', fontFamily: 'Inter, sans-serif', fontSize: '12px', color: '#6B5C90' }}>
+                                  ¿Te funciona alguno? Usa el botón <strong>🔄 Reagendar</strong> para agendar con {c?.nombre ?? 'el compita'} en esa nueva fecha.
+                                </p>
+                              )}
+                            </div>
+                          )}
                         </div>
                       )
                     })}

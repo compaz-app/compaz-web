@@ -1257,6 +1257,12 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
       return NextResponse.json({ ok: true })
     }
 
+    // Guardar el mensaje del compita en la solicitud para mostrarlo en el dashboard
+    await supabase
+      .from('solicitudes')
+      .update({ mensaje_compita_reagendar: text.slice(0, 2000) })
+      .eq('id', solicitudId)
+
     // Enviar email al cliente con los horarios sugeridos
     let emailHorarioEnviado = false
     if (clienteEmail) {

@@ -54,9 +54,11 @@ export async function POST(req: NextRequest) {
         subject: `${solicitud.compita_nombre} necesita cambiar la fecha de la llamada`,
         html: `
           <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px">
-            <h2 style="color:#2D1464;font-size:22px">Cambio de fecha</h2>
-            <p style="color:#4A3B6B;font-size:16px;line-height:1.6"><strong>${esc(solicitud.compita_nombre)}</strong> tuvo una eventualidad y necesita cambiar la fecha de la llamada.</p>
-            <p style="color:#4A3B6B;font-size:15px;line-height:1.6">En breve recibirás un correo con los nuevos horarios disponibles para que puedas elegir el que mejor te quede.</p>
+            <h2 style="color:#2D1464;font-size:22px">🔄 ${esc(solicitud.compita_nombre ?? '')} no puede en ese horario</h2>
+            <p style="color:#4A3B6B;font-size:16px;line-height:1.6"><strong>${esc(solicitud.compita_nombre ?? '')}</strong> no pudo en el horario que propusiste, pero quiere reagendar contigo.</p>
+            <p style="color:#4A3B6B;font-size:15px;line-height:1.6">En breve recibirás otro correo con los horarios que propone ${esc(solicitud.compita_nombre ?? '')} para que elijas el que mejor te quede.</p>
+            <p style="color:#4A3B6B;font-size:15px;line-height:1.6">También puedes verlo desde tu portal:</p>
+            <a href="${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://micompaz.com'}/dashboard" style="display:inline-block;background:#FF6B2B;color:white;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:600;margin-top:8px">Ver mi portal →</a>
             <p style="color:#6B5C90;font-size:13px;margin-top:24px">Compaz — <em>Cerca aunque estés lejos</em></p>
           </div>`,
       })

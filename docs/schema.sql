@@ -128,6 +128,7 @@ create table solicitudes (
 -- 6. Cliente confirma → estado=completada
 
 -- Columnas añadidas por ALTER (no en CREATE inicial):
+-- alter table solicitudes add column if not exists mensaje_compita_reagendar text;
 -- alter table solicitudes add column if not exists slot_confirmado timestamptz;
 -- alter table solicitudes add column if not exists room_url text;
 -- alter table solicitudes add column if not exists seguimiento_enviado boolean default false;
