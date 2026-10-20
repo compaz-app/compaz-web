@@ -64,7 +64,8 @@ create table visitas (
   fin         timestamptz,
   room_url    text,                          -- URL de la sala Daily.co para videollamada
   rating_cliente smallint check (rating_cliente between 1 and 5),  -- Calificación del cliente (1-5 estrellas)
-  created_at  timestamptz not null default now()
+  created_at  timestamptz not null default now(),
+  confirmando_inicio_en timestamptz  -- momento en que pasó a 'confirmando_inicio'; el cron la usa para auto-confirmar a los 5 min
 );
 
 -- ══════════════════════════════════════════════════════════════════════════════

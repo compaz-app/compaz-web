@@ -78,6 +78,7 @@ export interface Visita {
   room_url: string | null
   rating_cliente: number | null  // 1-5
   created_at: string
+  confirmando_inicio_en: string | null  // timestamp en que pasó a 'confirmando_inicio' (para el auto-confirm a los 5 min)
   compita?: Compita
   usuario?: Usuario
   mensajes?: Mensaje[]

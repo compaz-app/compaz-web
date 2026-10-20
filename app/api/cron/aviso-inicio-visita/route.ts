@@ -58,9 +58,9 @@ export async function POST(req: NextRequest) {
   const hace5min = new Date(Date.now() - 5 * 60_000).toISOString()
   const { data: pendientes } = await admin
     .from('visitas')
-    .select('id, updated_at, compitas(nombre, telegram_chat_id), usuario:usuarios(*)')
+    .select('id, confirmando_inicio_en, compitas(nombre, telegram_chat_id), usuario:usuarios(*)')
     .eq('estado', 'confirmando_inicio')
-    .lt('updated_at', hace5min)
+    .lt('confirmando_inicio_en', hace5min)
 
   let autoConfirmados = 0
   for (const v of pendientes ?? []) {

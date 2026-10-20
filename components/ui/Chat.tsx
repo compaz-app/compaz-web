@@ -111,9 +111,13 @@ export default function Chat({ visita, mensajesIniciales, compitaNombre }: ChatP
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {/* Cabecera */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '16px 20px', borderBottom: '2px solid #E8E0D4' }}>
-        <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: visita.estado === 'pre_visita' ? '#7C4DFF' : '#22c55e', flexShrink: 0 }} />
+        <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: visita.estado === 'pre_visita' ? '#7C4DFF' : visita.estado === 'confirmando_inicio' ? '#1d4ed8' : '#22c55e', flexShrink: 0 }} />
         <span style={{ color: '#2D1464', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700 }}>
-          {visita.estado === 'pre_visita' ? `Coordina con ${compitaNombre}` : `Visita en curso con ${compitaNombre}`}
+          {visita.estado === 'pre_visita'
+            ? `Coordina con ${compitaNombre}`
+            : visita.estado === 'confirmando_inicio'
+              ? `${compitaNombre} está esperando tu confirmación`
+              : `Visita en curso con ${compitaNombre}`}
         </span>
         <span style={{ marginLeft: 'auto', fontSize: '11px', color: '#9B8AB8', fontFamily: 'Inter, sans-serif' }}>🔒 Chat seguro</span>
       </div>

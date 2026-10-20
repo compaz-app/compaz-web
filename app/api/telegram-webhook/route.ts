@@ -1065,7 +1065,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
       // Pasa a confirmando_inicio: el cliente debe confirmar en el dashboard (max 5 min).
       const { data: visita, error: errInicio } = await supabase
         .from('visitas')
-        .update({ estado: 'confirmando_inicio' })
+        .update({ estado: 'confirmando_inicio', confirmando_inicio_en: new Date().toISOString() })
         .eq('id', conf.visitaId)
         .eq('compita_id', compita.id)
         .in('estado', ['programada', 'pre_visita'])

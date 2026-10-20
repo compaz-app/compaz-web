@@ -57,7 +57,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     .select('*, compita:compitas(id, nombre, zona, estado, verificado, foto_url, descripcion, servicios, youtube_url, visitas_realizadas, created_at)')
     .eq('usuario_id', targetUid)
     .in('estado', ['en_curso', 'confirmando_inicio'])
-    .order('updated_at', { ascending: false })
+    .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle() as { data: (Visita & { compita: Compita }) | null }
 
@@ -515,8 +515,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                 </a>
               </div>
             )}
-            {visitaActiva.estado === 'en_curso' && (
-              <div style={{ background: 'white', border: '2px solid #22c55e', borderRadius: '16px', overflow: 'hidden', height: '500px', display: 'flex', flexDirection: 'column' }}>
+            {(visitaActiva.estado === 'en_curso' || visitaActiva.estado === 'confirmando_inicio') && (
+              <div style={{ background: 'white', border: `2px solid ${visitaActiva.estado === 'en_curso' ? '#22c55e' : '#1d4ed8'}`, borderRadius: '16px', overflow: 'hidden', height: '500px', display: 'flex', flexDirection: 'column' }}>
                 <Chat visita={visitaActiva} mensajesIniciales={mensajes} compitaNombre={visitaActiva.compita.nombre} />
               </div>
             )}
