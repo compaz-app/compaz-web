@@ -317,6 +317,20 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
     }
   }
 
+  async function eliminarClientesEnLote(ids: string[]): Promise<number> {
+    let eliminados = 0
+    await Promise.all(ids.map(async (id) => {
+      const res = await fetch('/api/admin/eliminar-cliente', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ usuario_id: id }),
+      })
+      if (res.ok) eliminados++
+    }))
+    setUsuariosState((prev) => prev.filter((u) => !ids.includes(u.id)))
+    return eliminados
+  }
+
   async function eliminarCompita(compitaId: string, force: boolean): Promise<{ ok: true } | { ok: false; visitas?: number; error?: string }> {
     const res = await fetch('/api/admin/eliminar-compita', {
       method: 'DELETE',
@@ -519,6 +533,7 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
             compitas={compitas}
             onAsignar={asignarCompita}
             onEliminar={eliminarCliente}
+            onEliminarLote={eliminarClientesEnLote}
             onMarcar={(id, nombre) => setFlagModal({ entidad_tipo: 'cliente', entidad_id: id, entidad_nombre: nombre })}
             clientesInactivos={clientesInactivos}
           />
@@ -923,16 +938,20 @@ type ClientePreviewData = {
   visitasPasadas: { id: string; created_at: string; fin: string | null; inicio: string | null; compita: { nombre: string } }[]
 }
 
-function ClientesTab({ usuarios, compitas, onAsignar, onEliminar, onMarcar, clientesInactivos }: {
+function ClientesTab({ usuarios, compitas, onAsignar, onEliminar, onEliminarLote, onMarcar, clientesInactivos }: {
   usuarios: UsuarioConCompita[]
   compitas: Compita[]
   onAsignar: (usuarioId: string, compitaId: string) => void
   onEliminar: (usuarioId: string) => void
+  onEliminarLote: (ids: string[]) => Promise<number>
   onMarcar: (id: string, nombre: string) => void
   clientesInactivos?: Set<string>
 }) {
   const [busqueda, setBusqueda] = useState('')
   const [filtro, setFiltro] = useState<'todos' | 'activos' | 'invitados' | 'bloqueados'>('todos')
+  const [seleccionados, setSeleccionados] = useState<Set<string>>(new Set())
+  const [confirmarLote, setConfirmarLote] = useState(false)
+  const [eliminandoLote, setEliminandoLote] = useState(false)
 
   const activos = usuarios.filter((u) => u.activado && u.plan !== 'bloqueado')
   const invitados = usuarios.filter((u) => !u.activado && u.plan !== 'bloqueado')
@@ -946,6 +965,32 @@ function ClientesTab({ usuarios, compitas, onAsignar, onEliminar, onMarcar, clie
         (u.zona ?? '').toLowerCase().includes(busqueda.toLowerCase())
       )
     : base
+
+  const todosSeleccionados = lista.length > 0 && lista.every((u) => seleccionados.has(u.id))
+
+  function toggleTodos() {
+    if (todosSeleccionados) {
+      setSeleccionados((prev) => { const next = new Set(prev); lista.forEach((u) => next.delete(u.id)); return next })
+    } else {
+      setSeleccionados((prev) => { const next = new Set(prev); lista.forEach((u) => next.add(u.id)); return next })
+    }
+  }
+
+  function toggleUno(id: string) {
+    setSeleccionados((prev) => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next })
+  }
+
+  async function ejecutarEliminarLote() {
+    const ids = [...seleccionados]
+    setEliminandoLote(true)
+    try {
+      await onEliminarLote(ids)
+      setSeleccionados(new Set())
+      setConfirmarLote(false)
+    } finally {
+      setEliminandoLote(false)
+    }
+  }
 
   const btnFiltro = (f: typeof filtro, label: string, count: number) => (
     <button
@@ -979,23 +1024,92 @@ function ClientesTab({ usuarios, compitas, onAsignar, onEliminar, onMarcar, clie
         </div>
       </div>
 
+      {/* Barra de selección masiva */}
+      {lista.length > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', background: seleccionados.size > 0 ? '#FEF2F2' : '#F5F0FF', border: `2px solid ${seleccionados.size > 0 ? '#fca5a5' : '#D4C9E8'}`, borderRadius: '12px', flexWrap: 'wrap' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', userSelect: 'none' }}>
+            <input
+              type="checkbox"
+              checked={todosSeleccionados}
+              onChange={toggleTodos}
+              style={{ width: '16px', height: '16px', accentColor: '#2D1464', cursor: 'pointer' }}
+            />
+            <span style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', color: '#2D1464' }}>
+              {todosSeleccionados ? 'Deseleccionar todos' : `Seleccionar todos (${lista.length})`}
+            </span>
+          </label>
+          {seleccionados.size > 0 && (
+            <>
+              <span style={{ fontFamily: 'Inter, sans-serif', fontSize: '13px', color: '#991b1b' }}>
+                {seleccionados.size} seleccionado{seleccionados.size !== 1 ? 's' : ''}
+              </span>
+              {!confirmarLote ? (
+                <button
+                  onClick={() => setConfirmarLote(true)}
+                  style={{ background: '#B91C1C', color: 'white', border: 'none', borderRadius: '9999px', padding: '6px 16px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                >
+                  🗑 Eliminar seleccionados
+                </button>
+              ) : (
+                <>
+                  <span style={{ fontFamily: 'Inter, sans-serif', fontSize: '13px', color: '#991b1b', fontWeight: 700 }}>
+                    ¿Eliminar {seleccionados.size} cliente{seleccionados.size !== 1 ? 's' : ''}? Esta acción no se puede deshacer.
+                  </span>
+                  <button
+                    onClick={ejecutarEliminarLote}
+                    disabled={eliminandoLote}
+                    style={{ background: '#B91C1C', color: 'white', border: 'none', borderRadius: '9999px', padding: '6px 16px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', cursor: eliminandoLote ? 'not-allowed' : 'pointer', opacity: eliminandoLote ? 0.6 : 1, whiteSpace: 'nowrap' }}
+                  >
+                    {eliminandoLote ? 'Eliminando…' : 'Sí, eliminar'}
+                  </button>
+                  <button
+                    onClick={() => setConfirmarLote(false)}
+                    style={{ background: 'white', color: '#6B5C90', border: '2px solid #D1C8E0', borderRadius: '9999px', padding: '6px 14px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', cursor: 'pointer' }}
+                  >
+                    Cancelar
+                  </button>
+                </>
+              )}
+              <button
+                onClick={() => { setSeleccionados(new Set()); setConfirmarLote(false) }}
+                style={{ background: 'none', color: '#9B8AB8', border: 'none', fontSize: '13px', cursor: 'pointer', padding: '0', fontFamily: 'Inter, sans-serif' }}
+              >
+                ✕ Limpiar selección
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
       {lista.length === 0 ? (
         <div style={{ textAlign: 'center', color: '#9B8AB8', padding: '32px', fontFamily: 'Inter, sans-serif' }}>
           {busqueda ? 'Sin resultados para esa búsqueda.' : 'Ningún cliente en esta categoría.'}
         </div>
       ) : (
         lista.map((u) => (
-          <ClienteCard key={u.id} u={u} compitas={compitas} onAsignar={onAsignar} onEliminar={onEliminar} onMarcar={onMarcar} inactivo={clientesInactivos?.has(u.id) ?? false} />
+          <ClienteCard
+            key={u.id}
+            u={u}
+            compitas={compitas}
+            onAsignar={onAsignar}
+            onEliminar={onEliminar}
+            onMarcar={onMarcar}
+            inactivo={clientesInactivos?.has(u.id) ?? false}
+            seleccionado={seleccionados.has(u.id)}
+            onToggleSeleccion={toggleUno}
+          />
         ))
       )}
     </div>
   )
 }
 
-function ClienteCard({ u, compitas, onAsignar, onEliminar, onMarcar, inactivo = false }: {
+function ClienteCard({ u, compitas, onAsignar, onEliminar, onMarcar, inactivo = false, seleccionado = false, onToggleSeleccion }: {
   u: UsuarioConCompita
   compitas: Compita[]
   inactivo?: boolean
+  seleccionado?: boolean
+  onToggleSeleccion?: (id: string) => void
   onAsignar: (usuarioId: string, compitaId: string) => void
   onEliminar: (usuarioId: string) => void
   onMarcar: (id: string, nombre: string) => void
@@ -1012,10 +1126,18 @@ function ClienteCard({ u, compitas, onAsignar, onEliminar, onMarcar, inactivo = 
     if (res.ok) setBloqueado((b) => !b)
   }
 
-  const borderColor = bloqueado ? '#dc2626' : '#E8E0D4'
+  const borderColor = seleccionado ? '#7C4DFF' : bloqueado ? '#dc2626' : '#E8E0D4'
 
   return (
-    <div style={{ background: 'white', border: `2px solid ${borderColor}`, borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
+    <div style={{ background: seleccionado ? '#F5F0FF' : 'white', border: `2px solid ${borderColor}`, borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
+      {onToggleSeleccion && (
+        <input
+          type="checkbox"
+          checked={seleccionado}
+          onChange={() => onToggleSeleccion(u.id)}
+          style={{ width: '18px', height: '18px', accentColor: '#7C4DFF', cursor: 'pointer', flexShrink: 0 }}
+        />
+      )}
       <div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           <span style={{ color: '#1A0A3C', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700 }}>{u.nombre}</span>
