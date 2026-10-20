@@ -1,6 +1,8 @@
 // POST /api/admin/enviar-link-llamada
-// Fuerza el envío del link de sala al cliente y al compita para una solicitud específica.
-// Solo admins. No modifica slot_confirmado ni ningún campo de estado.
+// Fuerza el envío del link de sala al cliente y al compita para una solicitud específica,
+// y adelanta slot_confirmado a ahora mismo para que la sala quede abierta de inmediato
+// (la página /sala calcula la apertura en base a ese campo, no en base a cuándo se envió el link).
+// Solo admins.
 import { NextRequest } from 'next/server'
 import { getAdminUser } from '@/lib/auth'
 import { createAdminSupabase } from '@/lib/supabase-server'
@@ -32,6 +34,17 @@ export async function POST(req: NextRequest) {
   if (!row.slot_confirmado) return err('La solicitud no tiene slot confirmado')
 
   const compitaData = row.compitas as unknown as { nombre: string; telegram_chat_id: string | null; email: string | null } | null
+
+  // Forzar la hora a ahora mismo: la página /sala solo se abre 10 min antes de slot_confirmado,
+  // así que si el admin fuerza el envío, el slot debe adelantarse para que la sala quede
+  // abierta de inmediato (en vez de seguir bloqueada hasta la hora original pactada).
+  const ahoraIso = new Date().toISOString()
+  const { error: eSlot } = await admin.from('solicitudes').update({ slot_confirmado: ahoraIso }).eq('id', row.id)
+  if (eSlot) {
+    console.error('Error adelantando slot_confirmado:', eSlot)
+    return serverError(eSlot)
+  }
+  row.slot_confirmado = ahoraIso
   const slotLabel = formatSlotVE(row.slot_confirmado)
 
   // Crear sala si no existe, reusar si ya existe
