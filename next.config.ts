@@ -38,19 +38,6 @@ const nextConfig: NextConfig = {
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },
-  async redirects() {
-    return [
-      // El QR de los flyers universitarios (impreso, no se puede cambiar) apunta a
-      // /?rol=compita#formulario. Se lleva a la landing de reclutamiento.
-      // Temporal (307) para que los navegadores no la guarden y el destino pueda cambiar.
-      {
-        source: "/",
-        has: [{ type: "query", key: "rol", value: "compita" }],
-        destination: "/se-compita",
-        permanent: false,
-      },
-    ];
-  },
 };
 
 export default nextConfig;

@@ -170,7 +170,7 @@ Los flyers impresos en universidades tienen un QR que no se puede cambiar. Este 
 
 ```
 Escanea el QR del flyer → micompaz.com/?rol=compita#formulario
-→ next.config.ts redirige (307, temporal) a /se-compita
+→ middleware.ts redirige (307, temporal) a /se-compita, sin pasar por Supabase
 → Ve la landing de reclutamiento (qué hace un Compita, beneficios, requisitos)
 → Llena el formulario (nombre, WhatsApp, email, estado y ciudad donde vive)
 → Se envía a /api/waitlist con "Rol: compa" en el campo Contacto
