@@ -650,6 +650,11 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
       QUITAR_TECLADO,
     )
     await sendTelegramMessage(chatId, GUIA_COMPITA, TECLADO_SIN_VISITA)
+    await sendTelegramMessage(
+      chatId,
+      `🙌 <b>Eso es todo. Tu registro ya terminó.</b>\n\nNo tienes que hacer nada más de tu lado. Ahora solo falta que una familia te contrate — en cuanto eso pase, te va a aparecer aquí mismo, en este chat.\n\nMientras tanto, si quieres, completa tu perfil con /perfil para que las familias te conozcan mejor.`,
+      TECLADO_SIN_VISITA,
+    )
     const adminChatId = process.env.TELEGRAM_ADMIN_CHAT_ID
     if (adminChatId) {
       try {
