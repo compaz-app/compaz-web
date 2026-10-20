@@ -3,7 +3,7 @@
 import Image from "next/image";
 import ChatWidget from "@/components/ChatWidget";
 import DashboardMockup from "@/components/DashboardMockup";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import {
   ShoppingCart,
   Building2,
@@ -1120,14 +1120,33 @@ function Footer() {
 
 // ─── Home ─────────────────────────────────────────────────────────────────────
 
+// Valores de `?rol=` aceptados en enlaces externos (QR de flyers, campañas) → valor interno del formulario.
+const ROL_DESDE_URL: Record<string, string> = {
+  compita: "compa",
+  compa: "compa",
+  familia: "familia",
+};
+
+const sinSuscripcion = () => () => {};
+const leerRolDesdeUrl = () =>
+  ROL_DESDE_URL[new URLSearchParams(window.location.search).get("rol")?.toLowerCase() ?? ""] ?? "";
+
 export default function Home() {
-  const [rolSeleccionado, setRolSeleccionado] = useState("");
+  // Rol elegido en el hero; si no hay, se usa el que venga en ?rol= (p. ej. QR del flyer universitario).
+  const [rolElegido, setRolElegido] = useState("");
+  const rolDesdeUrl = useSyncExternalStore(sinSuscripcion, leerRolDesdeUrl, () => "");
+  const rolSeleccionado = rolElegido || rolDesdeUrl;
+
+  // Si el enlace trae un rol, llevar directo al formulario.
+  useEffect(() => {
+    if (rolDesdeUrl) document.getElementById("formulario")?.scrollIntoView();
+  }, [rolDesdeUrl]);
 
   return (
     <>
       <Nav />
       <main>
-        <Hero onSelectRol={setRolSeleccionado} />
+        <Hero onSelectRol={setRolElegido} />
         <SeccionConfianza />
         <QueHaceUnCompa />
         <WaveDivider from="#FDFAF6" to="#2D1464" shape={2} />
