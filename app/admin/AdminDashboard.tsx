@@ -1901,14 +1901,14 @@ function VisitasAdminTab({
                   style={{ background: 'white', border: `2px solid ${v.id === visitaSeleccionada ? '#FF6B2B' : '#22c55e'}`, borderRadius: '16px', padding: '20px', cursor: 'pointer' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                     <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22c55e' }} />
-                    <strong style={{ color: '#1A0A3C', fontFamily: 'Bricolage Grotesque, sans-serif' }}>{v.compita.nombre}</strong>
-                    <span style={{ color: '#6B5C90', fontSize: '14px' }}>con {v.usuario.nombre}</span>
+                    <strong style={{ color: '#1A0A3C', fontFamily: 'Bricolage Grotesque, sans-serif' }}>{v.compita?.nombre}</strong>
+                    <span style={{ color: '#6B5C90', fontSize: '14px' }}>con {v.usuario?.nombre}</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
                     <div style={{ color: '#6B5C90', fontSize: '13px' }}>
                       Iniciada: {v.inicio ? new Date(v.inicio).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' }) : '—'}
                     </div>
-                    <button onClick={(e) => { e.stopPropagation(); setFlagModal({ entidad_tipo: 'visita', entidad_id: v.id, entidad_nombre: `${v.compita.nombre} con ${v.usuario.nombre}` }) }}
+                    <button onClick={(e) => { e.stopPropagation(); setFlagModal({ entidad_tipo: 'visita', entidad_id: v.id, entidad_nombre: `${v.compita?.nombre} con ${v.usuario?.nombre}` }) }}
                       style={{ background: 'none', border: '1.5px solid #dc2626', color: '#dc2626', borderRadius: '9999px', padding: '3px 10px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Bricolage Grotesque, sans-serif' }}>
                       ⚑ Marcar
                     </button>
@@ -1963,8 +1963,8 @@ function VisitasAdminTab({
                   style={{ background: 'white', border: `2px solid ${v.id === visitaSeleccionada ? '#7C4DFF' : '#D4C9E8'}`, borderRadius: '16px', padding: '20px', cursor: 'pointer' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                     <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#7C4DFF' }} />
-                    <strong style={{ color: '#1A0A3C', fontFamily: 'Bricolage Grotesque, sans-serif' }}>{v.compita.nombre}</strong>
-                    <span style={{ color: '#6B5C90', fontSize: '14px' }}>con {v.usuario.nombre}</span>
+                    <strong style={{ color: '#1A0A3C', fontFamily: 'Bricolage Grotesque, sans-serif' }}>{v.compita?.nombre}</strong>
+                    <span style={{ color: '#6B5C90', fontSize: '14px' }}>con {v.usuario?.nombre}</span>
                     <span style={{ background: '#F5F0FF', color: '#7C4DFF', border: '1.5px solid #D4C9E8', borderRadius: '9999px', padding: '2px 10px', fontSize: '11px', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif' }}>
                       {v.estado === 'programada' ? 'Programada' : 'Coordinando'}
                     </span>
@@ -1974,7 +1974,7 @@ function VisitasAdminTab({
                         {v.hora_inicio_programada ? ` · ${v.hora_inicio_programada}` : ''}
                       </span>
                     )}
-                    <button onClick={(e) => { e.stopPropagation(); setFlagModal({ entidad_tipo: 'visita', entidad_id: v.id, entidad_nombre: `${v.compita.nombre} con ${v.usuario.nombre}` }) }}
+                    <button onClick={(e) => { e.stopPropagation(); setFlagModal({ entidad_tipo: 'visita', entidad_id: v.id, entidad_nombre: `${v.compita?.nombre} con ${v.usuario?.nombre}` }) }}
                       style={{ background: 'none', border: '1.5px solid #dc2626', color: '#dc2626', borderRadius: '9999px', padding: '3px 10px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Bricolage Grotesque, sans-serif', marginLeft: 'auto' }}>
                       ⚑ Marcar
                     </button>
@@ -2017,8 +2017,8 @@ function VisitasAdminTab({
               <div key={v.id} style={{ background: 'white', border: '2px solid #E8E0D4', borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '4px' }}>
-                    <strong style={{ color: '#1A0A3C', fontFamily: 'Bricolage Grotesque, sans-serif' }}>{v.compita.nombre}</strong>
-                    <span style={{ color: '#6B5C90', fontSize: '14px' }}>con {v.usuario.nombre}</span>
+                    <strong style={{ color: '#1A0A3C', fontFamily: 'Bricolage Grotesque, sans-serif' }}>{v.compita?.nombre}</strong>
+                    <span style={{ color: '#6B5C90', fontSize: '14px' }}>con {v.usuario?.nombre}</span>
                     <span style={{ background: '#F5F5F5', color: '#6B5C90', border: '1.5px solid #E8E0D4', borderRadius: '9999px', padding: '2px 10px', fontSize: '11px', fontWeight: 700 }}>✅ Terminada</span>
                   </div>
                   <p style={{ color: '#9B8AB8', fontSize: '13px', margin: 0 }}>
