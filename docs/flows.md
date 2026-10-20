@@ -177,7 +177,7 @@ Escanea el QR del flyer → micompaz.com/?rol=compita#formulario
 → Queda registrado en Airtable, igual que los leads de la home
 → Airtable le manda un saludo automático con un preformulario
 → Cuando lo completa, el equipo lo llama por WhatsApp
-→ CMC
+→ CMC (Centro de Mando de Compitas, donde se gestiona la selección)
 ```
 
 **Por qué /se-compita y no /compitas:** `/compitas` ya es el marketplace privado donde las familias con sesión iniciada eligen Compita. Está enlazado desde el dashboard, los emails, Telegram y el middleware, así que no se puede reutilizar para una página pública.
