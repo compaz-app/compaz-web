@@ -82,9 +82,12 @@ export const TECLADO_INICIO = {
   resize_keyboard: true,
 } satisfies ReplyKeyboard
 
-// Visita en curso: Terminar + Menú
+// Visita en curso: Terminar + Llamar al cliente + Menú
 export const TECLADO_DURANTE_VISITA = {
-  keyboard: [[{ text: '🔴 Terminar visita' }, { text: '📋 Menú' }]],
+  keyboard: [
+    [{ text: '🔴 Terminar visita' }, { text: '📹 Llamar al cliente' }],
+    [{ text: '📋 Menú' }],
+  ],
   resize_keyboard: true,
 } satisfies ReplyKeyboard
 

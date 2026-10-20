@@ -87,10 +87,11 @@ export default function SalaEntrevista({ token, quien, roomUrl, compitaNombre, c
     try {
       const res = await fetch(`/api/solicitud/reconectar-llamada?token=${token}&${rolQs}`, { method: 'POST' })
       const data = await res.json()
-      if (data.room_url) {
-        setNuevaRoomUrl(data.room_url)
+      const url = data.data?.room_url
+      if (url) {
+        setNuevaRoomUrl(url)
         setPaso('reconectando')
-        window.open(data.room_url, '_blank', 'noopener,noreferrer')
+        window.open(url, '_blank', 'noopener,noreferrer')
       } else {
         alert('No pudimos crear la sala. Intenta de nuevo o escríbenos a hola@micompaz.com.')
       }
@@ -156,10 +157,11 @@ export default function SalaEntrevista({ token, quien, roomUrl, compitaNombre, c
     try {
       const res = await fetch(`/api/solicitud/reconectar-llamada?token=${token}&${rolQs}`, { method: 'POST' })
       const data = await res.json()
-      if (data.room_url) {
-        setNuevaRoomUrl(data.room_url)
+      const url = data.data?.room_url
+      if (url) {
+        setNuevaRoomUrl(url)
         setPaso('reconectando')
-        window.open(data.room_url, '_blank', 'noopener,noreferrer')
+        window.open(url, '_blank', 'noopener,noreferrer')
       } else {
         alert('No pudimos crear la sala. Intenta de nuevo o escríbenos a hola@micompaz.com.')
       }

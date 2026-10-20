@@ -24,8 +24,8 @@ export default function VideoCall({ visitaId, compitaNombre, roomUrlInicial }: P
         body: JSON.stringify({ visita_id: visitaId, solo_audio: soloAudio }),
       })
       const d = await res.json()
-      if (d.url) {
-        setRoomUrl(d.url)
+      if (d.ok && d.data?.url) {
+        setRoomUrl(d.data.url)
         setEnLlamada(true)
       } else {
         alert(d.error ?? 'Error al iniciar la llamada')

@@ -19,6 +19,7 @@ import {
   makeInlineKeyboard,
 } from '@/lib/telegram'
 import { generarTokenPerfil } from '@/lib/compita-tokens'
+import { getOrCreateDailyRoom } from '@/lib/daily'
 import { sendVisitaInicio, sendVisitaResumen, sendResumenConReporte, sendCodigoTelegram } from '@/lib/resend'
 import { responderSolicitud } from '@/lib/solicitudes'
 import { qRol } from '@/lib/links'
@@ -804,6 +805,56 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
       `¿Confirmas que quieres terminar la visita?\n\nToca <b>✅ Sí, terminar</b> para confirmar. Se le enviará un resumen a la familia.`,
       INLINE_CONFIRMAR_FIN,
     )
+    return NextResponse.json({ ok: true })
+  }
+
+  // ── Botón: Llamar al cliente ─────────────────────────────────────────────────
+  if (text === '📹 Llamar al cliente') {
+    const { data: visitaLlamada } = await supabase
+      .from('visitas')
+      .select('id, room_url, usuario:usuarios(nombre, email)')
+      .eq('compita_id', compita.id)
+      .eq('estado', 'en_curso')
+      .order('inicio', { ascending: false })
+      .limit(1)
+      .maybeSingle() as { data: { id: string; room_url: string | null; usuario: { nombre: string; email: string } | null } | null }
+
+    if (!visitaLlamada) {
+      await sendTelegramMessage(chatId, `No tienes ninguna visita en curso en este momento.`, TECLADO_SIN_VISITA)
+      return NextResponse.json({ ok: true })
+    }
+
+    let roomUrl = visitaLlamada.room_url
+    if (!roomUrl) {
+      const room = await getOrCreateDailyRoom(visitaLlamada.id, null)
+      roomUrl = room.url
+      await supabase.from('visitas').update({ room_url: roomUrl }).eq('id', visitaLlamada.id)
+    }
+
+    await sendTelegramMessage(
+      chatId,
+      `📹 <b>Enlace de videollamada</b>\n\nAbre este enlace para llamar al cliente:\n${roomUrl}`,
+      TECLADO_DURANTE_VISITA,
+    )
+
+    // Notificar al cliente por email
+    const clienteEmail = visitaLlamada.usuario?.email
+    if (clienteEmail) {
+      await sendEmail({
+        to: [clienteEmail],
+        subject: `${compita.nombre} quiere llamarte`,
+        html: `<div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px">
+          <h2 style="color:#2D1464">📹 ${escapeHtml(compita.nombre)} quiere llamarte</h2>
+          <p style="color:#4A3B6B;font-size:16px;line-height:1.6">
+            Tu compita quiere hacer una videollamada. Entra a tu portal para conectarte:
+          </p>
+          <a href="${SITE_URL}/dashboard" style="display:inline-block;background:#FF6B2B;color:white;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:600;margin-top:8px">
+            Ir al portal
+          </a>
+        </div>`,
+      })
+    }
+
     return NextResponse.json({ ok: true })
   }
 
