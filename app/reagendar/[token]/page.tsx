@@ -141,6 +141,9 @@ export default function ReagendarPage({ params }: { params: Promise<{ token: str
           <p style={{ color: '#4A3B6B', fontFamily: 'Inter, sans-serif', lineHeight: 1.6 }}>
             {info?.compita_nombre} revisará tus horarios y confirmará el que mejor le quede. Te avisaremos por correo cuando confirme.
           </p>
+          <a href="/dashboard" style={{ display: 'inline-block', background: '#FF6B2B', color: 'white', padding: '14px 28px', borderRadius: '9999px', textDecoration: 'none', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '16px', marginTop: '24px' }}>
+            ← Ir a mi portal
+          </a>
         </div>
       </div>
     )

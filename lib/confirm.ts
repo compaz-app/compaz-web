@@ -17,9 +17,10 @@ export function paginaHtml(titulo: string, cuerpoHtml: string, status = 200): Ne
 }
 
 export function pagina(titulo: string, texto: string, status = 200, boton?: { texto: string; href: string }): NextResponse {
+  const btnEfectivo = boton ?? (status === 200 ? { texto: '← Ir a mi portal', href: '/dashboard' } : undefined)
   return paginaHtml(
     titulo,
-    `<p>${esc(texto)}</p>${boton ? `<a class="btn" href="${esc(boton.href)}">${esc(boton.texto)}</a>` : ''}`,
+    `<p>${esc(texto)}</p>${btnEfectivo ? `<a class="btn" href="${esc(btnEfectivo.href)}">${esc(btnEfectivo.texto)}</a>` : ''}`,
     status,
   )
 }
