@@ -83,7 +83,6 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
   const [solicitudes, setSolicitudes] = useState<Solicitud[]>([])
   const [mostrarFormulario, setMostrarFormulario] = useState(false)
   const [formMensaje, setFormMensaje] = useState('')
-  const [formSobreCliente, setFormSobreCliente] = useState('')
   const [slotsElegidos, setSlotsElegidos] = useState<string[]>([])
   const reagendarId = searchParams.get('reagendar')
   const [reagendando, setReagendando] = useState(false)
@@ -92,6 +91,7 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
   const [errorAgendar, setErrorAgendar] = useState('')
   const [compitaAsignadaId, setCompitaAsignadaId] = useState<string | null>(null)
   const [compitasConHistorial, setCompitasConHistorial] = useState<string[]>([])
+  const [mensajeAutogenerado, setMensajeAutogenerado] = useState(false)
   const resultadosRef = useRef<HTMLDivElement>(null)
 
   async function agendarOtraVisita() {
@@ -119,9 +119,21 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
       .then((d) => {
         if (d.data?.compita_id) setCompitaAsignadaId(d.data.compita_id)
         if (Array.isArray(d.data?.compitas_con_historial)) setCompitasConHistorial(d.data.compitas_con_historial)
+        // Ya se registraron los datos del familiar al entrar al portal (PrimerAccesoModal):
+        // no se le vuelven a pedir aquí, se generan automáticamente (salvo que esté reagendando,
+        // donde ya se restaura el mensaje original de la solicitud).
+        if (d.data?.familiar_nombre && !reagendarId) {
+          const partes = [`Mi familiar es ${d.data.familiar_nombre}`]
+          if (d.data.familiar_edad) partes.push(`tiene ${d.data.familiar_edad} años`)
+          if (d.data.familiar_condicion) partes.push(`su condición: ${d.data.familiar_condicion}`)
+          let texto = `${partes.join(', ')}.`
+          if (d.data.familiar_notas) texto += ` ${d.data.familiar_notas}`
+          setFormMensaje(texto)
+          setMensajeAutogenerado(true)
+        }
       })
       .catch(() => {})
-  }, [])
+  }, [reagendarId])
 
   useEffect(() => {
     fetch('/api/mis-solicitudes')
@@ -133,7 +145,6 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
             const sol = (d.solicitudes as Solicitud[]).find((s) => s.id === reagendarId)
             if (sol) {
               setFormMensaje(sol.mensaje)
-              setFormSobreCliente('')
               setReagendando(true)
               setMostrarFormulario(true)
               // Seleccionar el compita directamente para no depender del segundo useEffect
@@ -303,7 +314,6 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
         body: JSON.stringify({
           compita_id: compita.id,
           mensaje: formMensaje,
-          sobre_cliente: formSobreCliente.trim() || null,
           slots_propuestos: slotsElegidos,
         }),
       })
@@ -337,7 +347,6 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
         setSeleccionada(null)
         setMostrarFormulario(false)
         setFormMensaje('')
-        setFormSobreCliente('')
         setSlotsElegidos([])
         setReagendando(false)
       } else {
@@ -540,7 +549,7 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
           onClick={(e) => { if (e.target === e.currentTarget) { setSeleccionada(null); setMostrarFormulario(false) } }}
         >
           <div style={{ background: '#FDFAF6', borderRadius: '24px', maxWidth: '560px', width: '100%', maxHeight: '90vh', overflowY: 'auto', position: 'relative' }}>
-            <button onClick={() => { setSeleccionada(null); setMostrarFormulario(false); setSlotsElegidos([]); setFormMensaje(''); setFormSobreCliente(''); setReagendando(false) }} style={{ position: 'absolute', top: '16px', right: '16px', background: 'white', border: '2px solid #E8E0D4', borderRadius: '9999px', width: '32px', height: '32px', cursor: 'pointer', fontSize: '16px', zIndex: 10 }}>×</button>
+            <button onClick={() => { setSeleccionada(null); setMostrarFormulario(false); setSlotsElegidos([]); setFormMensaje(''); setReagendando(false) }} style={{ position: 'absolute', top: '16px', right: '16px', background: 'white', border: '2px solid #E8E0D4', borderRadius: '9999px', width: '32px', height: '32px', cursor: 'pointer', fontSize: '16px', zIndex: 10 }}>×</button>
 
             {seleccionada.foto_url
               // eslint-disable-next-line @next/next/no-img-element
@@ -701,26 +710,7 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
                     </div>
                   )}
 
-                  {/* Sobre el cliente */}
-                  {!reagendando && (
-                    <div>
-                      <label style={{ display: 'block', fontWeight: 600, fontSize: '13px', color: '#1A0A3C', marginBottom: '4px' }}>
-                        Cuéntanos sobre ti
-                      </label>
-                      <p style={{ color: '#6B5C90', fontSize: '12px', marginBottom: '8px' }}>
-                        Opcional — los compitas aceptan más cuando saben con quién están hablando.
-                      </p>
-                      <textarea
-                        value={formSobreCliente}
-                        onChange={(e) => setFormSobreCliente(e.target.value)}
-                        placeholder="Soy la hija de Rosa, vivo cerca y estoy buscando acompañamiento para ella…"
-                        rows={3}
-                        style={{ width: '100%', border: '2px solid rgba(45,20,100,0.2)', borderRadius: '12px', padding: '12px', fontFamily: 'Inter, sans-serif', fontSize: '16px', color: '#1A0A3C', resize: 'vertical', boxSizing: 'border-box' }}
-                      />
-                    </div>
-                  )}
-
-                  {/* Mensaje sobre el familiar */}
+                  {/* Mensaje sobre el familiar — ya se registró en el portal; solo se confirma/edita */}
                   <div>
                     {reagendando ? (
                       <div style={{ background: '#F5F0FF', border: '2px solid rgba(45,20,100,0.15)', borderRadius: '12px', padding: '14px 16px' }}>
@@ -730,11 +720,16 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
                     ) : (
                       <>
                         <label style={{ display: 'block', fontWeight: 600, fontSize: '13px', color: '#1A0A3C', marginBottom: '6px' }}>
-                          Cuéntale a {seleccionada.nombre} sobre tu familiar *
+                          Esto es lo que verá {seleccionada.nombre} sobre tu familiar{!mensajeAutogenerado && ' *'}
                         </label>
+                        {mensajeAutogenerado && (
+                          <p style={{ color: '#6B5C90', fontSize: '12px', marginBottom: '8px' }}>
+                            Lo armamos con los datos que ya registraste. Puedes editarlo si quieres agregar algo.
+                          </p>
+                        )}
                         <textarea
                           value={formMensaje}
-                          onChange={(e) => setFormMensaje(e.target.value)}
+                          onChange={(e) => { setFormMensaje(e.target.value); setMensajeAutogenerado(false) }}
                           placeholder="Edad, condición de salud, qué tipo de acompañamiento necesita y en qué zona vive…"
                           rows={4}
                           style={{ width: '100%', border: '2px solid rgba(45,20,100,0.2)', borderRadius: '12px', padding: '12px', fontFamily: 'Inter, sans-serif', fontSize: '16px', color: '#1A0A3C', resize: 'vertical', boxSizing: 'border-box' }}
@@ -834,7 +829,7 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
                   {/* Botones */}
                   <div style={{ display: 'flex', gap: '10px' }}>
                     <button
-                      onClick={() => { setMostrarFormulario(false); setSlotsElegidos([]); setFormMensaje(''); setFormSobreCliente(''); setReagendando(false) }}
+                      onClick={() => { setMostrarFormulario(false); setSlotsElegidos([]); setFormMensaje(''); setReagendando(false) }}
                       style={{ flex: 1, background: 'white', color: '#4A3B6B', border: '2px solid #D4C9E8', borderRadius: '9999px', padding: '14px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '15px', cursor: 'pointer' }}
                     >
                       Cancelar

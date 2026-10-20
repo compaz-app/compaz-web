@@ -10,7 +10,7 @@ export async function GET() {
   const admin = createAdminSupabase()
 
   const [{ data: usuarioRow }, { data: visitasRow }] = await Promise.all([
-    admin.from('usuarios').select('compita_id').eq('id', user.id).maybeSingle(),
+    admin.from('usuarios').select('compita_id, familiar_nombre, familiar_edad, familiar_condicion, familiar_notas').eq('id', user.id).maybeSingle(),
     admin.from('visitas').select('compita_id').eq('usuario_id', user.id).neq('estado', 'pre_visita'),
   ])
 
@@ -23,5 +23,12 @@ export async function GET() {
       .filter(Boolean)
   )]
 
-  return ok({ compita_id: compitaAsignadaId, compitas_con_historial: compitasConHistorial })
+  return ok({
+    compita_id: compitaAsignadaId,
+    compitas_con_historial: compitasConHistorial,
+    familiar_nombre: usuarioRow?.familiar_nombre ?? null,
+    familiar_edad: usuarioRow?.familiar_edad ?? null,
+    familiar_condicion: usuarioRow?.familiar_condicion ?? null,
+    familiar_notas: usuarioRow?.familiar_notas ?? null,
+  })
 }
