@@ -72,6 +72,7 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
   const [inviteUrl, setInviteUrl] = useState<string | null>(null)
   const [generandoInvite, setGenerandoInvite] = useState(false)
   const [compitas, setCompitas] = useState(todasCompitas)
+  const [seleccionadosCompitas, setSeleccionadosCompitas] = useState<Set<string>>(new Set())
   const [busqueda, setBusqueda] = useState('')
   const [filtroDesactivadas, setFiltroDesactivadas] = useState<'todas' | 'inactivo' | 'bloqueado'>('todas')
   const [clientePreviewId, setClientePreviewId] = useState<string | null>(null)
@@ -345,9 +346,38 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
       const data = await res.json()
       if (res.status === 409 && data.visitas != null) return { ok: false, visitas: data.visitas }
       return { ok: false, error: data.error ?? 'Error desconocido' }
+
     } catch {
       return { ok: false, error: `Error ${res.status}` }
     }
+  }
+
+  async function eliminarCompitasEnLote(ids: string[]): Promise<number> {
+    let eliminados = 0
+    await Promise.all(ids.map(async (id) => {
+      const res = await fetch('/api/admin/eliminar-compita', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ compita_id: id, force: true }),
+      })
+      if (res.ok) eliminados++
+    }))
+    setCompitas((prev) => prev.filter((c) => !ids.includes(c.id)))
+    return eliminados
+  }
+
+  function toggleUnoCompita(id: string) {
+    setSeleccionadosCompitas((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function toggleTodosCompitas(lista: { id: string }[]) {
+    const todos = lista.every((c) => seleccionadosCompitas.has(c.id))
+    setSeleccionadosCompitas(todos ? new Set() : new Set(lista.map((c) => c.id)))
   }
 
   async function toggleVerificado(compitaId: string, actual: boolean) {
@@ -584,8 +614,37 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
               const enMapa = filtrar(compitasEnMapa)
               const sinTelegram = filtrar(compitasSinTelegram)
               const totalActivas = enMapa.length + sinTelegram.length + pendientes.length
+              const todasEnVista = [...pendientes, ...sinTelegram, ...enMapa]
+              const todosSeleccionados = todasEnVista.length > 0 && todasEnVista.every((c) => seleccionadosCompitas.has(c.id))
               return (
                 <>
+                  {/* Barra de selección masiva */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', background: seleccionadosCompitas.size > 0 ? '#FEF2F2' : '#F5F0FF', border: `2px solid ${seleccionadosCompitas.size > 0 ? '#fca5a5' : '#D4C9E8'}`, borderRadius: '12px', flexWrap: 'wrap' }}>
+                    <input type="checkbox" checked={todosSeleccionados} onChange={() => toggleTodosCompitas(todasEnVista)} style={{ width: '18px', height: '18px', accentColor: '#7C4DFF', cursor: 'pointer', flexShrink: 0 }} />
+                    <span style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '14px', color: '#4A3B6B', flex: 1 }}>
+                      {todosSeleccionados ? 'Todos seleccionados' : 'Seleccionar todos'}
+                    </span>
+                    {seleccionadosCompitas.size > 0 && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                        <span style={{ fontFamily: 'Inter, sans-serif', fontSize: '13px', color: '#6B5C90' }}>
+                          {seleccionadosCompitas.size} seleccionado{seleccionadosCompitas.size !== 1 ? 's' : ''}
+                        </span>
+                        <button
+                          onClick={async () => {
+                            if (!confirm(`¿Eliminar ${seleccionadosCompitas.size} compita${seleccionadosCompitas.size !== 1 ? 's' : ''}? Esta acción no se puede deshacer.`)) return
+                            const ids = [...seleccionadosCompitas]
+                            const n = await eliminarCompitasEnLote(ids)
+                            setSeleccionadosCompitas(new Set())
+                            alert(`${n} compita${n !== 1 ? 's' : ''} eliminado${n !== 1 ? 's' : ''}.`)
+                          }}
+                          style={{ background: '#dc2626', color: 'white', border: 'none', borderRadius: '9999px', padding: '6px 14px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                        >
+                          🗑 Eliminar seleccionados
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
                   {/* Sección pendientes — siempre visible */}
                   <div style={{ marginBottom: '20px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
@@ -597,7 +656,7 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
                     {pendientes.length > 0 ? (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         {pendientes.map((c) => (
-                          <CompitaCard key={c.id} c={c} onToggleVerificado={toggleVerificado} onToggleEstado={toggleEstado} onVerPerfil={(id) => { setCompitaPerfilId(id); setTab('perfil') }} onToggleBloqueado={toggleBloqueado} onEliminar={eliminarCompita} onMarcar={(id, nombre) => setFlagModal({ entidad_tipo: 'compita', entidad_id: id, entidad_nombre: nombre })} />
+                          <CompitaCard key={c.id} c={c} onToggleVerificado={toggleVerificado} onToggleEstado={toggleEstado} onVerPerfil={(id) => { setCompitaPerfilId(id); setTab('perfil') }} onToggleBloqueado={toggleBloqueado} onEliminar={eliminarCompita} onMarcar={(id, nombre) => setFlagModal({ entidad_tipo: 'compita', entidad_id: id, entidad_nombre: nombre })} seleccionado={seleccionadosCompitas.has(c.id)} onToggleSeleccion={toggleUnoCompita} />
                         ))}
                       </div>
                     ) : (
@@ -618,7 +677,7 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
                     {sinTelegram.length > 0 ? (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         {sinTelegram.map((c) => (
-                          <CompitaCard key={c.id} c={c} onToggleVerificado={toggleVerificado} onToggleEstado={toggleEstado} onVerPerfil={(id) => { setCompitaPerfilId(id); setTab('perfil') }} onToggleBloqueado={toggleBloqueado} onEliminar={eliminarCompita} onMarcar={(id, nombre) => setFlagModal({ entidad_tipo: 'compita', entidad_id: id, entidad_nombre: nombre })} />
+                          <CompitaCard key={c.id} c={c} onToggleVerificado={toggleVerificado} onToggleEstado={toggleEstado} onVerPerfil={(id) => { setCompitaPerfilId(id); setTab('perfil') }} onToggleBloqueado={toggleBloqueado} onEliminar={eliminarCompita} onMarcar={(id, nombre) => setFlagModal({ entidad_tipo: 'compita', entidad_id: id, entidad_nombre: nombre })} seleccionado={seleccionadosCompitas.has(c.id)} onToggleSeleccion={toggleUnoCompita} />
                         ))}
                       </div>
                     ) : (
@@ -639,7 +698,7 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
                     {enMapa.length > 0 ? (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         {enMapa.map((c) => (
-                          <CompitaCard key={c.id} c={c} onToggleVerificado={toggleVerificado} onToggleEstado={toggleEstado} onVerPerfil={(id) => { setCompitaPerfilId(id); setTab('perfil') }} onToggleBloqueado={toggleBloqueado} onEliminar={eliminarCompita} onMarcar={(id, nombre) => setFlagModal({ entidad_tipo: 'compita', entidad_id: id, entidad_nombre: nombre })} />
+                          <CompitaCard key={c.id} c={c} onToggleVerificado={toggleVerificado} onToggleEstado={toggleEstado} onVerPerfil={(id) => { setCompitaPerfilId(id); setTab('perfil') }} onToggleBloqueado={toggleBloqueado} onEliminar={eliminarCompita} onMarcar={(id, nombre) => setFlagModal({ entidad_tipo: 'compita', entidad_id: id, entidad_nombre: nombre })} seleccionado={seleccionadosCompitas.has(c.id)} onToggleSeleccion={toggleUnoCompita} />
                         ))}
                       </div>
                     ) : (
@@ -660,6 +719,7 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
                 : filtroDesactivadas === 'inactivo' ? compitasInactivas
                 : [...compitasBloqueadas, ...compitasInactivas]
               const lista = filtrar(pool)
+              const todosSeleccionados = lista.length > 0 && lista.every((c) => seleccionadosCompitas.has(c.id))
               return (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   {/* Barra de búsqueda + filtro */}
@@ -677,9 +737,35 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
                       </button>
                     ))}
                   </div>
+                  {/* Barra de selección masiva */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', background: seleccionadosCompitas.size > 0 ? '#FEF2F2' : '#F5F0FF', border: `2px solid ${seleccionadosCompitas.size > 0 ? '#fca5a5' : '#D4C9E8'}`, borderRadius: '12px', flexWrap: 'wrap' }}>
+                    <input type="checkbox" checked={todosSeleccionados} onChange={() => toggleTodosCompitas(lista)} style={{ width: '18px', height: '18px', accentColor: '#7C4DFF', cursor: 'pointer', flexShrink: 0 }} />
+                    <span style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '14px', color: '#4A3B6B', flex: 1 }}>
+                      {todosSeleccionados ? 'Todos seleccionados' : 'Seleccionar todos'}
+                    </span>
+                    {seleccionadosCompitas.size > 0 && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                        <span style={{ fontFamily: 'Inter, sans-serif', fontSize: '13px', color: '#6B5C90' }}>
+                          {seleccionadosCompitas.size} seleccionado{seleccionadosCompitas.size !== 1 ? 's' : ''}
+                        </span>
+                        <button
+                          onClick={async () => {
+                            if (!confirm(`¿Eliminar ${seleccionadosCompitas.size} compita${seleccionadosCompitas.size !== 1 ? 's' : ''}? Esta acción no se puede deshacer.`)) return
+                            const ids = [...seleccionadosCompitas]
+                            const n = await eliminarCompitasEnLote(ids)
+                            setSeleccionadosCompitas(new Set())
+                            alert(`${n} compita${n !== 1 ? 's' : ''} eliminado${n !== 1 ? 's' : ''}.`)
+                          }}
+                          style={{ background: '#dc2626', color: 'white', border: 'none', borderRadius: '9999px', padding: '6px 14px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                        >
+                          🗑 Eliminar seleccionados
+                        </button>
+                      </div>
+                    )}
+                  </div>
                   {lista.length === 0
                     ? <div style={{ background: 'white', border: '2px solid #E8E0D4', borderRadius: '16px', padding: '40px', textAlign: 'center' }}><p style={{ color: '#6B5C90' }}>No hay resultados.</p></div>
-                    : lista.map((c) => <CompitaCard key={c.id} c={c} onToggleVerificado={toggleVerificado} onToggleEstado={toggleEstado} onVerPerfil={(id) => { setCompitaPerfilId(id); setTab('perfil') }} onToggleBloqueado={toggleBloqueado} onEliminar={eliminarCompita} onMarcar={(id, nombre) => setFlagModal({ entidad_tipo: 'compita', entidad_id: id, entidad_nombre: nombre })} />)
+                    : lista.map((c) => <CompitaCard key={c.id} c={c} onToggleVerificado={toggleVerificado} onToggleEstado={toggleEstado} onVerPerfil={(id) => { setCompitaPerfilId(id); setTab('perfil') }} onToggleBloqueado={toggleBloqueado} onEliminar={eliminarCompita} onMarcar={(id, nombre) => setFlagModal({ entidad_tipo: 'compita', entidad_id: id, entidad_nombre: nombre })} seleccionado={seleccionadosCompitas.has(c.id)} onToggleSeleccion={toggleUnoCompita} />)
                   }
                 </div>
               )
@@ -1314,7 +1400,7 @@ function ClientePreview({ usuarioId }: { usuarioId: string }) {
 
 type DeletePhase = 'idle' | 'confirm' | 'warn' | 'loading' | 'error'
 
-function CompitaCard({ c, onToggleVerificado, onToggleEstado, onVerPerfil, onToggleBloqueado, onEliminar, onMarcar }: {
+function CompitaCard({ c, onToggleVerificado, onToggleEstado, onVerPerfil, onToggleBloqueado, onEliminar, onMarcar, seleccionado = false, onToggleSeleccion }: {
   c: Compita
   onToggleVerificado: (id: string, actual: boolean) => void
   onToggleEstado: (id: string, estado: string) => void
@@ -1322,6 +1408,8 @@ function CompitaCard({ c, onToggleVerificado, onToggleEstado, onVerPerfil, onTog
   onToggleBloqueado: (id: string, bloqueado: boolean) => void
   onEliminar: (id: string, force: boolean) => Promise<{ ok: true } | { ok: false; visitas?: number; error?: string }>
   onMarcar: (id: string, nombre: string) => void
+  seleccionado?: boolean
+  onToggleSeleccion?: (id: string) => void
 }) {
   const [deletePhase, setDeletePhase] = useState<DeletePhase>('idle')
   const [warnVisitas, setWarnVisitas] = useState(0)
@@ -1334,15 +1422,23 @@ function CompitaCard({ c, onToggleVerificado, onToggleEstado, onVerPerfil, onTog
   const isBloqueada = c.estado === 'bloqueado'
 
   const isVerificadaAny = isVerificada || isVerificadaSinTelegram
-  const borderColor = isBloqueada ? '#dc2626' : isPendiente ? '#FF6B2B' : isVerificadaAny ? '#22c55e' : '#E8E0D4'
+  const borderColor = seleccionado ? '#7C4DFF' : isBloqueada ? '#dc2626' : isPendiente ? '#FF6B2B' : isVerificadaAny ? '#22c55e' : '#E8E0D4'
   const badgeBg = isBloqueada ? '#FEF2F2' : isPendiente ? '#FFF3E8' : isVerificadaAny ? '#F0FDF4' : '#F5F0E8'
   const badgeColor = isBloqueada ? '#B91C1C' : isPendiente ? '#C84B0E' : isVerificadaAny ? '#15803d' : '#6B5C90'
   const badgeText = isBloqueada ? '🚫 Bloqueado' : isPendiente ? '⏳ Pendiente' : (isVerificada || isVerificadaSinTelegram) ? '✓ Verificado' : '✗ Desactivado'
 
-  const cardBg = isBloqueada ? '#FEF2F2' : 'white'
+  const cardBg = seleccionado ? '#F5F0FF' : isBloqueada ? '#FEF2F2' : 'white'
 
   return (
     <div style={{ background: cardBg, border: `2px solid ${borderColor}`, borderRadius: '16px', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
+      {onToggleSeleccion && (
+        <input
+          type="checkbox"
+          checked={seleccionado}
+          onChange={() => onToggleSeleccion(c.id)}
+          style={{ width: '18px', height: '18px', accentColor: '#7C4DFF', cursor: 'pointer', flexShrink: 0 }}
+        />
+      )}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '6px' }}>
           <span style={{ color: isBloqueada ? '#B91C1C' : '#1A0A3C', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700 }}>{c.nombre}</span>
