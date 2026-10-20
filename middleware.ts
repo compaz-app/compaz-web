@@ -14,6 +14,12 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(destino)
   }
 
+  // QR de los flyers universitarios (impreso, no se puede cambiar): /?rol=compita#formulario → landing de reclutamiento.
+  // Temporal (307) para que los navegadores no la guarden y el destino pueda cambiar.
+  if (pathname === '/' && searchParams.get('rol') === 'compita') {
+    return NextResponse.redirect(urlPublica('/se-compita', request), 307)
+  }
+
   const isAdminRoute = pathname.startsWith('/admin')
   const isAreaCliente = pathname.startsWith('/dashboard') || pathname.startsWith('/compitas') || pathname.startsWith('/pago')
   if (!isAdminRoute && !isAreaCliente) return NextResponse.next()

@@ -3,7 +3,10 @@
 import Image from "next/image";
 import ChatWidget from "@/components/ChatWidget";
 import DashboardMockup from "@/components/DashboardMockup";
-import { useEffect, useRef, useState } from "react";
+import SelectorEstadoCiudad from "@/components/ui/SelectorEstadoCiudad";
+import WaveDivider from "@/components/ui/WaveDivider";
+import { VE_PREFIJOS } from "@/lib/venezuela";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import {
   ShoppingCart,
   Building2,
@@ -16,33 +19,6 @@ import {
   ShieldCheck,
   Camera,
 } from "lucide-react";
-
-// ─── Wave Divider ─────────────────────────────────────────────────────────────
-
-const WAVE_PATHS: Record<number, string> = {
-  1: "M0,60 C480,0 960,0 1440,60 L1440,80 L0,80 Z",       // cóncava (baja al centro)
-  2: "M0,20 C480,80 960,80 1440,20 L1440,80 L0,80 Z",      // convexa (sube al centro)
-  3: "M0,0 C480,0 1200,80 1440,80 L1440,80 L0,80 Z",       // inclinada izquierda→derecha
-  4: "M0,80 C240,80 960,0 1440,0 L1440,80 L0,80 Z",        // inclinada derecha→izquierda
-  5: "M0,40 C600,80 840,0 1440,40 L1440,80 L0,80 Z",       // suave asimétrica
-};
-
-function WaveDivider({ from, to, shape, flip = false }: { from: string; to: string; shape: 1 | 2 | 3 | 4 | 5; flip?: boolean }) {
-  return (
-    <div style={{ backgroundColor: from, lineHeight: 0, fontSize: 0 }}>
-      <svg
-        viewBox="0 0 1440 80"
-        xmlns="http://www.w3.org/2000/svg"
-        preserveAspectRatio="none"
-        className="w-full block h-10 sm:h-14 lg:h-16"
-        style={flip ? { transform: "scaleX(-1)" } : undefined}
-        aria-hidden="true"
-      >
-        <path d={WAVE_PATHS[shape]} fill={to} />
-      </svg>
-    </div>
-  );
-}
 
 // ─── YouTube Facade ───────────────────────────────────────────────────────────
 
@@ -572,45 +548,7 @@ function Equipo() {
   );
 }
 
-// ─── Estados y ciudades de Venezuela ─────────────────────────────────────────
-const VENEZUELA_ESTADOS: Record<string, string[]> = {
-  "Amazonas": ["Puerto Ayacucho", "San Fernando de Atabapo", "San Juan de Manapiare"],
-  "Anzoátegui": ["Barcelona", "Puerto La Cruz", "El Tigre", "Anaco", "Lechería", "Guanta", "Cantaura", "Clarines"],
-  "Apure": ["San Fernando de Apure", "Guasdualito", "Achaguas", "Biruaca"],
-  "Aragua": ["Maracay", "La Victoria", "Turmero", "Cagua", "Villa de Cura", "El Limón", "Palo Negro"],
-  "Barinas": ["Barinas", "Barinitas", "Socopó", "Ciudad Bolivia", "Santa Bárbara"],
-  "Bolívar": ["Ciudad Bolívar", "Ciudad Guayana (Puerto Ordaz)", "San Félix", "Upata", "Caicara del Orinoco"],
-  "Carabobo": ["Valencia", "Puerto Cabello", "Guacara", "San Diego", "Los Guayos", "Naguanagua", "Mariara"],
-  "Cojedes": ["San Carlos", "Tinaquillo", "El Pao", "Tinaco"],
-  "Delta Amacuro": ["Tucupita", "Pedernales"],
-  "Dependencias Federales": ["Los Roques", "La Orchila"],
-  "Distrito Capital": ["Caracas"],
-  "Falcón": ["Coro", "Punto Fijo", "La Vela de Coro", "Chichiriviche", "Tucacas"],
-  "Guárico": ["San Juan de los Morros", "Calabozo", "Valle de la Pascua", "Zaraza", "Altagracia de Orituco"],
-  "Lara": ["Barquisimeto", "Carora", "El Tocuyo", "Quíbor", "Chivacoa"],
-  "Mérida": ["Mérida", "El Vigía", "Ejido", "Tovar", "Valera (sector Mérida)"],
-  "Miranda": ["Los Teques", "Guarenas", "Guatire", "Ocumare del Tuy", "Santa Teresa del Tuy", "Charallave", "Petare", "Caucagua"],
-  "Monagas": ["Maturín", "Caripito", "Punta de Mata", "Temblador"],
-  "Nueva Esparta": ["Porlamar", "La Asunción", "Pampatar", "Juan Griego"],
-  "Portuguesa": ["Guanare", "Acarigua", "Araure", "Biscucuy", "Turén"],
-  "Sucre": ["Cumaná", "Carúpano", "Güiria", "Cariaco"],
-  "Táchira": ["San Cristóbal", "Rubio", "Táriba", "La Fría", "San Antonio del Táchira", "Colón"],
-  "Trujillo": ["Trujillo", "Valera", "Boconó", "La Ceiba", "Pampán"],
-  "Vargas": ["La Guaira", "Maiquetía", "Catia La Mar", "Naiguatá"],
-  "Yaracuy": ["San Felipe", "Yaritagua", "Nirgua", "Chivacoa", "Yumare"],
-  "Zulia": ["Maracaibo", "Cabimas", "Ciudad Ojeda", "Machiques", "San Francisco", "Lagunillas", "Baralt"],
-};
-
 // ─── Formulario ───────────────────────────────────────────────────────────────
-
-const VE_PREFIJOS = [
-  { code: "0412", label: "0412" },
-  { code: "0414", label: "0414" },
-  { code: "0416", label: "0416" },
-  { code: "0422", label: "0422" },
-  { code: "0424", label: "0424" },
-  { code: "0426", label: "0426" },
-];
 
 // Venezuela, EE.UU. y España primero, luego todos los países del mundo ordenados alfabéticamente
 const COUNTRY_CODES = [
@@ -790,7 +728,6 @@ function Formulario({ rolInicial }: { rolInicial: string }) {
     website: "",
   });
   const [phoneError, setPhoneError] = useState("");
-  const ciudadesDelEstado = form.estado ? VENEZUELA_ESTADOS[form.estado] ?? [] : [];
 
   // Sincronizar cuando rolInicial cambia desde el hero
   const prevRolInicial = useRef(rolInicial);
@@ -972,32 +909,12 @@ function Formulario({ rolInicial }: { rolInicial: string }) {
               className="w-full rounded-xl px-5 py-4 text-base outline-none focus:ring-2 focus:ring-[#2D1464]"
               style={{ backgroundColor: "white", color: "#1A0A3C", fontFamily: "var(--font-inter)" }}
             />
-            <select
-              required
-              value={form.estado}
-              onChange={(e) => setForm({ ...form, estado: e.target.value, ciudad: "" })}
-              className="w-full rounded-xl px-5 py-4 text-base outline-none focus:ring-2 focus:ring-[#2D1464]"
-              style={{ backgroundColor: "white", color: form.estado ? "#1A0A3C" : "#9ca3af", fontFamily: "var(--font-inter)" }}
-            >
-              <option value="" disabled>Estado donde vive tu familiar</option>
-              {Object.keys(VENEZUELA_ESTADOS).sort().map((e) => (
-                <option key={e} value={e}>{e}</option>
-              ))}
-            </select>
-            {form.estado && (
-              <select
-                required
-                value={form.ciudad}
-                onChange={(e) => setForm({ ...form, ciudad: e.target.value })}
-                className="w-full rounded-xl px-5 py-4 text-base outline-none focus:ring-2 focus:ring-[#2D1464]"
-                style={{ backgroundColor: "white", color: form.ciudad ? "#1A0A3C" : "#9ca3af", fontFamily: "var(--font-inter)" }}
-              >
-                <option value="" disabled>Ciudad o municipio</option>
-                {ciudadesDelEstado.map((c) => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
-            )}
+            <SelectorEstadoCiudad
+              estado={form.estado}
+              ciudad={form.ciudad}
+              onChange={({ estado, ciudad }) => setForm({ ...form, estado, ciudad })}
+              placeholderEstado="Estado donde vive tu familiar"
+            />
 
             {/* Selector de rol */}
             <div className="flex flex-col gap-2">
@@ -1120,14 +1037,33 @@ function Footer() {
 
 // ─── Home ─────────────────────────────────────────────────────────────────────
 
+// Valores de `?rol=` aceptados en enlaces externos (QR de flyers, campañas) → valor interno del formulario.
+const ROL_DESDE_URL: Record<string, string> = {
+  compita: "compa",
+  compa: "compa",
+  familia: "familia",
+};
+
+const sinSuscripcion = () => () => {};
+const leerRolDesdeUrl = () =>
+  ROL_DESDE_URL[new URLSearchParams(window.location.search).get("rol")?.toLowerCase() ?? ""] ?? "";
+
 export default function Home() {
-  const [rolSeleccionado, setRolSeleccionado] = useState("");
+  // Rol elegido en el hero; si no hay, se usa el que venga en ?rol= (p. ej. QR del flyer universitario).
+  const [rolElegido, setRolElegido] = useState("");
+  const rolDesdeUrl = useSyncExternalStore(sinSuscripcion, leerRolDesdeUrl, () => "");
+  const rolSeleccionado = rolElegido || rolDesdeUrl;
+
+  // Si el enlace trae un rol, llevar directo al formulario.
+  useEffect(() => {
+    if (rolDesdeUrl) document.getElementById("formulario")?.scrollIntoView();
+  }, [rolDesdeUrl]);
 
   return (
     <>
       <Nav />
       <main>
-        <Hero onSelectRol={setRolSeleccionado} />
+        <Hero onSelectRol={setRolElegido} />
         <SeccionConfianza />
         <QueHaceUnCompa />
         <WaveDivider from="#FDFAF6" to="#2D1464" shape={2} />

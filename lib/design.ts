@@ -14,6 +14,9 @@ export const colors = {
   naranja: '#FF6B2B',
   naranjaHover: '#E55A1F',
 
+  // Acento amarillo de marca (sección del formulario, subrayado del hero)
+  amarilloMarca: '#FFD23F',
+
   // Fondos
   fondoCrudo: '#FDFAF6',
   fondoClaro: '#F5F0E8',
@@ -43,6 +46,9 @@ export const colors = {
 
 export const fonts = {
   base: 'Inter, system-ui, sans-serif',
+  // Fuentes cargadas con next/font en app/layout.tsx
+  display: 'var(--font-display), system-ui, sans-serif',
+  body: 'var(--font-inter), system-ui, sans-serif',
   mono: 'JetBrains Mono, Fira Code, monospace',
 } as const
 

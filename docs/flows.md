@@ -161,3 +161,32 @@ ADMIN_EMAILS=juan@compaz.com,otro@compaz.com
 # App URL (para links en Telegram)
 NEXT_PUBLIC_APP_URL=https://micompaz.com
 ```
+
+---
+
+## 11. Reclutamiento de Compitas desde flyers
+
+Los flyers impresos en universidades tienen un QR que no se puede cambiar. Este es el camino que sigue un estudiante desde que lo escanea:
+
+```
+Escanea el QR del flyer → micompaz.com/?rol=compita#formulario
+→ middleware.ts redirige (307, temporal) a /se-compita, sin pasar por Supabase
+→ Ve la landing de reclutamiento (qué hace un Compita, beneficios, requisitos)
+→ Llena el formulario (nombre, WhatsApp, email, estado y ciudad donde vive)
+→ Se envía a /api/waitlist con "Rol: compa" en el campo Contacto
+→ Queda registrado en Airtable, igual que los leads de la home
+→ Airtable le manda un saludo automático con un preformulario
+→ Cuando lo completa, el equipo lo llama por WhatsApp
+→ CMC (Centro de Mando de Compitas, donde se gestiona la selección)
+```
+
+**Por qué /se-compita y no /compitas:** `/compitas` ya es el marketplace privado donde las familias con sesión iniciada eligen Compita. Está enlazado desde el dashboard, los emails, Telegram y el middleware, así que no se puede reutilizar para una página pública.
+
+**Por qué es temporal la redirección:** el QR está impreso para siempre. Con una redirección 307 los navegadores no la guardan, y el destino se puede cambiar en el futuro sin reimprimir nada. `?rol=familia` y la home sin parámetro no se redirigen.
+
+**Mismo formato que la home:** el formulario de `/se-compita` (lógica en `lib/postulaciones.ts`) envía exactamente los mismos campos que el formulario de la home. No hay que tocar Airtable ni sus automatizaciones para distinguir a los Compitas: basta con el texto "Rol: compa".
+
+**Límite de envíos en /api/waitlist:**
+- **50 envíos por IP por hora.** En el wifi de una universidad muchos estudiantes salen a internet con la misma IP; con un límite más bajo, solo los primeros podrían postularse.
+- **1 envío por email por hora.** Evita postulaciones repetidas de la misma persona. Solo cuenta los envíos que se guardaron bien, así un fallo de Airtable no bloquea el reintento.
+- Cloudflare Turnstile sigue siendo la defensa principal contra bots; estos límites son una capa extra y viven en memoria (cada instancia serverless lleva su propia cuenta).

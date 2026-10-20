@@ -35,15 +35,20 @@ export async function OPTIONS(req: NextRequest) {
 }
 
 // ── Rate limiting in-memory ──────────────────────────────────────────────────
-// Nota: en serverless cada instancia tiene su propio contador. La primera línea
-// de defensa real es Cloudflare Turnstile; esto es una capa adicional.
 // En serverless cada instancia tiene su propio contador, así que el límite real
 // puede ser RATE_LIMIT_MAX × número de instancias activas. Turnstile es la defensa
 // principal; esto es una capa adicional para el caso en que Turnstile falle.
-// Bajado a 1 para que incluso con múltiples instancias el abuse sea mínimo.
-const RATE_LIMIT_MAX = 1;
+//
+// Dos límites:
+//  - Por IP (50/hora): holgado a propósito. Los estudiantes que se postulan desde
+//    el wifi de una universidad comparten IP; con 1/hora solo el primero entraba.
+//  - Por email (1/hora): evita envíos repetidos de la misma persona. Solo cuenta
+//    los envíos guardados, para que un fallo al guardar no bloquee el reintento.
+const RATE_LIMIT_MAX = 50;
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
 const requestLog = new Map<string, number[]>();
+const EMAIL_LIMIT_MAX = 1;
+const emailLog = new Map<string, number[]>();
 
 function isRateLimited(ip: string): boolean {
   const now = Date.now();
@@ -57,6 +62,23 @@ function isRateLimited(ip: string): boolean {
   timestamps.push(now);
   requestLog.set(ip, timestamps);
   return false;
+}
+
+function emailRecientes(email: string): number[] {
+  const now = Date.now();
+  const timestamps = (emailLog.get(email) ?? []).filter(
+    (t) => now - t < RATE_LIMIT_WINDOW_MS
+  );
+  emailLog.set(email, timestamps);
+  return timestamps;
+}
+
+function isEmailRateLimited(email: string): boolean {
+  return emailRecientes(email).length >= EMAIL_LIMIT_MAX;
+}
+
+function registrarEnvioEmail(email: string): void {
+  emailLog.set(email, [...emailRecientes(email), Date.now()]);
 }
 
 function getClientIp(req: NextRequest): string {
@@ -168,6 +190,15 @@ export async function POST(req: NextRequest) {
    );
   }
 
+  // 5b. Límite por email
+  const emailKey = email.toLowerCase();
+  if (isEmailRateLimited(emailKey)) {
+    return NextResponse.json(
+      { error: "Ya recibimos una postulación con este correo. Revisa tu WhatsApp y tu correo." },
+      { status: 429, headers }
+    );
+  }
+
   // 6. Guardar en Airtable
   const airtableKey = process.env.AIRTABLE_API_KEY;
   const baseId = process.env.AIRTABLE_BASE_ID;
@@ -175,6 +206,7 @@ export async function POST(req: NextRequest) {
 
   if (!airtableKey || !baseId) {
     console.log("Waitlist entry (sin Airtable):", { nombre, contacto, ciudad, utmSource, utmMedium, utmCampaign });
+    registrarEnvioEmail(emailKey);
     return NextResponse.json({ ok: true }, { headers });
   }
 
@@ -197,5 +229,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Error guardando" }, { status: 500, headers });
   }
 
+  registrarEnvioEmail(emailKey);
   return NextResponse.json({ ok: true }, { headers });
 }
