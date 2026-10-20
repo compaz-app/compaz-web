@@ -69,8 +69,18 @@ Toca el botón <b>🚨 Emergencia</b>. El equipo de Compaz recibe una alerta inm
 
 ━━━━━━━━━━━━━━━━━━━
 
+<b>7. Botones en tu teclado</b>
+Siempre tienes botones visibles en la parte de abajo del chat. Son atajos rápidos:
+
+<b>📋 Menú</b> — Ver estas instrucciones en cualquier momento.
+<b>▶️ Iniciar visita</b> — Aparece cuando tienes visita programada. Tócalo cuando llegues.
+<b>🔴 Terminar visita</b> — Aparece cuando la visita está en curso. Tócalo cuando te vayas.
+<b>📹 Llamar al cliente</b> — Aparece durante la visita. Te da un enlace para hacer videollamada.
+
+━━━━━━━━━━━━━━━━━━━
+
 <b>¿Tienes dudas?</b>
-Escribe <b>/menu</b> para volver a ver estas instrucciones.
+Toca <b>📋 Menú</b> o escribe <b>/menu</b> para volver a ver estas instrucciones.
 O escríbenos a <b>hola@micompaz.com</b> y te ayudamos.`
 
 const PREGUNTAS_REPORTE = [
