@@ -890,7 +890,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
   }
 
   // ── Botón: Emergencia ────────────────────────────────────────────────────────
-  if (isCallback && text === 'emergencia') {
+  if ((isCallback && text === 'emergencia') || text === '🚨 Emergencia') {
     const { data: visitaEmergencia } = await supabase
       .from('visitas')
       .select('id, usuario:usuarios(nombre, email, zona, familiar_nombre, familiar_condicion)')
