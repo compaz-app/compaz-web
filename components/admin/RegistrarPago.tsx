@@ -13,7 +13,7 @@ type Cupo = { planNombre: string; limite: number; usadas: number; restantes: num
 
 const campo = { border: `2px solid ${colors.gris200}`, borderRadius: '10px', padding: '8px 10px', fontFamily: 'Inter, sans-serif', fontSize: '14px', color: colors.textoOscuro, background: colors.blanco, minWidth: 0 } as const
 const etiqueta = { display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '12px', fontWeight: 700, color: colors.textoSutil, fontFamily: 'Bricolage Grotesque, sans-serif', flex: '1 1 140px' } as const
-const fecha = (iso: string) => new Date(iso).toLocaleDateString('es-VE', { day: 'numeric', month: 'short', year: 'numeric' })
+const fecha = (iso: string) => new Date(iso).toLocaleDateString('es-VE', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'America/Caracas' })
 
 /** Panel de pagos de un cliente: cupo actual, historial y formulario para registrar Zelle, transferencia, etc. */
 export default function RegistrarPago({ usuarioId, nombre }: { usuarioId: string; nombre: string }) {

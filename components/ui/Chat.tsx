@@ -162,7 +162,7 @@ export default function Chat({ visita, mensajesIniciales, compitaNombre }: ChatP
                     <span>{m.contenido}</span>
                   )}
                   <div style={{ fontSize: '11px', opacity: 0.6, marginTop: '4px', textAlign: 'right' }}>
-                    {new Date(m.created_at).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' })}
+                    {new Date(m.created_at).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Caracas' })}
                   </div>
                 </div>
               </div>

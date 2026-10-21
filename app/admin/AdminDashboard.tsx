@@ -906,7 +906,7 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
                               <div style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, color: '#1A0A3C', fontSize: '14px', marginBottom: '4px' }}>{f.entidad_nombre}</div>
                               <div style={{ fontSize: '14px', color: '#4A3B6B' }}>{f.nota}</div>
                               <div style={{ fontSize: '12px', color: '#9B8AB8', marginTop: '6px' }}>
-                                {f.reportado_por} · {new Date(f.created_at).toLocaleDateString('es-VE', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                                {f.reportado_por} · {new Date(f.created_at).toLocaleDateString('es-VE', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Caracas' })}
                               </div>
                             </div>
                             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -958,7 +958,7 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
                     <span style={{ color: '#6B5C90', fontSize: '13px' }}> con {v.usuario?.nombre}</span>
                   </div>
                   <div style={{ color: '#6B5C90', fontSize: '13px' }}>
-                    {v.fin ? new Date(v.fin).toLocaleDateString('es-VE', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'} · {duracion}
+                    {v.fin ? new Date(v.fin).toLocaleDateString('es-VE', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'America/Caracas' }) : '—'} · {duracion}
                   </div>
                 </div>
               )
@@ -1350,7 +1350,7 @@ function ClientePreview({ usuarioId }: { usuarioId: string }) {
               <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22c55e' }} />
               <strong style={{ color: '#1A0A3C', fontFamily: 'Bricolage Grotesque, sans-serif' }}>Visita en curso con {visitaActiva.compita.nombre}</strong>
               {visitaActiva.inicio && (
-                <span style={{ color: '#6B5C90', fontSize: '13px' }}>desde {new Date(visitaActiva.inicio).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' })}</span>
+                <span style={{ color: '#6B5C90', fontSize: '13px' }}>desde {new Date(visitaActiva.inicio).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Caracas' })}</span>
               )}
             </div>
             <div style={{ maxHeight: '360px', overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -1365,7 +1365,7 @@ function ClientePreview({ usuarioId }: { usuarioId: string }) {
                       : m.contenido}
                   </div>
                   <span style={{ fontSize: '11px', color: '#A09AB8', whiteSpace: 'nowrap' }}>
-                    {new Date(m.created_at).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' })}
+                    {new Date(m.created_at).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Caracas' })}
                   </span>
                 </div>
               ))}
@@ -1386,7 +1386,7 @@ function ClientePreview({ usuarioId }: { usuarioId: string }) {
             <h3 style={{ color: '#2D1464', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, marginBottom: '12px' }}>Visitas anteriores</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {visitasPasadas.map((v) => {
-                const fecha = new Date(v.created_at).toLocaleDateString('es-VE', { day: 'numeric', month: 'long', year: 'numeric' })
+                const fecha = new Date(v.created_at).toLocaleDateString('es-VE', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'America/Caracas' })
                 const duracion = v.inicio && v.fin
                   ? `${Math.round((new Date(v.fin).getTime() - new Date(v.inicio).getTime()) / 60000)} min`
                   : '—'
@@ -2004,7 +2004,7 @@ function SolicitudesTab({ solicitudes }: { solicitudes: SolicitudAdmin[] }) {
                   </span>
                 </div>
                 <div style={{ fontSize: '12px', color: '#9B8AB8' }}>
-                  {s.usuarios?.email} · {s.compitas?.zona ?? ''} · {new Date(s.created_at).toLocaleDateString('es-VE', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  {s.usuarios?.email} · {s.compitas?.zona ?? ''} · {new Date(s.created_at).toLocaleDateString('es-VE', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'America/Caracas' })}
                 </div>
               </div>
               {isAceptada && s.slot_confirmado && (
@@ -2148,7 +2148,7 @@ function VisitasAdminTab({
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
                     <div style={{ color: '#6B5C90', fontSize: '13px' }}>
-                      Iniciada: {v.inicio ? new Date(v.inicio).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' }) : '—'}
+                      Iniciada: {v.inicio ? new Date(v.inicio).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Caracas' }) : '—'}
                     </div>
                     <div style={{ display: 'flex', gap: '6px' }}>
                       <button onClick={(e) => { e.stopPropagation(); setFlagModal({ entidad_tipo: 'visita', entidad_id: v.id, entidad_nombre: `${v.compita?.nombre} con ${v.usuario?.nombre}` }) }}
@@ -2183,7 +2183,7 @@ function VisitasAdminTab({
                 <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   {(mensajes[visitaSeleccionada] ?? []).filter((m) => m.origen !== 'admin').map((m) => (
                     <div key={m.id} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
-                      <span style={{ fontSize: '11px', color: '#6B5C90', whiteSpace: 'nowrap', marginTop: '2px' }}>{new Date(m.created_at).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' })}</span>
+                      <span style={{ fontSize: '11px', color: '#6B5C90', whiteSpace: 'nowrap', marginTop: '2px' }}>{new Date(m.created_at).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Caracas' })}</span>
                       <span style={{ fontSize: '12px', color: '#FF6B2B', fontWeight: 700, whiteSpace: 'nowrap', textTransform: 'uppercase' }}>{m.origen}</span>
                       {m.tipo === 'foto'
                         // eslint-disable-next-line @next/next/no-img-element
@@ -2240,7 +2240,7 @@ function VisitasAdminTab({
                 <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   {(mensajes[visitaSeleccionada] ?? []).filter((m) => m.origen !== 'admin').map((m) => (
                     <div key={m.id} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
-                      <span style={{ fontSize: '11px', color: '#6B5C90', whiteSpace: 'nowrap', marginTop: '2px' }}>{new Date(m.created_at).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' })}</span>
+                      <span style={{ fontSize: '11px', color: '#6B5C90', whiteSpace: 'nowrap', marginTop: '2px' }}>{new Date(m.created_at).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Caracas' })}</span>
                       <span style={{ fontSize: '12px', fontWeight: 700, color: m.origen === 'cliente' ? '#FF6B2B' : '#2D1464', fontFamily: 'Bricolage Grotesque, sans-serif', whiteSpace: 'nowrap' }}>{m.origen.toUpperCase()}</span>
                       <span style={{ fontSize: '14px', color: '#1A0A3C' }}>{m.contenido}</span>
                     </div>

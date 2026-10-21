@@ -155,7 +155,7 @@ export default function SeguimientoBienestar({ reportes, compitaNombre }: Props)
           {(() => {
             const ultimaNovedad = [...mostrandoDatos].reverse().find((r) => r.novedad)
             if (!ultimaNovedad) return null
-            const fecha = new Date(ultimaNovedad.created_at).toLocaleDateString('es-VE', { day: 'numeric', month: 'long' })
+            const fecha = new Date(ultimaNovedad.created_at).toLocaleDateString('es-VE', { day: 'numeric', month: 'long', timeZone: 'America/Caracas' })
             return (
               <div style={{ background: '#FFF3E8', border: '1.5px solid #FF6B2B', borderRadius: '10px', padding: '12px 16px' }}>
                 <p style={{ color: '#C84B0E', fontSize: '12px', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif', margin: '0 0 4px' }}>Última novedad reportada ({fecha})</p>

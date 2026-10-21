@@ -35,7 +35,7 @@ export default function AgendarOtraVisita({ compitaNombre, cupo }: Props) {
     }
   }
 
-  const fmt = (iso: string) => new Date(iso).toLocaleDateString('es-VE', { day: 'numeric', month: 'long' })
+  const fmt = (iso: string) => new Date(iso).toLocaleDateString('es-VE', { day: 'numeric', month: 'long', timeZone: 'America/Caracas' })
 
   if (cupo && cupo.restantes <= 0) {
     return (

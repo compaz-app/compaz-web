@@ -63,7 +63,7 @@ export default function HistorialVisitas({ visitas, compitaId, compitaNombre }: 
       </h3>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         {visitas.map((v) => {
-          const fecha = new Date(v.created_at).toLocaleDateString('es-VE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+          const fecha = new Date(v.created_at).toLocaleDateString('es-VE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'America/Caracas' })
           const duracion = v.inicio && v.fin
             ? `${Math.round((new Date(v.fin).getTime() - new Date(v.inicio).getTime()) / 60000)} min`
             : '—'
