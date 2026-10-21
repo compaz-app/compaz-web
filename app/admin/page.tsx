@@ -44,51 +44,17 @@ export default async function AdminPage({
     { data: ultimasVisitasPorUsuario },
     { data: visitasActivas30 },
   ] = await Promise.all([
-    supabase
-      .from('visitas')
-      .select('*, compita:compitas(*), usuario:usuarios(*)')
-      .eq('estado', 'en_curso')
-      .order('inicio', { ascending: false }),
-    supabase
-      .from('visitas')
-      .select('*, compita:compitas(*), usuario:usuarios(*)')
-      .eq('estado', 'pre_visita')
-      .order('created_at', { ascending: false }),
-    supabase
-      .from('usuarios')
-      .select('*, compita:compitas(nombre, zona, verificado)')
-      .order('created_at', { ascending: false }),
-    supabase
-      .from('compitas')
-      .select('id, nombre, zona, estado, verificado, telegram_chat_id, foto_url, descripcion, servicios, youtube_url, visitas_realizadas, rating_promedio, total_ratings, fecha_ingreso, codigo, email, created_at')
-      .order('nombre', { ascending: true }),
-    supabase
-      .from('visitas')
-      .select('*, compita:compitas(nombre), usuario:usuarios(nombre, email)')
-      .eq('estado', 'terminada')
-      .order('fin', { ascending: false })
-      .limit(50),
-    supabase
-      .from('solicitudes')
-      .select('id, cliente_id, compita_id, estado, slot_confirmado, room_url, created_at, slots_propuestos, mensaje, usuarios(nombre, email), compitas(nombre, foto_url, zona)')
-      .order('created_at', { ascending: false })
-      .limit(100),
-    supabase
-      .from('visitas')
-      .select('*', { count: 'exact', head: true })
-      .gte('created_at', inicioMes),
+    supabase.from('visitas').select('*, compita:compitas(*), usuario:usuarios(*)').eq('estado', 'en_curso').order('inicio', { ascending: false }).then((r) => ({ data: r.data ?? [] })),
+    supabase.from('visitas').select('*, compita:compitas(*), usuario:usuarios(*)').eq('estado', 'pre_visita').order('created_at', { ascending: false }).then((r) => ({ data: r.data ?? [] })),
+    supabase.from('usuarios').select('*, compita:compitas(nombre, zona, verificado)').order('created_at', { ascending: false }).then((r) => ({ data: r.data ?? [] })),
+    supabase.from('compitas').select('id, nombre, zona, estado, verificado, telegram_chat_id, foto_url, descripcion, servicios, youtube_url, visitas_realizadas, rating_promedio, total_ratings, fecha_ingreso, codigo, email, created_at').order('nombre', { ascending: true }).then((r) => ({ data: r.data ?? [] })),
+    supabase.from('visitas').select('*, compita:compitas(nombre), usuario:usuarios(nombre, email)').eq('estado', 'terminada').order('fin', { ascending: false }).limit(50).then((r) => ({ data: r.data ?? [] })),
+    supabase.from('solicitudes').select('id, cliente_id, compita_id, estado, slot_confirmado, room_url, created_at, slots_propuestos, mensaje, usuarios(nombre, email), compitas(nombre, foto_url, zona)').order('created_at', { ascending: false }).limit(100).then((r) => ({ data: r.data ?? [] })),
+    supabase.from('visitas').select('*', { count: 'exact', head: true }).gte('created_at', inicioMes).then((r) => ({ count: r.count ?? 0 })),
     // Última visita terminada por usuario (para detectar inactivos)
-    supabase
-      .from('visitas')
-      .select('usuario_id, fin')
-      .eq('estado', 'terminada')
-      .order('fin', { ascending: false })
-      .limit(500),
+    supabase.from('visitas').select('usuario_id, fin').eq('estado', 'terminada').order('fin', { ascending: false }).limit(500).then((r) => ({ data: r.data ?? [] })),
     // Visitas activas en los últimos 30 días (para excluir del churn)
-    supabase
-      .from('visitas')
-      .select('usuario_id')
-      .in('estado', ['pre_visita', 'programada', 'en_curso']),
+    supabase.from('visitas').select('usuario_id').in('estado', ['pre_visita', 'programada', 'en_curso']).then((r) => ({ data: r.data ?? [] })),
   ])
 
   // Calcular set de clientes inactivos (última visita terminada >30 días, sin visita activa)

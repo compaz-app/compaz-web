@@ -1,6 +1,11 @@
 'use client'
 
+import { useEffect } from 'react'
+
 export default function AdminError({ error, reset }: { error: Error; reset: () => void }) {
+  useEffect(() => {
+    console.error('[Admin crash]', error.message, error.stack)
+  }, [error])
   return (
     <div style={{ minHeight: '100vh', background: '#FDFAF6', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
       <div style={{ background: 'white', border: '2px solid #fca5a5', borderRadius: '24px', padding: '40px 32px', maxWidth: '520px', width: '100%', textAlign: 'center' }}>
