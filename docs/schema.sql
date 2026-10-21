@@ -140,6 +140,7 @@ create table solicitudes (
 -- alter table visitas drop constraint if exists visitas_estado_check;
 -- alter table visitas add constraint visitas_estado_check check (estado in ('pre_visita', 'programada', 'en_curso', 'terminada'));
 -- alter table visitas add column if not exists fecha_programada date;
+-- alter table visitas add column if not exists llamada_solicitada_at timestamptz;
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- TABLA: reportes_visita

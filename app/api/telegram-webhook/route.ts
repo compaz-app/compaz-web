@@ -849,7 +849,9 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
     if (!roomUrl) {
       const room = await getOrCreateDailyRoom(visitaLlamada.id, null)
       roomUrl = room.url
-      await supabase.from('visitas').update({ room_url: roomUrl }).eq('id', visitaLlamada.id)
+      await supabase.from('visitas').update({ room_url: roomUrl, llamada_solicitada_at: new Date().toISOString() }).eq('id', visitaLlamada.id)
+    } else {
+      await supabase.from('visitas').update({ llamada_solicitada_at: new Date().toISOString() }).eq('id', visitaLlamada.id)
     }
 
     await sendTelegramMessage(
