@@ -42,64 +42,125 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const targetUid = (previewUid && isAdmin) ? previewUid : session.user.id
 
   const db = previewUid && isAdmin ? createAdminSupabase() : await createServerSupabase()
+  const adminDb = createAdminSupabase()
+  const hace30dias = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
 
-  const { data: usuario } = await db
-    .from('usuarios')
-    .select('*, compita:compitas(id, nombre, zona, estado, verificado, foto_url, descripcion, servicios, youtube_url, visitas_realizadas, created_at), familiar_nombre, familiar_edad, familiar_condicion, familiar_notas, telefono')
-    .eq('id', targetUid)
-    .single() as { data: Usuario | null }
+  // Todas las queries independientes en paralelo y resilientes: si una falla,
+  // no debe tumbar el resto de la página (antes eran secuenciales y sin protección).
+  const [
+    { data: usuario },
+    { data: visitaActiva },
+    { data: visitaPreVisita },
+    { data: visitaProgramada },
+    { data: solicitudesRaw },
+    { data: reportesBienestar },
+    { data: resenasPendientes },
+    { data: visitasPasadas },
+    cupo,
+    sp,
+  ] = await Promise.all([
+    Promise.resolve(
+      db
+        .from('usuarios')
+        .select('*, compita:compitas(id, nombre, zona, estado, verificado, foto_url, descripcion, servicios, youtube_url, visitas_realizadas, created_at), familiar_nombre, familiar_edad, familiar_condicion, familiar_notas, telefono')
+        .eq('id', targetUid)
+        .single(),
+    )
+      .then((r) => ({ data: r.data as Usuario | null }))
+      .catch((e) => { console.error('[dashboard] usuario:', e); return { data: null as Usuario | null } }),
+    Promise.resolve(
+      db
+        .from('visitas')
+        .select('*, compita:compitas(id, nombre, zona, estado, verificado, foto_url, descripcion, servicios, youtube_url, visitas_realizadas, created_at)')
+        .eq('usuario_id', targetUid)
+        .in('estado', ['en_curso', 'confirmando_inicio'])
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+    )
+      .then((r) => ({ data: r.data as (Visita & { compita: Compita }) | null }))
+      .catch((e) => { console.error('[dashboard] visitaActiva:', e); return { data: null as (Visita & { compita: Compita }) | null } }),
+    Promise.resolve(
+      db
+        .from('visitas')
+        .select('*, compita:compitas(id, nombre, zona, estado, verificado, foto_url, descripcion, servicios, youtube_url, visitas_realizadas, created_at)')
+        .eq('usuario_id', targetUid)
+        .eq('estado', 'pre_visita')
+        .maybeSingle(),
+    )
+      .then((r) => ({ data: r.data as (Visita & { compita: Compita }) | null }))
+      .catch((e) => { console.error('[dashboard] visitaPreVisita:', e); return { data: null as (Visita & { compita: Compita }) | null } }),
+    Promise.resolve(
+      db
+        .from('visitas')
+        .select('*, compita:compitas(id, nombre, zona, estado, verificado, foto_url, descripcion, servicios, youtube_url, visitas_realizadas, created_at)')
+        .eq('usuario_id', targetUid)
+        .eq('estado', 'programada')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+    )
+      .then((r) => ({ data: r.data as (Visita & { compita: Compita }) | null }))
+      .catch((e) => { console.error('[dashboard] visitaProgramada:', e); return { data: null as (Visita & { compita: Compita }) | null } }),
+    Promise.resolve(
+      adminDb
+        .from('solicitudes')
+        .select('id, compita_id, estado, slot_confirmado, room_url, created_at, slots_propuestos, token_respuesta, seguimiento_enviado, compitas(nombre, foto_url, zona)')
+        .eq('cliente_id', targetUid)
+        .gte('created_at', hace30dias)
+        .order('created_at', { ascending: false }),
+    )
+      .then((r) => ({ data: r.data ?? [] }))
+      .catch((e) => { console.error('[dashboard] solicitudes:', e); return { data: [] as unknown[] } }),
+    Promise.resolve(
+      adminDb
+        .from('visitas')
+        .select('reportes_visita(id, visita_id, animo, fisico, participacion, entorno, novedad, resumen_ia, created_at)')
+        .eq('usuario_id', targetUid)
+        .eq('estado', 'terminada')
+        .order('created_at', { ascending: true }),
+    )
+      .then((r) => ({ data: r.data ?? [] }))
+      .catch((e) => { console.error('[dashboard] reportesBienestar:', e); return { data: [] as unknown[] } }),
+    Promise.resolve(
+      adminDb
+        .from('resenas')
+        .select('id, compita_id, publicada, compitas(nombre)')
+        .eq('cliente_id', targetUid)
+        .eq('publicada', false),
+    )
+      .then((r) => ({ data: r.data ?? [] }))
+      .catch((e) => { console.error('[dashboard] resenasPendientes:', e); return { data: [] as unknown[] } }),
+    Promise.resolve(
+      adminDb
+        .from('visitas')
+        .select('*, compita:compitas(nombre), mensajes(*), reportes_visita(*)')
+        .eq('usuario_id', targetUid)
+        .eq('estado', 'terminada')
+        .order('created_at', { ascending: false })
+        .limit(10),
+    )
+      .then((r) => ({ data: r.data ?? [] }))
+      .catch((e) => { console.error('[dashboard] visitasPasadas:', e); return { data: [] as unknown[] } }),
+    cupoDelPlan(targetUid).catch((e) => { console.error('[dashboard] cupoDelPlan:', e); return null }),
+    previewUid ? Promise.resolve(null) : solicitudPendiente(targetUid).catch((e) => { console.error('[dashboard] solicitudPendiente:', e); return null }),
+  ])
 
   if (!usuario && !previewUid) redirect('/login')
-
-  // Visita activa (en curso) o esperando confirmación del cliente
-  const { data: visitaActiva } = await db
-    .from('visitas')
-    .select('*, compita:compitas(id, nombre, zona, estado, verificado, foto_url, descripcion, servicios, youtube_url, visitas_realizadas, created_at)')
-    .eq('usuario_id', targetUid)
-    .in('estado', ['en_curso', 'confirmando_inicio'])
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle() as { data: (Visita & { compita: Compita }) | null }
-
-  // Visita en coordinación pre-visita (chat para agendar fecha)
-  const { data: visitaPreVisita } = await db
-    .from('visitas')
-    .select('*, compita:compitas(id, nombre, zona, estado, verificado, foto_url, descripcion, servicios, youtube_url, visitas_realizadas, created_at)')
-    .eq('usuario_id', targetUid)
-    .eq('estado', 'pre_visita')
-    .maybeSingle() as { data: (Visita & { compita: Compita }) | null }
-
-  // Visita programada (fecha acordada, esperando el día)
-  const { data: visitaProgramada } = await db
-    .from('visitas')
-    .select('*, compita:compitas(id, nombre, zona, estado, verificado, foto_url, descripcion, servicios, youtube_url, visitas_realizadas, created_at)')
-    .eq('usuario_id', targetUid)
-    .eq('estado', 'programada')
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle() as { data: (Visita & { compita: Compita }) | null }
 
   // Mensajes de la visita activa, pre_visita o programada
   let mensajes: Mensaje[] = []
   const visitaConChat = visitaActiva ?? visitaPreVisita ?? visitaProgramada
   if (visitaConChat) {
-    const { data } = await db
-      .from('mensajes')
-      .select('*')
-      .eq('visit_id', visitaConChat.id)
-      .order('created_at', { ascending: true })
+    const { data } = await Promise.resolve(
+      db
+        .from('mensajes')
+        .select('*')
+        .eq('visit_id', visitaConChat.id)
+        .order('created_at', { ascending: true }),
+    ).catch((e) => { console.error('[dashboard] mensajes:', e); return { data: [] as Mensaje[] | null } })
     mensajes = (data ?? []) as Mensaje[]
   }
-
-  // Solicitudes del cliente (nuevo sistema)
-  const adminDb = createAdminSupabase()
-  const hace30dias = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
-  const { data: solicitudesRaw } = await adminDb
-    .from('solicitudes')
-    .select('id, compita_id, estado, slot_confirmado, room_url, created_at, slots_propuestos, token_respuesta, seguimiento_enviado, compitas(nombre, foto_url, zona)')
-    .eq('cliente_id', targetUid)
-    .gte('created_at', hace30dias)
-    .order('created_at', { ascending: false })
 
   type SolicitudRow = {
     id: string
@@ -141,14 +202,6 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     && entrevistasConfirmadas.length === 0
     && solicitudes.every((s) => s.estado === 'rechazada')
 
-  // Reportes de bienestar de visitas pasadas de este cliente
-  const { data: reportesBienestar } = await adminDb
-    .from('visitas')
-    .select('reportes_visita(id, visita_id, animo, fisico, participacion, entorno, novedad, resumen_ia, created_at)')
-    .eq('usuario_id', targetUid)
-    .eq('estado', 'terminada')
-    .order('created_at', { ascending: true })
-
   type ReporteRow = { id: string; visita_id: string; animo: number | null; fisico: number | null; participacion: number | null; entorno: number | null; novedad: string | null; resumen_ia: string | null; created_at: string }
   const reportes: ReporteVisita[] = (reportesBienestar ?? [])
     .flatMap((v) => {
@@ -159,23 +212,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     })
     .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
 
-  // Reseñas pendientes de aprobación del cliente
-  const { data: resenasPendientes } = await adminDb
-    .from('resenas')
-    .select('id, compita_id, publicada, compitas(nombre)')
-    .eq('cliente_id', targetUid)
-    .eq('publicada', false)
-
   const resenasPendientesCount = resenasPendientes?.length ?? 0
-
-  // Visitas pasadas con fotos y reportes
-  const { data: visitasPasadas } = await adminDb
-    .from('visitas')
-    .select('*, compita:compitas(nombre), mensajes(*), reportes_visita(*)')
-    .eq('usuario_id', targetUid)
-    .eq('estado', 'terminada')
-    .order('created_at', { ascending: false })
-    .limit(10)
 
   const totalVisitas = (visitasPasadas?.length ?? 0) + (visitaActiva ? 1 : 0)
   const compita = usuario?.compita ?? null
@@ -186,7 +223,6 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     : false
   const hayVisitaActivaOCercana = !!(visitaActiva || visitaPreVisita || visitaProgramada)
   const esPrimeraVisita = (visitasPasadas?.length ?? 0) === 0
-  const cupo = await cupoDelPlan(targetUid)
 
   // Mensajes no leídos (proxy: mensajes de compita/admin después del último mensaje del cliente)
   const ultimoMsgCliente = [...mensajes].reverse().find(m => m.origen === 'cliente')
@@ -194,7 +230,6 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     m.origen !== 'cliente' &&
     (!ultimoMsgCliente || m.created_at > ultimoMsgCliente.created_at)
   ).length
-  const sp = previewUid ? null : await solicitudPendiente(targetUid)
   const pendientePago = sp ? { id: sp.id, tipo: sp.tipo, plan: sp.plan, horas: sp.horas, monto_usd: sp.monto_usd, metodo: sp.metodo, referencia: referenciaDe(sp.id), ...(() => { const i = instruccionesPago(sp.metodo as MetodoDirecto); return { lineas: i.lineas, configurado: i.configurado } })() } : null
   // Visitas 2, 3, 4...: con compita activa y verificada, sin otra visita en curso, y cuenta no bloqueada
   const puedeAgendarOtra = !previewUid && !!compita && compita.estado === 'activo' && compita.verificado

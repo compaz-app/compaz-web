@@ -9,10 +9,6 @@
 
 [functions]
   directory = "netlify/functions"
-  timeout = 30
-
-[functions."___netlify-server-handler"]
-  timeout = 30
 
 # Función programada: envía recordatorios de llamada 30 min antes
 # Requiere env var CRON_SECRET (cadena aleatoria) en Netlify y en .env.local
