@@ -2076,6 +2076,22 @@ function VisitasAdminTab({
 }) {
   const defaultTab: SubtabVisitas = visitasActivas.length > 0 ? 'en_curso' : visitasPreVisita.length > 0 ? 'agendadas' : 'cerradas'
   const [subtab, setSubtab] = useState<SubtabVisitas>(defaultTab)
+  const [cerrando, setCerrando] = useState<string | null>(null)
+
+  async function forzarCierre(visitaId: string, compitaNombre: string, usuarioNombre: string) {
+    if (!confirm(`¿Cerrar la visita de ${compitaNombre} con ${usuarioNombre}? Se notificará al compita por Telegram.`)) return
+    setCerrando(visitaId)
+    try {
+      const res = await fetch('/api/admin/forzar-cierre-visita', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ visita_id: visitaId }),
+      })
+      if (!res.ok) alert('Error al cerrar la visita. Inténtalo de nuevo.')
+    } finally {
+      setCerrando(null)
+    }
+  }
 
   const subtabs: { id: SubtabVisitas; label: string; count: number; color: string }[] = [
     { id: 'en_curso',  label: 'En curso',  count: visitasActivas.length,   color: '#22c55e' },
@@ -2127,10 +2143,18 @@ function VisitasAdminTab({
                     <div style={{ color: '#6B5C90', fontSize: '13px' }}>
                       Iniciada: {v.inicio ? new Date(v.inicio).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' }) : '—'}
                     </div>
-                    <button onClick={(e) => { e.stopPropagation(); setFlagModal({ entidad_tipo: 'visita', entidad_id: v.id, entidad_nombre: `${v.compita?.nombre} con ${v.usuario?.nombre}` }) }}
-                      style={{ background: 'none', border: '1.5px solid #dc2626', color: '#dc2626', borderRadius: '9999px', padding: '3px 10px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Bricolage Grotesque, sans-serif' }}>
-                      ⚑ Marcar
-                    </button>
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      <button onClick={(e) => { e.stopPropagation(); setFlagModal({ entidad_tipo: 'visita', entidad_id: v.id, entidad_nombre: `${v.compita?.nombre} con ${v.usuario?.nombre}` }) }}
+                        style={{ background: 'none', border: '1.5px solid #dc2626', color: '#dc2626', borderRadius: '9999px', padding: '3px 10px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Bricolage Grotesque, sans-serif' }}>
+                        ⚑ Marcar
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); forzarCierre(v.id, v.compita?.nombre ?? '—', v.usuario?.nombre ?? '—') }}
+                        disabled={cerrando === v.id}
+                        style={{ background: cerrando === v.id ? '#9B8AB8' : '#dc2626', color: 'white', border: 'none', borderRadius: '9999px', padding: '3px 10px', fontSize: '12px', fontWeight: 700, cursor: cerrando === v.id ? 'not-allowed' : 'pointer', fontFamily: 'Bricolage Grotesque, sans-serif' }}>
+                        {cerrando === v.id ? 'Cerrando…' : '🔴 Forzar cierre'}
+                      </button>
+                    </div>
                   </div>
                   {(v as VisitaConRelaciones & { room_url?: string | null }).room_url && (
                     <div style={{ marginTop: '8px' }}>
