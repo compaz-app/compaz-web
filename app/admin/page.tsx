@@ -122,7 +122,7 @@ export default async function AdminPage({
         todasSolicitudes={(todasSolicitudes ?? []) as unknown as SolicitudAdmin[]}
         visitasMes={visitasMes ?? 0}
         defaultTab={defaultTab}
-        clientesInactivos={clientesInactivosSet}
+        clientesInactivos={[...clientesInactivosSet]}
       />
     </Suspense>
   )

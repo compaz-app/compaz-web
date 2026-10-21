@@ -21,7 +21,7 @@ interface Props {
   todasSolicitudes: SolicitudAdmin[]
   visitasMes: number
   defaultTab: string
-  clientesInactivos?: Set<string>
+  clientesInactivos?: string[]
 }
 
 type Tab = 'visitas' | 'clientes' | 'compitas' | 'desactivadas' | 'historial' | 'solicitudes' | 'cliente' | 'accesos' | 'perfil' | 'atencion' | 'resenas'
@@ -1031,8 +1031,9 @@ function ClientesTab({ usuarios, compitas, onAsignar, onEliminar, onEliminarLote
   onEliminar: (usuarioId: string) => void
   onEliminarLote: (ids: string[]) => Promise<number>
   onMarcar: (id: string, nombre: string) => void
-  clientesInactivos?: Set<string>
+  clientesInactivos?: string[]
 }) {
+  const clientesInactivosSet = new Set(clientesInactivos ?? [])
   const [busqueda, setBusqueda] = useState('')
   const [filtro, setFiltro] = useState<'todos' | 'activos' | 'invitados' | 'bloqueados'>('todos')
   const [seleccionados, setSeleccionados] = useState<Set<string>>(new Set())
@@ -1180,7 +1181,7 @@ function ClientesTab({ usuarios, compitas, onAsignar, onEliminar, onEliminarLote
             onAsignar={onAsignar}
             onEliminar={onEliminar}
             onMarcar={onMarcar}
-            inactivo={clientesInactivos?.has(u.id) ?? false}
+            inactivo={clientesInactivosSet.has(u.id)}
             seleccionado={seleccionados.has(u.id)}
             onToggleSeleccion={toggleUno}
           />
