@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 
 interface Props {
   visitaId: string
@@ -9,10 +10,17 @@ interface Props {
 }
 
 export default function VideoCall({ compitaNombre, roomUrlInicial }: Props) {
+  const router = useRouter()
   const [roomUrl, setRoomUrl] = useState<string | null>(roomUrlInicial)
   const [llamandoVideo, setLlamandoVideo] = useState(false)
   const [llamandoAudio, setLlamandoAudio] = useState(false)
   const [enLlamada, setEnLlamada] = useState(!!roomUrlInicial)
+
+  // Sincronizar con datos frescos del servidor (router.refresh puede traer room_url=null)
+  useEffect(() => {
+    setRoomUrl(roomUrlInicial)
+    setEnLlamada(!!roomUrlInicial)
+  }, [roomUrlInicial])
 
   async function iniciarLlamada(soloAudio: boolean) {
     if (soloAudio) setLlamandoAudio(true)
@@ -36,9 +44,15 @@ export default function VideoCall({ compitaNombre, roomUrlInicial }: Props) {
     }
   }
 
-  function colgar() {
+  async function colgar() {
     setEnLlamada(false)
     setRoomUrl(null)
+    try {
+      await fetch('/api/colgar-llamada', { method: 'POST' })
+    } catch {
+      // silencioso — el estado local ya se actualizó
+    }
+    router.refresh()
   }
 
   if (enLlamada && roomUrl) {
