@@ -15,6 +15,7 @@ export default function ReagendarButton({ visitaId, compitaNombre }: Props) {
 
   async function reagendar() {
     if (reagendando) return
+    if (!confirm(`¿Quieres solicitar un cambio de fecha con ${compitaNombre}? Se notificará al equipo de Compaz.`)) return
     setReagendando(true)
     setError('')
     try {

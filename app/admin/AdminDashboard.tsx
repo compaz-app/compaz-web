@@ -149,6 +149,7 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
   }
 
   async function resolverFlag(flagId: string) {
+    if (!confirm('¿Marcar este flag como resuelto?')) return
     const res = await fetch('/api/admin/flags', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -185,6 +186,7 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
 
   async function toggleEstado(compitaId: string, estadoActual: string) {
     const nuevoEstado = estadoActual === 'activo' ? 'inactivo' : 'activo'
+    if (!confirm(`¿${nuevoEstado === 'activo' ? 'Reactivar' : 'Desactivar'} esta compita?`)) return
     const res = await fetch('/api/admin/toggle-estado', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -290,6 +292,7 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
   }
 
   async function toggleBloqueado(compitaId: string, bloqueado: boolean) {
+    if (!confirm(`¿${bloqueado ? 'Desbloquear' : 'Bloquear'} esta compita?`)) return
     const res = await fetch('/api/admin/bloquear-compita', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -381,6 +384,7 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
   }
 
   async function toggleVerificado(compitaId: string, actual: boolean) {
+    if (!confirm(`¿${actual ? 'Quitar la verificación de' : 'Verificar'} esta compita?`)) return
     const res = await fetch('/api/admin/toggle-verificado', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -853,6 +857,7 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
                   {!r.publicada ? (
                     <button
                       onClick={async () => {
+                        if (!confirm('¿Publicar esta reseña?')) return
                         const res = await fetch('/api/admin/resenas', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: r.id, publicada: true }) })
                         if (res.ok) setResenas(prev => prev.map(x => x.id === r.id ? { ...x, publicada: true } : x))
                       }}
@@ -863,6 +868,7 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
                   ) : (
                     <button
                       onClick={async () => {
+                        if (!confirm('¿Ocultar esta reseña?')) return
                         const res = await fetch('/api/admin/resenas', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: r.id, publicada: false }) })
                         if (res.ok) setResenas(prev => prev.map(x => x.id === r.id ? { ...x, publicada: false } : x))
                       }}
@@ -1916,6 +1922,7 @@ function SolicitudesTab({ solicitudes }: { solicitudes: SolicitudAdmin[] }) {
   const [linkEnviado, setLinkEnviado] = useState<string | null>(null)
 
   async function enviarLink(solicitudId: string) {
+    if (!confirm('¿Enviar el link de llamada al cliente?')) return
     setEnviandoLink(solicitudId)
     try {
       const res = await fetch('/api/admin/enviar-link-llamada', {
