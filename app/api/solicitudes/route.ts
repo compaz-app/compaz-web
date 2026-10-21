@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
   if (!Array.isArray(slotsRaw) || slotsRaw.length === 0 || slotsRaw.length > 3) {
     return err('Debes proponer entre 1 y 3 horarios')
   }
-  if (!slotsRaw.every((s) => esSlotFuturo(s, 10))) return err('Todos los horarios deben ser válidos y estar al menos 10 minutos en el futuro')
+  if (!slotsRaw.every((s) => esSlotFuturo(s, 0))) return err('Todos los horarios deben ser válidos y estar en el futuro')
   if ((slotsRaw as string[]).some((s) => new Date(s).getTime() > Date.now() + 60 * 86400_000)) return err('Los horarios deben estar dentro de los próximos 60 días')
   const slots_propuestos = [...new Set((slotsRaw as string[]).map((s) => new Date(s).toISOString()))]
 
