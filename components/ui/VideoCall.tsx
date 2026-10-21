@@ -171,7 +171,7 @@ export default function VideoCall({ visitaId, compitaNombre, roomUrlInicial }: P
           </button>
         </div>
         <iframe
-          src={roomUrl}
+          src={`${roomUrl}${roomUrl.includes('?') ? '&' : '?'}lang=es`}
           allow="camera; microphone; fullscreen; speaker; display-capture"
           style={{ width: '100%', height: '480px', border: 'none', display: 'block' }}
         />

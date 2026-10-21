@@ -854,9 +854,10 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
       await supabase.from('visitas').update({ llamada_solicitada_at: new Date().toISOString() }).eq('id', visitaLlamada.id)
     }
 
+    const roomUrlEs = `${roomUrl}${roomUrl.includes('?') ? '&' : '?'}lang=es`
     await sendTelegramMessage(
       chatId,
-      `📹 <b>Enlace de videollamada</b>\n\nAbre este enlace para llamar al cliente:\n${roomUrl}`,
+      `📹 <b>Enlace de videollamada</b>\n\nAbre este enlace para llamar al cliente:\n${roomUrlEs}`,
       TECLADO_DURANTE_VISITA,
     )
 
