@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
 interface Props {
@@ -14,6 +14,15 @@ interface Props {
 export default function FechaProgramada({ visitaId, fechaActual, horaInicioActual, horaFinActual, compitaNombre }: Props) {
   const hoy = new Date().toISOString().split('T')[0]
   const [fecha, setFecha] = useState(fechaActual ?? '')
+  const [horaVE, setHoraVE] = useState('')
+  useEffect(() => {
+    function actualizar() {
+      setHoraVE(new Date().toLocaleTimeString('es-VE', { timeZone: 'America/Caracas', hour: '2-digit', minute: '2-digit', hour12: true }))
+    }
+    actualizar()
+    const t = setInterval(actualizar, 30_000)
+    return () => clearInterval(t)
+  }, [])
   const [horaInicio, setHoraInicio] = useState(horaInicioActual ?? '')
   const [horaFin, setHoraFin] = useState(horaFinActual ?? '')
   const [guardando, setGuardando] = useState(false)
@@ -59,8 +68,11 @@ export default function FechaProgramada({ visitaId, fechaActual, horaInicioActua
 
   return (
     <div style={{ background: '#F0FDF4', border: '2px solid #86EFAC', borderRadius: '12px', padding: '14px 18px', marginBottom: '12px' }}>
-      <p style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, color: '#15803d', fontSize: '14px', margin: '0 0 8px' }}>
+      <p style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, color: '#15803d', fontSize: '14px', margin: '0 0 4px' }}>
         📅 ¿Acordaron una fecha con {compitaNombre}?
+      </p>
+      <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '12px', color: '#166534', margin: '0 0 10px' }}>
+        Todos los horarios son en hora de Venezuela (VET){horaVE ? ` · Ahora en Venezuela: ${horaVE}` : ''}.
       </p>
       {errorGuardar && (
         <p style={{ color: '#E05520', fontSize: '13px', margin: '0 0 8px', fontFamily: 'Inter, sans-serif' }}>{errorGuardar}</p>
