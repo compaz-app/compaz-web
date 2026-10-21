@@ -1231,7 +1231,7 @@ function ClienteCard({ u, compitas, onAsignar, onEliminar, onMarcar, inactivo = 
           style={{ width: '18px', height: '18px', accentColor: '#7C4DFF', cursor: 'pointer', flexShrink: 0 }}
         />
       )}
-      <div>
+      <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           <span style={{ color: '#1A0A3C', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700 }}>{u.nombre}</span>
           {bloqueado && <span style={{ background: '#FEE2E2', color: '#B91C1C', border: '1px solid #FCA5A5', borderRadius: '9999px', padding: '2px 8px', fontSize: '11px', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif' }}>🚫 Bloqueado</span>}
