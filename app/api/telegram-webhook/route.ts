@@ -1200,12 +1200,20 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
       }
 
       // Contador: lectura fresca (la copia de `compita` puede estar desactualizada).
-      const { data: fresca } = await supabase.from('compitas').select('visitas_realizadas').eq('id', compita.id).single()
-      await supabase.from('compitas').update({ visitas_realizadas: (fresca?.visitas_realizadas ?? 0) + 1 }).eq('id', compita.id)
+      try {
+        const { data: fresca } = await supabase.from('compitas').select('visitas_realizadas').eq('id', compita.id).single()
+        await supabase.from('compitas').update({ visitas_realizadas: (fresca?.visitas_realizadas ?? 0) + 1 }).eq('id', compita.id)
+      } catch (e) {
+        console.error('Error actualizando contador de visitas:', e)
+      }
 
-      const duracionMin = Math.round((new Date(fin).getTime() - new Date(visita.inicio!).getTime()) / 60000)
-      const duracion = duracionMin >= 60 ? `${Math.floor(duracionMin / 60)}h ${duracionMin % 60}min` : `${duracionMin} min`
-      await avisarAdmin(`✅ <b>Visita terminada</b>\n\n<b>Compita:</b> ${esc(compita.nombre)}\n<b>Cliente:</b> ${esc(visita.usuario?.nombre ?? '—')}\n<b>Duración:</b> ${duracion}`)
+      try {
+        const duracionMin = Math.round((new Date(fin).getTime() - new Date(visita.inicio ?? fin).getTime()) / 60000)
+        const duracion = duracionMin >= 60 ? `${Math.floor(duracionMin / 60)}h ${duracionMin % 60}min` : `${duracionMin} min`
+        await avisarAdmin(`✅ <b>Visita terminada</b>\n\n<b>Compita:</b> ${esc(compita.nombre)}\n<b>Cliente:</b> ${esc(visita.usuario?.nombre ?? '—')}\n<b>Duración:</b> ${duracion}`)
+      } catch (e) {
+        console.error('Error notificando admin al terminar visita:', e)
+      }
 
       if (visita.usuario) {
         try {
