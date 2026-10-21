@@ -40,7 +40,7 @@ export default function FechaProgramada({ visitaId, fechaActual, horaInicioActua
       const res = await fetch('/api/visita/fecha', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ visita_id: visitaId, fecha_programada: fecha, hora_inicio: horaInicio, hora_fin: horaFin }),
+        body: JSON.stringify({ visita_id: visitaId, fecha_programada: fecha, hora_inicio: horaInicio.slice(0, 5), hora_fin: horaFin.slice(0, 5) }),
       })
       if (res.ok) {
         setGuardada(true)

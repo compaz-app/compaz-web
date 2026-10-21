@@ -21,12 +21,14 @@ export async function PUT(req: NextRequest) {
 
   if (!visita_id || !fecha_programada || !hora_inicio || !hora_fin) return err('Faltan parámetros')
   if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha_programada)) return err('Fecha inválida')
-  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(hora_inicio) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(hora_fin)) return err('Hora inválida')
-  if (hora_fin <= hora_inicio) return err('La hora de fin debe ser después de la hora de inicio')
+  const horaInicioN = hora_inicio.slice(0, 5)
+  const horaFinN = hora_fin.slice(0, 5)
+  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(horaInicioN) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(horaFinN)) return err('Hora inválida')
+  if (horaFinN <= horaInicioN) return err('La hora de fin debe ser después de la hora de inicio')
   if (Number.isNaN(new Date(`${fecha_programada}T12:00:00Z`).getTime()) || new Date(`${fecha_programada}T12:00:00Z`).toISOString().slice(0, 10) !== fecha_programada) return err('Fecha inválida')
   const hoy = hoyVE() // día de Venezuela, no UTC
   if (fecha_programada < hoy) return err('La fecha debe ser hoy o en el futuro')
-  if (fecha_programada === hoy && hora_inicio <= horaVE()) return err('La hora de inicio ya pasó')
+  if (fecha_programada === hoy && horaInicioN <= horaVE()) return err('La hora de inicio ya pasó')
   if (fecha_programada > hoyVE(180)) return err('La fecha es demasiado lejana')
 
   const admin = createAdminSupabase()
@@ -56,7 +58,7 @@ export async function PUT(req: NextRequest) {
     const ini = v.hora_inicio_programada
     const fin = v.hora_fin_programada
     if (!ini || !fin) return false
-    return ini < hora_fin && fin > hora_inicio
+    return ini < horaFinN && fin > horaInicioN
   })
 
   if (hayConflicto) {
@@ -65,7 +67,7 @@ export async function PUT(req: NextRequest) {
 
   const { error } = await admin
     .from('visitas')
-    .update({ fecha_programada, hora_inicio_programada: hora_inicio, hora_fin_programada: hora_fin, estado: 'programada' })
+    .update({ fecha_programada, hora_inicio_programada: horaInicioN, hora_fin_programada: horaFinN, estado: 'programada' })
     .eq('id', visita_id)
 
   if (error) {
@@ -74,7 +76,7 @@ export async function PUT(req: NextRequest) {
   }
 
   const fechaFormateada = formatFechaVE(fecha_programada, true)
-  const horarioLabel = `${hora_inicio} – ${hora_fin}`
+  const horarioLabel = `${horaInicioN} – ${horaFinN}`
 
   const [{ data: compita }, { data: cliente }] = await Promise.all([
     admin.from('compitas').select('telegram_chat_id, nombre').eq('id', visita.compita_id).single(),
@@ -83,7 +85,7 @@ export async function PUT(req: NextRequest) {
 
   // Si la visita es hoy en menos de 30 min, el cron no llegará a tiempo — avisar ahora mismo.
   const minutosParaInicio = fecha_programada === hoyVE()
-    ? (hora_inicio.split(':').map(Number).reduce((h, m) => h * 60 + m) - horaVE().split(':').map(Number).reduce((h, m) => h * 60 + m))
+    ? (horaInicioN.split(':').map(Number).reduce((h, m) => h * 60 + m) - horaVE().split(':').map(Number).reduce((h, m) => h * 60 + m))
     : Infinity
   const esInminente = minutosParaInicio <= 30 && minutosParaInicio >= 0
 
