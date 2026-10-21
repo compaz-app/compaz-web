@@ -37,7 +37,9 @@ export default function VideoCall({ visitaId, compitaNombre, roomUrlInicial }: P
           }
         },
       )
-      .subscribe()
+      .subscribe((status) => {
+        console.log('[VideoCall] Realtime status:', status)
+      })
     return () => { supabase.removeChannel(canal) }
   }, [visitaId])
 
