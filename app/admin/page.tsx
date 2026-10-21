@@ -82,7 +82,8 @@ export default async function AdminPage({
       .from('visitas')
       .select('usuario_id, fin')
       .eq('estado', 'terminada')
-      .order('fin', { ascending: false }),
+      .order('fin', { ascending: false })
+      .limit(500),
     // Visitas activas en los últimos 30 días (para excluir del churn)
     supabase
       .from('visitas')
