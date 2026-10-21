@@ -76,9 +76,12 @@ export const TECLADO_SIN_VISITA = {
   resize_keyboard: true,
 } satisfies ReplyKeyboard
 
-// Visita programada (fecha agendada, no iniciada aún): Iniciar + Terminar + Menú
+// Visita programada (fecha agendada, no iniciada aún): Iniciar + Terminar + Emergencia + Menú
 export const TECLADO_INICIO = {
-  keyboard: [[{ text: '▶️ Iniciar visita' }, { text: '🔴 Terminar visita' }, { text: '📋 Menú' }]],
+  keyboard: [
+    [{ text: '▶️ Iniciar visita' }, { text: '🔴 Terminar visita' }],
+    [{ text: '🚨 Emergencia' }, { text: '📋 Menú' }],
+  ],
   resize_keyboard: true,
 } satisfies ReplyKeyboard
 
