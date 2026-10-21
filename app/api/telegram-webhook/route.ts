@@ -679,11 +679,22 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
   if (estado?.registro_pendiente && !compita) {
     if (!text.trim()) return NextResponse.json({ ok: true })
     await setRegistroPendiente(supabase, chatId, false)
-    const { data: resultados } = await supabase
+    const normalizar = (s: string) =>
+      s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()
+    const textoBuscado = text.trim().slice(0, 80)
+    let { data: resultados } = await supabase
       .from('compitas')
       .select('id, nombre, email, codigo')
-      .ilike('nombre', `%${escLike(text.trim().slice(0, 80))}%`)
+      .ilike('nombre', `%${escLike(textoBuscado)}%`)
       .limit(5) as { data: Compita[] | null }
+    // Si no hubo coincidencia exacta, buscar ignorando tildes
+    if (!resultados?.length) {
+      const { data: todos } = await supabase
+        .from('compitas')
+        .select('id, nombre, email, codigo') as { data: Compita[] | null }
+      const normBuscado = normalizar(textoBuscado)
+      resultados = (todos ?? []).filter((c) => normalizar(c.nombre).includes(normBuscado)).slice(0, 5)
+    }
 
     const encontrada = resultados?.length === 1 ? resultados[0] : null
     const ambiguo = (resultados?.length ?? 0) > 1
