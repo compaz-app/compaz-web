@@ -290,3 +290,12 @@ alter table telegram_estados enable row level security;
 -- create index if not exists solicitudes_confirmacion_idx
 --   on solicitudes(confirmacion_llamada_enviada, estado)
 --   where estado = 'aceptada';
+
+-- ══════════════════════════════════════════════════════════════════════════════
+-- CAPTACIÓN (Bloque 1): personas, postulaciones, eventos
+-- Definición completa en supabase/migrations/20261022_captacion.sql (no se duplica aquí).
+--   personas      · identidad compartida; uuid permanente; teléfono y correo NO únicos
+--   postulaciones · cada envío del formulario, con UTM, coincidencia de identidad y cola de copia a Airtable
+--   eventos       · historial inmutable común a todos los módulos (solo inserción)
+-- Acceso: ninguno para anon/authenticated; el servidor escribe solo mediante funciones security definer.
+-- ══════════════════════════════════════════════════════════════════════════════

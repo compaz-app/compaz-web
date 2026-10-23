@@ -777,6 +777,10 @@ function Formulario({ rolInicial }: { rolInicial: string }) {
           utmSource: params.get("utm_source") ?? "",
           utmMedium: params.get("utm_medium") ?? "",
           utmCampaign: params.get("utm_campaign") ?? "",
+          utmContent: params.get("utm_content") ?? "",
+          utmTerm: params.get("utm_term") ?? "",
+          fuente: "home",
+          claveIdempotencia: crypto.randomUUID(),
         }),
       });
       if (!res.ok) throw new Error("Error");

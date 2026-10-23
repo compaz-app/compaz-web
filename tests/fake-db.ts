@@ -42,11 +42,17 @@ export class FakeDB {
   tables: Record<string, Row[]> = {}
   /** Inyección de fallos: { 'visitas:update': 1 } hace fallar las próximas N operaciones. */
   fail: Record<string, number> = {}
+  /** Funciones de Postgres simuladas para rpc(): cada test registra las que necesita. */
+  rpcs: Record<string, (args: any) => { data: any; error: any } | Promise<{ data: any; error: any }>> = {}
+  /** Llamadas recibidas por rpc(), en orden. */
+  rpcLlamadas: { fn: string; args: any }[] = []
   constructor() { this.reset() }
   reset() {
     this.tables = {}
     for (const t of Object.keys(DEFAULTS)) this.tables[t] = []
     this.fail = {}
+    this.rpcs = {}
+    this.rpcLlamadas = []
   }
   rows(t: string): Row[] { return this.tables[t] }
   seed(t: string, row: Row): Row {
@@ -294,6 +300,13 @@ class Query {
 export function makeClient(db: FakeDB, user: () => { id: string; email: string } | null) {
   return {
     from: (t: string) => new Query(db, t),
+    rpc: async (fn: string, args: any = {}) => {
+      db.rpcLlamadas.push({ fn, args })
+      if (db.shouldFail(fn, 'rpc')) return { data: null, error: { message: `fallo simulado en ${fn}` } }
+      const h = db.rpcs[fn]
+      if (!h) return { data: null, error: { message: `función ${fn} no simulada` } }
+      return h(args)
+    },
     auth: {
       getUser: async () => ({ data: { user: user() }, error: null }),
       getSession: async () => ({ data: { session: user() ? { user: user() } : null } }),
