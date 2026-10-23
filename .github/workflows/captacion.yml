@@ -74,6 +74,7 @@ jobs:
         run: |
           n=$(psql "$DB_URL" -At -c "select count(*) from information_schema.tables where table_schema='public' and table_name in ('personas','postulaciones','eventos')")
           test "$n" = "0"
+          # La consulta de verificación pensada para producción también debe correr en una base vacía
           psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f tests/sql/verificar_esquema_bloque1.sql > /dev/null
       - name: Migración
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f supabase/migrations/20261022_captacion.sql
@@ -98,4 +99,4 @@ jobs:
         with:
           node-version: 22
       - name: API real de Airtable (base de pruebas)
-        run: node --experimental-strip-types --no-warnings tests/integracion/airtable-real.mts
+        run: node --experimental-strip-types --no-warnings tests/integracion/airtable-real.mjs

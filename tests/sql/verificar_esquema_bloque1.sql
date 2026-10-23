@@ -38,10 +38,13 @@ select column_name, data_type, is_nullable, column_default
   from information_schema.columns where table_schema = 'public' and table_name = 'compitas'
  order by ordinal_position;
 select conname, pg_get_constraintdef(oid) as definicion
-  from pg_constraint where conrelid = 'public.compitas'::regclass and contype in ('c', 'u', 'p');
+  from pg_constraint where conrelid = to_regclass('public.compitas') and contype in ('c', 'u', 'p');
 
 -- V7 · Distribución de estados de compitas (solo conteos)
-select estado, verificado, count(*) from public.compitas group by 1, 2 order by 1, 2;
+--      (dinámico: no falla si la tabla no existe, como en una base vacía de pruebas)
+select case when to_regclass('public.compitas') is null then null
+            else query_to_xml('select estado, verificado, count(*) as n from public.compitas group by 1, 2 order by 1, 2', false, false, '')
+       end as estados_compitas;
 
 -- V8 · Tablas públicas con RLS y número de políticas (para confirmar el patrón general)
 select c.relname as tabla, c.relrowsecurity as rls, count(p.policyname) as politicas

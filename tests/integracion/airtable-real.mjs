@@ -11,14 +11,17 @@
 //   A6 · Las fórmulas de la tabla (Teléfono, Email, Rol) leen el Contacto canónico.
 //
 // Uso (solo con la base de pruebas):
-//   AIRTABLE_API_KEY=… AIRTABLE_BASE_ID=app… node --experimental-strip-types tests/integracion/airtable-real.mts
+//   AIRTABLE_API_KEY=… AIRTABLE_BASE_ID=app… node --experimental-strip-types tests/integracion/airtable-real.mjs
 // Deja registros de prueba en la base de pruebas (marcados "PRUEBA CI"); no borra nada.
+// Es .mjs (no .ts) para que tsc y next build no lo comprueben: Node lo ejecuta
+// importando directamente lib/airtable.ts con --experimental-strip-types.
 // ══════════════════════════════════════════════════════════════════════════════
 import { crearRegistroAirtable, obtenerRegistro, buscarPorContacto, listarCreadosDesde, mismaFecha } from '../../lib/airtable.ts'
 
 const BASE_PRODUCCION = 'appd3xCmNZEIJ0rWS'
-const resultados: { id: string; ok: boolean; detalle: string }[] = []
-const anotar = (id: string, ok: boolean, detalle: string) => { resultados.push({ id, ok, detalle }); console.log(`${ok ? 'OK  ' : 'FALLO'} ${id} · ${detalle}`) }
+/** @type {{ id: string, ok: boolean, detalle: string }[]} */
+const resultados = []
+const anotar = (id, ok, detalle) => { resultados.push({ id, ok, detalle }); console.log(`${ok ? 'OK  ' : 'FALLO'} ${id} · ${detalle}`) }
 
 async function main() {
   const base = process.env.AIRTABLE_BASE_ID ?? ''
@@ -47,7 +50,7 @@ async function main() {
   // A6 · fórmulas propias de la tabla (lectura directa de los campos calculados)
   const res = await fetch(`https://api.airtable.com/v0/${base}/${encodeURIComponent(process.env.AIRTABLE_TABLE_NAME ?? 'Lista de Espera')}/${c.id}`,
     { headers: { Authorization: `Bearer ${process.env.AIRTABLE_API_KEY}` } })
-  const f = ((await res.json()) as { fields?: Record<string, unknown> }).fields ?? {}
+  const f = (await res.json()).fields ?? {}
   const rolOk = f['Rol'] === undefined || f['Rol'] === 'compa'
   anotar('A6', res.ok && rolOk, `Teléfono=${JSON.stringify(f['Teléfono'])} Email=${JSON.stringify(f['Email'])} Rol=${JSON.stringify(f['Rol'])}`)
 }
