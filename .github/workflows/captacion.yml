@@ -107,6 +107,15 @@ jobs:
           [ -n "$AIRTABLE_API_KEY" ] && echo "::notice title=Secreto AIRTABLE_TEST_API_KEY::presente (${#AIRTABLE_API_KEY} caracteres)" || echo "::warning title=Secreto AIRTABLE_TEST_API_KEY::ausente"
           [ -n "$AIRTABLE_BASE_ID" ] && echo "::notice title=Secreto AIRTABLE_TEST_BASE_ID::presente (empieza por ${AIRTABLE_BASE_ID:0:3}, ${#AIRTABLE_BASE_ID} caracteres, distinto de producción: $([ "$AIRTABLE_BASE_ID" != appd3xCmNZEIJ0rWS ] && echo sí || echo NO))" || echo "::warning title=Secreto AIRTABLE_TEST_BASE_ID::ausente"
           if [ -n "$AIRTABLE_API_KEY" ] && [ -n "$AIRTABLE_BASE_ID" ]; then echo "AIRTABLE_OBLIGATORIA=si" >> "$GITHUB_ENV"; fi
+          # Diagnóstico de formato del token (sin mostrar su valor)
+          k="$AIRTABLE_API_KEY"
+          a=no; [[ "$k" == pat* ]] && a=sí
+          b=no; [[ "$k" == Bearer* ]] && b=sí
+          c=no; [[ "$k" =~ [[:space:]] ]] && c=sí
+          d=no; [[ "$k" == *'"'* || "$k" == *"'"* ]] && d=sí
+          e=no; [[ "$k" =~ ^pat[A-Za-z0-9]{14}[.][a-f0-9]{64}$ ]] && e=sí
+          pos=$(awk -v s="$k" 'BEGIN{print index(s, "pat")}')
+          echo "::notice title=Formato del token::empieza por pat: $a · empieza por Bearer: $b · espacios o saltos: $c · comillas: $d · 'pat' aparece en la posición $pos · formato estándar (pat + 14 + punto + 64): $e"
       - name: API real de Airtable (base de pruebas)
         run: node --experimental-strip-types --no-warnings tests/integracion/airtable-real.mjs
 
