@@ -2,6 +2,7 @@
 // Compaz — Postulaciones de Compitas desde la landing pública (/se-compita)
 // Usa el mismo endpoint y formato que el formulario de la home (/api/waitlist),
 // así Airtable y sus automatizaciones reciben los leads igual que siempre.
+// `fuente` y `claveIdempotencia` los usa el registro en Supabase (lib/captacion.ts).
 // ══════════════════════════════════════════════════════════════════════════════
 
 export interface PostulacionCompita {
@@ -43,6 +44,10 @@ export async function enviarPostulacionCompita(datos: PostulacionCompita): Promi
         utmSource: params.get('utm_source') ?? '',
         utmMedium: params.get('utm_medium') ?? '',
         utmCampaign: params.get('utm_campaign') ?? '',
+        utmContent: params.get('utm_content') ?? '',
+        utmTerm: params.get('utm_term') ?? '',
+        fuente: 'se_compita',
+        claveIdempotencia: crypto.randomUUID(),
       }),
     })
     if (res.ok) return { ok: true }

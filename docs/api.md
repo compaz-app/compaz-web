@@ -174,6 +174,15 @@ Actualiza campos editables del perfil de una compita. Solo admin.
 
 ---
 
+## Captación
+
+| Método | Ruta | Acceso | Qué hace |
+| --- | --- | --- | --- |
+| POST | `/api/waitlist` | Público (Turnstile, honeypot, límites) | Recibe postulaciones de la home y de `/se-compita`. Con `POSTULACIONES_DESTINO=supabase_y_airtable` guarda en Supabase y copia a Airtable. Campos nuevos opcionales: `utmContent`, `utmTerm`, `fuente` (`home` o `se_compita`), `claveIdempotencia` (uuid por envío) |
+| POST | `/api/cron/reintentar-airtable` | `x-cron-secret` | Reintenta la copia a Airtable (cada 15 min) |
+| GET | `/api/interno/cmc/postulaciones` | `x-cmc-secreto` (desactivada sin `CMC_ENTREGA_SECRETO`) | Postulaciones que Airtable no aceptó, en formato de registro de Airtable |
+| POST | `/api/interno/cmc/postulaciones` | `x-cmc-secreto` | `{ ids: [...] }`: el CMC confirma que las incorporó |
+
 ## Errores comunes
 
 | Status | Descripción |
