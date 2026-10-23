@@ -13,7 +13,8 @@ set -euo pipefail
 N="${N:-10}"
 TEL="+584125550000"   # teléfono reservado para esta prueba
 
-guardia=$(psql "$DB_URL" -At -c "select coalesce((select count(*) from public.compitas), 0) + coalesce((select count(*) from public.usuarios), 0)")
+# Cuenta filas de operación solo si las tablas existen (en una base vacía no existen)
+guardia=$(psql "$DB_URL" -At -c "select coalesce(sum(case when to_regclass(t) is null then 0 else (xpath('/row/n/text()', query_to_xml('select count(*) as n from ' || t, false, true, '')))[1]::text::int end), 0) from unnest(array['public.compitas', 'public.usuarios']) as t" 2>/dev/null || echo error)
 if [ "$guardia" != "0" ]; then echo "ABORTADO: la base tiene compitas o usuarios; esto no es staging." >&2; exit 1; fi
 previas=$(psql "$DB_URL" -At -c "select count(*) from public.postulaciones where telefono_declarado = '$TEL'")
 if [ "$previas" != "0" ]; then echo "ABORTADO: ya hay postulaciones con el teléfono de prueba." >&2; exit 1; fi

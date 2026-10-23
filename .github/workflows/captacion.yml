@@ -1,0 +1,101 @@
+# Compaz · Bloque 1 · Validación de la captación en Supabase
+#
+# Se ejecuta en cada PR que toque la captación. No despliega nada, no usa
+# producción y no necesita secretos salvo para la prueba opcional de Airtable.
+#
+#   app       · tipos y pruebas de la aplicación (node:test con dobles)
+#   base      · migración + pruebas SQL + concurrencia sobre la imagen oficial de
+#               Supabase con PostgreSQL 17.6 (mismos roles y permisos por defecto)
+#   airtable  · API real de Airtable contra una base de PRUEBAS; se salta si no
+#               existen los secretos AIRTABLE_TEST_API_KEY y AIRTABLE_TEST_BASE_ID
+name: captacion
+
+on:
+  pull_request:
+    paths:
+      - 'supabase/migrations/**'
+      - 'lib/captacion.ts'
+      - 'lib/airtable.ts'
+      - 'app/api/waitlist/**'
+      - 'app/api/cron/reintentar-airtable/**'
+      - 'app/api/cron/conciliar-airtable/**'
+      - 'app/api/admin/postulaciones/**'
+      - 'app/admin/postulaciones/**'
+      - 'tests/**'
+      - '.github/workflows/captacion.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: captacion-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  app:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Tipos
+        run: npx tsc --noEmit -p .
+      - name: Pruebas de captación (obligatorias)
+        run: node tests/run.mjs 18
+      - name: Suite completa (informativa; tiene fallos previos en main)
+        continue-on-error: true
+        run: node tests/run.mjs 2>&1 | grep -E '^# (tests|pass|fail)'
+
+  base:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      db:
+        image: supabase/postgres:17.6.1.173
+        env:
+          POSTGRES_PASSWORD: ci-solo-pruebas
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -h localhost"
+          --health-interval 5s --health-timeout 5s --health-retries 30
+    env:
+      DB_URL: postgresql://postgres:ci-solo-pruebas@localhost:5432/postgres
+    steps:
+      - uses: actions/checkout@v4
+      - name: Versión y roles de la imagen
+        run: psql "$DB_URL" -At -c "select version()" -c "select string_agg(rolname, ', ' order by rolname) from pg_roles where rolname in ('anon','authenticated','service_role')"
+      - name: Verificación previa del esquema (no debe existir nada del Bloque 1)
+        run: |
+          n=$(psql "$DB_URL" -At -c "select count(*) from information_schema.tables where table_schema='public' and table_name in ('personas','postulaciones','eventos')")
+          test "$n" = "0"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f tests/sql/verificar_esquema_bloque1.sql > /dev/null
+      - name: Migración
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f supabase/migrations/20261022_captacion.sql
+      - name: Migración idempotente ante reintento (debe fallar sin cambiar nada)
+        run: |
+          if psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f supabase/migrations/20261022_captacion.sql 2>/dev/null; then echo "La migración se aplicó dos veces"; exit 1; fi
+          psql "$DB_URL" -At -c "select count(*) from public.postulaciones" | grep -qx 0
+      - name: Pruebas SQL (19 casos)
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f tests/sql/captacion.sql
+      - name: Concurrencia (10 envíos simultáneos de la misma persona)
+        run: N=10 bash tests/sql/concurrencia.sh
+
+  airtable:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      AIRTABLE_API_KEY: ${{ secrets.AIRTABLE_TEST_API_KEY }}
+      AIRTABLE_BASE_ID: ${{ secrets.AIRTABLE_TEST_BASE_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: API real de Airtable (base de pruebas)
+        run: node --experimental-strip-types --no-warnings tests/integracion/airtable-real.mts
