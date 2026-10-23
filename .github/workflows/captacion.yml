@@ -102,6 +102,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Secretos de Airtable de pruebas (sin mostrar valores)
+        run: |
+          [ -n "$AIRTABLE_API_KEY" ] && echo "::notice title=Secreto AIRTABLE_TEST_API_KEY::presente (${#AIRTABLE_API_KEY} caracteres)" || echo "::warning title=Secreto AIRTABLE_TEST_API_KEY::ausente"
+          [ -n "$AIRTABLE_BASE_ID" ] && echo "::notice title=Secreto AIRTABLE_TEST_BASE_ID::presente (empieza por ${AIRTABLE_BASE_ID:0:3}, ${#AIRTABLE_BASE_ID} caracteres, distinto de producción: $([ "$AIRTABLE_BASE_ID" != appd3xCmNZEIJ0rWS ] && echo sí || echo NO))" || echo "::warning title=Secreto AIRTABLE_TEST_BASE_ID::ausente"
+          if [ -n "$AIRTABLE_API_KEY" ] && [ -n "$AIRTABLE_BASE_ID" ]; then echo "AIRTABLE_OBLIGATORIA=si" >> "$GITHUB_ENV"; fi
       - name: API real de Airtable (base de pruebas)
         run: node --experimental-strip-types --no-warnings tests/integracion/airtable-real.mjs
 
@@ -172,10 +177,14 @@ jobs:
           NEXT_PUBLIC_TURNSTILE_SITE_KEY: 1x00000000000000000000AA
           TURNSTILE_SECRET_KEY: 1x0000000000000000000000000000000AA
           RESEND_API_KEY: re_ci_sin_envios
+          AIRTABLE_OBLIGATORIA: si
         run: |
           npx next start -p 3000 > /tmp/e2e/web.log 2>&1 &
           for i in $(seq 1 60); do curl -sf -o /dev/null http://localhost:3000/privacidad && break; sleep 2; done
           node --experimental-strip-types --no-warnings tests/integracion/e2e-captacion.mjs
       - name: Registro de la web (si algo falló)
         if: failure() && steps.secretos.outputs.hay == 'si'
-        run: tail -n 200 /tmp/e2e/web.log || true
+        run: |
+          tail -n 200 /tmp/e2e/web.log || true
+          # Las últimas líneas de error, como anotaciones (sin secretos: la web no los registra)
+          grep -iE "error|falló|exception" /tmp/e2e/web.log | tail -n 8 | while IFS= read -r l; do echo "::warning title=web.log::${l//::/: :}"; done || true

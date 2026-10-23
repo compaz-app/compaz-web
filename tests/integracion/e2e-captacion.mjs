@@ -30,7 +30,14 @@ const KONG = process.env.E2E_KONG_CONTAINER ?? ''
 const BASE_PRODUCCION = 'appd3xCmNZEIJ0rWS'
 
 const resultados = []
-const anotar = (id, ok, detalle) => { resultados.push({ id, ok }); console.log(`${ok ? 'OK   ' : 'FALLO'} ${id} · ${detalle}`) }
+const enCI = process.env.GITHUB_ACTIONS === 'true'
+const limpio = (t) => String(t).replace(/[\r\n]+/g, ' ').replace(/::/g, ': :')
+const anotar = (id, ok, detalle) => {
+  resultados.push({ id, ok, detalle })
+  console.log(`${ok ? 'OK   ' : 'FALLO'} ${id} · ${detalle}`)
+  // En CI, cada resultado queda como anotación del trabajo (visible sin abrir los registros)
+  if (enCI) console.log(`::${ok ? 'notice' : 'error'} title=${id} ${ok ? 'OK' : 'FALLO'}::${limpio(detalle)}`)
+}
 const sql = (q) => execFileSync('psql', [DB, '-At', '-v', 'ON_ERROR_STOP=1', '-c', q], { encoding: 'utf8' }).trim()
 const sqlJson = (q) => JSON.parse(sql(`select coalesce(json_agg(t), '[]') from (${q}) t`) || '[]')
 const esperar = (ms) => new Promise((r) => setTimeout(r, ms))
@@ -68,7 +75,7 @@ function registrarDirecto(p) {
 
 async function main() {
   // Salvaguardas de aislamiento
-  if (!process.env.AIRTABLE_API_KEY || !process.env.AIRTABLE_BASE_ID) { console.log('SALTADA: faltan los secretos de la base de Airtable de pruebas'); return }
+  if (!process.env.AIRTABLE_API_KEY || !process.env.AIRTABLE_BASE_ID) { console.log('SALTADA: faltan los secretos de la base de Airtable de pruebas'); if (process.env.AIRTABLE_OBLIGATORIA === 'si') { console.log('::error title=E2E::Secretos de Airtable de pruebas ausentes'); process.exit(1) } return }
   if (process.env.AIRTABLE_BASE_ID === BASE_PRODUCCION) { console.error('ABORTADO: la base de Airtable es la de producción'); process.exit(1) }
   if (!/^postgresql:\/\/[^@]+@(127\.0\.0\.1|localhost):/.test(DB)) { console.error('ABORTADO: la base de datos no es local'); process.exit(1) }
 
@@ -157,5 +164,6 @@ async function main() {
 main().then(() => {
   const fallos = resultados.filter((r) => !r.ok)
   console.log(`\n${resultados.length - fallos.length}/${resultados.length} escenarios de extremo a extremo correctos`)
+  if (enCI) console.log(`::notice title=Resumen E2E::${resultados.length - fallos.length}/${resultados.length} escenarios correctos`)
   if (fallos.length) process.exit(1)
 }).catch((e) => { console.error(e); process.exit(1) })

@@ -21,11 +21,18 @@ import { crearRegistroAirtable, obtenerRegistro, buscarPorContacto, listarCreado
 const BASE_PRODUCCION = 'appd3xCmNZEIJ0rWS'
 /** @type {{ id: string, ok: boolean, detalle: string }[]} */
 const resultados = []
-const anotar = (id, ok, detalle) => { resultados.push({ id, ok, detalle }); console.log(`${ok ? 'OK  ' : 'FALLO'} ${id} · ${detalle}`) }
+const enCI = process.env.GITHUB_ACTIONS === 'true'
+const limpio = (t) => String(t).replace(/[\r\n]+/g, ' ').replace(/::/g, ': :')
+const anotar = (id, ok, detalle) => {
+  resultados.push({ id, ok, detalle })
+  console.log(`${ok ? 'OK   ' : 'FALLO'} ${id} · ${detalle}`)
+  // En CI, cada resultado queda como anotación del trabajo (visible sin abrir los registros)
+  if (enCI) console.log(`::${ok ? 'notice' : 'error'} title=${id} ${ok ? 'OK' : 'FALLO'}::${limpio(detalle)}`)
+}
 
 async function main() {
   const base = process.env.AIRTABLE_BASE_ID ?? ''
-  if (!process.env.AIRTABLE_API_KEY || !base) { console.log('SALTADA: faltan AIRTABLE_API_KEY o AIRTABLE_BASE_ID de pruebas'); return }
+  if (!process.env.AIRTABLE_API_KEY || !base) { console.log('SALTADA: faltan AIRTABLE_API_KEY o AIRTABLE_BASE_ID de pruebas'); if (process.env.AIRTABLE_OBLIGATORIA === 'si') { console.log('::error title=Airtable::Secretos de Airtable de pruebas ausentes'); process.exit(1) } return }
   if (base === BASE_PRODUCCION) { console.error('ABORTADO: AIRTABLE_BASE_ID es la base de producción'); process.exit(1) }
   anotar('A1', true, 'la base no es la de producción')
 
@@ -58,5 +65,6 @@ async function main() {
 main().then(() => {
   const fallos = resultados.filter((r) => !r.ok)
   console.log(`\n${resultados.length - fallos.length}/${resultados.length} comprobaciones correctas`)
+  if (enCI) console.log(`::notice title=Resumen Airtable real::${resultados.length - fallos.length}/${resultados.length} comprobaciones correctas`)
   if (fallos.length) process.exit(1)
 }).catch((e) => { console.error(e); process.exit(1) })
