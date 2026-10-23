@@ -6,34 +6,45 @@
 --
 -- Qué hace:
 --   · Crea 3 tablas nuevas: personas, postulaciones y eventos.
---   · Crea las funciones que usa el servidor (solo service_role):
---       registrar_postulacion, reclamar_envios_airtable, marcar_envio_airtable,
---       postulaciones_para_cmc y confirmar_entrega_cmc.
+--   · Crea las funciones que usa el servidor (solo service_role).
 --   · No modifica ninguna tabla existente (compitas, usuarios, visitas…).
 --
--- Identidad (decisión del 22 oct):
+-- Identidad:
 --   · El uuid de personas es el identificador permanente.
---   · Ni el teléfono ni el correo son únicos. Sirven para detectar coincidencias:
---     solo se reutiliza una persona cuando teléfono Y correo coinciden con ella.
---     Cualquier coincidencia parcial crea una persona nueva marcada para revisión,
---     para no fusionar a dos personas por error.
+--   · Teléfono y correo NO son únicos: solo se reutiliza una persona cuando ambos
+--     coinciden. Una coincidencia parcial crea otra persona marcada para revisión.
 --
 -- Reintento técnico frente a postulación nueva:
---   · Misma clave de idempotencia → reintento técnico: no se crea nada nuevo.
---   · Mismos datos y mismo tipo en los últimos 15 minutos → reintento técnico
---     (doble clic, recarga del formulario): no se crea nada nuevo.
---   · Misma persona y mismo tipo fuera de esa ventana → postulación nueva legítima,
---     guardada como "repetida" y sin reenvío a Airtable (sin segunda bienvenida).
+--   · Misma clave de idempotencia, o mismos datos y tipo en 15 min → reintento
+--     técnico: no se crea nada nuevo.
+--   · Misma persona y tipo fuera de esa ventana → postulación nueva "repetida",
+--     sin copia a Airtable (sin segunda bienvenida).
 --
--- Si Airtable no acepta registros (límite de 1.000 u otra caída prolongada):
---   · Tras 5 intentos fallidos la postulación queda "agotada" y el CMC puede leerla
---     desde Supabase (postulaciones_para_cmc) y confirmar su recepción
---     (confirmar_entrega_cmc). Una postulación entregada así ya no se envía a
---     Airtable, de modo que nunca entra dos veces al CMC.
+-- Copia a Airtable sin duplicados (Airtable no ofrece claves de idempotencia):
+--   · Cada postulación tiene una huella fija en Airtable: Contacto + Fecha, donde
+--     Fecha = recibida_en con precisión de milisegundos, igual en todos los intentos.
+--   · Primer intento: lo hace la ruta; la fila queda reservada 5 min para que el
+--     cron no envíe en paralelo.
+--   · Todo intento posterior BUSCA primero la huella en Airtable: si existe, se
+--     vincula ese registro en lugar de crear otro (confirmación perdida o timeout).
+--     Si hay más de una, queda en "conflicto" para revisión manual. Si la búsqueda
+--     falla, no se crea nada.
+--
+-- Postulaciones que no llegan a Airtable (límite de 1.000, conflicto):
+--   · Quedan en la bandeja postulaciones_por_resolver hasta que Luis o Juan las
+--     resuelven: vinculándolas a un registro de Airtable, registrándolas
+--     directamente en el CMC o marcándolas como no procedentes. Siempre con
+--     autor, fecha, nota y evento.
+--
+-- Ruta de respaldo (Supabase caído → la web guarda directamente en Airtable):
+--   · conciliar_registro_airtable importa a Supabase cada registro de Airtable
+--     posterior a la activación que no esté vinculado, o lo vincula con la
+--     postulación que ya tenga su huella. Es idempotente.
 --
 -- Seguridad:
 --   · RLS activado y sin políticas: anon y authenticated no leen ni escriben.
---   · Se retiran explícitamente los permisos por defecto que Supabase concede.
+--   · Se retiran los permisos por defecto de Supabase; service_role solo lee y
+--     escribe mediante las funciones (security definer).
 --   · eventos es de solo inserción (trigger y permisos).
 -- ══════════════════════════════════════════════════════════════════════════════
 
@@ -69,42 +80,47 @@ create table public.postulaciones (
   clasificacion             text not null default 'pendiente'
                               check (clasificacion in ('pendiente', 'calificada', 'no_calificada', 'spam', 'repetida')),
   repeticion_de             uuid references public.postulaciones (id),
-  -- Cómo se resolvió la identidad al llegar
   coincidencia              text not null
                               check (coincidencia in ('nueva', 'exacta', 'parcial_telefono', 'parcial_email', 'conflicto')),
-  persona_coincidente_id    uuid references public.personas (id),   -- posible duplicado, a revisar
-  fuente                    text not null check (fuente in ('home', 'se_compita', 'importacion_airtable', 'otra')),
+  persona_coincidente_id    uuid references public.personas (id),
+  fuente                    text not null check (fuente in ('home', 'se_compita', 'respaldo_airtable', 'importacion_airtable', 'otra')),
   utm_source                text check (char_length(utm_source) <= 50),
   utm_medium                text check (char_length(utm_medium) <= 50),
   utm_campaign              text check (char_length(utm_campaign) <= 50),
   utm_content               text check (char_length(utm_content) <= 100),
   utm_term                  text check (char_length(utm_term) <= 100),
-  -- Datos declarados tal cual llegaron (personas no se sobrescribe)
   nombre_declarado          text not null check (char_length(nombre_declarado) <= 100),
   telefono_declarado        text not null check (char_length(telefono_declarado) <= 30),
   email_declarado           text not null check (char_length(email_declarado) <= 100),
   ubicacion_declarada       text not null check (char_length(ubicacion_declarada) <= 100),
   clave_idempotencia        uuid not null unique,
+  -- Precisión de milisegundos: es la "Fecha" que se envía a Airtable y forma parte de la huella
+  recibida_en               timestamptz not null default date_trunc('milliseconds', now()),
   -- Copia temporal a Airtable
   airtable_id               text unique check (airtable_id ~ '^rec[A-Za-z0-9]{14}$'),
   airtable_estado           text not null default 'pendiente'
-                              check (airtable_estado in ('pendiente', 'enviada', 'error', 'agotada', 'no_aplica')),
+                              check (airtable_estado in ('pendiente', 'enviada', 'error', 'agotada', 'conflicto', 'no_aplica')),
   airtable_intentos         integer not null default 0 check (airtable_intentos >= 0),
   airtable_ultimo_error     text check (char_length(airtable_ultimo_error) <= 500),
   airtable_proximo_intento  timestamptz default now(),
   airtable_reclamada_hasta  timestamptz,
-  -- Entrega directa al CMC cuando Airtable no está disponible
-  entregada_cmc_en          timestamptz,
-  recibida_en               timestamptz not null default now(),
-  constraint postulaciones_entrega_unica check (not (airtable_estado = 'enviada' and entregada_cmc_en is not null))
+  -- Resolución manual de lo que no llegó a Airtable (bandeja)
+  resolucion                text check (resolucion in ('vinculada_airtable', 'registrada_en_cmc', 'no_procede')),
+  resuelta_por              text check (char_length(resuelta_por) <= 120),
+  resuelta_en               timestamptz,
+  nota_resolucion           text check (char_length(nota_resolucion) <= 500),
+  constraint postulaciones_resolucion_completa check (
+    (resolucion is null and resuelta_en is null and resuelta_por is null)
+    or (resolucion is not null and resuelta_en is not null and resuelta_por is not null)),
+  constraint postulaciones_enviada_con_id check (airtable_estado <> 'enviada' or airtable_id is not null)
 );
 
 create index postulaciones_persona_idx on public.postulaciones (persona_id, tipo, recibida_en desc);
+create index postulaciones_reintento_idx on public.postulaciones (telefono_declarado, recibida_en desc);
 create index postulaciones_airtable_pend_idx on public.postulaciones (airtable_proximo_intento)
   where airtable_estado in ('pendiente', 'error');
-create index postulaciones_reintento_idx on public.postulaciones (telefono_declarado, recibida_en desc);
-create index postulaciones_agotadas_idx on public.postulaciones (recibida_en)
-  where airtable_estado = 'agotada' and entregada_cmc_en is null;
+create index postulaciones_por_resolver_idx on public.postulaciones (recibida_en)
+  where airtable_estado in ('agotada', 'conflicto') and resuelta_en is null;
 
 comment on table public.postulaciones is
   'Entrada de captación: familias (futuro Centro de Leads) y aspirantes (CMC). No crea clientes ni Compitas.';
@@ -148,10 +164,11 @@ alter table public.eventos       enable row level security;
 
 revoke all on public.personas, public.postulaciones, public.eventos from public, anon, authenticated, service_role;
 grant select on public.personas, public.postulaciones, public.eventos to service_role;
--- Las escrituras pasan siempre por las funciones de abajo (security definer).
 
 -- ──────────────────────────────────────────────────────────────────────────────
 -- 5. registrar_postulacion
+--    p_airtable_id y p_recibida_en solo se usan al importar un registro que ya
+--    existe en Airtable (ruta de respaldo): entonces no hay copia que hacer.
 -- ──────────────────────────────────────────────────────────────────────────────
 create function public.registrar_postulacion(
   p_clave          uuid,
@@ -165,8 +182,10 @@ create function public.registrar_postulacion(
   p_telefono_decl  text,
   p_email_decl     text,
   p_ubicacion_decl text,
-  p_utm            jsonb default '{}'::jsonb
-) returns table (postulacion_id uuid, persona_id uuid, resultado text, enviar_a_airtable boolean)
+  p_utm            jsonb default '{}'::jsonb,
+  p_airtable_id    text default null,
+  p_recibida_en    timestamptz default null
+) returns table (postulacion_id uuid, persona_id uuid, resultado text, enviar_a_airtable boolean, recibida_en timestamptz)
 language plpgsql
 security definer
 set search_path = public, pg_temp
@@ -184,6 +203,8 @@ declare
   v_id          uuid;
   v_enviar      boolean;
   v_resultado   text;
+  v_recibida    timestamptz := date_trunc('milliseconds', coalesce(p_recibida_en, now()));
+  v_importacion boolean := p_airtable_id is not null;
   k1 bigint; k2 bigint;
 begin
   if p_telefono_e164 is null and p_email_norm is null then
@@ -196,45 +217,46 @@ begin
   perform pg_advisory_xact_lock(least(k1, k2));
   perform pg_advisory_xact_lock(greatest(k1, k2));
 
-  -- b) Reintento técnico por clave
+  -- b) Reintento técnico por clave (también hace idempotente la importación)
   select * into v_previa from public.postulaciones where clave_idempotencia = p_clave;
   if found then
     insert into public.eventos (modulo, entidad, entidad_id, tipo, datos)
       values ('captacion', 'postulacion', v_previa.id, 'reintento_tecnico', jsonb_build_object('motivo', 'misma_clave'));
-    return query select v_previa.id, v_previa.persona_id, 'reintento_tecnico'::text, false;
+    return query select v_previa.id, v_previa.persona_id, 'reintento_tecnico'::text, false, v_previa.recibida_en;
     return;
   end if;
 
-  -- c) Reintento técnico por datos idénticos en 15 minutos (doble clic, recarga)
-  select * into v_previa from public.postulaciones
-   where tipo = p_tipo
-     and telefono_declarado = p_telefono_decl
-     and lower(email_declarado) = lower(p_email_decl)
-     and nombre_declarado = p_nombre
-     and ubicacion_declarada = p_ubicacion_decl
-     and recibida_en > now() - interval '15 minutes'
-   order by recibida_en desc limit 1;
-  if found then
-    insert into public.eventos (modulo, entidad, entidad_id, tipo, datos)
-      values ('captacion', 'postulacion', v_previa.id, 'reintento_tecnico',
-              jsonb_build_object('motivo', 'mismos_datos_15_min', 'clave_nueva', p_clave));
-    return query select v_previa.id, v_previa.persona_id, 'reintento_tecnico'::text, false;
-    return;
+  -- c) Reintento técnico por datos idénticos en 15 min (doble clic, recarga).
+  --    No aplica a importaciones: un registro de Airtable siempre se conserva.
+  if not v_importacion then
+    select * into v_previa from public.postulaciones
+     where tipo = p_tipo
+       and telefono_declarado = p_telefono_decl
+       and lower(email_declarado) = lower(p_email_decl)
+       and nombre_declarado = p_nombre
+       and ubicacion_declarada = p_ubicacion_decl
+       and recibida_en > now() - interval '15 minutes'
+     order by recibida_en desc limit 1;
+    if found then
+      insert into public.eventos (modulo, entidad, entidad_id, tipo, datos)
+        values ('captacion', 'postulacion', v_previa.id, 'reintento_tecnico',
+                jsonb_build_object('motivo', 'mismos_datos_15_min', 'clave_nueva', p_clave));
+      return query select v_previa.id, v_previa.persona_id, 'reintento_tecnico'::text, false, v_previa.recibida_en;
+      return;
+    end if;
   end if;
 
-  -- d) Identidad: solo coincidencia exacta reutiliza una persona
+  -- d) Identidad: solo la coincidencia exacta reutiliza una persona
   if p_telefono_e164 is not null and p_email_norm is not null then
     select id into v_exacta from public.personas
      where telefono_e164 = p_telefono_e164 and email_norm = p_email_norm
      order by creada_en limit 1;
   end if;
   if p_telefono_e164 is not null then
-    select id into v_por_tel from public.personas
-     where telefono_e164 = p_telefono_e164 order by creada_en limit 1;
+    select id into v_por_tel from public.personas where telefono_e164 = p_telefono_e164 order by creada_en limit 1;
   end if;
   if p_email_norm is not null then
-    select id into v_por_email from public.personas
-     where email_norm = p_email_norm order by creada_en limit 1;
+    select id into v_por_email from public.personas where email_norm = p_email_norm order by creada_en limit 1;
   end if;
 
   if v_exacta is not null then
@@ -254,43 +276,47 @@ begin
   -- e) Postulación previa del mismo tipo (misma persona, o mismo teléfono si es parcial)
   select id into v_anterior from public.postulaciones
    where tipo = p_tipo
-     and (persona_id = v_persona
-          or (v_coinc = 'parcial_telefono' and persona_id = v_coinc_id))
+     and (persona_id = v_persona or (v_coinc = 'parcial_telefono' and persona_id = v_coinc_id))
    order by recibida_en desc limit 1;
 
-  -- Se reenvía a Airtable salvo que sea una repetición de la misma persona.
-  -- parcial_email (correo compartido en una familia) sí se envía: puede ser otra persona.
-  v_enviar := v_anterior is null;
+  v_enviar := v_anterior is null and not v_importacion;
 
   insert into public.postulaciones (
     persona_id, tipo, clasificacion, repeticion_de, coincidencia, persona_coincidente_id, fuente,
     utm_source, utm_medium, utm_campaign, utm_content, utm_term,
     nombre_declarado, telefono_declarado, email_declarado, ubicacion_declarada,
-    clave_idempotencia, airtable_estado
+    clave_idempotencia, recibida_en, airtable_id, airtable_estado,
+    airtable_reclamada_hasta, airtable_proximo_intento
   ) values (
     v_persona, p_tipo, case when v_anterior is null then 'pendiente' else 'repetida' end,
     v_anterior, v_coinc, v_coinc_id, p_fuente,
     nullif(p_utm->>'source', ''), nullif(p_utm->>'medium', ''), nullif(p_utm->>'campaign', ''),
     nullif(p_utm->>'content', ''), nullif(p_utm->>'term', ''),
     p_nombre, p_telefono_decl, p_email_decl, p_ubicacion_decl,
-    p_clave, case when v_enviar then 'pendiente' else 'no_aplica' end
+    p_clave, v_recibida, p_airtable_id,
+    case when v_importacion then 'enviada' when v_enviar then 'pendiente' else 'no_aplica' end,
+    -- El primer intento lo hace la ruta: reservado 5 min para que el cron no envíe en paralelo
+    case when v_enviar then now() + interval '5 minutes' end,
+    case when v_enviar then now() + interval '2 minutes' end
   ) returning id into v_id;
 
   v_resultado := case when v_anterior is not null then 'repetida' else 'registrada' end;
 
   insert into public.eventos (modulo, entidad, entidad_id, tipo, datos)
-    values ('captacion', 'postulacion', v_id, 'postulacion_recibida',
+    values ('captacion', 'postulacion', v_id,
+            case when v_importacion then 'importada_desde_airtable' else 'postulacion_recibida' end,
             jsonb_build_object('resultado', v_resultado, 'tipo', p_tipo, 'fuente', p_fuente,
                                'persona_id', v_persona, 'coincidencia', v_coinc,
-                               'persona_coincidente_id', v_coinc_id, 'repeticion_de', v_anterior));
+                               'persona_coincidente_id', v_coinc_id, 'repeticion_de', v_anterior,
+                               'airtable_id', p_airtable_id));
 
-  return query select v_id, v_persona, v_resultado, v_enviar;
+  return query select v_id, v_persona, v_resultado, v_enviar, v_recibida;
 end $$;
 
 -- ──────────────────────────────────────────────────────────────────────────────
--- 6. Cola de envíos a Airtable (reclamar / marcar; segura ante crons solapados)
+-- 6. Cola de copia a Airtable
 -- ──────────────────────────────────────────────────────────────────────────────
-create function public.reclamar_envios_airtable(p_limite integer default 20)
+create function public.reclamar_envios_airtable(p_limite integer default 10)
 returns setof public.postulaciones
 language sql
 security definer
@@ -304,12 +330,13 @@ as $$
         and airtable_proximo_intento <= now()
         and (airtable_reclamada_hasta is null or airtable_reclamada_hasta < now())
       order by recibida_en
-      limit greatest(1, least(p_limite, 100))
+      limit greatest(1, least(p_limite, 50))
       for update skip locked)
   returning p.*;
 $$;
 
-create function public.marcar_envio_airtable(p_id uuid, p_ok boolean, p_airtable_id text default null, p_error text default null)
+-- p_estado: 'enviada' (creada o encontrada en Airtable), 'error' o 'conflicto'
+create function public.marcar_envio_airtable(p_id uuid, p_estado text, p_airtable_id text default null, p_error text default null)
 returns text
 language plpgsql
 security definer
@@ -317,10 +344,25 @@ set search_path = public, pg_temp
 as $$
 declare v_estado text;
 begin
-  if p_ok then
+  if p_estado not in ('enviada', 'error', 'conflicto') then
+    raise exception 'estado no válido: %', p_estado using errcode = '22023';
+  end if;
+  if p_estado = 'enviada' and (p_airtable_id is null or p_airtable_id !~ '^rec[A-Za-z0-9]{14}$') then
+    raise exception 'enviada requiere un id de Airtable válido' using errcode = '22023';
+  end if;
+
+  if p_estado = 'enviada' then
+    -- También desde agotada/conflicto: un registro encontrado más tarde se vincula,
+    -- salvo que alguien ya lo haya resuelto a mano.
     update public.postulaciones
        set airtable_estado = 'enviada', airtable_id = p_airtable_id,
            airtable_reclamada_hasta = null, airtable_ultimo_error = null
+     where id = p_id and resuelta_en is null
+       and airtable_estado in ('pendiente', 'error', 'agotada', 'conflicto')
+     returning airtable_estado into v_estado;
+  elsif p_estado = 'conflicto' then
+    update public.postulaciones
+       set airtable_estado = 'conflicto', airtable_ultimo_error = left(p_error, 500), airtable_reclamada_hasta = null
      where id = p_id and airtable_estado in ('pendiente', 'error')
      returning airtable_estado into v_estado;
   else
@@ -334,70 +376,164 @@ begin
      returning airtable_estado into v_estado;
   end if;
 
-  if v_estado is not null then
-    insert into public.eventos (modulo, entidad, entidad_id, tipo, datos)
-      values ('captacion', 'postulacion', p_id, 'airtable_' || v_estado,
-              jsonb_build_object('airtable_id', p_airtable_id, 'error', left(p_error, 200)));
-  end if;
-  return v_estado;   -- null si ya no estaba pendiente (p. ej. entregada al CMC)
+  insert into public.eventos (modulo, entidad, entidad_id, tipo, datos)
+    values ('captacion', 'postulacion', p_id,
+            case when v_estado is null then 'airtable_marca_ignorada' else 'airtable_' || v_estado end,
+            jsonb_build_object('pedido', p_estado, 'airtable_id', p_airtable_id, 'error', left(p_error, 200)));
+  return v_estado;   -- null: la fila ya no admitía ese cambio
 end $$;
 
 -- ──────────────────────────────────────────────────────────────────────────────
--- 7. Entrega directa al CMC (solo postulaciones que Airtable no aceptó)
+-- 7. Conciliación de registros de Airtable (ruta de respaldo y confirmaciones perdidas)
+--    Devuelve: ya_vinculada | adoptada | importada | ambigua
 -- ──────────────────────────────────────────────────────────────────────────────
-create function public.postulaciones_para_cmc(p_limite integer default 100)
+create function public.conciliar_registro_airtable(
+  p_airtable_id    text,
+  p_fecha          timestamptz,
+  p_tipo           text,
+  p_nombre         text,
+  p_telefono_decl  text,
+  p_email_decl     text,
+  p_ubicacion_decl text,
+  p_telefono_e164  text,
+  p_email_norm     text,
+  p_ciudad         text,
+  p_region         text,
+  p_utm            jsonb default '{}'::jsonb
+) returns text
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_ids uuid[];
+begin
+  if p_airtable_id !~ '^rec[A-Za-z0-9]{14}$' then
+    raise exception 'id de Airtable no válido' using errcode = '22023';
+  end if;
+  perform pg_advisory_xact_lock(hashtextextended('airtable:' || p_airtable_id, 0));
+
+  if exists (select 1 from public.postulaciones where airtable_id = p_airtable_id) then
+    return 'ya_vinculada';
+  end if;
+
+  -- ¿Es la copia de una postulación nuestra cuya confirmación se perdió? (misma huella)
+  select array_agg(id) into v_ids from public.postulaciones
+   where airtable_id is null
+     and recibida_en = date_trunc('milliseconds', p_fecha)
+     and telefono_declarado = p_telefono_decl
+     and lower(email_declarado) = lower(p_email_decl);
+
+  if coalesce(array_length(v_ids, 1), 0) = 1 then
+    if public.marcar_envio_airtable(v_ids[1], 'enviada', p_airtable_id, null) is not null then
+      return 'adoptada';
+    end if;
+    -- Ya resuelta a mano: se deja constancia y no se toca
+    insert into public.eventos (modulo, entidad, entidad_id, tipo, datos)
+      values ('captacion', 'postulacion', v_ids[1], 'airtable_registro_tardio', jsonb_build_object('airtable_id', p_airtable_id));
+    return 'ambigua';
+  elsif coalesce(array_length(v_ids, 1), 0) > 1 then
+    insert into public.eventos (modulo, entidad, entidad_id, tipo, datos)
+      select 'captacion', 'postulacion', unnest(v_ids), 'airtable_conciliacion_ambigua', jsonb_build_object('airtable_id', p_airtable_id);
+    return 'ambigua';
+  end if;
+
+  -- No existe en Supabase: se importa (guardada por la ruta de respaldo o creada a mano)
+  perform public.registrar_postulacion(
+    md5('airtable:' || p_airtable_id)::uuid, p_tipo, 'respaldo_airtable', p_nombre,
+    p_telefono_e164, p_email_norm, p_ciudad, p_region,
+    p_telefono_decl, p_email_decl, p_ubicacion_decl, p_utm, p_airtable_id, p_fecha);
+  return 'importada';
+end $$;
+
+-- ──────────────────────────────────────────────────────────────────────────────
+-- 8. Bandeja: postulaciones que no llegaron a Airtable, hasta su resolución
+-- ──────────────────────────────────────────────────────────────────────────────
+create function public.postulaciones_por_resolver(p_limite integer default 200)
 returns table (
-  id uuid, recibida_en timestamptz, tipo text, nombre text, telefono text, email text,
-  ubicacion text, utm_source text, utm_medium text, utm_campaign text, utm_content text, utm_term text,
-  coincidencia text
+  id uuid, recibida_en timestamptz, tipo text, nombre text, telefono text, email text, ubicacion text,
+  airtable_estado text, airtable_intentos integer, airtable_ultimo_error text, coincidencia text
 )
 language sql
 security definer
 set search_path = public, pg_temp
 as $$
   select p.id, p.recibida_en, p.tipo, p.nombre_declarado, p.telefono_declarado, p.email_declarado,
-         p.ubicacion_declarada, p.utm_source, p.utm_medium, p.utm_campaign, p.utm_content, p.utm_term,
-         p.coincidencia
+         p.ubicacion_declarada, p.airtable_estado, p.airtable_intentos, p.airtable_ultimo_error, p.coincidencia
     from public.postulaciones p
-   where p.airtable_estado = 'agotada' and p.entregada_cmc_en is null
+   where p.airtable_estado in ('agotada', 'conflicto') and p.resuelta_en is null
    order by p.recibida_en
    limit greatest(1, least(p_limite, 500));
 $$;
 
-create function public.confirmar_entrega_cmc(p_ids uuid[], p_actor text default 'cmc')
-returns integer
+create function public.resolver_postulacion(
+  p_id uuid, p_resolucion text, p_actor text, p_nota text default null, p_airtable_id text default null
+) returns boolean
 language plpgsql
 security definer
 set search_path = public, pg_temp
 as $$
-declare v_n integer;
+declare v_ok boolean;
 begin
-  with marcadas as (
-    update public.postulaciones
-       set entregada_cmc_en = now(), airtable_estado = 'no_aplica'
-     where id = any (p_ids) and airtable_estado = 'agotada' and entregada_cmc_en is null
-     returning id
-  ), ev as (
-    insert into public.eventos (modulo, entidad, entidad_id, tipo, actor)
-      select 'captacion', 'postulacion', id, 'entregada_cmc', left(p_actor, 120) from marcadas
-  )
-  select count(*) into v_n from marcadas;
-  return v_n;
+  if p_resolucion not in ('vinculada_airtable', 'registrada_en_cmc', 'no_procede') then
+    raise exception 'resolución no válida' using errcode = '22023';
+  end if;
+  if coalesce(btrim(p_actor), '') = '' then
+    raise exception 'falta el operador' using errcode = '22023';
+  end if;
+  if p_resolucion = 'vinculada_airtable' and (p_airtable_id is null or p_airtable_id !~ '^rec[A-Za-z0-9]{14}$') then
+    raise exception 'vincular requiere un id de Airtable válido' using errcode = '22023';
+  end if;
+  if p_resolucion <> 'vinculada_airtable' and coalesce(btrim(p_nota), '') = '' then
+    raise exception 'esta resolución requiere una nota (p. ej. el ID COM- o el motivo)' using errcode = '22023';
+  end if;
+
+  update public.postulaciones
+     set resolucion = p_resolucion, resuelta_por = left(p_actor, 120), resuelta_en = now(),
+         nota_resolucion = left(p_nota, 500),
+         airtable_id = case when p_resolucion = 'vinculada_airtable' then p_airtable_id else airtable_id end,
+         airtable_estado = case when p_resolucion = 'vinculada_airtable' then 'enviada' else 'no_aplica' end
+   where id = p_id and airtable_estado in ('agotada', 'conflicto') and resuelta_en is null
+  returning true into v_ok;
+
+  if v_ok then
+    insert into public.eventos (modulo, entidad, entidad_id, tipo, actor, datos)
+      values ('captacion', 'postulacion', p_id, 'resuelta_' || p_resolucion, left(p_actor, 120),
+              jsonb_build_object('nota', left(p_nota, 200), 'airtable_id', p_airtable_id));
+  end if;
+  return coalesce(v_ok, false);
 end $$;
 
+-- Ids de Airtable ya vinculados desde una fecha (para que la conciliación solo procese lo nuevo)
+create function public.airtable_ids_vinculados(p_desde timestamptz)
+returns setof text
+language sql
+security definer
+set search_path = public, pg_temp
+as $$
+  select airtable_id from public.postulaciones
+   where airtable_id is not null and recibida_en >= p_desde - interval '1 day';
+$$;
+
 -- ──────────────────────────────────────────────────────────────────────────────
--- 8. Ejecución: solo service_role
+-- 9. Ejecución: solo service_role
 -- ──────────────────────────────────────────────────────────────────────────────
-revoke all on function public.registrar_postulacion(uuid, text, text, text, text, text, text, text, text, text, text, jsonb) from public, anon, authenticated;
-revoke all on function public.reclamar_envios_airtable(integer) from public, anon, authenticated;
-revoke all on function public.marcar_envio_airtable(uuid, boolean, text, text) from public, anon, authenticated;
-revoke all on function public.postulaciones_para_cmc(integer) from public, anon, authenticated;
-revoke all on function public.confirmar_entrega_cmc(uuid[], text) from public, anon, authenticated;
-revoke all on function public.eventos_inmutables() from public, anon, authenticated;
-grant execute on function public.registrar_postulacion(uuid, text, text, text, text, text, text, text, text, text, text, jsonb) to service_role;
-grant execute on function public.reclamar_envios_airtable(integer) to service_role;
-grant execute on function public.marcar_envio_airtable(uuid, boolean, text, text) to service_role;
-grant execute on function public.postulaciones_para_cmc(integer) to service_role;
-grant execute on function public.confirmar_entrega_cmc(uuid[], text) to service_role;
+do $$
+declare f text;
+begin
+  foreach f in array array[
+    'public.registrar_postulacion(uuid, text, text, text, text, text, text, text, text, text, text, jsonb, text, timestamptz)',
+    'public.reclamar_envios_airtable(integer)',
+    'public.marcar_envio_airtable(uuid, text, text, text)',
+    'public.conciliar_registro_airtable(text, timestamptz, text, text, text, text, text, text, text, text, text, jsonb)',
+    'public.postulaciones_por_resolver(integer)',
+    'public.resolver_postulacion(uuid, text, text, text, text)',
+    'public.airtable_ids_vinculados(timestamptz)'
+  ] loop
+    execute format('revoke all on function %s from public, anon, authenticated', f);
+    execute format('grant execute on function %s to service_role', f);
+  end loop;
+  revoke all on function public.eventos_inmutables() from public, anon, authenticated;
+end $$;
 
 commit;

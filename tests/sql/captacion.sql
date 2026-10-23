@@ -3,218 +3,279 @@
 --
 -- Ejecutar SOLO en staging o en una base local desechable, NUNCA en producción:
 --   psql "$STAGING_DB_URL" -v ON_ERROR_STOP=1 -f tests/sql/captacion.sql
--- La primera comprobación aborta si la base se llama como la de producción o si
--- ya contiene postulaciones reales.
--- Todo corre dentro de una transacción que se revierte al final: no deja datos.
+-- La comprobación P0 aborta si la base tiene datos de operación (compitas,
+-- usuarios) o postulaciones previas.
+-- Todo corre en una transacción que se revierte al final: no deja datos.
 -- ══════════════════════════════════════════════════════════════════════════════
 
 \set ON_ERROR_STOP on
 begin;
 
--- P0 · Salvaguarda de aislamiento: abortar si esto parece producción
---      (en Supabase la base siempre se llama "postgres", así que se mira el contenido)
+-- P0 · Salvaguarda de aislamiento
 do $$
 begin
-  assert (select count(*) from public.postulaciones) = 0,
-    'P0 la base ya tiene postulaciones: estas pruebas solo se ejecutan en una base vacía';
+  assert (select count(*) from public.postulaciones) = 0, 'P0 la base ya tiene postulaciones. Abortado.';
   if to_regclass('public.compitas') is not null then
-    assert not exists (select 1 from public.compitas),
-      'P0 la tabla compitas tiene datos: esto no es staging. Abortado.';
+    assert not exists (select 1 from public.compitas), 'P0 la tabla compitas tiene datos: esto no es staging. Abortado.';
   end if;
   if to_regclass('public.usuarios') is not null then
-    assert not exists (select 1 from public.usuarios),
-      'P0 la tabla usuarios tiene datos: esto no es staging. Abortado.';
+    assert not exists (select 1 from public.usuarios), 'P0 la tabla usuarios tiene datos: esto no es staging. Abortado.';
   end if;
 end $$;
 
--- Persona Z de apoyo para el caso de conflicto
+-- Atajo: registrar con los datos de Ana
+create temp table if not exists _r (k text primary key, postulacion_id uuid, persona_id uuid, resultado text, enviar boolean, recibida timestamptz);
+grant all on _r to service_role;
+
 set local role service_role;
 select * from public.registrar_postulacion('00000000-0000-4000-8000-0000000000a1', 'compita', 'home', 'Zeta Apoyo',
   '+584147770000', 'zeta@ejemplo.com', 'Valencia', 'Carabobo', '+584147770000', 'zeta@ejemplo.com', 'Valencia, Carabobo');
 
--- P1 · Postulación nueva: persona nueva, se envía a Airtable, guarda las 5 UTM
+-- S1 · Postulación nueva: se guarda, se envía y queda reservada para el primer intento de la ruta
 do $$
 declare r record;
 begin
   select * into r from public.registrar_postulacion('00000000-0000-4000-8000-000000000001', 'compita', 'home', 'Ana Prueba',
     '+584121234567', 'ana@ejemplo.com', 'Caracas', 'Distrito Capital', '+584121234567', 'ana@ejemplo.com', 'Caracas, Distrito Capital',
     '{"source":"meta","medium":"paid","campaign":"oct","content":"video-3","term":"cuidado"}');
-  assert r.resultado = 'registrada', 'P1 resultado: ' || r.resultado;
-  assert r.enviar_a_airtable, 'P1 debe enviarse a Airtable';
-  assert (select coincidencia = 'nueva' and utm_content = 'video-3' and utm_term = 'cuidado' and utm_source = 'meta'
-            from public.postulaciones where id = r.postulacion_id), 'P1 coincidencia o UTM';
-  assert (select count(*) from public.eventos where entidad_id = r.postulacion_id and tipo = 'postulacion_recibida') = 1, 'P1 evento';
+  insert into _r values ('ana', r.postulacion_id, r.persona_id, r.resultado, r.enviar_a_airtable, r.recibida_en);
+  assert r.resultado = 'registrada' and r.enviar_a_airtable, 'S1 resultado: ' || r.resultado;
+  assert r.recibida_en = date_trunc('milliseconds', r.recibida_en), 'S1 recibida_en debe tener precisión de ms (huella)';
+  assert (select coincidencia = 'nueva' and utm_content = 'video-3' and utm_term = 'cuidado'
+                 and airtable_reclamada_hasta > now() and airtable_proximo_intento > now()
+            from public.postulaciones where id = r.postulacion_id), 'S1 reserva o UTM';
+  assert (select count(*) from public.reclamar_envios_airtable(50)) = 0, 'S1 el cron no debe tomar una fila reservada para la ruta';
 end $$;
 
--- P2 · Reintento técnico con la misma clave: no crea nada
+-- S2 · Reintento técnico con la misma clave
 do $$
 declare r record; n int := (select count(*) from public.postulaciones);
 begin
   select * into r from public.registrar_postulacion('00000000-0000-4000-8000-000000000001', 'compita', 'home', 'Ana Prueba',
     '+584121234567', 'ana@ejemplo.com', 'Caracas', 'Distrito Capital', '+584121234567', 'ana@ejemplo.com', 'Caracas, Distrito Capital');
-  assert r.resultado = 'reintento_tecnico' and not r.enviar_a_airtable, 'P2 resultado: ' || r.resultado;
-  assert (select count(*) from public.postulaciones) = n, 'P2 no debe crear postulaciones';
-  assert (select count(*) from public.eventos where entidad_id = r.postulacion_id and tipo = 'reintento_tecnico') = 1, 'P2 evento';
+  assert r.resultado = 'reintento_tecnico' and not r.enviar_a_airtable, 'S2 resultado: ' || r.resultado;
+  assert r.recibida_en = (select recibida from _r where k = 'ana'), 'S2 devuelve la misma huella';
+  assert (select count(*) from public.postulaciones) = n, 'S2 no crea postulaciones';
 end $$;
 
--- P3 · Reintento técnico con otra clave y los mismos datos en menos de 15 min (doble clic, recarga)
+-- S3 · Reintento técnico: otra clave, mismos datos en menos de 15 min
 do $$
 declare r record; n int := (select count(*) from public.postulaciones);
 begin
   select * into r from public.registrar_postulacion('00000000-0000-4000-8000-000000000002', 'compita', 'home', 'Ana Prueba',
     '+584121234567', 'ana@ejemplo.com', 'Caracas', 'Distrito Capital', '+584121234567', 'ana@ejemplo.com', 'Caracas, Distrito Capital');
-  assert r.resultado = 'reintento_tecnico' and not r.enviar_a_airtable, 'P3 resultado: ' || r.resultado;
-  assert (select count(*) from public.postulaciones) = n, 'P3 no debe crear postulaciones';
+  assert r.resultado = 'reintento_tecnico' and not r.enviar_a_airtable, 'S3 resultado: ' || r.resultado;
+  assert (select count(*) from public.postulaciones) = n, 'S3 no crea postulaciones';
 end $$;
 
--- Simular que la postulación de Ana es de ayer (como superusuario: service_role no puede editar)
 reset role;
-update public.postulaciones set recibida_en = now() - interval '1 day' where clave_idempotencia = '00000000-0000-4000-8000-000000000001';
+update public.postulaciones set recibida_en = recibida_en - interval '3 days' where clave_idempotencia = '00000000-0000-4000-8000-000000000001';
+update _r set recibida = recibida - interval '3 days' where k = 'ana';
 set local role service_role;
 
--- P4 · Postulación nueva legítima de la misma persona: se guarda como repetida, sin Airtable
+-- S4 · La misma persona se postula días después: nueva postulación "repetida", sin copia a Airtable
 do $$
-declare r record; v_ana uuid := (select persona_id from public.postulaciones where clave_idempotencia = '00000000-0000-4000-8000-000000000001');
+declare r record; v_ana uuid := (select persona_id from _r where k = 'ana');
 begin
   select * into r from public.registrar_postulacion('00000000-0000-4000-8000-000000000003', 'compita', 'se_compita', 'Ana P.',
     '+584121234567', 'ana@ejemplo.com', 'Caracas', 'Distrito Capital', '+584121234567', 'ana@ejemplo.com', 'Caracas');
-  assert r.resultado = 'repetida' and not r.enviar_a_airtable, 'P4 resultado: ' || r.resultado;
-  assert r.persona_id = v_ana, 'P4 debe ser la misma persona (coincidencia exacta)';
+  assert r.resultado = 'repetida' and not r.enviar_a_airtable and r.persona_id = v_ana, 'S4 resultado: ' || r.resultado;
   assert (select coincidencia = 'exacta' and airtable_estado = 'no_aplica' and repeticion_de is not null
-            from public.postulaciones where id = r.postulacion_id), 'P4 estado';
-  assert (select nombre from public.personas where id = v_ana) = 'Ana Prueba', 'P4 la persona no se sobrescribe';
+            from public.postulaciones where id = r.postulacion_id), 'S4 estado';
+  assert (select nombre from public.personas where id = v_ana) = 'Ana Prueba', 'S4 la persona no se sobrescribe';
 end $$;
 
--- P5 · Misma persona, otro tipo (familia): misma persona, sí se envía
+-- S5 · Misma persona como familia: misma persona, sí se envía
 do $$
-declare r record; v_ana uuid := (select persona_id from public.postulaciones where clave_idempotencia = '00000000-0000-4000-8000-000000000001');
+declare r record;
 begin
   select * into r from public.registrar_postulacion('00000000-0000-4000-8000-000000000004', 'familia', 'home', 'Ana Prueba',
     '+584121234567', 'ana@ejemplo.com', 'Caracas', 'Distrito Capital', '+584121234567', 'ana@ejemplo.com', 'Caracas, Distrito Capital');
-  assert r.resultado = 'registrada' and r.enviar_a_airtable and r.persona_id = v_ana, 'P5 resultado: ' || r.resultado;
+  assert r.resultado = 'registrada' and r.enviar_a_airtable and r.persona_id = (select persona_id from _r where k = 'ana'), 'S5';
+  insert into _r values ('familia', r.postulacion_id, r.persona_id, r.resultado, r.enviar_a_airtable, r.recibida_en);
 end $$;
 
--- P6 · Mismo teléfono, otro correo: persona NUEVA marcada (no se fusiona); es repetición probable, sin Airtable
+-- S6 · Mismo teléfono, otro correo: persona nueva marcada; repetición probable, sin copia
 do $$
-declare r record; v_ana uuid := (select persona_id from public.postulaciones where clave_idempotencia = '00000000-0000-4000-8000-000000000001');
+declare r record; v_ana uuid := (select persona_id from _r where k = 'ana');
 begin
   select * into r from public.registrar_postulacion('00000000-0000-4000-8000-000000000005', 'compita', 'home', 'Ana Prueba',
     '+584121234567', 'ana.nueva@ejemplo.com', 'Caracas', 'Distrito Capital', '+584121234567', 'ana.nueva@ejemplo.com', 'Caracas, Distrito Capital');
-  assert r.persona_id <> v_ana, 'P6 no debe reutilizar a Ana';
-  assert (select coincidencia = 'parcial_telefono' and persona_coincidente_id = v_ana
-            from public.postulaciones where id = r.postulacion_id), 'P6 coincidencia';
-  assert r.resultado = 'repetida' and not r.enviar_a_airtable, 'P6 resultado: ' || r.resultado;
+  assert r.persona_id <> v_ana, 'S6 no debe reutilizar a Ana';
+  assert (select coincidencia = 'parcial_telefono' and persona_coincidente_id = v_ana from public.postulaciones where id = r.postulacion_id), 'S6';
+  assert r.resultado = 'repetida' and not r.enviar_a_airtable, 'S6 resultado: ' || r.resultado;
 end $$;
 
--- P7 · Otro teléfono, mismo correo (familia que comparte correo): persona nueva marcada, sí se envía
+-- S7 · Otro teléfono, mismo correo (familia que comparte correo): persona nueva, sí se envía
 do $$
 declare r record;
 begin
   select * into r from public.registrar_postulacion('00000000-0000-4000-8000-000000000006', 'compita', 'home', 'Luisa Prueba',
     '+584149998877', 'ana@ejemplo.com', 'Maracay', 'Aragua', '+584149998877', 'ana@ejemplo.com', 'Maracay, Aragua');
-  assert (select coincidencia from public.postulaciones where id = r.postulacion_id) = 'parcial_email', 'P7 coincidencia';
-  assert r.resultado = 'registrada' and r.enviar_a_airtable, 'P7 resultado: ' || r.resultado;
+  assert (select coincidencia from public.postulaciones where id = r.postulacion_id) = 'parcial_email', 'S7';
+  assert r.resultado = 'registrada' and r.enviar_a_airtable, 'S7 resultado: ' || r.resultado;
+  insert into _r values ('luisa', r.postulacion_id, r.persona_id, r.resultado, r.enviar_a_airtable, r.recibida_en);
 end $$;
 
--- P8 · Teléfono de una persona y correo de otra: conflicto, persona nueva
+-- S8 · Teléfono de una persona y correo de otra: conflicto; S9 · sin contacto: error
 do $$
 declare r record;
 begin
   select * into r from public.registrar_postulacion('00000000-0000-4000-8000-000000000007', 'familia', 'home', 'Mezcla',
     '+584147770000', 'ana@ejemplo.com', null, null, '+584147770000', 'ana@ejemplo.com', 'Valencia');
-  assert (select coincidencia from public.postulaciones where id = r.postulacion_id) = 'conflicto', 'P8 coincidencia';
+  assert (select coincidencia from public.postulaciones where id = r.postulacion_id) = 'conflicto', 'S8';
+  begin
+    perform public.registrar_postulacion('00000000-0000-4000-8000-000000000008', 'compita', 'home', 'Nadie',
+      null, null, null, null, 'x', 'x', 'x');
+    raise exception 'S9 debería haber fallado';
+  exception when sqlstate '22023' then null;
+  end;
 end $$;
 
--- P9 · Sin teléfono ni correo: se rechaza
+-- S10 · Marcar: "enviada" exige un id válido de Airtable
 do $$
 begin
-  perform public.registrar_postulacion('00000000-0000-4000-8000-000000000008', 'compita', 'home', 'Nadie',
-    null, null, null, null, 'x', 'x', 'x');
-  raise exception 'P9 debería haber fallado';
+  perform public.marcar_envio_airtable((select postulacion_id from _r where k = 'familia'), 'enviada', null, null);
+  raise exception 'S10 debería exigir id';
 exception when sqlstate '22023' then null;
 end $$;
 
--- P10 · Cola de Airtable: reclamar sin solaparse, reintentar con espera y agotar a los 5 fallos
+-- S11 · Primer intento correcto (Airtable guarda y Supabase confirma)
+do $$
+begin
+  assert public.marcar_envio_airtable((select postulacion_id from _r where k = 'familia'), 'enviada', 'recFAMILIA0000001', null) = 'enviada', 'S11';
+  assert (select airtable_reclamada_hasta is null from public.postulaciones where id = (select postulacion_id from _r where k = 'familia')), 'S11 libera la reserva';
+end $$;
+
+-- Expirar las reservas (la ruta "murió" o nunca confirmó)
+reset role;
+update public.postulaciones set airtable_reclamada_hasta = now() - interval '1 second', airtable_proximo_intento = now() - interval '1 second'
+ where airtable_estado = 'pendiente';
+set local role service_role;
+
+-- S12 · Confirmación perdida: Airtable guardó pero Supabase no lo supo. La conciliación lo
+--       encuentra por su huella (Contacto + Fecha) y lo vincula: no se crea otro registro.
+do $$
+declare v_id uuid := (select postulacion_id from _r where k = 'luisa'); v_rec timestamptz := (select recibida from _r where k = 'luisa');
+begin
+  assert (select airtable_estado from public.postulaciones where id = v_id) = 'pendiente', 'S12 sigue pendiente';
+  assert public.conciliar_registro_airtable('recLUISA000000001', v_rec, 'compita', 'Luisa Prueba', '+584149998877', 'ana@ejemplo.com',
+    'Maracay, Aragua', '+584149998877', 'ana@ejemplo.com', 'Maracay', 'Aragua') = 'adoptada', 'S12 adoptada';
+  assert (select airtable_estado = 'enviada' and airtable_id = 'recLUISA000000001' from public.postulaciones where id = v_id), 'S12 vinculada';
+  assert public.conciliar_registro_airtable('recLUISA000000001', v_rec, 'compita', 'Luisa Prueba', '+584149998877', 'ana@ejemplo.com',
+    'Maracay, Aragua', '+584149998877', 'ana@ejemplo.com', 'Maracay', 'Aragua') = 'ya_vinculada', 'S12 idempotente';
+end $$;
+
+-- S13 · Cola: el cron toma lo pendiente sin solaparse; 5 fallos → agotada → bandeja
 do $$
 declare v_id uuid; v_estado text; n int; i int;
 begin
   select count(*) into n from public.reclamar_envios_airtable(50);
-  assert n = (select count(*) from public.postulaciones where airtable_estado = 'pendiente'), 'P10 reclamadas: ' || n;
-  select count(*) into n from public.reclamar_envios_airtable(50);
-  assert n = 0, 'P10 un segundo cron no debe reclamar lo mismo';
-
-  select id into v_id from public.postulaciones where clave_idempotencia = '00000000-0000-4000-8000-000000000006';
-  for i in 1..5 loop
-    v_estado := public.marcar_envio_airtable(v_id, false, null, 'HTTP 422');
-  end loop;
-  assert v_estado = 'agotada', 'P10 tras 5 fallos: ' || coalesce(v_estado, 'null');
-  assert (select airtable_proximo_intento > now() + interval '30 minutes' from public.postulaciones where id = v_id), 'P10 espera creciente';
-
-  select id into v_id from public.postulaciones where clave_idempotencia = '00000000-0000-4000-8000-000000000004';
-  assert public.marcar_envio_airtable(v_id, true, 'recAAAAAAAAAAAAA1', null) = 'enviada', 'P10 enviada';
+  assert n = (select count(*) from public.postulaciones where airtable_estado = 'pendiente'), 'S13 reclamadas: ' || n;
+  assert (select count(*) from public.reclamar_envios_airtable(50)) = 0, 'S13 un segundo cron no toma lo mismo';
+  select postulacion_id into v_id from _r where k = 'ana';
+  for i in 1..5 loop v_estado := public.marcar_envio_airtable(v_id, 'error', null, 'HTTP 422 límite de registros'); end loop;
+  assert v_estado = 'agotada', 'S13 tras 5 fallos: ' || coalesce(v_estado, 'null');
+  assert exists (select 1 from public.postulaciones_por_resolver() where id = v_id), 'S13 aparece en la bandeja';
 end $$;
 
--- P11 · Entrega directa al CMC: solo las agotadas, una sola vez, y Airtable ya no puede recibirlas
+-- S14 · Ruta de respaldo: un registro de Airtable que Supabase no conoce se importa, una sola vez
 do $$
-declare v_id uuid; n int;
+declare v_res text; v_id uuid;
 begin
-  select count(*) into n from public.postulaciones_para_cmc(100);
-  assert n = 1, 'P11 pendientes para el CMC: ' || n;
-  select id into v_id from public.postulaciones_para_cmc(100);
-  assert public.confirmar_entrega_cmc(array[v_id]) = 1, 'P11 confirmar';
-  assert public.confirmar_entrega_cmc(array[v_id]) = 0, 'P11 confirmar dos veces no repite';
-  assert (select count(*) from public.postulaciones_para_cmc(100)) = 0, 'P11 ya no se ofrece';
-  assert public.marcar_envio_airtable(v_id, true, 'recBBBBBBBBBBBBB1', null) is null, 'P11 Airtable no debe recibirla después';
+  v_res := public.conciliar_registro_airtable('recRESPALDO000001', '2026-10-25T14:00:00.123Z', 'compita', 'Pedro Respaldo',
+    '+584161112233', 'pedro@ejemplo.com', 'Mérida, Mérida', '+584161112233', 'pedro@ejemplo.com', 'Mérida', 'Mérida', '{"source":"ig"}');
+  assert v_res = 'importada', 'S14 ' || v_res;
+  select id into v_id from public.postulaciones where airtable_id = 'recRESPALDO000001';
+  assert (select fuente = 'respaldo_airtable' and airtable_estado = 'enviada' and recibida_en = '2026-10-25T14:00:00.123Z'::timestamptz
+            and utm_source = 'ig' from public.postulaciones where id = v_id), 'S14 datos';
+  assert not exists (select 1 from public.reclamar_envios_airtable(50) where id = v_id), 'S14 no se vuelve a copiar a Airtable';
+  assert public.conciliar_registro_airtable('recRESPALDO000001', '2026-10-25T14:00:00.123Z', 'compita', 'Pedro Respaldo',
+    '+584161112233', 'pedro@ejemplo.com', 'Mérida, Mérida', '+584161112233', 'pedro@ejemplo.com', 'Mérida', 'Mérida') = 'ya_vinculada', 'S14 idempotente';
+  assert (select count(*) from public.postulaciones where telefono_declarado = '+584161112233') = 1, 'S14 una sola fila';
 end $$;
 
--- P12 · eventos es inmutable incluso para el dueño de la tabla
+-- S15 · Huella ambigua: no se vincula ni se importa
+reset role;
+insert into public.postulaciones (persona_id, tipo, coincidencia, fuente, nombre_declarado, telefono_declarado, email_declarado,
+  ubicacion_declarada, clave_idempotencia, recibida_en, airtable_estado)
+select persona_id, tipo, 'exacta', fuente, nombre_declarado, telefono_declarado, email_declarado, ubicacion_declarada,
+       '00000000-0000-4000-8000-0000000000d1', recibida_en, 'pendiente'
+  from public.postulaciones where id = (select postulacion_id from _r where k = 'ana');
+set local role service_role;
+do $$
+declare v_rec timestamptz := (select recibida from _r where k = 'ana');
+begin
+  assert public.conciliar_registro_airtable('recAMBIGUO0000001', v_rec, 'compita', 'Ana Prueba', '+584121234567', 'ana@ejemplo.com',
+    'Caracas, Distrito Capital', '+584121234567', 'ana@ejemplo.com', 'Caracas', 'Distrito Capital') = 'ambigua', 'S15';
+  assert not exists (select 1 from public.postulaciones where airtable_id = 'recAMBIGUO0000001'), 'S15 no vincula ni importa';
+end $$;
+
+-- S16 · Bandeja: se resuelve con autor y nota; deja de aparecer; no se resuelve dos veces
+do $$
+declare v_id uuid := (select postulacion_id from _r where k = 'ana');
+begin
+  begin
+    perform public.resolver_postulacion(v_id, 'registrada_en_cmc', 'soycompaz@gmail.com', null);
+    raise exception 'S16 debería exigir nota';
+  exception when sqlstate '22023' then null;
+  end;
+  assert public.resolver_postulacion(v_id, 'registrada_en_cmc', 'soycompaz@gmail.com', 'Registrada a mano como COM-1099'), 'S16 resolver';
+  assert not exists (select 1 from public.postulaciones_por_resolver() where id = v_id), 'S16 sale de la bandeja';
+  assert not public.resolver_postulacion(v_id, 'no_procede', 'juantenreiro@gmail.com', 'otra'), 'S16 no se resuelve dos veces';
+  assert (select count(*) from public.eventos where entidad_id = v_id and tipo = 'resuelta_registrada_en_cmc' and actor = 'soycompaz@gmail.com') = 1, 'S16 evento';
+  -- Si después aparece en Airtable, no se cambia lo resuelto a mano
+  assert public.marcar_envio_airtable(v_id, 'enviada', 'recTARDIO00000001', null) is null, 'S16 no se pisa una resolución manual';
+end $$;
+
+-- S17 · eventos es inmutable incluso para el dueño de la tabla
 reset role;
 do $$
 begin
   update public.eventos set tipo = 'x';
-  raise exception 'P12 UPDATE debería fallar';
+  raise exception 'S17 UPDATE debería fallar';
 exception when sqlstate 'P0001' then null;
 end $$;
 
--- P13 · service_role no escribe directamente (solo mediante las funciones)
+-- S18 · service_role no escribe directamente (solo mediante las funciones)
 set local role service_role;
 do $$
 begin
   insert into public.personas (nombre, telefono_e164) values ('x', '+584120000001');
-  raise exception 'P13 service_role no debería insertar en personas';
+  raise exception 'S18 service_role no debería insertar en personas';
 exception when insufficient_privilege then null;
 end $$;
 do $$
 begin
   update public.postulaciones set clasificacion = 'spam';
-  raise exception 'P13 service_role no debería editar postulaciones';
+  raise exception 'S18 service_role no debería editar postulaciones';
 exception when insufficient_privilege then null;
 end $$;
 
--- P14 · anon y authenticated no ven ni ejecutan nada
+-- S19 · anon y authenticated no ven ni ejecutan nada
 reset role;
 set local role anon;
 do $$
 begin
   perform 1 from public.personas;
-  raise exception 'P14 anon no debería leer personas';
+  raise exception 'S19 anon no debería leer personas';
 exception when insufficient_privilege then null;
 end $$;
 do $$
 begin
   perform public.registrar_postulacion(gen_random_uuid(), 'compita', 'home', 'x', '+584120000000', null, null, null, 'x', 'x', 'x');
-  raise exception 'P14 anon no debería ejecutar registrar_postulacion';
+  raise exception 'S19 anon no debería ejecutar registrar_postulacion';
 exception when insufficient_privilege then null;
 end $$;
 reset role;
 set local role authenticated;
 do $$
 begin
-  perform 1 from public.postulaciones_para_cmc(1);
-  raise exception 'P14 authenticated no debería leer la entrega al CMC';
+  perform 1 from public.postulaciones_por_resolver(1);
+  raise exception 'S19 authenticated no debería leer la bandeja';
 exception when insufficient_privilege then null;
 end $$;
 reset role;
 
-select 'Todas las pruebas SQL de captación pasaron (14)' as resultado;
+select 'Todas las pruebas SQL de captación pasaron (19)' as resultado;
 rollback;

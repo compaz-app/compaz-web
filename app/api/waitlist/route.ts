@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { registrarPostulacion, claveIdempotencia, fuenteValida } from "@/lib/captacion";
+import { avisarAdmin } from "@/lib/telegram";
 
 // ── Dominios permitidos (CORS) ────────────────────────────────────────────────
 const ALLOWED_ORIGINS = [
@@ -89,6 +90,10 @@ function getClientIp(req: NextRequest): string {
     "unknown"
   );
 }
+
+// Aviso de la ruta de respaldo: como mucho uno cada 15 min por instancia (Supabase está caído,
+// así que no se puede usar la deduplicación habitual de avisos).
+let ultimoAvisoRespaldo = 0;
 
 // ── Verificación Cloudflare Turnstile ────────────────────────────────────────
 async function verifyTurnstile(token: string, ip: string): Promise<boolean> {
@@ -204,6 +209,7 @@ export async function POST(req: NextRequest) {
   }
 
   // 6. Guardar
+  let respaldo = false;
   //    POSTULACIONES_DESTINO=supabase_y_airtable → Supabase primero (fuente principal) y copia a Airtable.
   //    Sin la variable (o con "airtable") se mantiene el comportamiento anterior: solo Airtable.
   if (process.env.POSTULACIONES_DESTINO === "supabase_y_airtable") {
@@ -217,9 +223,10 @@ export async function POST(req: NextRequest) {
       registrarEnvioEmail(emailKey);
       return NextResponse.json({ ok: true }, { headers });
     }
-    // Supabase no respondió: se intenta guardar como antes, directamente en Airtable,
-    // para no perder la postulación. La conciliación posterior la incorporará a Supabase.
+    // Supabase no respondió: se guarda como antes, directamente en Airtable, para no
+    // perder la postulación. El cron conciliar-airtable la importará después a Supabase.
     console.error("[waitlist] Supabase falló; se guarda solo en Airtable");
+    respaldo = true;
     if (!process.env.AIRTABLE_API_KEY || !process.env.AIRTABLE_BASE_ID) {
       return NextResponse.json({ error: "Error guardando" }, { status: 500, headers });
     }
@@ -256,5 +263,9 @@ export async function POST(req: NextRequest) {
   }
 
   registrarEnvioEmail(emailKey);
+  if (respaldo && Date.now() - ultimoAvisoRespaldo > 15 * 60_000) {
+    ultimoAvisoRespaldo = Date.now();
+    await avisarAdmin("⚠️ <b>Supabase no respondió en /api/waitlist</b>\n\nAl menos una postulación se guardó solo en Airtable. La conciliación horaria la importará a Supabase.").catch(() => false);
+  }
   return NextResponse.json({ ok: true }, { headers });
 }

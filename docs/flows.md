@@ -195,28 +195,39 @@ Escanea el QR del flyer → micompaz.com/?rol=compita#formulario
 
 ## 12. Captación en Supabase (Bloque 1)
 
-Desde el Bloque 1, cada postulación de la home y de `/se-compita` se guarda primero en Supabase y después se copia a Airtable, que sigue alimentando la hoja del CMC. Se activa con `POSTULACIONES_DESTINO=supabase_y_airtable`; sin esa variable, `/api/waitlist` funciona exactamente como antes (solo Airtable).
+Desde el Bloque 1, cada postulación de la home y de `/se-compita` se guarda primero en Supabase y después se copia a Airtable, que sigue alimentando la hoja del CMC. Se activa con `POSTULACIONES_DESTINO=supabase_y_airtable` y `CAPTACION_DESDE` (fecha de activación); sin la primera variable, `/api/waitlist` funciona exactamente como antes (solo Airtable).
 
 ```
 Formulario → /api/waitlist (Turnstile, honeypot, límites: sin cambios)
 → Supabase: registrar_postulacion() guarda persona, postulación y evento en una transacción
-→ Copia a Airtable con los mismos campos de siempre (fórmulas y hoja del CMC sin cambios)
-   · Si Airtable falla, la postulación ya está guardada: el cron reintentar-airtable reintenta cada 15 min
-   · Tras 5 fallos queda "agotada": aviso por Telegram y el CMC puede leerla en /api/interno/cmc/postulaciones
-→ Si Supabase falla, se guarda directamente en Airtable como antes (nunca se responde "ok" sin guardar)
+→ Primer intento de copia a Airtable (la fila queda reservada 5 min para que nadie más la envíe)
+   · Si falla o no se confirma: el cron reintentar-airtable (cada 15 min) la retoma
+     buscando ANTES su huella en Airtable; si ya existe, la vincula en vez de crear otra
+   · Tras 5 fallos (p. ej. Airtable lleno): bandeja /admin/postulaciones + aviso por Telegram
+     hasta que Luis o Juan la resuelven
+→ Si Supabase falla: se guarda directamente en Airtable como antes y se avisa;
+  el cron conciliar-airtable (cada hora) la importa después a Supabase
 ```
 
-**Identidad.** Cada persona tiene un uuid permanente en `personas`. Ni el teléfono ni el correo son únicos: solo se reutiliza una persona cuando ambos coinciden. Una coincidencia parcial crea otra persona y queda marcada (`coincidencia`: `parcial_telefono`, `parcial_email` o `conflicto`) para revisarla, sin fusionar a nadie.
+**Huella en Airtable.** La API de Airtable no admite claves de idempotencia. Cada postulación lleva una huella fija: el texto *Contacto* (construido siempre igual en el servidor) y la *Fecha* con milisegundos, que es la hora en que Supabase la recibió. Todo reintento busca esa huella antes de crear nada. Si hay una coincidencia, la vincula; si hay varias, la deja en conflicto para revisión; si la búsqueda falla, no crea nada y espera.
+
+**Bandeja de pendientes.** `/admin/postulaciones` lista lo que no llegó a Airtable. Cada caso se resuelve de una de tres formas, con el correo del operador y una nota:
+- *Ya está en Airtable*: se pega el ID `rec…`; se comprueba que existe y que tiene el teléfono o el correo de la persona.
+- *La registré directamente en el CMC*: nota con el ID COM- o dónde quedó.
+- *No procede*: nota con el motivo.
+
+**Conciliación.** Cada hora se revisan los registros de Airtable creados desde `CAPTACION_DESDE`. Los que Supabase no tiene vinculados se vinculan (si coinciden con la huella de una postulación) o se importan como `respaldo_airtable`. Es idempotente y solo lee Airtable.
+
+**Identidad.** Cada persona tiene un uuid permanente en `personas`. Ni el teléfono ni el correo son únicos: solo se reutiliza una persona cuando ambos coinciden. Una coincidencia parcial crea otra persona y queda marcada (`coincidencia`: `parcial_telefono`, `parcial_email` o `conflicto`), sin fusionar a nadie.
 
 **Reintento técnico o postulación nueva.**
 - Misma clave de envío, o mismos datos en menos de 15 minutos (doble clic, recarga): reintento técnico. No se crea nada nuevo; queda un evento.
 - La misma persona vuelve a postularse más tarde: se guarda como `repetida` y no se copia a Airtable, para que no reciba otra bienvenida.
 
-**UTM.** Se guardan `utm_source`, `utm_medium`, `utm_campaign`, `utm_content` y `utm_term`. Airtable sigue recibiendo solo las tres primeras, porque no tiene campos para las otras dos.
+**UTM.** Se guardan `utm_source`, `utm_medium`, `utm_campaign`, `utm_content` y `utm_term`. Airtable sigue recibiendo solo las tres primeras.
 
 **Familias y aspirantes.** Las dos quedan como postulaciones de tipo `familia` o `compita`. Ninguna se convierte sola en cliente ni en Compita operativa.
 
-**Permisos.** Las tablas `personas`, `postulaciones` y `eventos` no son accesibles para `anon` ni `authenticated`; el servidor escribe solo a través de funciones. `eventos` no admite cambios ni borrados.
+**Permisos.** `personas`, `postulaciones` y `eventos` no son accesibles para `anon` ni `authenticated`; el servidor escribe solo a través de funciones. `eventos` no admite cambios ni borrados.
 
-Migración: `supabase/migrations/20261022_captacion.sql`. Pruebas SQL: `tests/sql/captacion.sql` (solo en staging o en una base desechable).
-
+Migración: `supabase/migrations/20261022_captacion.sql`. Pruebas: `tests/18-captacion.test.ts`, `tests/sql/captacion.sql` y `tests/sql/concurrencia.sh` (estas dos, solo en staging o en una base desechable).

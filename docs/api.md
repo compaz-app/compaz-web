@@ -179,9 +179,10 @@ Actualiza campos editables del perfil de una compita. Solo admin.
 | Método | Ruta | Acceso | Qué hace |
 | --- | --- | --- | --- |
 | POST | `/api/waitlist` | Público (Turnstile, honeypot, límites) | Recibe postulaciones de la home y de `/se-compita`. Con `POSTULACIONES_DESTINO=supabase_y_airtable` guarda en Supabase y copia a Airtable. Campos nuevos opcionales: `utmContent`, `utmTerm`, `fuente` (`home` o `se_compita`), `claveIdempotencia` (uuid por envío) |
-| POST | `/api/cron/reintentar-airtable` | `x-cron-secret` | Reintenta la copia a Airtable (cada 15 min) |
-| GET | `/api/interno/cmc/postulaciones` | `x-cmc-secreto` (desactivada sin `CMC_ENTREGA_SECRETO`) | Postulaciones que Airtable no aceptó, en formato de registro de Airtable |
-| POST | `/api/interno/cmc/postulaciones` | `x-cmc-secreto` | `{ ids: [...] }`: el CMC confirma que las incorporó |
+| POST | `/api/cron/reintentar-airtable` | `x-cron-secret` | Cada 15 min: retoma copias pendientes buscando antes su huella en Airtable; avisa de la bandeja |
+| POST | `/api/cron/conciliar-airtable` | `x-cron-secret` | Cada hora: importa o vincula registros de Airtable creados desde `CAPTACION_DESDE` que Supabase no tenga |
+| POST | `/api/admin/postulaciones/resolver` | Admin (sesión verificada) | Resuelve una postulación de la bandeja: `{ id, resolucion, nota?, airtableId? }` |
+| GET | `/admin/postulaciones` | Admin | Bandeja de postulaciones que no llegaron a Airtable |
 
 ## Errores comunes
 

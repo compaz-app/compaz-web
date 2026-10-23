@@ -17,7 +17,8 @@ select 'tabla' as tipo, table_name as nombre from information_schema.tables
 union all
 select 'funcion', p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
  where n.nspname = 'public' and p.proname in ('registrar_postulacion', 'reclamar_envios_airtable',
-   'marcar_envio_airtable', 'postulaciones_para_cmc', 'confirmar_entrega_cmc', 'eventos_inmutables')
+   'marcar_envio_airtable', 'conciliar_registro_airtable', 'postulaciones_por_resolver', 'resolver_postulacion',
+   'airtable_ids_vinculados', 'eventos_inmutables')
 union all
 select 'indice', indexname from pg_indexes where schemaname = 'public' and indexname like any (array['personas_%', 'postulaciones_%', 'eventos_%']);
 
