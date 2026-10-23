@@ -6,8 +6,12 @@
 #   app       · tipos y pruebas de la aplicación (node:test con dobles)
 #   base      · migración + pruebas SQL + concurrencia sobre la imagen oficial de
 #               Supabase con PostgreSQL 17.6 (mismos roles y permisos por defecto)
-#   airtable  · API real de Airtable contra una base de PRUEBAS; se salta si no
-#               existen los secretos AIRTABLE_TEST_API_KEY y AIRTABLE_TEST_BASE_ID
+#   airtable  · API real de Airtable contra una base de PRUEBAS
+#   e2e       · Supabase local completo (CLI oficial) + la web compilada + Airtable
+#               de PRUEBAS: los escenarios de extremo a extremo, incluido apagar
+#               Supabase de verdad para probar la ruta de respaldo
+# airtable y e2e se saltan si no existen los secretos AIRTABLE_TEST_API_KEY y
+# AIRTABLE_TEST_BASE_ID (token y base de Airtable de pruebas).
 name: captacion
 
 on:
@@ -100,3 +104,78 @@ jobs:
           node-version: 22
       - name: API real de Airtable (base de pruebas)
         run: node --experimental-strip-types --no-warnings tests/integracion/airtable-real.mjs
+
+  e2e:
+    needs: [app, base]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      AIRTABLE_API_KEY: ${{ secrets.AIRTABLE_TEST_API_KEY }}
+      AIRTABLE_BASE_ID: ${{ secrets.AIRTABLE_TEST_BASE_ID }}
+      AIRTABLE_TABLE_NAME: Lista de Espera
+    steps:
+      - name: ¿Hay base de Airtable de pruebas?
+        id: secretos
+        run: |
+          if [ -n "$AIRTABLE_API_KEY" ] && [ -n "$AIRTABLE_BASE_ID" ]; then echo "hay=si" >> "$GITHUB_OUTPUT"; else echo "hay=no" >> "$GITHUB_OUTPUT"; echo "::notice::E2E SALTADA: faltan los secretos de Airtable de pruebas"; fi
+      - uses: actions/checkout@v4
+        if: steps.secretos.outputs.hay == 'si'
+      - uses: actions/setup-node@v4
+        if: steps.secretos.outputs.hay == 'si'
+        with:
+          node-version: 22
+          cache: npm
+      - uses: supabase/setup-cli@v1
+        if: steps.secretos.outputs.hay == 'si'
+        with:
+          version: 2.119.0
+      - name: Supabase local (aislado, se destruye al terminar)
+        if: steps.secretos.outputs.hay == 'si'
+        run: |
+          mkdir -p /tmp/e2e && cd /tmp/e2e
+          supabase init < /dev/null
+          supabase start -x studio,imgproxy,edge-runtime,logflare,vector,realtime,storage-api,postgres-meta
+          supabase status -o env > /tmp/e2e/estado.env
+          set -a; . /tmp/e2e/estado.env; set +a
+          SERVICIO="${SERVICE_ROLE_KEY:-$SECRET_KEY}"; ANONIMA="${ANON_KEY:-$PUBLISHABLE_KEY}"
+          {
+            echo "E2E_SUPABASE_URL=$API_URL"
+            echo "E2E_DB_URL=$DB_URL"
+            echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL"
+            echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$ANONIMA"
+            echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICIO"
+            echo "E2E_KONG_CONTAINER=supabase_kong_e2e"
+          } >> "$GITHUB_ENV"
+      - name: Migración de captación en el Supabase local
+        if: steps.secretos.outputs.hay == 'si'
+        run: |
+          psql "$E2E_DB_URL" -v ON_ERROR_STOP=1 -q -f tests/integracion/fixtures/operacion_minima.sql
+          psql "$E2E_DB_URL" -v ON_ERROR_STOP=1 -q -f supabase/migrations/20261022_captacion.sql
+      - name: Compilar y arrancar la web contra el entorno aislado
+        if: steps.secretos.outputs.hay == 'si'
+        env:
+          POSTULACIONES_DESTINO: supabase_y_airtable
+          NEXT_PUBLIC_SITE_URL: http://localhost:3000
+          NEXT_PUBLIC_TURNSTILE_SITE_KEY: 1x00000000000000000000AA
+          TURNSTILE_SECRET_KEY: 1x0000000000000000000000000000000AA
+          RESEND_API_KEY: re_ci_sin_envios
+        run: |
+          echo "CRON_SECRET=$(openssl rand -hex 16)" >> "$GITHUB_ENV"
+          echo "CAPTACION_DESDE=$(date -u -d '-2 minutes' +%Y-%m-%dT%H:%M:%S.000Z)" >> "$GITHUB_ENV"
+          npm ci --no-audit --no-fund
+          npx next build
+      - name: Escenarios de extremo a extremo
+        if: steps.secretos.outputs.hay == 'si'
+        env:
+          POSTULACIONES_DESTINO: supabase_y_airtable
+          NEXT_PUBLIC_SITE_URL: http://localhost:3000
+          NEXT_PUBLIC_TURNSTILE_SITE_KEY: 1x00000000000000000000AA
+          TURNSTILE_SECRET_KEY: 1x0000000000000000000000000000000AA
+          RESEND_API_KEY: re_ci_sin_envios
+        run: |
+          npx next start -p 3000 > /tmp/e2e/web.log 2>&1 &
+          for i in $(seq 1 60); do curl -sf -o /dev/null http://localhost:3000/privacidad && break; sleep 2; done
+          node --experimental-strip-types --no-warnings tests/integracion/e2e-captacion.mjs
+      - name: Registro de la web (si algo falló)
+        if: failure() && steps.secretos.outputs.hay == 'si'
+        run: tail -n 200 /tmp/e2e/web.log || true
