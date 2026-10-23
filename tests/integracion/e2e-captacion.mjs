@@ -166,4 +166,4 @@ main().then(() => {
   console.log(`\n${resultados.length - fallos.length}/${resultados.length} escenarios de extremo a extremo correctos`)
   if (enCI) console.log(`::notice title=Resumen E2E::${resultados.length - fallos.length}/${resultados.length} escenarios correctos`)
   if (fallos.length) process.exit(1)
-}).catch((e) => { console.error(e); process.exit(1) })
+}).catch((e) => { console.error(e); if (process.env.GITHUB_ACTIONS === 'true') console.log(`::error title=Excepción::${String(e?.message ?? e).replace(/[\r\n]+/g, ' ').slice(0, 300)}`); process.exit(1) })

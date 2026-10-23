@@ -67,4 +67,4 @@ main().then(() => {
   console.log(`\n${resultados.length - fallos.length}/${resultados.length} comprobaciones correctas`)
   if (enCI) console.log(`::notice title=Resumen Airtable real::${resultados.length - fallos.length}/${resultados.length} comprobaciones correctas`)
   if (fallos.length) process.exit(1)
-}).catch((e) => { console.error(e); process.exit(1) })
+}).catch((e) => { console.error(e); if (process.env.GITHUB_ACTIONS === 'true') console.log(`::error title=Excepción::${String(e?.message ?? e).replace(/[\r\n]+/g, ' ').slice(0, 300)}`); process.exit(1) })
