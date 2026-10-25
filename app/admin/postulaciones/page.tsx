@@ -11,7 +11,9 @@ export const dynamic = 'force-dynamic'
 export default async function PostulacionesPage() {
   await requireAdmin()
 
-  const activa = process.env.POSTULACIONES_DESTINO === 'supabase_y_airtable'
+  // Igual que los crons: visible desde la activación (CAPTACION_DESDE) y también durante
+  // una reversión, para poder resolver lo que quedó pendiente.
+  const activa = Boolean(process.env.CAPTACION_DESDE)
   let pendientes: PostulacionPorResolver[] = []
   let error = ''
   if (activa) {
@@ -35,7 +37,7 @@ export default async function PostulacionesPage() {
           Resuélvelas aquí: vincúlalas a un registro de Airtable, regístralas directamente en el CMC o márcalas como no procedentes.
         </p>
         {!activa && (
-          <Aviso texto="La captación en Supabase no está activada (POSTULACIONES_DESTINO). No hay nada que revisar." />
+          <Aviso texto="La captación en Supabase no está activada (CAPTACION_DESDE). No hay nada que revisar." />
         )}
         {error && <Aviso texto={error} />}
         {activa && !error && <BandejaPostulaciones pendientes={pendientes} />}
