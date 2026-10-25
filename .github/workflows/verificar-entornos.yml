@@ -1,0 +1,28 @@
+# Verificación temporal y de solo lectura: ¿la vista previa y producción usan el mismo
+# proyecto de Supabase? Lee solo JavaScript público (lo que descarga cualquier visitante).
+# No envía formularios ni llama a APIs. Rama desechable: no se fusiona.
+name: verificar-entornos
+on: push
+permissions: {}
+jobs:
+  comparar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Extraer el proyecto de Supabase de cada sitio
+        run: |
+          set -u
+          refs() {
+            local base="$1" tmp; tmp=$(mktemp -d)
+            for p in / /login /admin /compita/registro; do curl -fsSL "$base$p" >> "$tmp/html" 2>/dev/null || true; done
+            grep -oE '/_next/static/[^"'"'"' ]+\.js' "$tmp/html" | sort -u > "$tmp/js"
+            while read -r js; do curl -fsSL "$base$js" 2>/dev/null; done < "$tmp/js" > "$tmp/all"
+            echo "scripts=$(wc -l < "$tmp/js")" >&2
+            grep -oE '[a-z0-9]{20}\.supabase\.co' "$tmp/all" | sort -u | tr '\n' ' '
+          }
+          P=$(refs https://deploy-preview-11--compaz-beta.netlify.app)
+          M=$(refs https://micompaz.com)
+          echo "::notice title=preview-11::supabase=${P:-ninguno}"
+          echo "::notice title=produccion::supabase=${M:-ninguno}"
+          if [ -n "$P" ] && [ "$P" = "$M" ]; then echo "::warning title=resultado::MISMO proyecto de Supabase en vista previa y producción"
+          elif [ -n "$P" ] && [ -n "$M" ]; then echo "::notice title=resultado::proyectos DISTINTOS"
+          else echo "::warning title=resultado::no concluyente"; fi
