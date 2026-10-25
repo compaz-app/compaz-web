@@ -10,8 +10,11 @@ import { ok, err } from '@/lib/api'
 
 export async function POST(req: NextRequest) {
   if (!cronAutorizado(req)) return err('No autorizado', 401)
-  if (process.env.POSTULACIONES_DESTINO !== 'supabase_y_airtable') return ok({ desactivado: true })
-  if (!airtableConfigurado()) return err('Airtable sin configurar', 500)
+  // Los crons dependen de CAPTACION_DESDE, no de POSTULACIONES_DESTINO: al revertir
+  // (quitar solo POSTULACIONES_DESTINO) siguen vaciando pendientes y conciliando.
+  const desde = process.env.CAPTACION_DESDE
+  if (!desde) return ok({ desactivado: true })
+  if (!airtableConfigurado() || Number.isNaN(Date.parse(desde))) return err('Falta AIRTABLE_* o CAPTACION_DESDE (fecha ISO)', 500)
 
   try {
     const resumen = await reintentarEnviosAirtable()

@@ -197,6 +197,8 @@ Escanea el QR del flyer → micompaz.com/?rol=compita#formulario
 
 Desde el Bloque 1, cada postulación de la home y de `/se-compita` se guarda primero en Supabase y después se copia a Airtable, que sigue alimentando la hoja del CMC. Se activa con `POSTULACIONES_DESTINO=supabase_y_airtable` y `CAPTACION_DESDE` (fecha de activación); sin la primera variable, `/api/waitlist` funciona exactamente como antes (solo Airtable).
 
+**Reversión.** Se quita solo `POSTULACIONES_DESTINO`. La web vuelve a guardar directamente en Airtable, y los dos crons, que dependen de `CAPTACION_DESDE`, siguen entregando las pendientes y conciliando. Así lo recibido durante un incidente o durante la reversión queda en Airtable y en Supabase sin duplicados. Sin `CAPTACION_DESDE`, los crons no hacen nada.
+
 ```
 Formulario → /api/waitlist (Turnstile, honeypot, límites: sin cambios)
 → Supabase: registrar_postulacion() guarda persona, postulación y evento en una transacción

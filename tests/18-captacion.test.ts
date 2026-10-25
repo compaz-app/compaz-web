@@ -345,19 +345,35 @@ describe('Escenarios de fiabilidad', () => {
 })
 
 describe('Activación y cron', () => {
-  test('sin POSTULACIONES_DESTINO: comportamiento anterior y crons apagados', async () => {
+  test('sin POSTULACIONES_DESTINO ni CAPTACION_DESDE (antes de activar): comportamiento anterior y crons apagados', async () => {
     delete process.env.POSTULACIONES_DESTINO
+    delete process.env.CAPTACION_DESDE
     assert.equal((await waitlist(postulacion())).status, 200)
     assert.equal(db.rpcLlamadas.length, 0)
     assert.equal(at.registros.length, 1)
     assert.deepEqual((await (await reintentar(cron('reintentar-airtable'))).json()).data, { desactivado: true })
     assert.deepEqual((await (await conciliar(cron('conciliar-airtable'))).json()).data, { desactivado: true })
   })
-  test('crons sin secreto → 401; conciliación sin CAPTACION_DESDE → 500', async () => {
+  test('reversión (se quita solo POSTULACIONES_DESTINO): las pendientes se entregan y lo nuevo se concilia', async () => {
+    at.modo = 'caido'
+    assert.equal((await waitlist(postulacion())).status, 200)
+    assert.notEqual(fila().airtable_estado, 'enviada', 'queda en Supabase sin copia en Airtable')
+    delete process.env.POSTULACIONES_DESTINO
+    at.modo = 'ok'
+    pasaElTiempo(); await correrCron()
+    assert.equal(fila().airtable_estado, 'enviada', 'la pendiente del incidente llega a Airtable')
+    assert.equal((await waitlist(postulacion())).status, 200)
+    assert.equal(at.registros.length, 2)
+    const d = (await (await conciliar(cron('conciliar-airtable'))).json()).data
+    assert.equal(d.importada, 1, 'lo recibido durante la reversión también queda en Supabase')
+    assert.equal(sb.filas.length, 2)
+  })
+  test('crons sin secreto → 401; CAPTACION_DESDE inválida → 500', async () => {
     assert.equal((await reintentar(cron('reintentar-airtable', null))).status, 401)
     assert.equal((await conciliar(cron('conciliar-airtable', 'mal'))).status, 401)
-    delete process.env.CAPTACION_DESDE
+    process.env.CAPTACION_DESDE = 'no-es-fecha'
     assert.equal((await conciliar(cron('conciliar-airtable'))).status, 500)
+    assert.equal((await reintentar(cron('reintentar-airtable'))).status, 500)
   })
   test('honeypot: "ok" sin guardar nada', async () => {
     assert.equal((await waitlist(postulacion({ website: 'http://spam.test' }))).status, 200)
