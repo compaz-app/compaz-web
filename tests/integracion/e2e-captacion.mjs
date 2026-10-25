@@ -18,8 +18,10 @@
 //   E7  Supabase caído (se detiene de verdad) → la web guarda en Airtable → al volver,
 //       la conciliación la importa una sola vez
 //   E8  honeypot: no guarda nada
+//   E9  reversión: una segunda web SIN POSTULACIONES_DESTINO (con CAPTACION_DESDE) guarda solo en
+//       Airtable; sus crons entregan la pendiente del incidente y concilian lo nuevo, sin duplicar
 // ══════════════════════════════════════════════════════════════════════════════
-import { execFileSync } from 'node:child_process'
+import { execFileSync, spawn } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 import { crearRegistroAirtable, buscarPorContacto, obtenerRegistro, mismaFecha } from '../../lib/airtable.ts'
 
@@ -159,6 +161,37 @@ async function main() {
   const p8 = persona()
   const s8 = await postular(p8, { website: 'http://spam.test' })
   anotar('E8', s8 === 200 && filas(p8.tel).length === 0 && (await enAirtable(p8)).length === 0, `HTTP ${s8}, sin filas ni registros`)
+
+  // E9 · Reversión: se quita solo POSTULACIONES_DESTINO (se arranca otra web en el puerto 3001)
+  const p9a = persona(), p9b = persona()
+  registrarDirecto(p9a) // pendiente del incidente: en Supabase, sin copia en Airtable
+  const env9 = { ...process.env }; delete env9.POSTULACIONES_DESTINO
+  const web9 = spawn('npx', ['next', 'start', '-p', '3001'], { env: env9, stdio: 'ignore', detached: true })
+  const SITE9 = 'http://localhost:3001'
+  try {
+    for (let i = 0; i < 60; i++) { try { if ((await fetch(`${SITE9}/privacidad`)).ok) break } catch {} await esperar(1000) }
+    const cron9 = async (n) => { const r = await fetch(`${SITE9}/api/cron/${n}`, { method: 'POST', headers: { 'x-cron-secret': CRON } }); return { status: r.status, data: (await r.json().catch(() => null))?.data } }
+    const res9 = await fetch(`${SITE9}/api/waitlist`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Origin: 'https://micompaz.com' },
+      body: JSON.stringify({ nombre: p9b.nombre, whatsapp: p9b.tel, email: p9b.email, ciudad: 'Chacao, Miranda', contacto: contactoDe(p9b),
+        website: '', turnstileToken: 'XXXX.DUMMY.TOKEN.XXXX', fuente: 'home', claveIdempotencia: randomUUID() }),
+    })
+    const filasB0 = filas(p9b.tel).length
+    vencerEsperas()
+    const k9 = await cron9('reintentar-airtable')
+    const c9 = await cron9('conciliar-airtable')
+    vencerEsperas()
+    const k9b = await cron9('reintentar-airtable')
+    const c9b = await cron9('conciliar-airtable')
+    const fa = filas(p9a.tel), fb = filas(p9b.tel), ra = await enAirtable(p9a), rb = await enAirtable(p9b)
+    anotar('E9', res9.status === 200 && filasB0 === 0 && k9.status === 200 && !k9.data?.desactivado
+      && fa[0]?.airtable_estado === 'enviada' && ra.length === 1 && fa[0].airtable_id === ra[0].id
+      && fb.length === 1 && fb[0].fuente === 'respaldo_airtable' && rb.length === 1 && fb[0].airtable_id === rb[0].id
+      && c9b.data?.importada === 0 && k9b.status === 200,
+      `web sin destino HTTP ${res9.status} (filas en Supabase al recibir=${filasB0}); pendiente: ${fa[0]?.airtable_estado}, Airtable=${ra.length}; recibida en reversión: filas=${fb.length}, fuente=${fb[0]?.fuente}, Airtable=${rb.length}; cron=${JSON.stringify(k9.data)}, conciliación=${JSON.stringify(c9.data)}, 2ª importadas=${c9b.data?.importada}`)
+  } finally {
+    try { process.kill(-web9.pid) } catch {}
+  }
 }
 
 main().then(() => {
