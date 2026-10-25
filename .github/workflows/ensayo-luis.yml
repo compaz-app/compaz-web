@@ -1,0 +1,127 @@
+# Ensayo personal de Luis · rama desechable ensayo/* (no forma parte del PR #11 y no se fusiona).
+# Levanta durante 30 minutos la web del PR #11 con la captación activada contra:
+#   · Supabase LOCAL del runner (desaparece al terminar)
+#   · Airtable "Compaz Pruebas" (nunca la base de producción)
+# detrás de una puerta con usuario y contraseña aleatoria de esta ejecución, en un enlace temporal
+# https://….trycloudflare.com. El enlace y la contraseña se entregan dentro de Compaz Pruebas,
+# no en los registros públicos. Sin Telegram, sin correos, sin analítica de producción.
+name: ensayo-luis
+on:
+  push:
+    branches: ['ensayo/**']
+permissions:
+  contents: read
+concurrency:
+  group: ensayo-luis
+  cancel-in-progress: true
+jobs:
+  ensayo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    env:
+      AIRTABLE_API_KEY: ${{ secrets.AIRTABLE_TEST_API_KEY }}
+      AIRTABLE_BASE_ID: ${{ secrets.AIRTABLE_TEST_BASE_ID }}
+      AIRTABLE_TABLE_NAME: Lista de Espera
+      MINUTOS: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - uses: supabase/setup-cli@v1
+        with: { version: 2.119.0 }
+
+      - name: Aislamiento de producción
+        run: |
+          [ -n "$AIRTABLE_API_KEY" ] && [ -n "$AIRTABLE_BASE_ID" ] || { echo "::error::faltan los secretos de Compaz Pruebas"; exit 1; }
+          [ "$AIRTABLE_BASE_ID" != appd3xCmNZEIJ0rWS ] || { echo "::error::la base de Airtable es la de producción"; exit 1; }
+          # Ninguna credencial ni servicio de producción presente en el entorno
+          for v in SUPABASE_SERVICE_ROLE_KEY NEXT_PUBLIC_SUPABASE_URL TELEGRAM_BOT_TOKEN TELEGRAM_ADMIN_CHAT_ID TELEGRAM_WEBHOOK_SECRET RESEND_API_KEY DAILY_API_KEY NETLIFY_AUTH_TOKEN NEXT_PUBLIC_GA_MEASUREMENT_ID NEXT_PUBLIC_META_PIXEL_ID STRIPE_SECRET_KEY; do
+            [ -z "${!v:-}" ] || { echo "::error::$v presente en el entorno del ensayo"; exit 1; }
+          done
+          echo "::notice title=Aislamiento::solo secretos de Compaz Pruebas; sin Supabase, Telegram, Resend, Daily, Netlify ni analítica de producción"
+
+      - name: Supabase local con la migración
+        run: |
+          mkdir -p /tmp/e && cd /tmp/e && supabase init > /dev/null
+          supabase start -x studio,imgproxy,edge-runtime,logflare,vector,realtime,storage-api,postgres-meta > /tmp/e/start.log 2>&1 || { tail -5 /tmp/e/start.log; exit 1; }
+          supabase status -o env > /tmp/e/estado.env; set -a; . /tmp/e/estado.env; set +a
+          case "$DB_URL" in *@127.0.0.1:*) echo "::notice title=Aislamiento::Supabase local en el runner";; *) echo "::error::la base no es local"; exit 1;; esac
+          {
+            echo "E2E_DB_URL=$DB_URL"
+            echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL"
+            echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=${ANON_KEY:-$PUBLISHABLE_KEY}"
+            echo "SUPABASE_SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY:-$SECRET_KEY}"
+            echo "CRON_SECRET=$(openssl rand -hex 16)"
+            echo "CAPTACION_DESDE=$(date -u +%Y-%m-%dT%H:%M:%S.000Z)"
+          } >> "$GITHUB_ENV"
+          cd "$GITHUB_WORKSPACE"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f tests/integracion/fixtures/operacion_minima.sql
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f supabase/migrations/20261022_captacion.sql
+
+      - name: Enlace temporal y contraseña de un solo uso
+        run: |
+          CLAVE=$(openssl rand -base64 24 | tr -dc 'A-Za-z0-9' | head -c 24)
+          echo "::add-mask::$CLAVE"
+          echo "ENSAYO_CLAVE=$CLAVE" >> "$GITHUB_ENV"
+          curl -fsSL -o /tmp/cloudflared https://github.com/cloudflare/cloudflared/releases/download/2025.8.1/cloudflared-linux-amd64 || curl -fsSL -o /tmp/cloudflared https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64
+          chmod +x /tmp/cloudflared
+          # El túnel apunta a la puerta con contraseña (8080), nunca directamente a la web (3000)
+          nohup /tmp/cloudflared tunnel --no-autoupdate --url http://127.0.0.1:8080 > /tmp/tunel.log 2>&1 &
+          for i in $(seq 1 60); do URL=$(grep -oE 'https://[a-z0-9-]+\.trycloudflare\.com' /tmp/tunel.log | head -1); [ -n "$URL" ] && break; sleep 2; done
+          [ -n "$URL" ] || { echo "::error::no se pudo abrir el enlace temporal"; exit 1; }
+          echo "::add-mask::$URL"
+          echo "ENSAYO_URL=$URL" >> "$GITHUB_ENV"
+
+      - name: "Compilar la web (única diferencia con el PR: admite el origen del enlace temporal)"
+        env:
+          POSTULACIONES_DESTINO: supabase_y_airtable
+          NEXT_PUBLIC_TURNSTILE_SITE_KEY: 1x00000000000000000000AA
+        run: |
+          sed -i "s#^  \"https://compaz-beta.netlify.app\",#&\n  \"$ENSAYO_URL\",#" app/api/waitlist/route.ts
+          grep -qF "$ENSAYO_URL" app/api/waitlist/route.ts || { echo "::error::no se pudo admitir el origen del ensayo"; exit 1; }
+          npm ci --no-audit --no-fund > /dev/null
+          NEXT_PUBLIC_SITE_URL="$ENSAYO_URL" npx next build > /tmp/build.log 2>&1 || { tail -20 /tmp/build.log; exit 1; }
+
+      - name: Ventana del ensayo (30 minutos)
+        env:
+          POSTULACIONES_DESTINO: supabase_y_airtable
+          NEXT_PUBLIC_TURNSTILE_SITE_KEY: 1x00000000000000000000AA
+          TURNSTILE_SECRET_KEY: 1x0000000000000000000000000000000AA
+        run: |
+          NEXT_PUBLIC_SITE_URL="$ENSAYO_URL" nohup npx next start -H 127.0.0.1 -p 3000 > /tmp/web.log 2>&1 &
+          nohup node tests/ensayo/proxy.mjs > /tmp/proxy.log 2>&1 &
+          for i in $(seq 1 60); do curl -sf -o /dev/null http://127.0.0.1:3000/privacidad && break; sleep 2; done
+          # Comprobaciones de la puerta a través del enlace público
+          ok=no
+          for i in $(seq 1 40); do c=$(curl -s -o /dev/null -w '%{http_code}' "$ENSAYO_URL/" || true); [ "$c" = 401 ] && ok=si && break; sleep 3; done
+          [ "$ok" = si ] || { echo "::error::el enlace no responde con la puerta cerrada (último código: $c)"; exit 1; }
+          c=$(curl -s -o /dev/null -w '%{http_code}' -u "luis:$ENSAYO_CLAVE" "$ENSAYO_URL/")
+          [ "$c" = 200 ] || { echo "::error::con la contraseña la home responde $c"; tail -20 /tmp/web.log; exit 1; }
+          curl -s -D - -o /dev/null -u "luis:$ENSAYO_CLAVE" "$ENSAYO_URL/" | grep -qi "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com;" || { echo "::error::falta la CSP que bloquea la analítica"; exit 1; }
+          echo "::notice title=Puerta del ensayo::sin contraseña 401 · con contraseña 200 · analítica de producción bloqueada por CSP"
+          export ENSAYO_HASTA=$(TZ=America/New_York date -d "+$MINUTOS minutes" +%H:%M)
+          node tests/ensayo/enlace.mjs
+          echo "::notice title=Ensayo ABIERTO::enlace y contraseña en Compaz Pruebas (registro ENLACE DEL ENSAYO) · cierra a las $ENSAYO_HASTA hora de Nueva York"
+          fin=$(( $(date +%s) + MINUTOS * 60 ))
+          while [ "$(date +%s)" -lt "$fin" ]; do
+            echo "$(date -u +%H:%M) · postulaciones: $(psql "$E2E_DB_URL" -At -c 'select count(*) from public.postulaciones') · envíos: $(wc -l < /tmp/ensayo-solicitudes.log 2>/dev/null || echo 0)"
+            [ $(( ($(date +%s) / 60) % 5 )) -eq 0 ] && curl -s -o /dev/null -X POST -H "x-cron-secret: $CRON_SECRET" http://127.0.0.1:3000/api/cron/reintentar-airtable
+            sleep 60
+          done
+          # Cierre: primero se corta el acceso público, después se pasan los crons una última vez
+          pkill -f cloudflared || true
+          pkill -f tests/ensayo/proxy.mjs || true
+          curl -s -o /dev/null -X POST -H "x-cron-secret: $CRON_SECRET" http://127.0.0.1:3000/api/cron/reintentar-airtable
+          curl -s -o /dev/null -X POST -H "x-cron-secret: $CRON_SECRET" http://127.0.0.1:3000/api/cron/conciliar-airtable
+          echo "::notice title=Ensayo CERRADO::enlace temporal y puerta detenidos"
+
+      - name: Resultado
+        if: always()
+        run: node --experimental-strip-types --no-warnings tests/ensayo/resultados.mjs
+
+      - name: Cierre del entorno
+        if: always()
+        run: |
+          pkill -f cloudflared || true
+          (cd /tmp/e && supabase stop --no-backup > /dev/null 2>&1) || true
+          echo "::notice title=Entorno eliminado::túnel detenido y Supabase local destruido; el runner se elimina al terminar"
