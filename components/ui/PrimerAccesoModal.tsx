@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { VENEZUELA_ESTADOS } from '@/lib/venezuela'
+import { ZONAS_MUNICIPIOS } from '@/lib/venezuela'
 
 export default function PrimerAccesoModal() {
   const router = useRouter()
@@ -88,12 +88,12 @@ export default function PrimerAccesoModal() {
                 required
               >
                 <option value="">Selecciona un estado…</option>
-                {Object.keys(VENEZUELA_ESTADOS).sort().map((est) => (
+                {Object.keys(ZONAS_MUNICIPIOS).sort().map((est) => (
                   <option key={est} value={est}>{est}</option>
                 ))}
               </select>
             </Field>
-            <Field label="Ciudad / Municipio" required>
+            <Field label="Municipio" required>
               <select
                 value={form.zona_municipio}
                 onChange={(e) => set('zona_municipio', e.target.value)}
@@ -101,9 +101,9 @@ export default function PrimerAccesoModal() {
                 disabled={!form.zona_estado}
                 required
               >
-                <option value="">Selecciona una ciudad…</option>
-                {(VENEZUELA_ESTADOS[form.zona_estado] ?? []).sort().map((ciudad) => (
-                  <option key={ciudad} value={ciudad}>{ciudad}</option>
+                <option value="">Selecciona un municipio…</option>
+                {(ZONAS_MUNICIPIOS[form.zona_estado] ?? []).sort().map((municipio) => (
+                  <option key={municipio} value={municipio}>{municipio}</option>
                 ))}
               </select>
             </Field>
