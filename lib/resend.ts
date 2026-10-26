@@ -120,8 +120,11 @@ export async function sendBienvenidaCompita(
             <li>El bot te pedirá tu nombre completo. Escríbelo tal como apareces aquí.</li>
             <li>Te enviará un código de 6 dígitos a este correo.</li>
             <li>Ingresa ese código en el chat para activar tu cuenta.</li>
-            <li style="color:#B91C1C;font-weight:700;">🚨 Alerta de fraude: el código llega únicamente por correo. Compaz nunca te llamará por teléfono. No compartas este código con nadie.</li>
+            <li style="color:#B91C1C;font-weight:700;">🚨 El código llega únicamente por correo. No lo compartas con nadie.</li>
           </ol>
+          <p style="color:#1A0A3C;font-size:14px;font-weight:700;background:#FFF3E8;border-left:3px solid #FF6B2B;padding:10px 14px;border-radius:0 8px 8px 0;margin:0 0 16px">
+            🔔 <strong>Activa las notificaciones de Telegram</strong> — ve a Configuración → Notificaciones. Sin ellas no sabrás cuando llegue una solicitud de cliente o un aviso de visita.
+          </p>
           <a href="${botUrl}" style="display:inline-block;background:#FF6B2B;color:white;padding:12px 24px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:15px">
             Abrir bot de Telegram →
           </a>
@@ -244,6 +247,40 @@ export async function sendBienvenidaCliente(email: string, nombre: string, enlac
           Cualquier duda, responde este correo o escríbenos a <a href="mailto:hola@micompaz.com" style="color:#FF6B2B">hola@micompaz.com</a>.
         </p>
         <p style="color:#9990A8;font-size:13px;margin-top:8px">Compaz — <em>Cerca aunque estés lejos</em></p>
+      </div>
+    `,
+  })
+}
+
+export async function sendSolicitudCompita(
+  email: string,
+  nombre: string,
+  clienteNombre: string,
+  slots: { label: string; url: string }[],
+  urlRechazar: string,
+): Promise<void> {
+  const primero = escapeHtml(nombre.split(' ')[0])
+  const botonesSlots = slots.map(({ label, url }) => `
+    <a href="${escapeHtml(url)}" style="display:block;background:#7C4DFF;color:white;padding:12px 20px;border-radius:9999px;text-decoration:none;font-weight:700;font-size:14px;margin-bottom:8px;text-align:center">
+      ✅ ${escapeHtml(label)}
+    </a>`).join('')
+  await sendEmail({
+    to: email,
+    subject: `Nueva solicitud de entrevista — ${escapeHtml(clienteNombre)}`,
+    html: `
+      <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px;background:#FDFAF6">
+        <h2 style="color:#2D1464;font-size:22px;margin-bottom:4px">¡Hola, ${primero}! 👋</h2>
+        <p style="color:#4A3B6B;font-size:16px;line-height:1.6;margin-bottom:20px">
+          <strong>${escapeHtml(clienteNombre)}</strong> quiere conocerte. Elige el horario que te funcione para la videollamada de 20 minutos.
+        </p>
+        ${botonesSlots}
+        <a href="${escapeHtml(urlRechazar)}" style="display:block;background:white;color:#6B5C90;border:2px solid #D1C8E0;padding:12px 20px;border-radius:9999px;text-decoration:none;font-weight:700;font-size:14px;margin-bottom:24px;text-align:center">
+          ❌ No puedo en ninguno de esos horarios
+        </a>
+        <p style="color:#9990A8;font-size:13px;line-height:1.6">
+          Cada botón funciona una sola vez. Si ya respondiste desde Telegram, ignora este correo.
+        </p>
+        <p style="color:#9990A8;font-size:13px;margin-top:20px">Compaz — <em>Cerca aunque estés lejos</em></p>
       </div>
     `,
   })
