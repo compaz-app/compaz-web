@@ -314,14 +314,20 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                         🎫 {cupo.restantes} visita{cupo.restantes !== 1 ? 's' : ''} disponible{cupo.restantes !== 1 ? 's' : ''}
                       </span>
                     )}
-                    {cupo && cupo.restantes === 0 && (
-                      <span style={{ background: '#FEE2E2', color: '#DC2626', borderRadius: '9999px', padding: '4px 12px', fontSize: '13px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, whiteSpace: 'nowrap' }}>
-                        ⚠️ Sin visitas disponibles
-                      </span>
-                    )}
                   </div>
                   {estado.desc && (
                     <div style={{ color: '#6B5C90', fontSize: '13px', marginTop: '6px', lineHeight: 1.4 }}>{estado.desc}</div>
+                  )}
+                  {cupo && cupo.restantes === 0 && (
+                    <div style={{ marginTop: '12px', background: '#FFF7ED', border: '1.5px solid #FED7AA', borderRadius: '12px', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '16px', flexShrink: 0 }}>🔄</span>
+                      <span style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontSize: '13px', color: '#92400E', flex: 1 }}>
+                        <strong>Tu plan se agotó.</strong> Para agendar más visitas, recarga tu plan.
+                      </span>
+                      <a href="/pago" style={{ background: '#FF6B2B', color: 'white', borderRadius: '9999px', padding: '6px 16px', fontSize: '13px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                        Recargar plan →
+                      </a>
+                    </div>
                   )}
                 </div>
               </div>
@@ -353,7 +359,13 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                     ))}
                   </div>
                   <div style={{ marginTop: '20px', textAlign: 'center' }}>
-                    <a href="/compitas" style={{ display: 'inline-block', background: '#FF6B2B', color: 'white', borderRadius: '9999px', padding: '13px 32px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 900, fontSize: '16px', textDecoration: 'none', boxShadow: '0 4px 20px rgba(255,107,43,0.35)' }}>
+                    <a href={(() => {
+                      const zona = usuario?.zona ?? ''
+                      const partes = zona.split(' — ')
+                      if (partes.length === 2) return `/compitas?estado=${encodeURIComponent(partes[0])}&municipio=${encodeURIComponent(partes[1])}`
+                      if (partes.length === 1 && partes[0]) return `/compitas?estado=${encodeURIComponent(partes[0])}`
+                      return '/compitas'
+                    })()} style={{ display: 'inline-block', background: '#FF6B2B', color: 'white', borderRadius: '9999px', padding: '13px 32px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 900, fontSize: '16px', textDecoration: 'none', boxShadow: '0 4px 20px rgba(255,107,43,0.35)' }}>
                       {paso1Hecho ? 'Ver más compitas →' : 'Ver compitas disponibles →'}
                     </a>
                   </div>

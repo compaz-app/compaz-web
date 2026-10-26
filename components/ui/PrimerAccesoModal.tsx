@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { VENEZUELA_ESTADOS } from '@/lib/venezuela'
 
 export default function PrimerAccesoModal() {
   const router = useRouter()
@@ -13,6 +14,8 @@ export default function PrimerAccesoModal() {
     familiar_edad: '',
     familiar_condicion: '',
     familiar_notas: '',
+    zona_estado: '',
+    zona_municipio: '',
   })
 
   function set(field: keyof typeof form, value: string) {
@@ -37,6 +40,9 @@ export default function PrimerAccesoModal() {
           familiar_edad: form.familiar_edad ? Number(form.familiar_edad) : null,
           familiar_condicion: form.familiar_condicion,
           familiar_notas: form.familiar_notas,
+          zona: form.zona_estado && form.zona_municipio
+            ? `${form.zona_estado} — ${form.zona_municipio}`
+            : form.zona_estado || null,
         }),
       })
       if (res.ok) {
@@ -70,6 +76,36 @@ export default function PrimerAccesoModal() {
                 placeholder="+58 412 000 0000"
                 style={inputStyle}
               />
+            </Field>
+          </Section>
+
+          <Section title="Zona donde está tu familiar">
+            <Field label="Estado" required>
+              <select
+                value={form.zona_estado}
+                onChange={(e) => setForm((f) => ({ ...f, zona_estado: e.target.value, zona_municipio: '' }))}
+                style={inputStyle}
+                required
+              >
+                <option value="">Selecciona un estado…</option>
+                {Object.keys(VENEZUELA_ESTADOS).sort().map((est) => (
+                  <option key={est} value={est}>{est}</option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Ciudad / Municipio" required>
+              <select
+                value={form.zona_municipio}
+                onChange={(e) => set('zona_municipio', e.target.value)}
+                style={{ ...inputStyle, opacity: form.zona_estado ? 1 : 0.4 }}
+                disabled={!form.zona_estado}
+                required
+              >
+                <option value="">Selecciona una ciudad…</option>
+                {(VENEZUELA_ESTADOS[form.zona_estado] ?? []).sort().map((ciudad) => (
+                  <option key={ciudad} value={ciudad}>{ciudad}</option>
+                ))}
+              </select>
             </Field>
           </Section>
 
