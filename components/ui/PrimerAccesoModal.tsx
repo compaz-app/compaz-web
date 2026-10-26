@@ -73,19 +73,26 @@ export default function PrimerAccesoModal() {
             </Field>
           </Section>
 
-          <Section title="Sobre tu familiar">
-            <Field label="Nombre completo" required>
+          <Section title="Sobre TU FAMILIAR">
+            <div style={{ background: '#FFF3E8', border: '2px solid #FFD0B5', borderRadius: '12px', padding: '12px 16px', display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+              <span style={{ fontSize: '20px', flexShrink: 0 }}>👴</span>
+              <p style={{ margin: 0, fontSize: '13px', lineHeight: 1.6, color: '#7C3A00' }}>
+                Lo que sigue es sobre <strong>TU FAMILIAR</strong> — la persona que recibirá el cuidado.<br />
+                <strong>No pongas tus propios datos aquí.</strong>
+              </p>
+            </div>
+            <Field label="Nombre completo de TU FAMILIAR" required>
               <input
                 type="text"
                 value={form.familiar_nombre}
                 onChange={(e) => set('familiar_nombre', e.target.value)}
-                placeholder="Ej: María González"
+                placeholder="Ej: tu mamá, tu papá, tu abuelo…"
                 maxLength={120}
                 required
                 style={inputStyle}
               />
             </Field>
-            <Field label="Edad">
+            <Field label="Edad de TU FAMILIAR">
               <input
                 type="number"
                 value={form.familiar_edad}
@@ -96,7 +103,7 @@ export default function PrimerAccesoModal() {
                 style={{ ...inputStyle, width: '120px' }}
               />
             </Field>
-            <Field label="Condición o diagnóstico">
+            <Field label="Condición o diagnóstico de TU FAMILIAR">
               <input
                 type="text"
                 value={form.familiar_condicion}
@@ -106,7 +113,7 @@ export default function PrimerAccesoModal() {
                 style={inputStyle}
               />
             </Field>
-            <Field label="Notas adicionales" hint="Rutinas, preferencias, lo que la compita debería saber">
+            <Field label="Notas sobre TU FAMILIAR" hint="Rutinas, preferencias, lo que la compita debería saber">
               <textarea
                 value={form.familiar_notas}
                 onChange={(e) => set('familiar_notas', e.target.value)}
