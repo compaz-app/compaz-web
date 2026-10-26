@@ -196,14 +196,7 @@ export async function sendBienvenidaCliente(email: string, nombre: string, enlac
       <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px;background:#FDFAF6">
         <h1 style="color:#2D1464;font-size:26px;margin-bottom:8px">¡Hola, ${primero}! 👋</h1>
         <p style="color:#4A3B6B;font-size:16px;line-height:1.6;margin-bottom:20px">
-          Te damos la bienvenida a Compaz. Pulsa el botón para activar tu cuenta y entrar a tu portal.
-        </p>
-
-        <a href="${escapeHtml(enlaceAcceso)}" style="display:inline-block;background:#FF6B2B;color:white;padding:16px 32px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:17px">
-          Activar mi cuenta y entrar →
-        </a>
-        <p style="color:#6B5C90;font-size:13px;line-height:1.6;margin:12px 0 28px">
-          Este enlace es personal, funciona una sola vez y <strong>vence en 1 hora</strong>. Después podrás entrar siempre desde micompaz.com/login: escribes tu correo y te enviamos un enlace nuevo. Si este enlace venció, entra a micompaz.com/login, escribe tu correo y te enviamos uno nuevo al instante.
+          Te damos la bienvenida a Compaz. Lee los tres pasos a continuación y luego activa tu cuenta.
         </p>
 
         <div style="background:white;border:2px solid #E8E0D4;border-radius:16px;padding:24px;margin-bottom:16px">
@@ -229,6 +222,13 @@ export async function sendBienvenidaCliente(email: string, nombre: string, enlac
             Después de la entrevista, coordina directamente con el compita y agenda el primer día de visita. Recibirás actualizaciones en tiempo real.
           </p>
         </div>
+
+        <a href="${escapeHtml(enlaceAcceso)}" style="display:inline-block;background:#FF6B2B;color:white;padding:16px 32px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:17px;margin-bottom:12px">
+          Activar mi cuenta y entrar →
+        </a>
+        <p style="color:#6B5C90;font-size:13px;line-height:1.6;margin:0 0 28px">
+          Este enlace es personal, funciona una sola vez y <strong>vence en 1 hora</strong>. Después podrás entrar siempre desde micompaz.com/login: escribes tu correo y te enviamos un enlace nuevo. Si este enlace venció, entra a micompaz.com/login, escribe tu correo y te enviamos uno nuevo al instante.
+        </p>
 
         <p style="color:#4A3B6B;font-size:15px;line-height:1.6;margin-top:8px">
           Cualquier duda, responde este correo o escríbenos a <a href="mailto:hola@micompaz.com" style="color:#FF6B2B">hola@micompaz.com</a>.
