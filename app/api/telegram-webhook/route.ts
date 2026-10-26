@@ -81,7 +81,11 @@ Siempre tienes botones visibles en la parte de abajo del chat. Son atajos rápid
 
 <b>¿Tienes dudas?</b>
 Toca <b>📋 Menú</b> o escribe <b>/menu</b> para volver a ver estas instrucciones.
-O escríbenos a <b>hola@micompaz.com</b> y te ayudamos.`
+O escríbenos a <b>hola@micompaz.com</b> y te ayudamos.
+
+━━━━━━━━━━━━━━━━━━━
+
+🔒 <b>Aviso de seguridad:</b> Compaz nunca te pedirá contraseñas, datos bancarios, números de cédula ni información privada por este chat ni por ningún otro medio. Si alguien te los solicita diciendo ser de Compaz, no respondas y avísanos de inmediato a hola@micompaz.com.`
 
 const PREGUNTAS_REPORTE = [
   { emoji: '😊', label: 'Ánimo', texto: '¿Cómo estaba el <b>ánimo</b> de la persona durante la visita?' },
@@ -554,7 +558,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
       await setEstado(supabase, chatId, { registro_pendiente: true, pendiente_accion: null, pendiente_expira: null })
       await sendTelegramMessage(
         chatId,
-        `¡Bienvenido a Compaz! 👋\n\nSoy el asistente que te acompañará en cada visita.\n\nPrimero necesito verificar tu cuenta. ✍️ Escríbeme tu <b>nombre completo</b> tal como lo pusiste cuando te registraste. No importa si usas mayúsculas o no.\n\n<i>Por ejemplo: María González</i>`,
+        `¡Bienvenido a Compaz! 👋\n\nSoy el asistente que te acompañará en cada visita.\n\nPrimero necesito verificar tu cuenta. ✍️ Escríbeme tu <b>nombre completo</b> tal como lo pusiste cuando te registraste. No importa si usas mayúsculas o no.\n\n<i>Por ejemplo: María González</i>\n\n━━━━━━━━━━━━━━━━━━━\n\n🔒 <b>Aviso de seguridad:</b> Compaz nunca te pedirá contraseñas, datos bancarios, números de cédula ni información privada por este chat ni por ningún otro medio. Si alguien te los solicita diciendo ser de Compaz, no respondas y avísanos a hola@micompaz.com.`,
         QUITAR_TECLADO,
       )
     }

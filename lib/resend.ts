@@ -161,6 +161,11 @@ export async function sendBienvenidaCompita(
           </table>
         </div>
 
+        <div style="background:#FFF3E8;border-left:4px solid #FF6B2B;border-radius:0 8px 8px 0;padding:14px 16px;margin-bottom:20px">
+          <p style="color:#B91C1C;font-weight:700;font-size:13px;margin:0 0 4px;font-family:Inter,sans-serif">🔒 Aviso de seguridad</p>
+          <p style="color:#1A0A3C;font-size:13px;line-height:1.6;margin:0">Compaz nunca te pedirá contraseñas, datos bancarios, números de cédula ni información privada por correo, chat ni ningún otro medio. Tampoco te pediremos que hagas transferencias de dinero directamente a una persona. Si alguien te lo solicita diciendo ser de Compaz, no respondas y avísanos a <a href="mailto:hola@micompaz.com" style="color:#FF6B2B">hola@micompaz.com</a>.</p>
+        </div>
+
         <p style="color:#4A3B6B;font-size:15px;line-height:1.6;margin-bottom:8px">
           Cualquier duda, escríbenos directamente en Telegram o responde a este correo. ¡Estamos para ayudarte!
         </p>
@@ -229,6 +234,11 @@ export async function sendBienvenidaCliente(email: string, nombre: string, enlac
         <p style="color:#6B5C90;font-size:13px;line-height:1.6;margin:0 0 28px">
           Este enlace es personal, funciona una sola vez y <strong>vence en 1 hora</strong>. Después podrás entrar siempre desde micompaz.com/login: escribes tu correo y te enviamos un enlace nuevo. Si este enlace venció, entra a micompaz.com/login, escribe tu correo y te enviamos uno nuevo al instante.
         </p>
+
+        <div style="background:#FFF3E8;border-left:4px solid #FF6B2B;border-radius:0 8px 8px 0;padding:14px 16px;margin-bottom:20px">
+          <p style="color:#B91C1C;font-weight:700;font-size:13px;margin:0 0 4px;font-family:Inter,sans-serif">🔒 Aviso de seguridad</p>
+          <p style="color:#1A0A3C;font-size:13px;line-height:1.6;margin:0">Compaz nunca te pedirá contraseñas, datos bancarios, números de cédula ni información privada por correo, chat ni ningún otro medio. Tampoco te pediremos que hagas transferencias de dinero directamente a una persona. Si alguien te lo solicita diciendo ser de Compaz, no respondas y avísanos a <a href="mailto:hola@micompaz.com" style="color:#FF6B2B">hola@micompaz.com</a>.</p>
+        </div>
 
         <p style="color:#4A3B6B;font-size:15px;line-height:1.6;margin-top:8px">
           Cualquier duda, responde este correo o escríbenos a <a href="mailto:hola@micompaz.com" style="color:#FF6B2B">hola@micompaz.com</a>.
