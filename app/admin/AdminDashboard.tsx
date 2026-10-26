@@ -509,7 +509,7 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
       {/* Tabs */}
       <div style={{ background: 'white', borderBottom: '2px solid #E8E0D4', display: 'flex', padding: '0 24px', overflowX: 'auto' }}>
         <button style={tabStyle('visitas')} onClick={() => setTab('visitas')}>Visitas activas</button>
-        <button style={tabStyle('clientes')} onClick={() => setTab('clientes')}>Clientes ({usuarios.filter((u) => u.activado && u.plan !== 'bloqueado').length})</button>
+        <button style={tabStyle('clientes')} onClick={() => setTab('clientes')}>Clientes ({usuarios.length})</button>
         <button style={tabStyle('compitas')} onClick={() => setTab('compitas')}>
           Compitas ({compitasVerificadas.length}) {compitasPendientes.length > 0 && <span style={{ background: '#FF6B2B', color: 'white', borderRadius: '9999px', padding: '1px 7px', fontSize: '11px', fontWeight: 800, marginLeft: '4px' }}>{compitasPendientes.length}</span>}
         </button>
