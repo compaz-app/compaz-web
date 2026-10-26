@@ -472,6 +472,15 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
                 {s.room_url && (
                   <a href={s.room_url} target="_blank" rel="noreferrer" style={{ color: '#FF6B2B', fontWeight: 700, textDecoration: 'none', fontSize: '11px' }}>Unirse →</a>
                 )}
+                <button
+                  onClick={async () => {
+                    if (!confirm('¿Marcar esta llamada como completada y cerrar el banner?')) return
+                    await fetch('/api/admin/completar-solicitud', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: s.id }) })
+                    window.location.reload()
+                  }}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6B7280', fontSize: '14px', lineHeight: 1, padding: '0 2px' }}
+                  title="Cerrar — la llamada ya terminó"
+                >✕</button>
               </span>
             )
           })}
