@@ -154,6 +154,7 @@ function OnboardingForm() {
   const [horarioInicio, setHorarioInicio] = useState('08:00')
   const [horarioFin, setHorarioFin] = useState('17:00')
   const [horarioError, setHorarioError] = useState<string | null>(null)
+  const [guiaYoutube, setGuiaYoutube] = useState(false)
 
   const ORDEN_DIAS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo']
 
@@ -644,16 +645,41 @@ function OnboardingForm() {
               </div>
             </div>
 
-            <div style={{ background: 'white', borderRadius: '12px', padding: '14px 16px', marginBottom: '14px' }}>
-              <p style={{ fontSize: '12px', fontWeight: 700, color: '#1A0A3C', marginBottom: '8px' }}>Tips para grabar tu video:</p>
-              <ul style={{ fontSize: '13px', color: '#4A3B6B', paddingLeft: '18px', lineHeight: '1.9', margin: 0 }}>
-                <li>Graba en una zona bien iluminada, preferiblemente con luz natural</li>
-                <li>Habla con calma, mira directo a la cámara y sonríe</li>
-                <li>Evita ruido de fondo: apaga el televisor y cierra puertas</li>
-                <li>Viste ropa limpia y ordenada, como si fuera a una entrevista</li>
-                <li>Di tu nombre, cuéntanos quién eres y por qué serías una buena compañía</li>
-                <li>Sube el video a YouTube como «No listado» <span style={{ color: '#6B5C90', fontWeight: 400 }}>(significa que solo quien tenga el link puede verlo — no aparece en búsquedas)</span> y pega el enlace aquí</li>
-              </ul>
+            <div style={{ background: 'white', borderRadius: '12px', marginBottom: '14px', overflow: 'hidden' as const }}>
+              <button
+                type="button"
+                onClick={() => setGuiaYoutube((v) => !v)}
+                style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' as const }}
+              >
+                <span style={{ fontSize: '13px', fontWeight: 700, color: '#1A0A3C', fontFamily: 'Bricolage Grotesque, sans-serif' }}>
+                  ¿Cómo grabo y subo el video?
+                </span>
+                <span style={{ fontSize: '16px', color: '#4A3B6B', transform: guiaYoutube ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', display: 'inline-block' }}>▾</span>
+              </button>
+              {guiaYoutube && (
+                <div style={{ padding: '0 16px 16px', borderTop: '1px solid rgba(45,20,100,0.08)' }}>
+                  <p style={{ fontSize: '12px', fontWeight: 700, color: '#4A3B6B', textTransform: 'uppercase' as const, letterSpacing: '0.05em', margin: '12px 0 8px' }}>
+                    Cómo grabar
+                  </p>
+                  <ol style={{ fontSize: '13px', color: '#4A3B6B', paddingLeft: '18px', lineHeight: '1.9', margin: 0 }}>
+                    <li>Busca buena luz natural (frente a una ventana funciona bien).</li>
+                    <li>Pon el teléfono <strong>vertical</strong> y apóyalo para que no se mueva.</li>
+                    <li>Apaga el televisor y cierra puertas para evitar ruido.</li>
+                    <li>Viste ropa limpia como si fuera a una entrevista, mira a la cámara y sonríe.</li>
+                    <li>Di tu nombre, quién eres y por qué serías una buena compañía. <strong>Entre 1 y 1:30 minutos.</strong></li>
+                  </ol>
+                  <p style={{ fontSize: '12px', fontWeight: 700, color: '#4A3B6B', textTransform: 'uppercase' as const, letterSpacing: '0.05em', margin: '14px 0 8px' }}>
+                    Cómo subir a YouTube como «No listado»
+                  </p>
+                  <ol style={{ fontSize: '13px', color: '#4A3B6B', paddingLeft: '18px', lineHeight: '1.9', margin: 0 }}>
+                    <li>Abre YouTube en tu teléfono y toca el <strong>+</strong> abajo al centro.</li>
+                    <li>Selecciona <strong>«Subir un video»</strong> y elige el archivo que grabaste.</li>
+                    <li>En <strong>«Visibilidad»</strong>, elige <strong>«No listado»</strong> — solo quien tenga el link puede verlo, no aparece en búsquedas.</li>
+                    <li>Toca <strong>«Subir»</strong> y espera a que termine.</li>
+                    <li>Copia el link del video y pégalo en el campo de abajo.</li>
+                  </ol>
+                </div>
+              )}
             </div>
             <input
               value={form.youtube_url}
@@ -668,8 +694,8 @@ function OnboardingForm() {
             <div style={{ background: '#FFF3CD', border: '1px solid #FFCC00', borderRadius: '10px', padding: '12px 16px', fontSize: '13px', color: '#7A5800', lineHeight: '1.6' }}>
               Para continuar necesitas:
               <ul style={{ margin: '6px 0 0', paddingLeft: '18px' }}>
-                {zonas.length === 0 && <li>Agregar al menos una <strong>zona de trabajo</strong></li>}
-                {form.servicios.length === 0 && <li>Seleccionar al menos un <strong>servicio</strong></li>}
+                {zonas.length === 0 && <li>Agregar al menos una zona en <strong>Zonas que puedes cubrir</strong></li>}
+                {form.servicios.length === 0 && <li>Seleccionar al menos un item en <strong>Servicios que ofreces</strong></li>}
               </ul>
             </div>
           )}
