@@ -47,6 +47,74 @@ const SERVICIOS_GRUPOS = [
   },
 ]
 
+// ── Barra de progreso ─────────────────────────────────────────────────────────
+
+function BarraProgreso({ paso }: { paso: 1 | 2 }) {
+  const pasos = ['Tu perfil', 'Telegram']
+  return (
+    <nav style={{
+      background: '#1A0A3C',
+      padding: '0 20px',
+      position: 'sticky',
+      top: 0,
+      zIndex: 40,
+    }}>
+      <div style={{ maxWidth: '640px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', height: '56px' }}>
+        <span style={{ color: 'white', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '18px', flexShrink: 0 }}>
+          Compaz
+        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          {pasos.map((nombre, idx) => {
+            const num = idx + 1
+            const activo = num === paso
+            const hecho = num < paso
+            return (
+              <div key={nombre} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                {idx > 0 && (
+                  <div style={{ width: '24px', height: '2px', background: hecho ? '#FF6B2B' : 'rgba(255,255,255,0.25)', flexShrink: 0 }} />
+                )}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  background: activo ? '#FF6B2B' : hecho ? 'rgba(255,107,43,0.25)' : 'rgba(255,255,255,0.1)',
+                  borderRadius: '9999px',
+                  padding: '4px 10px 4px 6px',
+                }}>
+                  <div style={{
+                    width: '20px',
+                    height: '20px',
+                    borderRadius: '50%',
+                    background: activo ? 'white' : hecho ? '#FF6B2B' : 'rgba(255,255,255,0.3)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '11px',
+                    fontWeight: 800,
+                    color: activo ? '#FF6B2B' : 'white',
+                    flexShrink: 0,
+                  }}>
+                    {hecho ? '✓' : num}
+                  </div>
+                  <span style={{
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    color: activo ? 'white' : hecho ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.45)',
+                    fontFamily: 'Inter, sans-serif',
+                    whiteSpace: 'nowrap' as const,
+                  }}>
+                    {nombre}
+                  </span>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </nav>
+  )
+}
+
 // ── Componente ────────────────────────────────────────────────────────────────
 
 function OnboardingForm() {
@@ -230,8 +298,10 @@ function OnboardingForm() {
 
   if (step === 'telegram') {
     return (
-      <div style={s.center}>
-        <div style={{ ...s.card, maxWidth: '520px' }}>
+      <div style={{ minHeight: '100vh', background: '#FDFAF6', fontFamily: 'Inter, sans-serif' }}>
+        <BarraProgreso paso={2} />
+        <div style={{ maxWidth: '520px', margin: '0 auto', padding: '40px 20px 80px' }}>
+        <div style={{ ...s.card, maxWidth: '520px', textAlign: 'left' as const }}>
           <h2 style={s.h2}>¡Ya eres parte de Compaz, {form.nombre.split(' ')[0]}!</h2>
           <p style={{ color: '#6B5C90', marginTop: '8px', marginBottom: '16px', lineHeight: '1.7' }}>
             Tu perfil fue creado exitosamente. Falta un paso importante:
@@ -288,24 +358,21 @@ function OnboardingForm() {
             Abrir bot en Telegram
           </a>
         </div>
+        </div>
       </div>
     )
   }
 
   return (
     <div style={{ minHeight: '100vh', background: '#FDFAF6', fontFamily: 'Inter, sans-serif' }}>
-      <nav style={s.nav}>
-        <span style={s.logo}>Compaz</span>
-        <span style={s.badge}>Registro de Compita</span>
-      </nav>
-
-      <div style={{ maxWidth: '640px', margin: '0 auto', padding: '40px 20px 80px' }}>
+      <BarraProgreso paso={1} />
+      <div style={{ maxWidth: '640px', margin: '0 auto', padding: '40px 20px 100px' }}>
         <h1 style={s.h1}>Bienvenida a Compaz</h1>
         <p style={{ color: '#6B5C90', marginBottom: '32px', lineHeight: '1.6' }}>
           Completa tu perfil para empezar a recibir visitas. Solo toma unos minutos.
         </p>
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        <form id="form-onboarding" onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
 
           {/* Nombre */}
           <div>
@@ -606,12 +673,29 @@ function OnboardingForm() {
               </ul>
             </div>
           )}
+        </form>
+      </div>
+
+      {/* Botón sticky en el fondo */}
+      <div style={{
+        position: 'fixed',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        background: 'rgba(253,250,246,0.95)',
+        backdropFilter: 'blur(8px)',
+        borderTop: '1px solid rgba(45,20,100,0.12)',
+        padding: '12px 20px',
+        zIndex: 50,
+      }}>
+        <div style={{ maxWidth: '640px', margin: '0 auto' }}>
           {errorForm && (
-            <div style={{ background: '#FEF2F2', border: '2px solid #FCA5A5', borderRadius: '12px', padding: '12px 16px', color: '#B91C1C', fontSize: '14px', fontWeight: 600, fontFamily: 'Inter, sans-serif' }}>
+            <p style={{ color: '#B91C1C', fontSize: '13px', fontWeight: 600, marginBottom: '8px', textAlign: 'center' as const }}>
               ⚠️ {errorForm}
-            </div>
+            </p>
           )}
           <button
+            form="form-onboarding"
             type="submit"
             disabled={loading || form.servicios.length === 0 || zonas.length === 0}
             style={{
@@ -620,9 +704,9 @@ function OnboardingForm() {
               cursor: (loading || form.servicios.length === 0 || zonas.length === 0) ? 'not-allowed' : 'pointer',
             }}
           >
-            {loading ? 'Registrando…' : 'Crear mi perfil'}
+            {loading ? 'Registrando…' : 'Crear mi perfil → paso 2 de 2'}
           </button>
-        </form>
+        </div>
       </div>
     </div>
   )
