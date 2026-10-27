@@ -206,13 +206,6 @@ function OnboardingForm() {
     setHorarioError(null)
   }
 
-  function agregarZona() {
-    if (!estado || !municipio) return
-    const nueva = `${estado} — ${municipio}`
-    if (!zonas.includes(nueva)) setZonas((prev) => [...prev, nueva])
-    setMunicipio('')
-  }
-
   function quitarZona(z: string) {
     setZonas((prev) => prev.filter((x) => x !== z))
   }
@@ -397,15 +390,22 @@ function OnboardingForm() {
             {zonas.length > 0 && (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
                 {zonas.map((z) => (
-                  <span key={z} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#2D1464', color: 'white', borderRadius: '9999px', padding: '6px 12px', fontSize: '13px', fontWeight: 600 }}>
+                  <span key={z} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#2D1464', color: 'white', borderRadius: '9999px', padding: '6px 6px 6px 14px', fontSize: '13px', fontWeight: 600 }}>
                     {z}
-                    <button type="button" onClick={() => quitarZona(z)} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '16px', lineHeight: 1, padding: 0, opacity: 0.7 }}>×</button>
+                    <button
+                      type="button"
+                      onClick={() => quitarZona(z)}
+                      aria-label={`Quitar ${z}`}
+                      style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '28px', height: '28px', background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '50%', color: 'white', cursor: 'pointer', fontSize: '16px', fontWeight: 700, lineHeight: 1, flexShrink: 0 }}
+                    >
+                      ×
+                    </button>
                   </span>
                 ))}
               </div>
             )}
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '10px', alignItems: 'end' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', alignItems: 'end' }}>
               <div>
                 <label style={{ ...s.label, fontSize: '12px', marginBottom: '4px' }}>Estado</label>
                 <select value={estado} onChange={(e) => { setEstado(e.target.value); setMunicipio('') }} style={s.input}>
@@ -417,21 +417,25 @@ function OnboardingForm() {
               </div>
               <div>
                 <label style={{ ...s.label, fontSize: '12px', marginBottom: '4px' }}>Municipio</label>
-                <select value={municipio} onChange={(e) => setMunicipio(e.target.value)} disabled={!estado} style={{ ...s.input, opacity: estado ? 1 : 0.5 }}>
-                  <option value="">Seleccionar…</option>
+                <select
+                  value={municipio}
+                  disabled={!estado}
+                  onChange={(e) => {
+                    const mun = e.target.value
+                    if (!mun) return
+                    setMunicipio(mun)
+                    const nueva = `${estado} — ${mun}`
+                    if (!zonas.includes(nueva)) setZonas((prev) => [...prev, nueva])
+                    setMunicipio('')
+                  }}
+                  style={{ ...s.input, opacity: estado ? 1 : 0.5 }}
+                >
+                  <option value="">Seleccionar municipio…</option>
                   {(ZONAS[estado] ?? []).sort().map((mun) => (
                     <option key={mun} value={mun}>{mun}</option>
                   ))}
                 </select>
               </div>
-              <button
-                type="button"
-                onClick={agregarZona}
-                disabled={!estado || !municipio}
-                style={{ background: '#FF6B2B', color: 'white', border: 'none', borderRadius: '12px', padding: '12px 16px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '14px', cursor: estado && municipio ? 'pointer' : 'not-allowed', opacity: estado && municipio ? 1 : 0.4, whiteSpace: 'nowrap' }}
-              >
-                + Agregar
-              </button>
             </div>
           </div>
 
