@@ -155,8 +155,10 @@ function OnboardingForm() {
   const [horarioFin, setHorarioFin] = useState('17:00')
   const [horarioError, setHorarioError] = useState<string | null>(null)
   const [guiaYoutube, setGuiaYoutube] = useState(false)
+  const [tieneBorrador, setTieneBorrador] = useState(false)
 
   const ORDEN_DIAS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo']
+  const BORRADOR_KEY = `compaz_onboarding_${token || 'preview'}`
 
   function seSuperpone(existentes: HorarioItem[], dia: string, inicio: string, fin: string): boolean {
     return existentes.some(
@@ -219,6 +221,29 @@ function OnboardingForm() {
       .catch(() => setTokenValido(false))
   }, [token, preview])
 
+  // Cargar borrador guardado
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(BORRADOR_KEY)
+      if (!raw) return
+      const saved = JSON.parse(raw)
+      if (saved.form) setForm(saved.form)
+      if (saved.zonas) setZonas(saved.zonas)
+      if (saved.horarios) setHorarios(saved.horarios)
+      setTieneBorrador(true)
+    } catch { /* localStorage bloqueado o dato corrupto */ }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [BORRADOR_KEY])
+
+  // Guardar borrador en cada cambio
+  useEffect(() => {
+    try {
+      const hayAlgo = form.nombre || form.email || form.descripcion || zonas.length > 0 || horarios.length > 0
+      if (!hayAlgo) return
+      localStorage.setItem(BORRADOR_KEY, JSON.stringify({ form, zonas, horarios }))
+    } catch { /* localStorage bloqueado */ }
+  }, [form, zonas, horarios, BORRADOR_KEY])
+
   function toggleServicio(s: string) {
     setForm((prev) => ({
       ...prev,
@@ -265,6 +290,7 @@ function OnboardingForm() {
       })
 
       if (res.ok) {
+        try { localStorage.removeItem(BORRADOR_KEY) } catch { /* ignorar */ }
         setStep('telegram')
       } else {
         const d = await res.json()
@@ -362,9 +388,15 @@ function OnboardingForm() {
       <BarraProgreso paso={1} />
       <div style={{ maxWidth: '640px', margin: '0 auto', padding: '40px 20px 100px' }}>
         <h1 style={s.h1}>Bienvenida a Compaz</h1>
-        <p style={{ color: '#6B5C90', marginBottom: '32px', lineHeight: '1.6' }}>
+        <p style={{ color: '#6B5C90', marginBottom: tieneBorrador ? '12px' : '32px', lineHeight: '1.6' }}>
           Completa tu perfil para empezar a recibir visitas. Solo toma unos minutos.
         </p>
+        {tieneBorrador && (
+          <div style={{ background: '#EDE8FF', border: '2px solid rgba(45,20,100,0.2)', borderRadius: '12px', padding: '10px 16px', marginBottom: '32px', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: '#2D1464', fontWeight: 600 }}>
+            <span style={{ fontSize: '16px' }}>💾</span>
+            Continuamos donde lo dejaste — tus datos están guardados en este dispositivo.
+          </div>
+        )}
 
         <form id="form-onboarding" onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
 
