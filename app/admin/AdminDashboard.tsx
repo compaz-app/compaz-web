@@ -1929,6 +1929,12 @@ function SolicitudesTab({ solicitudes }: { solicitudes: SolicitudAdmin[] }) {
   const [filtro, setFiltro] = useState<'todas' | 'pendiente' | 'aceptada' | 'rechazada'>('todas')
   const [enviandoLink, setEnviandoLink] = useState<string | null>(null)
   const [linkEnviado, setLinkEnviado] = useState<string | null>(null)
+  const [ahora, setAhora] = useState(() => Date.now())
+
+  useEffect(() => {
+    const id = setInterval(() => setAhora(Date.now()), 60_000)
+    return () => clearInterval(id)
+  }, [])
 
   async function enviarLink(solicitudId: string) {
     if (!confirm('¿Enviar el link de llamada al cliente?')) return
@@ -1988,7 +1994,7 @@ function SolicitudesTab({ solicitudes }: { solicitudes: SolicitudAdmin[] }) {
       ) : lista.map((s) => {
         const isPendiente = s.estado === 'pendiente'
         const isAceptada = s.estado === 'aceptada'
-        const salaVigente = isAceptada && !!s.slot_confirmado && (Date.now() < new Date(s.slot_confirmado).getTime() + 30 * 60 * 1000)
+        const salaVigente = isAceptada && !!s.slot_confirmado && (ahora < new Date(s.slot_confirmado).getTime() + 30 * 60 * 1000)
         const borderColor = isPendiente ? '#FF6B2B' : isAceptada ? '#22c55e' : '#E8E0D4'
         return (
           <div key={s.id} style={{ background: 'white', border: `2px solid ${borderColor}`, borderRadius: '16px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
