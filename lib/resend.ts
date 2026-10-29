@@ -137,7 +137,7 @@ export async function sendBienvenidaCompita(
           <p style="color:#FF6B2B;font-weight:800;font-size:13px;margin:0 0 8px 0;text-transform:uppercase;letter-spacing:1px">Paso 2</p>
           <h2 style="color:#2D1464;font-size:18px;margin:0 0 12px 0">Completa tu perfil ✏️</h2>
           <p style="color:#4A3B6B;font-size:15px;line-height:1.6;margin:0">
-            Desde Telegram escribe <strong>/perfil</strong> para editar tu página: foto, descripción, servicios, horarios y video de YouTube. Las familias comparan perfiles — uno completo tiene muchas más posibilidades de ser elegido.
+            Si ya completaste tu perfil al inscribirte, salta este paso. Si no, desde Telegram escribe <strong>/perfil</strong> para editar tu página: foto, descripción, servicios, horarios y video de YouTube. Las familias comparan perfiles — uno completo tiene muchas más posibilidades de ser elegido.
           </p>
         </div>
 
@@ -145,11 +145,8 @@ export async function sendBienvenidaCompita(
         <div style="background:white;border:2px solid #E8E0D4;border-radius:16px;padding:24px;margin-bottom:24px">
           <p style="color:#FF6B2B;font-weight:800;font-size:13px;margin:0 0 8px 0;text-transform:uppercase;letter-spacing:1px">Paso 3</p>
           <h2 style="color:#2D1464;font-size:18px;margin:0 0 12px 0">¡Listo! Ahora espera a que lleguen las familias 🤝</h2>
-          <p style="color:#4A3B6B;font-size:15px;line-height:1.6;margin:0 0 12px 0">
-            Cuando una familia quiera conocerte, recibirás un mensaje de Telegram con todos los detalles. Desde ahí puedes <strong>aceptar o rechazar</strong> la solicitud y coordinar el horario de la videollamada.
-          </p>
           <p style="color:#4A3B6B;font-size:15px;line-height:1.6;margin:0">
-            Recuerda que las familias comparan varios perfiles antes de elegir. Una foto clara, una descripción que transmita tu personalidad y un video de presentación pueden ser lo que te haga destacar. Mientras más cuidado esté tu perfil, más probabilidades tienes de que te escojan a ti.
+            Cuando una familia quiera conocerte, recibirás un mensaje de Telegram con todos los detalles. Desde ahí puedes <strong>aceptar o rechazar</strong> la solicitud y coordinar el horario de la videollamada.
           </p>
         </div>
 
