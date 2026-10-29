@@ -88,15 +88,19 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
   const [resenasCargadas, setResenasCargadas] = useState(false)
 
   useEffect(() => {
-    fetch('/api/admin/flags')
-      .then((r) => r.json())
-      .then((d) => {
-        if (!Array.isArray(d.data)) return
-        setFlags(d.data)
-        // Emergencias no resueltas al cargar
-        const emgs = (d.data as AdminFlag[]).filter((f) => f.entidad_nombre?.startsWith('🚨') && !f.resuelto)
-        if (emgs.length) setEmergencias(emgs)
-      })
+    function cargarFlags() {
+      fetch('/api/admin/flags')
+        .then((r) => r.json())
+        .then((d) => {
+          if (!Array.isArray(d.data)) return
+          setFlags(d.data)
+          const emgs = (d.data as AdminFlag[]).filter((f) => f.entidad_nombre?.startsWith('🚨') && !f.resuelto)
+          if (emgs.length) setEmergencias(emgs)
+        })
+    }
+    cargarFlags()
+    const t = setInterval(cargarFlags, 120_000)
+    return () => clearInterval(t)
   }, [])
 
   // Realtime: nuevos flags de emergencia
