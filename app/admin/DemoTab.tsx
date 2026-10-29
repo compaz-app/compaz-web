@@ -350,11 +350,24 @@ export default function DemoTab() {
         </Box>
       )}
 
-      {/* Botón de refresco manual */}
-      <div style={{ marginTop: '24px', paddingTop: '16px', borderTop: `1px solid ${BORDER}` }}>
+      {/* Botones de control */}
+      <div style={{ marginTop: '24px', paddingTop: '16px', borderTop: `1px solid ${BORDER}`, display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
         <button style={secondaryBtn()} onClick={() => { setMsg(null); cargar() }}>
           🔄 Refrescar estado
         </button>
+        {stage !== 'esperando_solicitud' && (
+          <button
+            disabled={cargando}
+            style={{ ...secondaryBtn(), background: '#FEF2F2', color: '#991B1B', borderColor: '#FECACA' }}
+            onClick={async () => {
+              if (!confirm('¿Reiniciar la demo? Esto cancela solicitudes y visitas activas del compita demo.')) return
+              await accion('/api/admin/demo/reset', {}, 'Demo reiniciado — listo para empezar de nuevo')
+              setSalaAdmin(null)
+            }}
+          >
+            🗑️ Reiniciar demo
+          </button>
+        )}
       </div>
     </div>
   )
