@@ -41,6 +41,7 @@ export interface Compita {
   // Rating público (promedio 1-5 de visitas calificadas)
   rating_promedio: number | null
   total_ratings: number
+  es_demo: boolean
   // Stats calculados en runtime (no en BD)
   tasa_aceptacion?: number | null
   total_solicitudes?: number

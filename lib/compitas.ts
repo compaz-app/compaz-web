@@ -7,11 +7,11 @@ import type { Compita } from '@/types'
 // Campos públicos seguros para mostrar a clientes
 // telegram_chat_id excluido intencionalmente — es dato personal del trabajador
 const PUBLIC_FIELDS =
-  'id, nombre, zona, estado, verificado, foto_url, descripcion, servicios, youtube_url, visitas_realizadas, horarios_disponibles, created_at' as const
+  'id, nombre, zona, estado, verificado, foto_url, descripcion, servicios, youtube_url, visitas_realizadas, horarios_disponibles, created_at, es_demo' as const
 
 /**
  * Compitas visibles en el marketplace y en el mapa.
- * Solo activas y verificadas.
+ * Activas y verificadas con Telegram, MÁS las demos activas y verificadas.
  */
 export async function getCompitasActivas(): Promise<Compita[]> {
   const supabase = createAdminSupabase()
@@ -20,7 +20,7 @@ export async function getCompitasActivas(): Promise<Compita[]> {
     .select(PUBLIC_FIELDS)
     .eq('estado', 'activo')
     .eq('verificado', true)
-    .not('telegram_chat_id', 'is', null)
+    .or('telegram_chat_id.not.is.null,es_demo.eq.true')
     .order('visitas_realizadas', { ascending: false })
 
   if (error) throw new Error(error.message)

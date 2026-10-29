@@ -173,8 +173,9 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
   })
 
   const compitasPendientes = compitas.filter((c) => !c.verificado)
-  const compitasEnMapa = compitas.filter((c) => c.estado === 'activo' && c.verificado && !!c.telegram_chat_id)
-  const compitasSinTelegram = compitas.filter((c) => c.estado === 'activo' && c.verificado && !c.telegram_chat_id)
+  const compitasEnMapa = compitas.filter((c) => c.estado === 'activo' && c.verificado && (!!c.telegram_chat_id || c.es_demo))
+  const compitasSinTelegram = compitas.filter((c) => c.estado === 'activo' && c.verificado && !c.telegram_chat_id && !c.es_demo)
+  const compitasDemo = compitas.filter((c) => c.es_demo)
   const compitasVerificadas = compitas.filter((c) => c.estado === 'activo' && c.verificado)
   const compitasInactivas = compitas.filter((c) => c.estado === 'inactivo' && c.verificado)
   const compitasBloqueadas = compitas.filter((c) => c.estado === 'bloqueado')
@@ -727,6 +728,39 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
                   </div>
 
                   {totalActivas === 0 && !busqueda && null}
+
+                  {/* Sección demos — solo si hay alguna */}
+                  {(() => {
+                    const demos = filtrar(compitasDemo)
+                    if (demos.length === 0) return null
+                    const todosSeleccionados = demos.every((c) => seleccionadosCompitas.has(c.id))
+                    return (
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px', flexWrap: 'wrap' }}>
+                          <span style={{ background: '#FFF3E8', border: '2px solid #FF6B2B', color: '#C84B0E', borderRadius: '9999px', padding: '3px 12px', fontSize: '12px', fontWeight: 800, fontFamily: 'Bricolage Grotesque, sans-serif' }}>
+                            🎭 Demos — {demos.length}
+                          </span>
+                          <span style={{ fontSize: '12px', color: '#9B8AB8' }}>Perfiles de demostración</span>
+                          <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                            <button
+                              onClick={() => { if (todosSeleccionados) { demos.forEach((c) => setSeleccionadosCompitas((p) => { const n = new Set(p); n.delete(c.id); return n })) } else { demos.forEach((c) => setSeleccionadosCompitas((p) => new Set(p).add(c.id))) } }}
+                              style={{ background: 'white', color: '#C84B0E', border: '2px solid #FF6B2B', borderRadius: '9999px', padding: '4px 12px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '12px', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                            >
+                              {todosSeleccionados ? 'Deseleccionar todos' : 'Seleccionar todos los demos'}
+                            </button>
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          {demos.map((c) => (
+                            <div key={c.id} style={{ position: 'relative' }}>
+                              <div style={{ position: 'absolute', top: '8px', right: '8px', zIndex: 1, background: '#FF6B2B', color: 'white', borderRadius: '9999px', padding: '2px 8px', fontSize: '11px', fontWeight: 800, fontFamily: 'Bricolage Grotesque, sans-serif' }}>DEMO</div>
+                              <CompitaCard c={c} onToggleVerificado={toggleVerificado} onToggleEstado={toggleEstado} onVerPerfil={(id) => { setCompitaPerfilId(id); setTab('perfil') }} onToggleBloqueado={toggleBloqueado} onEliminar={eliminarCompita} onMarcar={(id, nombre) => setFlagModal({ entidad_tipo: 'compita', entidad_id: id, entidad_nombre: nombre })} seleccionado={seleccionadosCompitas.has(c.id)} onToggleSeleccion={toggleUnoCompita} />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  })()}
                 </>
               )
             })()}
@@ -1879,6 +1913,7 @@ function RegistrarCompitaDirecto({ onRegistrada }: { onRegistrada: (c: Compita) 
   const [subiendo, setSubiendo] = useState(false)
   const [fotoUrl, setFotoUrl] = useState<string | null>(null)
   const fotoRef = useRef<HTMLInputElement>(null)
+  const [esDemo, setEsDemo] = useState(false)
   const [estado, setEstado] = useState<'idle' | 'enviando' | 'ok' | 'error'>('idle')
   const [error, setError] = useState('')
 
@@ -1899,7 +1934,7 @@ function RegistrarCompitaDirecto({ onRegistrada }: { onRegistrada: (c: Compita) 
 
   function limpiar() {
     setNombre(''); setZonas([]); setEstadoZona(''); setDescripcion('')
-    setServicios([]); setFotoPreview(null); setFotoUrl(null); setYoutubeUrl(''); setEmailCompita('')
+    setServicios([]); setFotoPreview(null); setFotoUrl(null); setYoutubeUrl(''); setEmailCompita(''); setEsDemo(false)
   }
 
   async function registrar() {
@@ -1910,7 +1945,7 @@ function RegistrarCompitaDirecto({ onRegistrada }: { onRegistrada: (c: Compita) 
     const res = await fetch('/api/admin/registrar-compita', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nombre, zona, descripcion, servicios, foto_url: fotoUrl ?? null, youtube_url: youtubeUrl || null, email: emailCompita || null }),
+      body: JSON.stringify({ nombre, zona, descripcion, servicios, foto_url: fotoUrl ?? null, youtube_url: youtubeUrl || null, email: emailCompita || null, es_demo: esDemo }),
     })
     const d = await res.json()
     if (res.ok && d.ok) {
@@ -2016,6 +2051,15 @@ function RegistrarCompitaDirecto({ onRegistrada }: { onRegistrada: (c: Compita) 
 
           {/* YouTube */}
           <div>{lbl('URL de YouTube (opcional)')}{inp(youtubeUrl, setYoutubeUrl, 'https://youtube.com/watch?v=...')}</div>
+
+          {/* Demo */}
+          <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', padding: '10px 14px', background: esDemo ? '#FFF3E8' : '#F5F0FF', border: `2px solid ${esDemo ? '#FF6B2B' : '#D4C9E8'}`, borderRadius: '12px' }}>
+            <input type="checkbox" checked={esDemo} onChange={(e) => setEsDemo(e.target.checked)} style={{ width: '18px', height: '18px', accentColor: '#FF6B2B', cursor: 'pointer', flexShrink: 0 }} />
+            <div>
+              <div style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '14px', color: esDemo ? '#C84B0E' : '#4A3B6B' }}>Perfil demo</div>
+              <div style={{ fontFamily: 'Inter, sans-serif', fontSize: '12px', color: esDemo ? '#C84B0E' : '#9B8AB8', marginTop: '2px' }}>Aparece en el mapa sin necesitar Telegram. Se puede borrar en lote desde la sección Demos.</div>
+            </div>
+          </label>
 
           {estado === 'error' && <p style={{ margin: 0, color: '#B91C1C', fontSize: '13px', fontWeight: 600 }}>⚠️ {error}</p>}
           <button
