@@ -1988,6 +1988,7 @@ function SolicitudesTab({ solicitudes }: { solicitudes: SolicitudAdmin[] }) {
       ) : lista.map((s) => {
         const isPendiente = s.estado === 'pendiente'
         const isAceptada = s.estado === 'aceptada'
+        const salaVigente = isAceptada && !!s.slot_confirmado && (Date.now() < new Date(s.slot_confirmado).getTime() + 30 * 60 * 1000)
         const borderColor = isPendiente ? '#FF6B2B' : isAceptada ? '#22c55e' : '#E8E0D4'
         return (
           <div key={s.id} style={{ background: 'white', border: `2px solid ${borderColor}`, borderRadius: '16px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -2016,7 +2017,7 @@ function SolicitudesTab({ solicitudes }: { solicitudes: SolicitudAdmin[] }) {
                   {s.usuarios?.email} · {s.compitas?.zona ?? ''} · {new Date(s.created_at).toLocaleDateString('es-VE', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'America/Caracas' })}
                 </div>
               </div>
-              {isAceptada && s.slot_confirmado && (
+              {salaVigente && (
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', flexShrink: 0 }}>
                   {s.room_url && (
                     <a href={s.room_url} target="_blank" rel="noreferrer"
