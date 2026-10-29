@@ -1,12 +1,13 @@
 'use client'
 
 import { fotoSrc } from '@/lib/fotos'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createBrowserSupabase } from '@/lib/supabase'
 import type { Visita, Compita, Usuario, Mensaje } from '@/types'
 import type { SolicitudAdmin } from './page'
 import LogoutButton from '@/components/ui/LogoutButton'
+import { ZONAS_MUNICIPIOS as ZONAS } from '@/lib/venezuela'
 import RegistrarPago from '@/components/admin/RegistrarPago'
 
 type VisitaConRelaciones = Visita & { compita: Compita; usuario: Usuario }
@@ -1841,17 +1842,43 @@ function CompitaPerfilAdmin({ compita, onGuardado }: { compita: Compita; onGuard
   )
 }
 
-const SERVICIOS_OPCIONES = ['Acompañamiento', 'Cocina', 'Enfermería básica', 'Aseo del hogar', 'Movilidad', 'Medicamentos', 'Estimulación cognitiva', 'Compañía nocturna']
+const SERVICIOS_GRUPOS_ADMIN = [
+  { grupo: 'Compañía y ocio', items: ['Conversación y compañía', 'Juegos de mesa y entretenimiento', 'Lectura en voz alta', 'Manualidades y actividades creativas', 'Apoyo emocional', 'Acompañamiento espiritual o religioso', 'Ir a la iglesia o actividades de fe'] },
+  { grupo: 'Salidas y movilidad', items: ['Acompañamiento a citas y consultas', 'Paseos y caminatas', 'Compras y mandados', 'Trámites y diligencias'] },
+  { grupo: 'Actividad física y bienestar', items: ['Ejercicio y movilidad adaptada', 'Caminatas terapéuticas', 'Yoga o meditación', 'Fisioterapia (si tienes formación)', 'Artes marciales o deporte adaptado (si tienes formación)'] },
+  { grupo: 'Alimentación', items: ['Preparación de comidas simples', 'Acompañamiento a comer'] },
+]
+
+const inp = (v: string, onChange: (s: string) => void, placeholder: string, multiline?: boolean) =>
+  multiline ? (
+    <textarea value={v} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} rows={3}
+      style={{ border: '2px solid rgba(45,20,100,0.2)', borderRadius: '10px', padding: '9px 12px', fontFamily: 'Inter, sans-serif', fontSize: '16px', color: '#1A0A3C', background: 'white', outline: 'none', resize: 'vertical', width: '100%', boxSizing: 'border-box' as const }} />
+  ) : (
+    <input value={v} onChange={(e) => onChange(e.target.value)} placeholder={placeholder}
+      style={{ border: '2px solid rgba(45,20,100,0.2)', borderRadius: '10px', padding: '9px 12px', fontFamily: 'Inter, sans-serif', fontSize: '16px', color: '#1A0A3C', background: 'white', outline: 'none', width: '100%', boxSizing: 'border-box' as const }} />
+  )
+
+const inpSelect = (v: string, onChange: (s: string) => void, placeholder: string, options: string[], disabled?: boolean) => (
+  <select value={v} onChange={(e) => onChange(e.target.value)} disabled={disabled}
+    style={{ border: '2px solid rgba(45,20,100,0.2)', borderRadius: '10px', padding: '9px 12px', fontFamily: 'Inter, sans-serif', fontSize: '16px', color: v ? '#1A0A3C' : '#6B5C90', background: 'white', outline: 'none', width: '100%', boxSizing: 'border-box' as const, opacity: disabled ? 0.5 : 1 }}>
+    <option value="">{placeholder}</option>
+    {options.map((o) => <option key={o} value={o}>{o}</option>)}
+  </select>
+)
 
 function RegistrarCompitaDirecto({ onRegistrada }: { onRegistrada: (c: Compita) => void }) {
   const [abierto, setAbierto] = useState(false)
   const [nombre, setNombre] = useState('')
-  const [zona, setZona] = useState('')
+  const [zonas, setZonas] = useState<string[]>([])
+  const [estadoZona, setEstadoZona] = useState('')
   const [descripcion, setDescripcion] = useState('')
   const [servicios, setServicios] = useState<string[]>([])
-  const [fotoUrl, setFotoUrl] = useState('')
   const [youtubeUrl, setYoutubeUrl] = useState('')
   const [emailCompita, setEmailCompita] = useState('')
+  const [fotoPreview, setFotoPreview] = useState<string | null>(null)
+  const [subiendo, setSubiendo] = useState(false)
+  const [fotoUrl, setFotoUrl] = useState<string | null>(null)
+  const fotoRef = useRef<HTMLInputElement>(null)
   const [estado, setEstado] = useState<'idle' | 'enviando' | 'ok' | 'error'>('idle')
   const [error, setError] = useState('')
 
@@ -1859,33 +1886,46 @@ function RegistrarCompitaDirecto({ onRegistrada }: { onRegistrada: (c: Compita) 
     setServicios((prev) => prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s])
   }
 
+  async function subirFoto(file: File) {
+    setSubiendo(true)
+    const fd = new FormData()
+    fd.append('foto', file)
+    fd.append('nombre', nombre || 'compita')
+    const res = await fetch('/api/admin/upload-foto', { method: 'POST', body: fd })
+    const d = await res.json()
+    setSubiendo(false)
+    if (d.url) setFotoUrl(d.url)
+  }
+
+  function limpiar() {
+    setNombre(''); setZonas([]); setEstadoZona(''); setDescripcion('')
+    setServicios([]); setFotoPreview(null); setFotoUrl(null); setYoutubeUrl(''); setEmailCompita('')
+  }
+
   async function registrar() {
+    const zona = zonas.join(', ')
+    if (!zona) { setError('Agrega al menos una zona'); setEstado('error'); return }
     setEstado('enviando')
     setError('')
     const res = await fetch('/api/admin/registrar-compita', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nombre, zona, descripcion, servicios, foto_url: fotoUrl || null, youtube_url: youtubeUrl || null, email: emailCompita || null }),
+      body: JSON.stringify({ nombre, zona, descripcion, servicios, foto_url: fotoUrl ?? null, youtube_url: youtubeUrl || null, email: emailCompita || null }),
     })
     const d = await res.json()
     if (res.ok && d.ok) {
       onRegistrada(d.data)
       setEstado('ok')
-      setTimeout(() => { setEstado('idle'); setAbierto(false); setNombre(''); setZona(''); setDescripcion(''); setServicios([]); setFotoUrl(''); setYoutubeUrl(''); setEmailCompita('') }, 2000)
+      setTimeout(() => { setEstado('idle'); setAbierto(false); limpiar() }, 2000)
     } else {
       setError(d.error ?? 'Error al registrar')
       setEstado('error')
     }
   }
 
-  const inp = (v: string, onChange: (s: string) => void, placeholder: string, multiline?: boolean) =>
-    multiline ? (
-      <textarea value={v} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} rows={3}
-        style={{ border: '2px solid rgba(45,20,100,0.2)', borderRadius: '10px', padding: '9px 12px', fontFamily: 'Inter, sans-serif', fontSize: '16px', color: '#1A0A3C', background: 'white', outline: 'none', resize: 'vertical', width: '100%', boxSizing: 'border-box' as const }} />
-    ) : (
-      <input value={v} onChange={(e) => onChange(e.target.value)} placeholder={placeholder}
-        style={{ border: '2px solid rgba(45,20,100,0.2)', borderRadius: '10px', padding: '9px 12px', fontFamily: 'Inter, sans-serif', fontSize: '16px', color: '#1A0A3C', background: 'white', outline: 'none', width: '100%', boxSizing: 'border-box' as const }} />
-    )
+  const lbl = (t: string) => (
+    <div style={{ fontSize: '12px', fontWeight: 700, color: '#4A3B6B', fontFamily: 'Bricolage Grotesque, sans-serif', textTransform: 'uppercase' as const, letterSpacing: '0.06em', marginBottom: '6px' }}>{t}</div>
+  )
 
   return (
     <div>
@@ -1896,30 +1936,92 @@ function RegistrarCompitaDirecto({ onRegistrada }: { onRegistrada: (c: Compita) 
         + Registrar directamente
       </button>
       {abierto && (
-        <div style={{ background: 'white', border: '2px solid #E8E0D4', borderRadius: '16px', padding: '24px', marginTop: '12px', display: 'flex', flexDirection: 'column' as const, gap: '14px', maxWidth: '560px' }}>
+        <div style={{ background: 'white', border: '2px solid #E8E0D4', borderRadius: '16px', padding: '24px', marginTop: '12px', display: 'flex', flexDirection: 'column' as const, gap: '16px', maxWidth: '600px' }}>
           <p style={{ margin: 0, fontSize: '13px', color: '#4A3B6B' }}>El perfil queda como <strong>inactivo, sin verificar</strong>. Luego lo verificás desde esta misma pantalla.</p>
-          {inp(nombre, setNombre, 'Nombre completo')}
-          {inp(zona, setZona, 'Zona de cobertura — Ej: Caracas, Chacao')}
-          {inp(descripcion, setDescripcion, 'Descripción breve…', true)}
+
+          {/* Nombre */}
+          <div>{lbl('Nombre completo *')}{inp(nombre, setNombre, 'Nombre y apellido')}</div>
+
+          {/* Email */}
+          <div>{lbl('Email (opcional — recibe bienvenida)')}{inp(emailCompita, setEmailCompita, 'correo@ejemplo.com')}</div>
+
+          {/* Zonas */}
           <div>
-            <div style={{ fontSize: '12px', fontWeight: 700, color: '#4A3B6B', fontFamily: 'Bricolage Grotesque, sans-serif', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>Servicios</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-              {SERVICIOS_OPCIONES.map((s) => (
-                <button key={s} type="button" onClick={() => toggleServicio(s)}
-                  style={{ background: servicios.includes(s) ? '#2D1464' : 'white', color: servicios.includes(s) ? 'white' : '#4A3B6B', border: '2px solid ' + (servicios.includes(s) ? '#2D1464' : 'rgba(45,20,100,0.25)'), borderRadius: '9999px', padding: '5px 12px', fontSize: '13px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 600, cursor: 'pointer' }}>
-                  {s}
-                </button>
+            {lbl('Zonas que puede cubrir *')}
+            {zonas.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
+                {zonas.map((z) => (
+                  <span key={z} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#2D1464', color: 'white', borderRadius: '9999px', padding: '4px 6px 4px 12px', fontSize: '12px', fontWeight: 600 }}>
+                    {z}
+                    <button type="button" onClick={() => setZonas((p) => p.filter((x) => x !== z))} aria-label={`Quitar ${z}`}
+                      style={{ width: '22px', height: '22px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '50%', color: 'white', cursor: 'pointer', fontSize: '14px', fontWeight: 700 }}>×</button>
+                  </span>
+                ))}
+              </div>
+            )}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+              {inpSelect(estadoZona, (v) => { setEstadoZona(v) }, 'Estado…', Object.keys(ZONAS).sort())}
+              {inpSelect('', (mun) => {
+                if (!mun) return
+                const nueva = `${estadoZona} — ${mun}`
+                if (!zonas.includes(nueva)) setZonas((p) => [...p, nueva])
+              }, 'Municipio…', estadoZona ? (ZONAS[estadoZona] ?? []).sort() : [], !estadoZona)}
+            </div>
+          </div>
+
+          {/* Descripción */}
+          <div>{lbl('Descripción *')}{inp(descripcion, setDescripcion, 'Quién es, qué hace especial…', true)}</div>
+
+          {/* Servicios */}
+          <div>
+            {lbl('Servicios *')}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {SERVICIOS_GRUPOS_ADMIN.map(({ grupo, items }) => (
+                <div key={grupo}>
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#4A3B6B', textTransform: 'uppercase' as const, letterSpacing: '0.05em', marginBottom: '6px' }}>{grupo}</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    {items.map((item) => (
+                      <button key={item} type="button" onClick={() => toggleServicio(item)}
+                        style={{ padding: '5px 12px', borderRadius: '9999px', border: `2px solid ${servicios.includes(item) ? '#FF6B2B' : 'rgba(45,20,100,0.2)'}`, background: servicios.includes(item) ? '#FF6B2B' : 'white', color: servicios.includes(item) ? 'white' : '#4A3B6B', fontFamily: 'Inter, sans-serif', fontSize: '12px', cursor: 'pointer', fontWeight: servicios.includes(item) ? 700 : 400 }}>
+                        {item}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
           </div>
-          {inp(emailCompita, setEmailCompita, 'Email del compita (opcional — recibe bienvenida)')}
-          {inp(fotoUrl, setFotoUrl, 'URL de foto (opcional)')}
-          {inp(youtubeUrl, setYoutubeUrl, 'URL de YouTube (opcional)')}
+
+          {/* Foto */}
+          <div>
+            {lbl('Foto de perfil (opcional)')}
+            <div onClick={() => fotoRef.current?.click()}
+              style={{ border: '2px dashed rgba(45,20,100,0.3)', borderRadius: '12px', padding: '16px', textAlign: 'center', cursor: 'pointer', background: '#FDFAF6' }}>
+              {fotoPreview
+                // eslint-disable-next-line @next/next/no-img-element
+                ? <img src={fotoPreview} alt="preview" style={{ maxHeight: '120px', borderRadius: '8px', margin: '0 auto', display: 'block' }} />
+                : <p style={{ color: '#6B5C90', fontSize: '13px', margin: 0 }}>{subiendo ? 'Subiendo…' : 'Clic para subir foto (JPG, PNG, WEBP — máx 5 MB)'}</p>
+              }
+            </div>
+            <input ref={fotoRef} type="file" accept="image/*" style={{ display: 'none' }}
+              onChange={(e) => {
+                const f = e.target.files?.[0]; if (!f) return
+                const reader = new FileReader()
+                reader.onload = (ev) => setFotoPreview(ev.target?.result as string)
+                reader.readAsDataURL(f)
+                subirFoto(f)
+              }} />
+            {fotoUrl && <p style={{ fontSize: '11px', color: '#22c55e', margin: '4px 0 0', fontWeight: 600 }}>✓ Foto subida</p>}
+          </div>
+
+          {/* YouTube */}
+          <div>{lbl('URL de YouTube (opcional)')}{inp(youtubeUrl, setYoutubeUrl, 'https://youtube.com/watch?v=...')}</div>
+
           {estado === 'error' && <p style={{ margin: 0, color: '#B91C1C', fontSize: '13px', fontWeight: 600 }}>⚠️ {error}</p>}
           <button
             onClick={registrar}
-            disabled={estado === 'enviando' || !nombre || !zona || !descripcion || servicios.length === 0}
-            style={{ background: estado === 'ok' ? '#22c55e' : '#FF6B2B', color: 'white', border: 'none', borderRadius: '9999px', padding: '11px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '14px', cursor: 'pointer', opacity: (!nombre || !zona || !descripcion || servicios.length === 0) ? 0.5 : 1 }}
+            disabled={estado === 'enviando' || subiendo || !nombre || zonas.length === 0 || !descripcion || servicios.length === 0}
+            style={{ background: estado === 'ok' ? '#22c55e' : '#FF6B2B', color: 'white', border: 'none', borderRadius: '9999px', padding: '11px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '14px', cursor: 'pointer', opacity: (!nombre || zonas.length === 0 || !descripcion || servicios.length === 0) ? 0.5 : 1 }}
           >
             {estado === 'enviando' ? 'Registrando…' : estado === 'ok' ? '✓ Compita registrada' : 'Registrar Compita'}
           </button>
