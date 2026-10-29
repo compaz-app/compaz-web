@@ -119,30 +119,25 @@ export async function sendBienvenidaCompita(
             <a href="https://play.google.com/store/apps/details?id=org.telegram.messenger" style="display:inline-block;background:#2D1464;color:white;padding:8px 16px;border-radius:9999px;text-decoration:none;font-weight:700;font-size:13px">▶ Play Store (Android)</a>
           </p>
           <ol style="color:#4A3B6B;font-size:15px;line-height:2;padding-left:20px;margin:0 0 16px 0">
-            <li>Abre Telegram y busca <strong>@${escapeHtml(telegramBotUsername)}</strong></li>
+            <li>Busca <strong>@${escapeHtml(telegramBotUsername)}</strong> en Telegram — o pulsa el botón de abajo:<br>
+              <a href="${botUrl}" style="display:inline-block;background:#FF6B2B;color:white;padding:10px 20px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:14px;margin-top:8px">Abrir bot de Telegram →</a>
+            </li>
             <li>Pulsa <strong>Iniciar</strong> o escribe <strong>/start</strong></li>
             <li>El bot te pedirá tu nombre completo. Escríbelo tal como apareces aquí.</li>
-            <li>Te enviará un código de 6 dígitos a este correo.</li>
-            <li>Ingresa ese código en el chat para activar tu cuenta.</li>
-            <li style="color:#B91C1C;font-weight:700;">🚨 El código llega únicamente por correo. No lo compartas con nadie.</li>
+            <li>Te enviamos un código de 6 dígitos a este correo. Ingrésalo en el chat para activar tu cuenta.</li>
           </ol>
-          <p style="color:#1A0A3C;font-size:14px;font-weight:700;background:#FFF3E8;border-left:3px solid #FF6B2B;padding:10px 14px;border-radius:0 8px 8px 0;margin:0 0 16px">
-            🔔 <strong>Activa las notificaciones de Telegram</strong> — ve a Configuración → Notificaciones. Sin ellas no sabrás cuando llegue una solicitud de cliente o un aviso de visita.
+          <p style="color:#B91C1C;font-size:14px;font-weight:700;margin:0 0 12px">🚨 El código llega solo por correo. No lo compartas con nadie.</p>
+          <p style="color:#1A0A3C;font-size:14px;font-weight:700;background:#FFF3E8;border-left:3px solid #FF6B2B;padding:10px 14px;border-radius:0 8px 8px 0;margin:0">
+            🔔 <strong>Activa las notificaciones de Telegram</strong> (Configuración → Notificaciones) para no perderte solicitudes de clientes.
           </p>
-          <a href="${botUrl}" style="display:inline-block;background:#FF6B2B;color:white;padding:12px 24px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:15px">
-            Abrir bot de Telegram →
-          </a>
         </div>
 
         <!-- Paso 2 -->
         <div style="background:white;border:2px solid #E8E0D4;border-radius:16px;padding:24px;margin-bottom:16px">
           <p style="color:#FF6B2B;font-weight:800;font-size:13px;margin:0 0 8px 0;text-transform:uppercase;letter-spacing:1px">Paso 2</p>
           <h2 style="color:#2D1464;font-size:18px;margin:0 0 12px 0">Completa tu perfil ✏️</h2>
-          <p style="color:#4A3B6B;font-size:15px;line-height:1.6;margin:0 0 12px 0">
-            Un perfil completo atrae más familias. Desde Telegram puedes escribir <strong>/perfil</strong> para obtener un enlace directo a tu página de edición.
-          </p>
           <p style="color:#4A3B6B;font-size:15px;line-height:1.6;margin:0">
-            Desde ahí puedes actualizar tu foto 📸, tu descripción personal ✍️, los servicios que ofreces 🛎️, tus horarios disponibles 🕐 y agregar un video de presentación en YouTube 🎥. Mientras más completo esté tu perfil, más fácil será que las familias te escojan.
+            Desde Telegram escribe <strong>/perfil</strong> para editar tu página: foto, descripción, servicios, horarios y video de YouTube. Las familias comparan perfiles — uno completo tiene muchas más posibilidades de ser elegido.
           </p>
         </div>
 
