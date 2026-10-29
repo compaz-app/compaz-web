@@ -778,7 +778,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               )}
 
               {/* CTA: buscar compita (si aún puede enviar solicitudes) */}
-              {solicitudesPendientes.length < 3 && (
+              {solicitudesPendientes.length < 3 ? (
                 <div style={{ background: todasRechazadas ? 'white' : '#FDFAF6', border: `2px solid ${todasRechazadas ? '#FF6B2B' : '#E8E0D4'}`, borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
                   <div>
                     <h3 style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '16px', color: '#1A0A3C', margin: '0 0 4px' }}>
@@ -791,6 +791,19 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                   <a href="/compitas" style={{ background: '#FF6B2B', color: 'white', borderRadius: '9999px', padding: '11px 22px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '14px', textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0 }}>
                     Ver compitas →
                   </a>
+                </div>
+              ) : (
+                /* Máximo de solicitudes alcanzado */
+                <div style={{ background: '#FFFBEB', border: '2px solid #FCD34D', borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
+                  <span style={{ fontSize: '24px', flexShrink: 0, lineHeight: 1 }}>⏳</span>
+                  <div>
+                    <h3 style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '16px', color: '#1A0A3C', margin: '0 0 6px' }}>
+                      Ya tienes 3 solicitudes activas
+                    </h3>
+                    <p style={{ color: '#92400E', fontSize: '13px', margin: 0, lineHeight: 1.5 }}>
+                      Ese es el máximo permitido. En cuanto uno de los compitas responda, podrás enviar una nueva solicitud.
+                    </p>
+                  </div>
                 </div>
               )}
 

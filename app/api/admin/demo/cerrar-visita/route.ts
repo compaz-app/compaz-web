@@ -3,7 +3,7 @@
 import { NextRequest } from 'next/server'
 import { getAdminUser } from '@/lib/auth'
 import { createAdminSupabase } from '@/lib/supabase-server'
-import { sendVisitaResumen } from '@/lib/resend'
+import { sendResumenConReporte } from '@/lib/resend'
 import { ok, err, unauthorized, notFound, serverError } from '@/lib/api'
 import type { Visita, Compita, Usuario } from '@/types'
 
@@ -39,10 +39,19 @@ export async function POST(req: NextRequest) {
   })
   if (eReporte) console.error('[demo/cerrar-visita] reporte:', eReporte)
 
-  // Enviar resumen al cliente con esRecurrente=true para mostrar botones de seguimiento
+  // Enviar resumen al cliente con indicadores de bienestar y notas de la visita
   if (visita.usuario?.email) {
     try {
-      await sendVisitaResumen(visita.usuario, visita.compita, visita, [], true)
+      await sendResumenConReporte(
+        visita.usuario,
+        visita.compita,
+        visita,
+        [],
+        { animo: 3, fisico: 3, participacion: 3, entorno: 3, novedad: 'Visita de demostración completada exitosamente.' },
+        [],
+        false,
+        true,
+      )
     } catch (e) {
       console.error('[demo/cerrar-visita] email resumen:', e)
     }
