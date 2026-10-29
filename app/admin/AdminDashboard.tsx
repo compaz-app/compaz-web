@@ -592,9 +592,9 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
 
             {/* Barra de herramientas */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', flexWrap: 'wrap' }}>
               {tab === 'compitas' && (
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
                   <button
                     onClick={generarInvite}
                     disabled={generandoInvite}
