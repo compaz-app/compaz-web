@@ -172,11 +172,11 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
     return ahora >= inicio && ahora <= inicio + 23 * 60 * 1000
   })
 
-  const compitasPendientes = compitas.filter((c) => c.estado === 'activo' && !c.verificado)
+  const compitasPendientes = compitas.filter((c) => !c.verificado)
   const compitasEnMapa = compitas.filter((c) => c.estado === 'activo' && c.verificado && !!c.telegram_chat_id)
   const compitasSinTelegram = compitas.filter((c) => c.estado === 'activo' && c.verificado && !c.telegram_chat_id)
   const compitasVerificadas = compitas.filter((c) => c.estado === 'activo' && c.verificado)
-  const compitasInactivas = compitas.filter((c) => c.estado === 'inactivo')
+  const compitasInactivas = compitas.filter((c) => c.estado === 'inactivo' && c.verificado)
   const compitasBloqueadas = compitas.filter((c) => c.estado === 'bloqueado')
 
   function filtrar(lista: Compita[]) {
