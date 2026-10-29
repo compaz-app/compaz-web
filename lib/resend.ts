@@ -112,7 +112,11 @@ export async function sendBienvenidaCompita(
           <p style="color:#FF6B2B;font-weight:800;font-size:13px;margin:0 0 8px 0;text-transform:uppercase;letter-spacing:1px">Paso 1</p>
           <h2 style="color:#2D1464;font-size:18px;margin:0 0 12px 0">Conecta tu Telegram 📱</h2>
           <p style="color:#4A3B6B;font-size:15px;line-height:1.6;margin:0 0 16px 0">
-            Toda la comunicación con Compaz es a través de Telegram. Así recibirás solicitudes de clientes, confirmaciones de llamadas y mucho más.
+            Toda la comunicación con Compaz es a través de Telegram — una aplicación gratuita de mensajería, como WhatsApp. Si aún no la tienes, descárgala primero:
+          </p>
+          <p style="margin:0 0 16px 0">
+            <a href="https://apps.apple.com/app/telegram-messenger/id686449807" style="display:inline-block;background:#2D1464;color:white;padding:8px 16px;border-radius:9999px;text-decoration:none;font-weight:700;font-size:13px;margin-right:8px">📱 App Store (iPhone)</a>
+            <a href="https://play.google.com/store/apps/details?id=org.telegram.messenger" style="display:inline-block;background:#2D1464;color:white;padding:8px 16px;border-radius:9999px;text-decoration:none;font-weight:700;font-size:13px">▶ Play Store (Android)</a>
           </p>
           <ol style="color:#4A3B6B;font-size:15px;line-height:2;padding-left:20px;margin:0 0 16px 0">
             <li>Abre Telegram y busca <strong>@${escapeHtml(telegramBotUsername)}</strong></li>
@@ -150,7 +154,7 @@ export async function sendBienvenidaCompita(
             Cuando una familia quiera conocerte, recibirás un mensaje de Telegram con todos los detalles. Desde ahí puedes <strong>aceptar o rechazar</strong> la solicitud y coordinar el horario de la videollamada.
           </p>
           <p style="color:#4A3B6B;font-size:15px;line-height:1.6;margin:0">
-            Antes de aparecer ante las familias, nuestro equipo revisa y verifica tu perfil. Te avisaremos por Telegram y por correo en cuanto esté listo. Mientras tanto, recuerda que las familias comparan varios perfiles antes de elegir. Una foto clara, una descripción que transmita tu personalidad y un video de presentación pueden ser lo que te haga destacar. Mientras más cuidado esté tu perfil, más probabilidades tienes de que te escojan a ti.
+            Recuerda que las familias comparan varios perfiles antes de elegir. Una foto clara, una descripción que transmita tu personalidad y un video de presentación pueden ser lo que te haga destacar. Mientras más cuidado esté tu perfil, más probabilidades tienes de que te escojan a ti.
           </p>
         </div>
 
@@ -170,7 +174,7 @@ export async function sendBienvenidaCompita(
         </div>
 
         <p style="color:#4A3B6B;font-size:15px;line-height:1.6;margin-bottom:8px">
-          Cualquier duda, escríbenos directamente en Telegram o responde a este correo. ¡Estamos para ayudarte!
+          Cualquier duda, escríbenos a <a href="mailto:hola@micompaz.com" style="color:#FF6B2B">hola@micompaz.com</a> o responde a este correo. ¡Estamos para ayudarte!
         </p>
         <p style="color:#2D1464;font-size:15px;font-weight:700;margin-bottom:32px">El equipo Compaz 💙</p>
         <p style="color:#9990A8;font-size:13px;margin:0">Compaz — <em>Cerca aunque estés lejos</em></p>
