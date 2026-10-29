@@ -9,6 +9,7 @@ import type { SolicitudAdmin } from './page'
 import LogoutButton from '@/components/ui/LogoutButton'
 import { ZONAS_MUNICIPIOS as ZONAS } from '@/lib/venezuela'
 import RegistrarPago from '@/components/admin/RegistrarPago'
+import DemoTab from './DemoTab'
 
 type VisitaConRelaciones = Visita & { compita: Compita; usuario: Usuario }
 type UsuarioConCompita = Usuario & { compita: { nombre: string; zona: string; verificado: boolean } | null }
@@ -25,7 +26,7 @@ interface Props {
   clientesInactivos?: string[]
 }
 
-type Tab = 'visitas' | 'clientes' | 'compitas' | 'desactivadas' | 'historial' | 'solicitudes' | 'cliente' | 'accesos' | 'perfil' | 'atencion' | 'resenas'
+type Tab = 'visitas' | 'clientes' | 'compitas' | 'desactivadas' | 'historial' | 'solicitudes' | 'cliente' | 'accesos' | 'perfil' | 'atencion' | 'resenas' | 'demo'
 
 type Resena = {
   id: string
@@ -547,6 +548,9 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
         <button style={tabStyle('atencion')} onClick={() => setTab('atencion')}>
           ⚑ Atención {flagsAbiertos.length > 0 && <span style={{ background: '#dc2626', color: 'white', borderRadius: '9999px', padding: '1px 7px', fontSize: '11px', fontWeight: 800, marginLeft: '4px' }}>{flagsAbiertos.length}</span>}
         </button>
+        <button style={{ ...tabStyle('demo'), borderBottom: tab === 'demo' ? '3px solid #FF6B2B' : '3px solid transparent', color: tab === 'demo' ? '#FF6B2B' : '#6B5C90' }} onClick={() => setTab('demo')}>
+          🎬 Demo
+        </button>
         {clientePreviewId && (
           <button style={{ ...tabStyle('cliente'), borderBottom: tab === 'cliente' ? '3px solid #22c55e' : '3px solid transparent', color: tab === 'cliente' ? '#16a34a' : '#6B5C90' }} onClick={() => setTab('cliente')}>
             👁 Ver cliente
@@ -991,6 +995,9 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
             )}
           </div>
         )}
+
+        {/* ── Demo ─────────────────────────────────────────────────────────── */}
+        {tab === 'demo' && <DemoTab />}
 
         {/* ── Historial ─────────────────────────────────────────────────────── */}
         {tab === 'historial' && (
