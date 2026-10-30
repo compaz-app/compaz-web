@@ -21,12 +21,14 @@ export async function POST(req: NextRequest) {
   if (!v.ok) return err(v.error)
   const { nombre, zona, descripcion, servicios, foto_url, youtube_url } = v.datos
   const esDemo = body.es_demo === true
+  const apellido = typeof body.apellido === 'string' && body.apellido.trim() ? body.apellido.trim() : null
 
   const admin = createAdminSupabase()
   const { data, error } = await admin
     .from('compitas')
     .insert({
       nombre,
+      apellido,
       zona,
       descripcion,
       servicios,

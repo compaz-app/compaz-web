@@ -24,6 +24,7 @@ export interface Zona {
 export interface Compita {
   id: string
   nombre: string
+  apellido: string | null
   email: string | null
   telegram_chat_id: string | null
   zona: string
