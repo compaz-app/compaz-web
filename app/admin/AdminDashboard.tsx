@@ -645,8 +645,9 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
 
               const mapaFiltro: Record<string, Compita[]> = { todas, pendientes: cPendientes, sin_telegram: cSinTelegram, en_mapa: cEnMapa, demo: cDemo }
               const lista = (mapaFiltro[filtroEstadoCompitas] ?? todas).sort((a, b) => {
-                const pa = (a.apellido || a.nombre).toLowerCase()
-                const pb = (b.apellido || b.nombre).toLowerCase()
+                const sortKey = (c: Compita) => (c.apellido || c.nombre.split(' ').slice(1).join(' ') || c.nombre).toLowerCase()
+                const pa = sortKey(a)
+                const pb = sortKey(b)
                 return pa.localeCompare(pb, 'es')
               })
               const total = lista.length
@@ -818,9 +819,8 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
                 : filtroDesactivadas === 'inactivo' ? compitasInactivas
                 : [...compitasBloqueadas, ...compitasInactivas]
               const lista = filtrar(pool).sort((a, b) => {
-                const pa = (a.apellido || a.nombre).toLowerCase()
-                const pb = (b.apellido || b.nombre).toLowerCase()
-                return pa.localeCompare(pb, 'es')
+                const sortKey = (c: Compita) => (c.apellido || c.nombre.split(' ').slice(1).join(' ') || c.nombre).toLowerCase()
+                return sortKey(a).localeCompare(sortKey(b), 'es')
               })
               const totalD = lista.length
               const totalPaginasD = Math.max(1, Math.ceil(totalD / COMPITAS_POR_PAGINA))
@@ -1101,26 +1101,11 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
         {tab === 'demo' && <DemoTab />}
 
         {/* ── Historial ─────────────────────────────────────────────────────── */}
-        {tab === 'historial' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {(visitasPasadas as (Visita & { compita: { nombre: string }; usuario: { nombre: string; email: string } })[]).map((v) => {
-              const duracion = v.inicio && v.fin
-                ? `${Math.round((new Date(v.fin).getTime() - new Date(v.inicio).getTime()) / 60000)} min`
-                : '—'
-              return (
-                <div key={v.id} style={{ background: 'white', border: '2px solid #E8E0D4', borderRadius: '12px', padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-                  <div>
-                    <span style={{ color: '#1A0A3C', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700 }}>{v.compita?.nombre}</span>
-                    <span style={{ color: '#6B5C90', fontSize: '13px' }}> con {v.usuario?.nombre}</span>
-                  </div>
-                  <div style={{ color: '#6B5C90', fontSize: '13px' }}>
-                    {v.fin ? new Date(v.fin).toLocaleDateString('es-VE', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'America/Caracas' }) : '—'} · {duracion}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        )}
+        {tab === 'historial' && (() => {
+          const hVisitas = visitasPasadas as (Visita & { compita: { nombre: string }; usuario: { nombre: string; email: string } })[]
+          const H_POR_PAGINA = 50
+          return <HistorialTab visitas={hVisitas} porPagina={H_POR_PAGINA} />
+        })()}
       </div>
 
       {/* ── Modal: crear flag ──────────────────────────────────────────────── */}
@@ -2273,11 +2258,90 @@ function RegistrarCompitaDirecto({ onRegistrada }: { onRegistrada: (c: Compita) 
   )
 }
 
+function HistorialTab({ visitas, porPagina }: {
+  visitas: (Visita & { compita: { nombre: string }; usuario: { nombre: string; email: string } })[]
+  porPagina: number
+}) {
+  const [pagina, setPagina] = useState(0)
+  const total = visitas.length
+  const totalPaginas = Math.max(1, Math.ceil(total / porPagina))
+  const paginaActual = Math.min(pagina, totalPaginas - 1)
+  const slice = visitas.slice(paginaActual * porPagina, (paginaActual + 1) * porPagina)
+
+  function formatFecha(iso: string | null) {
+    if (!iso) return '—'
+    return new Date(iso).toLocaleDateString('es-VE', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'America/Caracas' })
+  }
+
+  function duracion(inicio: string | null, fin: string | null) {
+    if (!inicio || !fin) return '—'
+    const mins = Math.round((new Date(fin).getTime() - new Date(inicio).getTime()) / 60000)
+    if (mins < 60) return `${mins} min`
+    return `${Math.floor(mins / 60)}h ${mins % 60}min`
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      <div style={{ fontSize: '12px', color: '#9B8AB8', paddingLeft: '2px' }}>{total} visita{total !== 1 ? 's' : ''} registrada{total !== 1 ? 's' : ''}</div>
+      {total === 0 ? (
+        <div style={{ background: 'white', border: '2px solid #E8E0D4', borderRadius: '16px', padding: '48px', textAlign: 'center' }}>
+          <p style={{ color: '#6B5C90' }}>No hay visitas registradas.</p>
+        </div>
+      ) : (
+        <>
+          <div style={{ background: 'white', border: '2px solid #E8E0D4', borderRadius: '14px', overflow: 'hidden' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', fontFamily: 'Inter, sans-serif' }}>
+              <thead>
+                <tr style={{ background: '#F5F0FF', borderBottom: '2px solid #E8E0D4' }}>
+                  {['Compita', 'Cliente', 'Fecha', 'Duración', 'Rating'].map((h) => (
+                    <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, color: '#4A3B6B', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {slice.map((v, i) => (
+                  <tr key={v.id} style={{ background: i % 2 === 0 ? 'white' : '#FAFAFA', borderBottom: '1px solid #F0EBF8' }}>
+                    <td style={{ padding: '10px 14px', fontWeight: 600, color: '#2D1464' }}>{v.compita?.nombre ?? '—'}</td>
+                    <td style={{ padding: '10px 14px' }}>
+                      <div style={{ fontWeight: 500, color: '#1A0A3C' }}>{v.usuario?.nombre ?? '—'}</div>
+                      <div style={{ fontSize: '11px', color: '#9B8AB8' }}>{v.usuario?.email}</div>
+                    </td>
+                    <td style={{ padding: '10px 14px', color: '#6B5C90', fontSize: '12px', whiteSpace: 'nowrap' }}>{formatFecha(v.fecha_programada)}</td>
+                    <td style={{ padding: '10px 14px', color: '#6B5C90', fontSize: '12px', whiteSpace: 'nowrap' }}>{duracion(v.inicio, v.fin)}</td>
+                    <td style={{ padding: '10px 14px', fontSize: '13px' }}>
+                      {v.rating_cliente ? '⭐'.repeat(v.rating_cliente) : <span style={{ color: '#C4B8D8' }}>—</span>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {totalPaginas > 1 && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 4px', flexWrap: 'wrap', gap: '8px' }}>
+              <span style={{ fontSize: '12px', color: '#6B5C90' }}>{paginaActual * porPagina + 1}–{Math.min((paginaActual + 1) * porPagina, total)} de {total}</span>
+              <div style={{ display: 'flex', gap: '4px' }}>
+                <button onClick={() => setPagina(Math.max(0, paginaActual - 1))} disabled={paginaActual === 0} style={{ background: 'white', border: '2px solid #D4C9E8', borderRadius: '8px', padding: '4px 12px', fontSize: '13px', cursor: 'pointer', color: '#4A3B6B', opacity: paginaActual === 0 ? 0.4 : 1 }}>←</button>
+                {Array.from({ length: totalPaginas }, (_, i) => (
+                  <button key={i} onClick={() => setPagina(i)} style={{ background: i === paginaActual ? '#2D1464' : 'white', color: i === paginaActual ? 'white' : '#4A3B6B', border: '2px solid #D4C9E8', borderRadius: '8px', padding: '4px 10px', fontSize: '13px', cursor: 'pointer', fontWeight: i === paginaActual ? 700 : 400 }}>{i + 1}</button>
+                ))}
+                <button onClick={() => setPagina(Math.min(totalPaginas - 1, paginaActual + 1))} disabled={paginaActual >= totalPaginas - 1} style={{ background: 'white', border: '2px solid #D4C9E8', borderRadius: '8px', padding: '4px 12px', fontSize: '13px', cursor: 'pointer', color: '#4A3B6B', opacity: paginaActual >= totalPaginas - 1 ? 0.4 : 1 }}>→</button>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  )
+}
+
 function SolicitudesTab({ solicitudes }: { solicitudes: SolicitudAdmin[] }) {
   const [filtro, setFiltro] = useState<'todas' | 'pendiente' | 'aceptada' | 'rechazada'>('todas')
   const [enviandoLink, setEnviandoLink] = useState<string | null>(null)
   const [linkEnviado, setLinkEnviado] = useState<string | null>(null)
   const [ahora, setAhora] = useState(() => Date.now())
+  const [panelId, setPanelId] = useState<string | null>(null)
+  const [pagina, setPagina] = useState(0)
+  const S_POR_PAGINA = 25
 
   useEffect(() => {
     const id = setInterval(() => setAhora(Date.now()), 60_000)
@@ -2307,7 +2371,12 @@ function SolicitudesTab({ solicitudes }: { solicitudes: SolicitudAdmin[] }) {
     }
   }
 
-  const lista = filtro === 'todas' ? solicitudes : solicitudes.filter((s) => s.estado === filtro)
+  const listaFiltrada = filtro === 'todas' ? solicitudes : solicitudes.filter((s) => s.estado === filtro)
+  const total = listaFiltrada.length
+  const totalPaginas = Math.max(1, Math.ceil(total / S_POR_PAGINA))
+  const paginaActual = Math.min(pagina, totalPaginas - 1)
+  const slice = listaFiltrada.slice(paginaActual * S_POR_PAGINA, (paginaActual + 1) * S_POR_PAGINA)
+  const panelSolicitud = listaFiltrada.find((s) => s.id === panelId) ?? null
 
   const FILTROS = [
     { key: 'todas', label: 'Todas' },
@@ -2324,107 +2393,163 @@ function SolicitudesTab({ solicitudes }: { solicitudes: SolicitudAdmin[] }) {
     })
   }
 
+  function formatFecha(iso: string) {
+    return new Date(iso).toLocaleDateString('es-VE', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'America/Caracas' })
+  }
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-        {FILTROS.map(({ key, label }) => (
-          <button key={key} onClick={() => setFiltro(key)}
-            style={{ background: filtro === key ? '#2D1464' : 'white', color: filtro === key ? 'white' : '#4A3B6B', border: `2px solid ${filtro === key ? '#2D1464' : '#D1C8E0'}`, borderRadius: '9999px', padding: '7px 16px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', cursor: 'pointer' }}>
-            {label} ({key === 'todas' ? solicitudes.length : solicitudes.filter((s) => s.estado === key).length})
-          </button>
-        ))}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      {/* Filtros */}
+      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+        {FILTROS.map(({ key, label }) => {
+          const count = key === 'todas' ? solicitudes.length : solicitudes.filter((s) => s.estado === key).length
+          const activo = filtro === key
+          const dot = key === 'pendiente' && count > 0 ? '#FF6B2B' : key === 'aceptada' && count > 0 ? '#22c55e' : undefined
+          return (
+            <button key={key} onClick={() => { setFiltro(key); setPagina(0); setPanelId(null) }}
+              style={{ display: 'flex', alignItems: 'center', gap: '5px', background: activo ? '#2D1464' : 'white', color: activo ? 'white' : '#4A3B6B', border: `2px solid ${activo ? '#2D1464' : dot ?? 'rgba(45,20,100,0.2)'}`, borderRadius: '9999px', padding: '6px 14px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+              {label}
+              <span style={{ background: activo ? 'rgba(255,255,255,0.25)' : dot ?? 'rgba(45,20,100,0.1)', color: activo ? 'white' : dot ? 'white' : '#6B5C90', borderRadius: '9999px', padding: '0 7px', fontSize: '11px', fontWeight: 800, minWidth: '20px', textAlign: 'center' }}>
+                {count}
+              </span>
+            </button>
+          )
+        })}
       </div>
 
-      {lista.length === 0 ? (
+      {listaFiltrada.length === 0 ? (
         <div style={{ background: 'white', border: '2px solid #E8E0D4', borderRadius: '16px', padding: '48px', textAlign: 'center' }}>
           <p style={{ color: '#6B5C90' }}>No hay solicitudes en esta categoría.</p>
         </div>
-      ) : lista.map((s) => {
-        const isPendiente = s.estado === 'pendiente'
-        const isAceptada = s.estado === 'aceptada'
-        const salaVigente = isAceptada && !!s.slot_confirmado && (ahora < new Date(s.slot_confirmado).getTime() + 30 * 60 * 1000)
-        const borderColor = isPendiente ? '#FF6B2B' : isAceptada ? '#22c55e' : '#E8E0D4'
-        return (
-          <div key={s.id} style={{ background: 'white', border: `2px solid ${borderColor}`, borderRadius: '16px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {/* Cabecera */}
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', flexWrap: 'wrap' }}>
-                  <span style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, color: '#1A0A3C', fontSize: '15px' }}>
-                    {s.usuarios?.nombre ?? '—'}
-                  </span>
-                  <span style={{ color: '#9B8AB8', fontSize: '13px' }}>→</span>
-                  <span style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, color: '#2D1464', fontSize: '15px' }}>
-                    {s.compitas?.nombre ?? '—'}
-                  </span>
-                  <span style={{
-                    borderRadius: '9999px', padding: '2px 10px', fontSize: '11px', fontWeight: 700,
-                    fontFamily: 'Bricolage Grotesque, sans-serif',
-                    background: isPendiente ? '#FFF3E8' : isAceptada ? '#F0FDF4' : '#F1F0F5',
-                    color: isPendiente ? '#C84B0E' : isAceptada ? '#15803d' : '#6B5C90',
-                    border: `1.5px solid ${isPendiente ? '#FF6B2B' : isAceptada ? '#22c55e' : '#D4CAE8'}`,
-                  }}>
-                    {isPendiente ? '⏳ Pendiente' : isAceptada ? '✅ Aceptada' : '❌ Rechazada'}
-                  </span>
-                </div>
-                <div style={{ fontSize: '12px', color: '#9B8AB8' }}>
-                  {s.usuarios?.email} · {s.compitas?.zona ?? ''} · {new Date(s.created_at).toLocaleDateString('es-VE', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'America/Caracas' })}
-                </div>
-              </div>
-              {salaVigente && (
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', flexShrink: 0 }}>
-                  {s.room_url && (
-                    <a href={s.room_url} target="_blank" rel="noreferrer"
-                      style={{ background: '#22c55e', color: 'white', borderRadius: '9999px', padding: '8px 16px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', textDecoration: 'none', whiteSpace: 'nowrap' }}>
-                      📹 Sala de llamada
-                    </a>
-                  )}
-                  <button
-                    onClick={() => enviarLink(s.id)}
-                    disabled={enviandoLink === s.id}
-                    style={{ background: linkEnviado === s.id ? '#15803d' : '#2D1464', color: 'white', border: 'none', borderRadius: '9999px', padding: '8px 16px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', cursor: enviandoLink === s.id ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', opacity: enviandoLink === s.id ? 0.7 : 1 }}
-                  >
-                    {linkEnviado === s.id ? '✅ Enviado' : enviandoLink === s.id ? 'Enviando…' : '📨 Enviar link'}
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Mensaje del cliente */}
-            {s.mensaje && (
-              <div style={{ background: '#FDFAF6', border: '1.5px solid #E8E0D4', borderRadius: '10px', padding: '12px 14px' }}>
-                <div style={{ fontSize: '11px', fontWeight: 700, color: '#9B8AB8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '4px' }}>Mensaje</div>
-                <p style={{ margin: 0, fontSize: '14px', color: '#4A3B6B' }}>{s.mensaje}</p>
-              </div>
-            )}
-
-            {/* Horarios propuestos */}
-            {s.slots_propuestos?.length > 0 && (
-              <div>
-                <div style={{ fontSize: '11px', fontWeight: 700, color: '#9B8AB8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>Horarios propuestos</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  {s.slots_propuestos.map((slot, i) => {
-                    const esConfirmado = s.slot_confirmado === slot
-                    return (
-                      <div key={i} style={{
-                        fontSize: '13px', padding: '6px 12px', borderRadius: '8px',
-                        background: esConfirmado ? '#F0FDF4' : '#F5F0E8',
-                        color: esConfirmado ? '#15803d' : '#4A3B6B',
-                        border: esConfirmado ? '1.5px solid #22c55e' : '1.5px solid transparent',
-                        fontWeight: esConfirmado ? 700 : 400,
-                        display: 'flex', alignItems: 'center', gap: '6px',
-                      }}>
-                        {esConfirmado && <span>✅</span>}
-                        {['1️⃣', '2️⃣', '3️⃣'][i]} {formatSlot(slot)}
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
+      ) : (
+        <>
+          <div style={{ background: 'white', border: '2px solid #E8E0D4', borderRadius: '14px', overflow: 'hidden' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', fontFamily: 'Inter, sans-serif' }}>
+              <thead>
+                <tr style={{ background: '#F5F0FF', borderBottom: '2px solid #E8E0D4' }}>
+                  <th style={{ padding: '10px 14px', textAlign: 'left', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, color: '#4A3B6B', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Cliente</th>
+                  <th style={{ padding: '10px 14px', textAlign: 'left', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, color: '#4A3B6B', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Compita</th>
+                  <th style={{ padding: '10px 14px', textAlign: 'left', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, color: '#4A3B6B', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Estado</th>
+                  <th style={{ padding: '10px 14px', textAlign: 'left', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, color: '#4A3B6B', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Fecha</th>
+                  <th style={{ padding: '10px 14px', textAlign: 'left', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, color: '#4A3B6B', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Slot</th>
+                </tr>
+              </thead>
+              <tbody>
+                {slice.map((s, i) => {
+                  const isPendiente = s.estado === 'pendiente'
+                  const isAceptada = s.estado === 'aceptada'
+                  const salaVigente = isAceptada && !!s.slot_confirmado && (ahora < new Date(s.slot_confirmado).getTime() + 30 * 60 * 1000)
+                  const activo = panelId === s.id
+                  return (
+                    <tr key={s.id} onClick={() => setPanelId(activo ? null : s.id)}
+                      style={{ background: activo ? '#F5F0FF' : i % 2 === 0 ? 'white' : '#FAFAFA', borderBottom: '1px solid #F0EBF8', cursor: 'pointer' }}>
+                      <td style={{ padding: '10px 14px' }}>
+                        <div style={{ fontWeight: 600, color: '#1A0A3C' }}>{s.usuarios?.nombre ?? '—'}</div>
+                        <div style={{ fontSize: '11px', color: '#9B8AB8' }}>{s.usuarios?.email}</div>
+                      </td>
+                      <td style={{ padding: '10px 14px', color: '#4A3B6B', fontWeight: 600 }}>{s.compitas?.nombre ?? '—'}</td>
+                      <td style={{ padding: '10px 14px' }}>
+                        <span style={{ borderRadius: '9999px', padding: '2px 10px', fontSize: '11px', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif', background: isPendiente ? '#FFF3E8' : isAceptada ? '#F0FDF4' : '#F1F0F5', color: isPendiente ? '#C84B0E' : isAceptada ? '#15803d' : '#6B5C90', border: `1.5px solid ${isPendiente ? '#FF6B2B' : isAceptada ? '#22c55e' : '#D4CAE8'}` }}>
+                          {isPendiente ? '⏳ Pendiente' : isAceptada ? '✅ Aceptada' : '❌ Rechazada'}
+                        </span>
+                        {salaVigente && <span style={{ marginLeft: '6px', fontSize: '11px', color: '#15803d', fontWeight: 700 }}>📹 En curso</span>}
+                      </td>
+                      <td style={{ padding: '10px 14px', color: '#9B8AB8', fontSize: '12px', whiteSpace: 'nowrap' }}>{formatFecha(s.created_at)}</td>
+                      <td style={{ padding: '10px 14px', color: '#6B5C90', fontSize: '12px', whiteSpace: 'nowrap' }}>
+                        {s.slot_confirmado ? formatSlot(s.slot_confirmado) : s.slots_propuestos?.length > 0 ? `${s.slots_propuestos.length} propuesto${s.slots_propuestos.length !== 1 ? 's' : ''}` : '—'}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
           </div>
-        )
-      })}
+
+          {/* Paginación */}
+          {totalPaginas > 1 && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 4px', flexWrap: 'wrap', gap: '8px' }}>
+              <span style={{ fontSize: '12px', color: '#6B5C90' }}>{paginaActual * S_POR_PAGINA + 1}–{Math.min((paginaActual + 1) * S_POR_PAGINA, total)} de {total}</span>
+              <div style={{ display: 'flex', gap: '4px' }}>
+                <button onClick={() => setPagina(Math.max(0, paginaActual - 1))} disabled={paginaActual === 0} style={{ background: 'white', border: '2px solid #D4C9E8', borderRadius: '8px', padding: '4px 12px', fontSize: '13px', cursor: 'pointer', color: '#4A3B6B', opacity: paginaActual === 0 ? 0.4 : 1 }}>←</button>
+                {Array.from({ length: totalPaginas }, (_, i) => (
+                  <button key={i} onClick={() => setPagina(i)} style={{ background: i === paginaActual ? '#2D1464' : 'white', color: i === paginaActual ? 'white' : '#4A3B6B', border: '2px solid #D4C9E8', borderRadius: '8px', padding: '4px 10px', fontSize: '13px', cursor: 'pointer', fontWeight: i === paginaActual ? 700 : 400 }}>{i + 1}</button>
+                ))}
+                <button onClick={() => setPagina(Math.min(totalPaginas - 1, paginaActual + 1))} disabled={paginaActual >= totalPaginas - 1} style={{ background: 'white', border: '2px solid #D4C9E8', borderRadius: '8px', padding: '4px 12px', fontSize: '13px', cursor: 'pointer', color: '#4A3B6B', opacity: paginaActual >= totalPaginas - 1 ? 0.4 : 1 }}>→</button>
+              </div>
+            </div>
+          )}
+
+          {/* Panel lateral */}
+          {panelSolicitud && (() => {
+            const s = panelSolicitud
+            const isPendiente = s.estado === 'pendiente'
+            const isAceptada = s.estado === 'aceptada'
+            const salaVigente = isAceptada && !!s.slot_confirmado && (ahora < new Date(s.slot_confirmado).getTime() + 30 * 60 * 1000)
+            return (
+              <>
+                <div onClick={() => setPanelId(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(26,10,60,0.35)', zIndex: 200, backdropFilter: 'blur(2px)' }} />
+                <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: 'min(520px, 100vw)', background: '#FDFAF6', zIndex: 201, boxShadow: '-4px 0 40px rgba(26,10,60,0.18)', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 20px', borderBottom: '2px solid #E8E0D4', background: 'white', position: 'sticky', top: 0, zIndex: 1 }}>
+                    <div>
+                      <div style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '15px', color: '#1A0A3C' }}>
+                        {s.usuarios?.nombre ?? '—'} → {s.compitas?.nombre ?? '—'}
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#9B8AB8', marginTop: '2px' }}>{formatFecha(s.created_at)}</div>
+                    </div>
+                    <button onClick={() => setPanelId(null)} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#6B5C90', padding: '4px 8px', lineHeight: 1 }}>×</button>
+                  </div>
+                  <div style={{ padding: '20px', flex: 1, display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    {/* Info */}
+                    <div style={{ fontSize: '13px', color: '#4A3B6B' }}>
+                      <div>{s.usuarios?.email}</div>
+                      <div style={{ marginTop: '4px' }}>{s.compitas?.zona ?? ''}</div>
+                    </div>
+                    {/* Estado + sala */}
+                    {salaVigente && (
+                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                        {s.room_url && (
+                          <a href={s.room_url} target="_blank" rel="noreferrer"
+                            style={{ background: '#22c55e', color: 'white', borderRadius: '9999px', padding: '8px 16px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+                            📹 Sala de llamada
+                          </a>
+                        )}
+                        <button onClick={() => enviarLink(s.id)} disabled={enviandoLink === s.id}
+                          style={{ background: linkEnviado === s.id ? '#15803d' : '#2D1464', color: 'white', border: 'none', borderRadius: '9999px', padding: '8px 16px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap', opacity: enviandoLink === s.id ? 0.7 : 1 }}>
+                          {linkEnviado === s.id ? '✅ Enviado' : enviandoLink === s.id ? 'Enviando…' : '📨 Enviar link'}
+                        </button>
+                      </div>
+                    )}
+                    {/* Mensaje */}
+                    {s.mensaje && (
+                      <div style={{ background: 'white', border: '1.5px solid #E8E0D4', borderRadius: '10px', padding: '12px 14px' }}>
+                        <div style={{ fontSize: '11px', fontWeight: 700, color: '#9B8AB8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '4px' }}>Mensaje</div>
+                        <p style={{ margin: 0, fontSize: '14px', color: '#4A3B6B' }}>{s.mensaje}</p>
+                      </div>
+                    )}
+                    {/* Slots */}
+                    {s.slots_propuestos?.length > 0 && (
+                      <div>
+                        <div style={{ fontSize: '11px', fontWeight: 700, color: '#9B8AB8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>Horarios propuestos</div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          {s.slots_propuestos.map((slot, i) => {
+                            const esConfirmado = s.slot_confirmado === slot
+                            return (
+                              <div key={i} style={{ fontSize: '13px', padding: '8px 12px', borderRadius: '8px', background: esConfirmado ? '#F0FDF4' : '#F5F0E8', color: esConfirmado ? '#15803d' : '#4A3B6B', border: esConfirmado ? '1.5px solid #22c55e' : '1.5px solid transparent', fontWeight: esConfirmado ? 700 : 400, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                {esConfirmado && <span>✅</span>}
+                                {['1️⃣', '2️⃣', '3️⃣'][i]} {formatSlot(slot)}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
+            )
+          })()}
+        </>
+      )}
     </div>
   )
 }
