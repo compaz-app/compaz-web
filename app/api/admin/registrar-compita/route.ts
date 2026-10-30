@@ -20,6 +20,7 @@ export async function POST(req: NextRequest) {
   const v = validarPerfil(body, { permitirNombre: true })
   if (!v.ok) return err(v.error)
   const { nombre, zona, descripcion, servicios, foto_url, youtube_url } = v.datos
+  const esDemo = body.es_demo === true
 
   const admin = createAdminSupabase()
   const { data, error } = await admin
@@ -36,6 +37,7 @@ export async function POST(req: NextRequest) {
       estado: 'inactivo',
       verificado: false,
       visitas_realizadas: 0,
+      es_demo: esDemo,
     })
     .select('*')
     .single()

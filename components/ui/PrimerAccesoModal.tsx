@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { ZONAS_MUNICIPIOS } from '@/lib/venezuela'
 
 export default function PrimerAccesoModal() {
   const router = useRouter()
@@ -13,6 +14,8 @@ export default function PrimerAccesoModal() {
     familiar_edad: '',
     familiar_condicion: '',
     familiar_notas: '',
+    zona_estado: '',
+    zona_municipio: '',
   })
 
   function set(field: keyof typeof form, value: string) {
@@ -37,6 +40,9 @@ export default function PrimerAccesoModal() {
           familiar_edad: form.familiar_edad ? Number(form.familiar_edad) : null,
           familiar_condicion: form.familiar_condicion,
           familiar_notas: form.familiar_notas,
+          zona: form.zona_estado && form.zona_municipio
+            ? `${form.zona_estado} — ${form.zona_municipio}`
+            : form.zona_estado || null,
         }),
       })
       if (res.ok) {
@@ -51,8 +57,8 @@ export default function PrimerAccesoModal() {
   }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(26,10,60,0.7)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', overflowY: 'auto' }}>
-      <div style={{ background: 'white', borderRadius: '24px', padding: '36px 32px', maxWidth: '520px', width: '100%', boxShadow: '0 24px 80px rgba(0,0,0,0.25)' }}>
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(26,10,60,0.7)', zIndex: 9999, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '20px', overflowY: 'auto' }}>
+      <div style={{ background: 'white', borderRadius: '24px', padding: '36px 32px', maxWidth: '520px', width: '100%', boxShadow: '0 24px 80px rgba(0,0,0,0.25)', marginTop: 'auto', marginBottom: 'auto' }}>
         <h2 style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 900, fontSize: '22px', color: '#1A0A3C', margin: '0 0 6px' }}>
           Antes de continuar
         </h2>
@@ -73,19 +79,56 @@ export default function PrimerAccesoModal() {
             </Field>
           </Section>
 
-          <Section title="Sobre tu familiar">
-            <Field label="Nombre completo" required>
+          <Section title="Zona donde está tu familiar">
+            <Field label="Estado" required>
+              <select
+                value={form.zona_estado}
+                onChange={(e) => setForm((f) => ({ ...f, zona_estado: e.target.value, zona_municipio: '' }))}
+                style={inputStyle}
+                required
+              >
+                <option value="">Selecciona un estado…</option>
+                {Object.keys(ZONAS_MUNICIPIOS).sort().map((est) => (
+                  <option key={est} value={est}>{est}</option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Municipio" required>
+              <select
+                value={form.zona_municipio}
+                onChange={(e) => set('zona_municipio', e.target.value)}
+                style={{ ...inputStyle, opacity: form.zona_estado ? 1 : 0.4 }}
+                disabled={!form.zona_estado}
+                required
+              >
+                <option value="">Selecciona un municipio…</option>
+                {(ZONAS_MUNICIPIOS[form.zona_estado] ?? []).sort().map((municipio) => (
+                  <option key={municipio} value={municipio}>{municipio}</option>
+                ))}
+              </select>
+            </Field>
+          </Section>
+
+          <Section title="Sobre TU FAMILIAR">
+            <div style={{ background: '#FFF3E8', border: '2px solid #FFD0B5', borderRadius: '12px', padding: '12px 16px', display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+              <span style={{ fontSize: '20px', flexShrink: 0 }}>👴</span>
+              <p style={{ margin: 0, fontSize: '13px', lineHeight: 1.6, color: '#7C3A00' }}>
+                Lo que sigue es sobre <strong>TU FAMILIAR</strong> — la persona que recibirá el cuidado.<br />
+                <strong>No pongas tus propios datos aquí.</strong>
+              </p>
+            </div>
+            <Field label="Nombre completo de TU FAMILIAR" required>
               <input
                 type="text"
                 value={form.familiar_nombre}
                 onChange={(e) => set('familiar_nombre', e.target.value)}
-                placeholder="Ej: María González"
+                placeholder="Ej: tu mamá, tu papá, tu abuelo…"
                 maxLength={120}
                 required
                 style={inputStyle}
               />
             </Field>
-            <Field label="Edad">
+            <Field label="Edad de TU FAMILIAR">
               <input
                 type="number"
                 value={form.familiar_edad}
@@ -96,7 +139,7 @@ export default function PrimerAccesoModal() {
                 style={{ ...inputStyle, width: '120px' }}
               />
             </Field>
-            <Field label="Condición o diagnóstico">
+            <Field label="Condición o diagnóstico de TU FAMILIAR">
               <input
                 type="text"
                 value={form.familiar_condicion}
@@ -106,7 +149,7 @@ export default function PrimerAccesoModal() {
                 style={inputStyle}
               />
             </Field>
-            <Field label="Notas adicionales" hint="Rutinas, preferencias, lo que la compita debería saber">
+            <Field label="Notas sobre TU FAMILIAR" hint="Rutinas, preferencias, lo que la compita debería saber">
               <textarea
                 value={form.familiar_notas}
                 onChange={(e) => set('familiar_notas', e.target.value)}

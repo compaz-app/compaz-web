@@ -13,6 +13,7 @@ export async function PUT(req: NextRequest) {
     familiar_condicion?: string
     familiar_notas?: string
     telefono?: string
+    zona?: string
   }
 
   const supabase = createAdminSupabase()
@@ -23,6 +24,7 @@ export async function PUT(req: NextRequest) {
     familiar_notas: body.familiar_notas?.trim() || null,
   }
   if (body.telefono !== undefined) update.telefono = body.telefono.trim() || null
+  if (body.zona !== undefined) update.zona = body.zona.trim() || null
 
   const { error } = await supabase
     .from('usuarios')

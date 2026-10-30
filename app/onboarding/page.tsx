@@ -2,35 +2,7 @@
 
 import { useState, useEffect, useRef, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
-
-// ── Datos geográficos Venezuela ───────────────────────────────────────────────
-
-const ZONAS: Record<string, string[]> = {
-  'Distrito Capital': ['Libertador'],
-  'Miranda': ['Baruta', 'Chacao', 'El Hatillo', 'Sucre', 'Guaicaipuro', 'Carrizal', 'Los Salias', 'Cristóbal Rojas', 'Lander', 'Paz Castillo', 'Urdaneta', 'Acevedo', 'Brión', 'Buroz', 'Páez', 'Pedro Gual', 'Independencia', 'Simón Bolívar', 'Zamora'],
-  'Aragua': ['Girardot', 'Mario Briceño Iragorry', 'Ocumare de la Costa de Oro', 'Costa de Oro', 'Libertador', 'Sucre', 'Linares Alcántara', 'Francisco Linares Alcántara', 'Bolívar', 'Ribas', 'Santos Michelena', 'Zamora', 'Camatagua', 'San Casimiro', 'San Sebastián', 'Urdaneta'],
-  'Carabobo': ['Valencia', 'Naguanagua', 'San Diego', 'Libertador', 'Los Guayos', 'Miranda', 'Montalbán', 'Puerto Cabello', 'Juan José Mora', 'Guacara', 'Diego Ibarra', 'Carlos Arvelo', 'Bejuma'],
-  'Zulia': ['Maracaibo', 'San Francisco', 'Cabimas', 'Ciudad Ojeda', 'Lagunillas', 'Jesús Enrique Lossada', 'La Cañada de Urdaneta', 'Miranda', 'Mara', 'Páez', 'Rosario de Perijá', 'Machiques de Perijá', 'Colón', 'Catatumbo', 'Jesús María Semprún', 'Sucre', 'Valmore Rodríguez', 'Simón Bolívar', 'Santa Rita', 'Baralt'],
-  'Lara': ['Iribarren', 'Andrés Eloy Blanco', 'Crespo', 'Jiménez', 'Morán', 'Palavecino', 'Simón Planas', 'Torres', 'Urdaneta'],
-  'Mérida': ['Libertador', 'Campo Elías', 'Santos Marquina', 'Sucre', 'Rangel', 'Cardenal Quintero', 'Guaraque', 'Justo Briceño', 'Miranda', 'Obispo Ramos de Lora', 'Padre Noguera', 'Pueblo Llano', 'Rivas Dávila', 'Tovar', 'Tulio Febres Cordero', 'Arzobispo Chacón', 'Antonio Pinto Salinas', 'Aricagua', 'Zea', 'Caracciolo Parra Olmedo'],
-  'Táchira': ['San Cristóbal', 'Torbes', 'Cárdenas', 'Guásimos', 'Fernández Feo', 'Libertad', 'Lobatera', 'Michelena', 'Panamericano', 'Junín', 'Bolívar', 'Pedro María Ureña', 'García de Hevia', 'Seboruco', 'Ayacucho', 'Córdoba', 'Sucre', 'Uribante', 'Libertador', 'Andrés Bello', 'Antonio Rómulo Costa', 'Francisco de Miranda', 'Jáuregui', 'Montes', 'Samuel Darío Maldonado', 'Simón Rodríguez'],
-  'Bolívar': ['Caroní', 'Heres', 'Cedeño', 'El Callao', 'Gran Sabana', 'Padre Pedro Chien', 'Piar', 'Raúl Leoni', 'Roscio', 'Sifontes', 'Sucre'],
-  'Anzoátegui': ['Simón Bolívar', 'Sotillo', 'Diego Bautista Urbaneja', 'Bruzual', 'Cajigal', 'Fernando de Peñalver', 'Francisco del Carmen Carvajal', 'Francisco Javier Freites', 'Guanipa', 'Guanta', 'Independencia', 'Juan Antonio Sotillo', 'Juan Manuel Cajigal', 'Libertad', 'McGregor', 'Miranda', 'Monagas', 'Peñalver', 'Píritu', 'Sir Arthur McGregor', 'Simón Rodríguez'],
-  'Monagas': ['Maturín', 'Acosta', 'Aguasay', 'Bolívar', 'Caripe', 'Cedeño', 'Libertador', 'Piar', 'Punceres', 'Santa Bárbara', 'Sotillo', 'Uracoa', 'Ezequiel Zamora'],
-  'Sucre': ['Sucre', 'Arismendi', 'Benítez', 'Bermúdez', 'Bolívar', 'Cajigal', 'Cruz Salmerón Acosta', 'Libertador', 'Mariño', 'Mejías', 'Montes', 'Ribero', 'Valdez'],
-  'Falcón': ['Miranda', 'Acosta', 'Bolívar', 'Buchivacoa', 'Carirubana', 'Colina', 'Dabajuro', 'Democracia', 'Federación', 'Iturriza', 'Jacura', 'Los Taques', 'Mauroa', 'Palmasola', 'Petit', 'Piritu', 'San Francisco', 'Silva', 'Sucre', 'Tocópero', 'Unión', 'Urumaco', 'Zamora'],
-  'Barinas': ['Barinas', 'Alberto Arvelo Torrealba', 'Andrés Eloy Blanco', 'Antonio José de Sucre', 'Arismendi', 'Bolívar', 'Cruz Paredes', 'Ezequiel Zamora', 'Obispos', 'Pedraza', 'Rojas', 'Sosa', 'Ticoporo'],
-  'Portuguesa': ['Guanare', 'Araure', 'Acarigua', 'Esteller', 'Guanarito', 'José Vicente de Unda', 'Ospino', 'Páez', 'Papelón', 'San Genaro de Boconoíto', 'San Rafael de Onoto', 'Santa Rosalía', 'Sucre', 'Turén'],
-  'Yaracuy': ['San Felipe', 'Bolívar', 'Bruzual', 'Cocorote', 'Independencia', 'La Trinidad', 'Manuel Monge', 'Nirgua', 'Páez', 'Peña', 'Sucre', 'Urachiche'],
-  'Guárico': ['Juan Germán Roscio', 'Camaguán', 'Chaguaramas', 'El Socorro', 'Francisco de Miranda', 'José Félix Ribas', 'José Tadeo Monagas', 'Julian Mellado', 'Las Mercedes', 'Leonardo Infante', 'Mellado', 'Ortiz', 'San Gerónimo de Guayabal', 'San José de Guaribe', 'Santa María de Ipire', 'Zaraza'],
-  'Cojedes': ['Tinaco', 'Anzoátegui', 'Girardot', 'Lima Blanco', 'Pao de San Juan Bautista', 'Ricaurte', 'Rómulo Gallegos', 'San Carlos', 'Tinaquillo'],
-  'Apure': ['San Fernando', 'Achaguas', 'Biruaca', 'Muñoz', 'Páez', 'Pedro Camejo', 'Rómulo Gallegos'],
-  'Trujillo': ['Trujillo', 'Andrés Bello', 'Bolívar', 'Boconó', 'Candelaria', 'Carache', 'Escuque', 'José Felipe Márquez Cañizales', 'La Ceiba', 'Miranda', 'Motatán', 'Monte Carmelo', 'Pampán', 'Pampanito', 'Rafael Rangel', 'San Rafael de Carvajal', 'Sucre', 'Urdaneta', 'Valera'],
-  'Amazonas': ['Atures', 'Alto Orinoco', 'Autana', 'Manapiare', 'Maroa', 'Negro', 'Río Negro', 'Sipapo'],
-  'Delta Amacuro': ['Tucupita', 'Antonio Díaz', 'Casacoima', 'Pedernales'],
-  'Nueva Esparta': ['Mariño', 'Antolín del Campo', 'Arismendi', 'Díaz', 'García', 'Gómez', 'Macanao', 'Maneiro', 'Marcano', 'Tubores', 'Villalba'],
-  'Vargas': ['Vargas'],
-}
+import { ZONAS_MUNICIPIOS as ZONAS } from '@/lib/venezuela'
 
 // ── Servicios ─────────────────────────────────────────────────────────────────
 
@@ -75,6 +47,74 @@ const SERVICIOS_GRUPOS = [
   },
 ]
 
+// ── Barra de progreso ─────────────────────────────────────────────────────────
+
+function BarraProgreso({ paso }: { paso: 1 | 2 }) {
+  const pasos = ['Tu perfil', 'Telegram']
+  return (
+    <nav style={{
+      background: '#1A0A3C',
+      padding: '0 20px',
+      position: 'sticky',
+      top: 0,
+      zIndex: 40,
+    }}>
+      <div style={{ maxWidth: '640px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', height: '56px' }}>
+        <span style={{ color: 'white', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '18px', flexShrink: 0 }}>
+          Compaz
+        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          {pasos.map((nombre, idx) => {
+            const num = idx + 1
+            const activo = num === paso
+            const hecho = num < paso
+            return (
+              <div key={nombre} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                {idx > 0 && (
+                  <div style={{ width: '24px', height: '2px', background: hecho ? '#FF6B2B' : 'rgba(255,255,255,0.25)', flexShrink: 0 }} />
+                )}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  background: activo ? '#FF6B2B' : hecho ? 'rgba(255,107,43,0.25)' : 'rgba(255,255,255,0.1)',
+                  borderRadius: '9999px',
+                  padding: '4px 10px 4px 6px',
+                }}>
+                  <div style={{
+                    width: '20px',
+                    height: '20px',
+                    borderRadius: '50%',
+                    background: activo ? 'white' : hecho ? '#FF6B2B' : 'rgba(255,255,255,0.3)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '11px',
+                    fontWeight: 800,
+                    color: activo ? '#FF6B2B' : 'white',
+                    flexShrink: 0,
+                  }}>
+                    {hecho ? '✓' : num}
+                  </div>
+                  <span style={{
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    color: activo ? 'white' : hecho ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.45)',
+                    fontFamily: 'Inter, sans-serif',
+                    whiteSpace: 'nowrap' as const,
+                  }}>
+                    {nombre}
+                  </span>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </nav>
+  )
+}
+
 // ── Componente ────────────────────────────────────────────────────────────────
 
 function OnboardingForm() {
@@ -114,8 +154,11 @@ function OnboardingForm() {
   const [horarioInicio, setHorarioInicio] = useState('08:00')
   const [horarioFin, setHorarioFin] = useState('17:00')
   const [horarioError, setHorarioError] = useState<string | null>(null)
+  const [guiaYoutube, setGuiaYoutube] = useState(false)
+  const [tieneBorrador, setTieneBorrador] = useState(false)
 
   const ORDEN_DIAS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo']
+  const BORRADOR_KEY = `compaz_onboarding_${token || 'preview'}`
 
   function seSuperpone(existentes: HorarioItem[], dia: string, inicio: string, fin: string): boolean {
     return existentes.some(
@@ -165,13 +208,6 @@ function OnboardingForm() {
     setHorarioError(null)
   }
 
-  function agregarZona() {
-    if (!estado || !municipio) return
-    const nueva = `${estado} — ${municipio}`
-    if (!zonas.includes(nueva)) setZonas((prev) => [...prev, nueva])
-    setMunicipio('')
-  }
-
   function quitarZona(z: string) {
     setZonas((prev) => prev.filter((x) => x !== z))
   }
@@ -184,6 +220,29 @@ function OnboardingForm() {
       .then((d) => setTokenValido(d.valido ?? false))
       .catch(() => setTokenValido(false))
   }, [token, preview])
+
+  // Cargar borrador guardado
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(BORRADOR_KEY)
+      if (!raw) return
+      const saved = JSON.parse(raw)
+      if (saved.form) setForm(saved.form)
+      if (saved.zonas) setZonas(saved.zonas)
+      if (saved.horarios) setHorarios(saved.horarios)
+      setTieneBorrador(true)
+    } catch { /* localStorage bloqueado o dato corrupto */ }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [BORRADOR_KEY])
+
+  // Guardar borrador en cada cambio
+  useEffect(() => {
+    try {
+      const hayAlgo = form.nombre || form.email || form.descripcion || zonas.length > 0 || horarios.length > 0
+      if (!hayAlgo) return
+      localStorage.setItem(BORRADOR_KEY, JSON.stringify({ form, zonas, horarios }))
+    } catch { /* localStorage bloqueado */ }
+  }, [form, zonas, horarios, BORRADOR_KEY])
 
   function toggleServicio(s: string) {
     setForm((prev) => ({
@@ -231,6 +290,7 @@ function OnboardingForm() {
       })
 
       if (res.ok) {
+        try { localStorage.removeItem(BORRADOR_KEY) } catch { /* ignorar */ }
         setStep('telegram')
       } else {
         const d = await res.json()
@@ -258,8 +318,10 @@ function OnboardingForm() {
 
   if (step === 'telegram') {
     return (
-      <div style={s.center}>
-        <div style={{ ...s.card, maxWidth: '520px' }}>
+      <div style={{ minHeight: '100vh', background: '#FDFAF6', fontFamily: 'Inter, sans-serif' }}>
+        <BarraProgreso paso={2} />
+        <div style={{ maxWidth: '520px', margin: '0 auto', padding: '40px 20px 80px' }}>
+        <div style={{ ...s.card, maxWidth: '520px', textAlign: 'left' as const }}>
           <h2 style={s.h2}>¡Ya eres parte de Compaz, {form.nombre.split(' ')[0]}!</h2>
           <p style={{ color: '#6B5C90', marginTop: '8px', marginBottom: '16px', lineHeight: '1.7' }}>
             Tu perfil fue creado exitosamente. Falta un paso importante:
@@ -316,24 +378,27 @@ function OnboardingForm() {
             Abrir bot en Telegram
           </a>
         </div>
+        </div>
       </div>
     )
   }
 
   return (
     <div style={{ minHeight: '100vh', background: '#FDFAF6', fontFamily: 'Inter, sans-serif' }}>
-      <nav style={s.nav}>
-        <span style={s.logo}>Compaz</span>
-        <span style={s.badge}>Registro de Compita</span>
-      </nav>
-
-      <div style={{ maxWidth: '640px', margin: '0 auto', padding: '40px 20px 80px' }}>
+      <BarraProgreso paso={1} />
+      <div style={{ maxWidth: '640px', margin: '0 auto', padding: '40px 20px 100px' }}>
         <h1 style={s.h1}>Bienvenida a Compaz</h1>
-        <p style={{ color: '#6B5C90', marginBottom: '32px', lineHeight: '1.6' }}>
+        <p style={{ color: '#6B5C90', marginBottom: tieneBorrador ? '12px' : '32px', lineHeight: '1.6' }}>
           Completa tu perfil para empezar a recibir visitas. Solo toma unos minutos.
         </p>
+        {tieneBorrador && (
+          <div style={{ background: '#EDE8FF', border: '2px solid rgba(45,20,100,0.2)', borderRadius: '12px', padding: '10px 16px', marginBottom: '32px', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: '#2D1464', fontWeight: 600 }}>
+            <span style={{ fontSize: '16px' }}>💾</span>
+            Continuamos donde lo dejaste — tus datos están guardados en este dispositivo.
+          </div>
+        )}
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        <form id="form-onboarding" onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
 
           {/* Nombre */}
           <div>
@@ -357,15 +422,22 @@ function OnboardingForm() {
             {zonas.length > 0 && (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
                 {zonas.map((z) => (
-                  <span key={z} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#2D1464', color: 'white', borderRadius: '9999px', padding: '6px 12px', fontSize: '13px', fontWeight: 600 }}>
+                  <span key={z} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#2D1464', color: 'white', borderRadius: '9999px', padding: '6px 6px 6px 14px', fontSize: '13px', fontWeight: 600 }}>
                     {z}
-                    <button type="button" onClick={() => quitarZona(z)} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '16px', lineHeight: 1, padding: 0, opacity: 0.7 }}>×</button>
+                    <button
+                      type="button"
+                      onClick={() => quitarZona(z)}
+                      aria-label={`Quitar ${z}`}
+                      style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '28px', height: '28px', background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '50%', color: 'white', cursor: 'pointer', fontSize: '16px', fontWeight: 700, lineHeight: 1, flexShrink: 0 }}
+                    >
+                      ×
+                    </button>
                   </span>
                 ))}
               </div>
             )}
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '10px', alignItems: 'end' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', alignItems: 'end' }}>
               <div>
                 <label style={{ ...s.label, fontSize: '12px', marginBottom: '4px' }}>Estado</label>
                 <select value={estado} onChange={(e) => { setEstado(e.target.value); setMunicipio('') }} style={s.input}>
@@ -377,21 +449,25 @@ function OnboardingForm() {
               </div>
               <div>
                 <label style={{ ...s.label, fontSize: '12px', marginBottom: '4px' }}>Municipio</label>
-                <select value={municipio} onChange={(e) => setMunicipio(e.target.value)} disabled={!estado} style={{ ...s.input, opacity: estado ? 1 : 0.5 }}>
-                  <option value="">Seleccionar…</option>
+                <select
+                  value={municipio}
+                  disabled={!estado}
+                  onChange={(e) => {
+                    const mun = e.target.value
+                    if (!mun) return
+                    setMunicipio(mun)
+                    const nueva = `${estado} — ${mun}`
+                    if (!zonas.includes(nueva)) setZonas((prev) => [...prev, nueva])
+                    setMunicipio('')
+                  }}
+                  style={{ ...s.input, opacity: estado ? 1 : 0.5 }}
+                >
+                  <option value="">Seleccionar municipio…</option>
                   {(ZONAS[estado] ?? []).sort().map((mun) => (
                     <option key={mun} value={mun}>{mun}</option>
                   ))}
                 </select>
               </div>
-              <button
-                type="button"
-                onClick={agregarZona}
-                disabled={!estado || !municipio}
-                style={{ background: '#FF6B2B', color: 'white', border: 'none', borderRadius: '12px', padding: '12px 16px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '14px', cursor: estado && municipio ? 'pointer' : 'not-allowed', opacity: estado && municipio ? 1 : 0.4, whiteSpace: 'nowrap' }}
-              >
-                + Agregar
-              </button>
             </div>
           </div>
 
@@ -605,16 +681,41 @@ function OnboardingForm() {
               </div>
             </div>
 
-            <div style={{ background: 'white', borderRadius: '12px', padding: '14px 16px', marginBottom: '14px' }}>
-              <p style={{ fontSize: '12px', fontWeight: 700, color: '#1A0A3C', marginBottom: '8px' }}>Tips para grabar tu video:</p>
-              <ul style={{ fontSize: '13px', color: '#4A3B6B', paddingLeft: '18px', lineHeight: '1.9', margin: 0 }}>
-                <li>Graba en una zona bien iluminada, preferiblemente con luz natural</li>
-                <li>Habla con calma, mira directo a la cámara y sonríe</li>
-                <li>Evita ruido de fondo: apaga el televisor y cierra puertas</li>
-                <li>Viste ropa limpia y ordenada, como si fuera a una entrevista</li>
-                <li>Di tu nombre, cuéntanos quién eres y por qué serías una buena compañía</li>
-                <li>Sube el video a YouTube como «No listado» <span style={{ color: '#6B5C90', fontWeight: 400 }}>(significa que solo quien tenga el link puede verlo — no aparece en búsquedas)</span> y pega el enlace aquí</li>
-              </ul>
+            <div style={{ background: 'white', borderRadius: '12px', marginBottom: '14px', overflow: 'hidden' as const }}>
+              <button
+                type="button"
+                onClick={() => setGuiaYoutube((v) => !v)}
+                style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' as const }}
+              >
+                <span style={{ fontSize: '13px', fontWeight: 700, color: '#1A0A3C', fontFamily: 'Bricolage Grotesque, sans-serif' }}>
+                  ¿Cómo grabo y subo el video?
+                </span>
+                <span style={{ fontSize: '16px', color: '#4A3B6B', transform: guiaYoutube ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', display: 'inline-block' }}>▾</span>
+              </button>
+              {guiaYoutube && (
+                <div style={{ padding: '0 16px 16px', borderTop: '1px solid rgba(45,20,100,0.08)' }}>
+                  <p style={{ fontSize: '12px', fontWeight: 700, color: '#4A3B6B', textTransform: 'uppercase' as const, letterSpacing: '0.05em', margin: '12px 0 8px' }}>
+                    Cómo grabar
+                  </p>
+                  <ol style={{ fontSize: '13px', color: '#4A3B6B', paddingLeft: '18px', lineHeight: '1.9', margin: 0 }}>
+                    <li>Busca buena luz natural (frente a una ventana funciona bien).</li>
+                    <li>Pon el teléfono <strong>vertical</strong> y apóyalo para que no se mueva.</li>
+                    <li>Apaga el televisor y cierra puertas para evitar ruido.</li>
+                    <li>Viste ropa limpia como si fuera a una entrevista, mira a la cámara y sonríe.</li>
+                    <li>Di tu nombre, quién eres y por qué serías una buena compañía. <strong>Entre 1 y 1:30 minutos.</strong></li>
+                  </ol>
+                  <p style={{ fontSize: '12px', fontWeight: 700, color: '#4A3B6B', textTransform: 'uppercase' as const, letterSpacing: '0.05em', margin: '14px 0 8px' }}>
+                    Cómo subir a YouTube como «No listado»
+                  </p>
+                  <ol style={{ fontSize: '13px', color: '#4A3B6B', paddingLeft: '18px', lineHeight: '1.9', margin: 0 }}>
+                    <li>Abre YouTube en tu teléfono y toca el <strong>+</strong> abajo al centro.</li>
+                    <li>Selecciona <strong>«Subir un video»</strong> y elige el archivo que grabaste.</li>
+                    <li>En <strong>«Visibilidad»</strong>, elige <strong>«No listado»</strong> — solo quien tenga el link puede verlo, no aparece en búsquedas.</li>
+                    <li>Toca <strong>«Subir»</strong> y espera a que termine.</li>
+                    <li>Copia el link del video y pégalo en el campo de abajo.</li>
+                  </ol>
+                </div>
+              )}
             </div>
             <input
               value={form.youtube_url}
@@ -629,17 +730,34 @@ function OnboardingForm() {
             <div style={{ background: '#FFF3CD', border: '1px solid #FFCC00', borderRadius: '10px', padding: '12px 16px', fontSize: '13px', color: '#7A5800', lineHeight: '1.6' }}>
               Para continuar necesitas:
               <ul style={{ margin: '6px 0 0', paddingLeft: '18px' }}>
-                {zonas.length === 0 && <li>Agregar al menos una <strong>zona de trabajo</strong></li>}
-                {form.servicios.length === 0 && <li>Seleccionar al menos un <strong>servicio</strong></li>}
+                {zonas.length === 0 && <li>Agregar al menos una zona en <strong>Zonas que puedes cubrir</strong></li>}
+                {form.servicios.length === 0 && <li>Seleccionar al menos un item en <strong>Servicios que ofreces</strong></li>}
               </ul>
             </div>
           )}
+        </form>
+      </div>
+
+      {/* Botón sticky en el fondo */}
+      <div style={{
+        position: 'fixed',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        background: 'rgba(253,250,246,0.95)',
+        backdropFilter: 'blur(8px)',
+        borderTop: '1px solid rgba(45,20,100,0.12)',
+        padding: '12px 20px',
+        zIndex: 50,
+      }}>
+        <div style={{ maxWidth: '640px', margin: '0 auto' }}>
           {errorForm && (
-            <div style={{ background: '#FEF2F2', border: '2px solid #FCA5A5', borderRadius: '12px', padding: '12px 16px', color: '#B91C1C', fontSize: '14px', fontWeight: 600, fontFamily: 'Inter, sans-serif' }}>
+            <p style={{ color: '#B91C1C', fontSize: '13px', fontWeight: 600, marginBottom: '8px', textAlign: 'center' as const }}>
               ⚠️ {errorForm}
-            </div>
+            </p>
           )}
           <button
+            form="form-onboarding"
             type="submit"
             disabled={loading || form.servicios.length === 0 || zonas.length === 0}
             style={{
@@ -648,9 +766,9 @@ function OnboardingForm() {
               cursor: (loading || form.servicios.length === 0 || zonas.length === 0) ? 'not-allowed' : 'pointer',
             }}
           >
-            {loading ? 'Registrando…' : 'Crear mi perfil'}
+            {loading ? 'Registrando…' : 'Crear mi perfil → paso 2 de 2'}
           </button>
-        </form>
+        </div>
       </div>
     </div>
   )

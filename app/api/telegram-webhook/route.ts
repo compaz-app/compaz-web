@@ -30,58 +30,19 @@ import { randomInt } from 'crypto'
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? ''
 
-const GUIA_COMPITA = `📖 <b>Todo lo que puedes hacer desde este chat</b>
+const GUIA_COMPITA = `📋 <b>Guía rápida Compaz</b>
 
-Hola 👋 Este es tu asistente de Compaz. Desde aquí manejas todo tu trabajo. Te explico cómo funciona, paso a paso:
+<b>▶️ Al llegar</b> — Toca <b>Iniciar visita</b>. La familia sabe que llegaste.
+<b>📸 Durante la visita</b> — Manda fotos o mensajes. La familia los ve en tiempo real.
+<b>🔴 Al irte</b> — Toca <b>Terminar visita</b>. La familia recibe el resumen automáticamente.
+<b>🚨 Emergencia</b> — Toca ese botón y te contactamos de inmediato. Para peligro inmediato llama al 911.
+<b>/perfil</b> — Edita tu foto, descripción y horarios.
 
-━━━━━━━━━━━━━━━━━━━
-
-<b>1. Cuando llegues donde tu cliente</b>
-Toca el botón que dice <b>▶️ Iniciar visita</b>.
-Así la familia sabe que ya llegaste. Si no tocas ese botón, la familia no se entera de que estás ahí.
-
-<b>2. Durante la visita</b>
-Puedes <b>mandar fotos</b> o <b>escribir mensajes</b> en este mismo chat. La familia los ve en tiempo real en su celular o computadora. Por ejemplo: una foto del almuerzo que preparaste, o un mensaje diciéndole cómo está el adulto mayor.
-
-<b>3. Cuando te vayas</b>
-Toca el botón que dice <b>🔴 Terminar visita</b>. La familia recibe automáticamente un resumen de la visita por correo.
+¿Dudas? Escríbenos a <b>hola@micompaz.com</b>
 
 ━━━━━━━━━━━━━━━━━━━
 
-<b>4. Cuando un cliente quiere conocerte</b>
-Recibirás un mensaje aquí con la solicitud. Te propondrán unos horarios para hacer una llamada de video. Tú eliges el que te funcione o dices que ninguno sirve y propones otros. Nosotros le avisamos al cliente.
-
-━━━━━━━━━━━━━━━━━━━
-
-<b>5. Para actualizar tu perfil</b>
-Escribe <b>/perfil</b> (así, con la barra adelante).
-Te llegará un enlace. Ábrelo en tu celular y podrás:
-• Cambiar tu foto
-• Escribir una descripción tuya
-• Elegir qué servicios ofreces
-• Poner tus horarios disponibles
-• Agregar un video de YouTube donde te presentes
-
-━━━━━━━━━━━━━━━━━━━
-
-<b>6. Si hay una emergencia durante la visita</b>
-Toca el botón <b>🚨 Emergencia</b>. El equipo de Compaz recibe una alerta inmediata con tus datos y los del cliente, y te contactamos enseguida. Para peligro inmediato, llama al <b>911</b>.
-
-━━━━━━━━━━━━━━━━━━━
-
-<b>7. Botones en tu teclado</b>
-Siempre tienes botones visibles en la parte de abajo del chat. Son atajos rápidos:
-
-<b>📋 Menú</b> — Ver estas instrucciones en cualquier momento.
-<b>▶️ Iniciar visita</b> — Aparece cuando tienes visita programada. Tócalo cuando llegues.
-<b>🔴 Terminar visita</b> — Aparece cuando la visita está en curso. Tócalo cuando te vayas.
-<b>📹 Llamar al cliente</b> — Aparece durante la visita. Te da un enlace para hacer videollamada.
-
-━━━━━━━━━━━━━━━━━━━
-
-<b>¿Tienes dudas?</b>
-Toca <b>📋 Menú</b> o escribe <b>/menu</b> para volver a ver estas instrucciones.
-O escríbenos a <b>hola@micompaz.com</b> y te ayudamos.`
+🔒 <b>Aviso de seguridad:</b> Compaz nunca te pedirá contraseñas, datos bancarios, números de cédula ni información privada por este chat ni por ningún otro medio. Si alguien te los solicita diciendo ser de Compaz, no respondas y avísanos de inmediato a hola@micompaz.com.`
 
 const PREGUNTAS_REPORTE = [
   { emoji: '😊', label: 'Ánimo', texto: '¿Cómo estaba el <b>ánimo</b> de la persona durante la visita?' },
@@ -554,7 +515,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
       await setEstado(supabase, chatId, { registro_pendiente: true, pendiente_accion: null, pendiente_expira: null })
       await sendTelegramMessage(
         chatId,
-        `¡Bienvenido a Compaz! 👋\n\nSoy el asistente que te acompañará en cada visita.\n\nPrimero necesito verificar tu cuenta. ✍️ Escríbeme tu <b>nombre completo</b> tal como lo pusiste cuando te registraste. No importa si usas mayúsculas o no.\n\n<i>Por ejemplo: María González</i>`,
+        `¡Bienvenido a Compaz! 👋\n\nPara verificar tu cuenta escríbeme tu <b>nombre completo</b> tal como lo pusiste al registrarte.\n\n<i>Ejemplo: María González</i>\n\n🔔 <b>Activa las notificaciones de Telegram</b> para no perderte solicitudes ni avisos de visita.\n\n🔒 Compaz nunca te pedirá contraseñas, datos bancarios ni información privada. Si alguien lo hace, avísanos a hola@micompaz.com.`,
         QUITAR_TECLADO,
       )
     }
@@ -657,7 +618,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
     const nombre = esc(encontrada?.nombre ?? 'Compita')
     await sendTelegramMessage(
       chatId,
-      `✅ <b>¡Listo, ${nombre}!</b> Tu cuenta ya está activa en Compaz. ¡Ya eres parte del equipo! 🎉\n\nAhora te explico todo lo que puedes hacer desde este chat:`,
+      `✅ <b>¡Listo, ${nombre}!</b> Tu cuenta ya está activa en Compaz. ¡Ya eres parte del equipo! 🎉\n\n🔔 <b>Importante:</b> activa las notificaciones de Telegram ahora para no perderte solicitudes de clientes ni avisos de visita. Ve a Configuración → Notificaciones en Telegram y asegúrate de que estén activadas.\n\nAquí te explico cómo funciona todo:`,
       QUITAR_TECLADO,
     )
     await sendTelegramMessage(chatId, GUIA_COMPITA, TECLADO_SIN_VISITA)

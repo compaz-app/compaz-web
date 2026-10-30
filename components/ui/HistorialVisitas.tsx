@@ -144,28 +144,6 @@ export default function HistorialVisitas({ visitas, compitaId, compitaNombre }: 
         })}
       </div>
 
-      {/* Reagendar */}
-      <div style={{ background: '#F5F0E8', border: '1.5px solid #E8E0D4', borderRadius: '12px', padding: '16px 20px', marginTop: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-        <p style={{ color: '#4A3B6B', fontSize: '14px', margin: 0, fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700 }}>
-          ¿Agendar otra visita?
-        </p>
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-          {compitaId && compitaNombre && (
-            <a
-              href={`/compitas?compita=${compitaId}`}
-              style={{ background: '#FF6B2B', color: 'white', borderRadius: '9999px', padding: '8px 18px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '13px', textDecoration: 'none', whiteSpace: 'nowrap' }}
-            >
-              Con {compitaNombre} →
-            </a>
-          )}
-          <a
-            href="/compitas"
-            style={{ background: 'transparent', color: '#2D1464', border: '1.5px solid #D4CAE8', borderRadius: '9999px', padding: '8px 18px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', textDecoration: 'none', whiteSpace: 'nowrap' }}
-          >
-            Buscar otro compita
-          </a>
-        </div>
-      </div>
     </div>
   )
 }
