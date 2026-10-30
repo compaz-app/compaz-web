@@ -1197,16 +1197,21 @@ function ClientesTab({ usuarios, compitas, onAsignar, onEliminar, onEliminarLote
 }) {
   const clientesInactivosSet = new Set(clientesInactivos ?? [])
   const [busqueda, setBusqueda] = useState('')
-  const [filtro, setFiltro] = useState<'todos' | 'activos' | 'invitados' | 'bloqueados'>('todos')
+  const [filtro, setFiltro] = useState<'todos' | 'activos' | 'invitados' | 'bloqueados' | 'inactivos'>('todos')
   const [seleccionados, setSeleccionados] = useState<Set<string>>(new Set())
   const [confirmarLote, setConfirmarLote] = useState(false)
   const [eliminandoLote, setEliminandoLote] = useState(false)
+  const [panelId, setPanelId] = useState<string | null>(null)
+  const [pagina, setPagina] = useState(0)
+  const POR_PAGINA = 25
 
   const activos = usuarios.filter((u) => u.activado && u.plan !== 'bloqueado')
   const invitados = usuarios.filter((u) => !u.activado && u.plan !== 'bloqueado')
   const bloqueados = usuarios.filter((u) => u.plan === 'bloqueado')
+  const inactivos = usuarios.filter((u) => clientesInactivosSet.has(u.id))
 
-  const base = filtro === 'bloqueados' ? bloqueados : filtro === 'activos' ? activos : filtro === 'invitados' ? invitados : usuarios
+  const mapaFiltro: Record<string, UsuarioConCompita[]> = { todos: usuarios, activos, invitados, bloqueados, inactivos }
+  const base = mapaFiltro[filtro] ?? usuarios
   const lista = busqueda.trim()
     ? base.filter((u) =>
         u.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
@@ -1215,13 +1220,18 @@ function ClientesTab({ usuarios, compitas, onAsignar, onEliminar, onEliminarLote
       )
     : base
 
-  const todosSeleccionados = lista.length > 0 && lista.every((u) => seleccionados.has(u.id))
+  const total = lista.length
+  const totalPaginas = Math.max(1, Math.ceil(total / POR_PAGINA))
+  const paginaActual = Math.min(pagina, totalPaginas - 1)
+  const slice = lista.slice(paginaActual * POR_PAGINA, (paginaActual + 1) * POR_PAGINA)
+  const todosEnPagina = slice.length > 0 && slice.every((u) => seleccionados.has(u.id))
+  const panelUsuario = lista.find((u) => u.id === panelId) ?? null
 
   function toggleTodos() {
-    if (todosSeleccionados) {
-      setSeleccionados((prev) => { const next = new Set(prev); lista.forEach((u) => next.delete(u.id)); return next })
+    if (todosEnPagina) {
+      setSeleccionados((prev) => { const next = new Set(prev); slice.forEach((u) => next.delete(u.id)); return next })
     } else {
-      setSeleccionados((prev) => { const next = new Set(prev); lista.forEach((u) => next.add(u.id)); return next })
+      setSeleccionados((prev) => { const next = new Set(prev); slice.forEach((u) => next.add(u.id)); return next })
     }
   }
 
@@ -1241,113 +1251,189 @@ function ClientesTab({ usuarios, compitas, onAsignar, onEliminar, onEliminarLote
     }
   }
 
-  const btnFiltro = (f: typeof filtro, label: string, count: number) => (
-    <button
-      onClick={() => setFiltro(f)}
-      style={{ background: filtro === f ? '#2D1464' : 'white', color: filtro === f ? 'white' : '#4A3B6B', border: '2px solid', borderColor: filtro === f ? '#2D1464' : '#D1C8E0', borderRadius: '9999px', padding: '7px 16px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap' }}
-    >
-      {label} ({count})
-    </button>
-  )
+  type FiltroKey = 'todos' | 'activos' | 'invitados' | 'bloqueados' | 'inactivos'
+  const filtros: { key: FiltroKey; label: string; count: number; dot?: string }[] = [
+    { key: 'todos', label: 'Todos', count: usuarios.length },
+    { key: 'activos', label: '✓ Activos', count: activos.length },
+    { key: 'invitados', label: '⏳ Invitados', count: invitados.length, dot: invitados.length > 0 ? '#f59e0b' : undefined },
+    { key: 'inactivos', label: '⚠️ Sin visita +30d', count: inactivos.length, dot: inactivos.length > 0 ? '#ef4444' : undefined },
+    { key: 'bloqueados', label: '🚫 Bloqueados', count: bloqueados.length, dot: bloqueados.length > 0 ? '#B91C1C' : undefined },
+  ]
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
       <InvitarCliente />
 
-      {/* Barra de búsqueda + filtros */}
-      <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-        <div style={{ flex: 1, minWidth: '200px', position: 'relative' }}>
-          <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9B8AB8', fontSize: '16px', pointerEvents: 'none' }}>🔍</span>
-          <input
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            placeholder="Buscar por nombre, correo o zona…"
-            style={{ width: '100%', boxSizing: 'border-box', border: '2px solid rgba(45,20,100,0.2)', borderRadius: '12px', padding: '9px 14px 9px 36px', fontFamily: 'Inter, sans-serif', fontSize: '16px', color: '#1A0A3C', background: 'white', outline: 'none' }}
-          />
-        </div>
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          {btnFiltro('todos', 'Todos', usuarios.length)}
-          {btnFiltro('activos', 'Activos', activos.length)}
-          {btnFiltro('invitados', '⏳ Invitados', invitados.length)}
-          {btnFiltro('bloqueados', '🚫 Bloqueados', bloqueados.length)}
-        </div>
+      {/* Filtros */}
+      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+        {filtros.map(({ key, label, count, dot }) => {
+          const activo = filtro === key
+          return (
+            <button key={key}
+              onClick={() => { setFiltro(key); setPagina(0); setPanelId(null) }}
+              style={{ display: 'flex', alignItems: 'center', gap: '5px', background: activo ? '#2D1464' : 'white', color: activo ? 'white' : '#4A3B6B', border: `2px solid ${activo ? '#2D1464' : dot ?? 'rgba(45,20,100,0.2)'}`, borderRadius: '9999px', padding: '6px 14px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+              {label}
+              <span style={{ background: activo ? 'rgba(255,255,255,0.25)' : dot ? dot : 'rgba(45,20,100,0.1)', color: activo ? 'white' : dot ? 'white' : '#6B5C90', borderRadius: '9999px', padding: '0 7px', fontSize: '11px', fontWeight: 800, minWidth: '20px', textAlign: 'center' }}>
+                {count}
+              </span>
+            </button>
+          )
+        })}
       </div>
 
-      {/* Barra de selección masiva */}
-      {lista.length > 0 && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', background: seleccionados.size > 0 ? '#FEF2F2' : '#F5F0FF', border: `2px solid ${seleccionados.size > 0 ? '#fca5a5' : '#D4C9E8'}`, borderRadius: '12px', flexWrap: 'wrap' }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', userSelect: 'none' }}>
-            <input
-              type="checkbox"
-              checked={todosSeleccionados}
-              onChange={toggleTodos}
-              style={{ width: '16px', height: '16px', accentColor: '#2D1464', cursor: 'pointer' }}
-            />
-            <span style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', color: '#2D1464' }}>
-              {todosSeleccionados ? 'Deseleccionar todos' : `Seleccionar todos (${lista.length})`}
-            </span>
-          </label>
-          {seleccionados.size > 0 && (
+      {/* Búsqueda */}
+      <div style={{ position: 'relative' }}>
+        <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9B8AB8', fontSize: '16px', pointerEvents: 'none' }}>🔍</span>
+        <input
+          value={busqueda}
+          onChange={(e) => { setBusqueda(e.target.value); setPagina(0) }}
+          placeholder="Buscar por nombre, correo o zona…"
+          style={{ width: '100%', boxSizing: 'border-box', border: '2px solid rgba(45,20,100,0.2)', borderRadius: '12px', padding: '9px 14px 9px 36px', fontFamily: 'Inter, sans-serif', fontSize: '16px', color: '#1A0A3C', background: 'white', outline: 'none' }}
+        />
+      </div>
+
+      {/* Bulk */}
+      {seleccionados.size > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 14px', background: '#FEF2F2', border: '2px solid #fca5a5', borderRadius: '10px', flexWrap: 'wrap' }}>
+          <span style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', color: '#B91C1C', flex: 1 }}>
+            {seleccionados.size} seleccionado{seleccionados.size !== 1 ? 's' : ''}
+          </span>
+          {!confirmarLote ? (
+            <button onClick={() => setConfirmarLote(true)}
+              style={{ background: '#B91C1C', color: 'white', border: 'none', borderRadius: '9999px', padding: '5px 14px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', cursor: 'pointer' }}>
+              🗑 Eliminar
+            </button>
+          ) : (
             <>
-              <span style={{ fontFamily: 'Inter, sans-serif', fontSize: '13px', color: '#991b1b' }}>
-                {seleccionados.size} seleccionado{seleccionados.size !== 1 ? 's' : ''}
-              </span>
-              {!confirmarLote ? (
-                <button
-                  onClick={() => setConfirmarLote(true)}
-                  style={{ background: '#B91C1C', color: 'white', border: 'none', borderRadius: '9999px', padding: '6px 16px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap' }}
-                >
-                  🗑 Eliminar seleccionados
-                </button>
-              ) : (
-                <>
-                  <span style={{ fontFamily: 'Inter, sans-serif', fontSize: '13px', color: '#991b1b', fontWeight: 700 }}>
-                    ¿Eliminar {seleccionados.size} cliente{seleccionados.size !== 1 ? 's' : ''}? Esta acción no se puede deshacer.
-                  </span>
-                  <button
-                    onClick={ejecutarEliminarLote}
-                    disabled={eliminandoLote}
-                    style={{ background: '#B91C1C', color: 'white', border: 'none', borderRadius: '9999px', padding: '6px 16px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', cursor: eliminandoLote ? 'not-allowed' : 'pointer', opacity: eliminandoLote ? 0.6 : 1, whiteSpace: 'nowrap' }}
-                  >
-                    {eliminandoLote ? 'Eliminando…' : 'Sí, eliminar'}
-                  </button>
-                  <button
-                    onClick={() => setConfirmarLote(false)}
-                    style={{ background: 'white', color: '#6B5C90', border: '2px solid #D1C8E0', borderRadius: '9999px', padding: '6px 14px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', cursor: 'pointer' }}
-                  >
-                    Cancelar
-                  </button>
-                </>
-              )}
-              <button
-                onClick={() => { setSeleccionados(new Set()); setConfirmarLote(false) }}
-                style={{ background: 'none', color: '#9B8AB8', border: 'none', fontSize: '13px', cursor: 'pointer', padding: '0', fontFamily: 'Inter, sans-serif' }}
-              >
-                ✕ Limpiar selección
+              <span style={{ fontSize: '13px', color: '#991b1b', fontWeight: 700 }}>¿Eliminar {seleccionados.size}? No se puede deshacer.</span>
+              <button onClick={ejecutarEliminarLote} disabled={eliminandoLote}
+                style={{ background: '#B91C1C', color: 'white', border: 'none', borderRadius: '9999px', padding: '5px 14px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', cursor: 'pointer', opacity: eliminandoLote ? 0.6 : 1 }}>
+                {eliminandoLote ? 'Eliminando…' : 'Sí, eliminar'}
+              </button>
+              <button onClick={() => setConfirmarLote(false)}
+                style={{ background: 'white', color: '#6B5C90', border: '2px solid #D1C8E0', borderRadius: '9999px', padding: '5px 12px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', cursor: 'pointer' }}>
+                Cancelar
               </button>
             </>
           )}
+          <button onClick={() => { setSeleccionados(new Set()); setConfirmarLote(false) }}
+            style={{ background: 'white', color: '#6B5C90', border: '2px solid #D4C9E8', borderRadius: '9999px', padding: '5px 12px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', cursor: 'pointer' }}>
+            Limpiar
+          </button>
         </div>
       )}
 
+      {/* Tabla */}
       {lista.length === 0 ? (
         <div style={{ textAlign: 'center', color: '#9B8AB8', padding: '32px', fontFamily: 'Inter, sans-serif' }}>
           {busqueda ? 'Sin resultados para esa búsqueda.' : 'Ningún cliente en esta categoría.'}
         </div>
       ) : (
-        lista.map((u) => (
-          <ClienteCard
-            key={u.id}
-            u={u}
-            compitas={compitas}
-            onAsignar={onAsignar}
-            onEliminar={onEliminar}
-            onMarcar={onMarcar}
-            inactivo={clientesInactivosSet.has(u.id)}
-            seleccionado={seleccionados.has(u.id)}
-            onToggleSeleccion={toggleUno}
-          />
-        ))
+        <>
+          <div style={{ background: 'white', border: '2px solid #E8E0D4', borderRadius: '14px', overflow: 'hidden' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', fontFamily: 'Inter, sans-serif' }}>
+              <thead>
+                <tr style={{ background: '#F5F0FF', borderBottom: '2px solid #E8E0D4' }}>
+                  <th style={{ padding: '10px 12px', width: '36px' }}>
+                    <input type="checkbox" checked={todosEnPagina} onChange={toggleTodos} style={{ width: '16px', height: '16px', accentColor: '#7C4DFF', cursor: 'pointer' }} />
+                  </th>
+                  <th style={{ padding: '10px 12px', textAlign: 'left', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, color: '#4A3B6B', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Nombre</th>
+                  <th style={{ padding: '10px 12px', textAlign: 'left', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, color: '#4A3B6B', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Compita</th>
+                  <th style={{ padding: '10px 12px', textAlign: 'left', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, color: '#4A3B6B', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Zona</th>
+                  <th style={{ padding: '10px 12px', textAlign: 'left', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, color: '#4A3B6B', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {slice.map((u, i) => {
+                  const activo = panelId === u.id
+                  const sel = seleccionados.has(u.id)
+                  const blq = u.plan === 'bloqueado'
+                  const inact = clientesInactivosSet.has(u.id)
+                  const sinActivar = !u.activado && !blq
+                  return (
+                    <tr key={u.id}
+                      onClick={() => setPanelId(activo ? null : u.id)}
+                      style={{ background: activo ? '#F5F0FF' : sel ? '#FDFAFF' : i % 2 === 0 ? 'white' : '#FAFAFA', borderBottom: '1px solid #F0EBF8', cursor: 'pointer' }}>
+                      <td style={{ padding: '10px 12px' }} onClick={(e) => e.stopPropagation()}>
+                        <input type="checkbox" checked={sel} onChange={() => toggleUno(u.id)} style={{ width: '16px', height: '16px', accentColor: '#7C4DFF', cursor: 'pointer' }} />
+                      </td>
+                      <td style={{ padding: '10px 12px' }}>
+                        <div style={{ fontWeight: 600, color: blq ? '#9CA3AF' : '#1A0A3C' }}>{u.nombre}</div>
+                        <div style={{ fontSize: '11px', color: '#9B8AB8', marginTop: '1px' }}>{u.email}</div>
+                      </td>
+                      <td style={{ padding: '10px 12px', color: '#4A3B6B', fontSize: '12px' }}>
+                        {u.compita ? u.compita.nombre : <span style={{ color: '#D4C9E8' }}>—</span>}
+                      </td>
+                      <td style={{ padding: '10px 12px', color: '#6B5C90', fontSize: '12px', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {u.zona ?? '—'}
+                      </td>
+                      <td style={{ padding: '10px 12px' }}>
+                        {blq
+                          ? <span style={{ background: '#FEF2F2', color: '#B91C1C', border: '1.5px solid #fca5a5', borderRadius: '9999px', padding: '2px 9px', fontSize: '11px', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif' }}>🚫 Bloqueado</span>
+                          : inact
+                            ? <span style={{ background: '#FFF7ED', color: '#C2410C', border: '1.5px solid #FED7AA', borderRadius: '9999px', padding: '2px 9px', fontSize: '11px', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif' }}>⚠️ Inactivo</span>
+                            : sinActivar
+                              ? <span style={{ background: '#FFFBEB', color: '#B45309', border: '1.5px solid #f59e0b', borderRadius: '9999px', padding: '2px 9px', fontSize: '11px', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif' }}>⏳ Invitado</span>
+                              : <span style={{ background: '#F0FDF4', color: '#15803d', border: '1.5px solid #22c55e', borderRadius: '9999px', padding: '2px 9px', fontSize: '11px', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif' }}>✓ Activo</span>
+                        }
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Paginación */}
+          {totalPaginas > 1 && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 4px', flexWrap: 'wrap', gap: '8px' }}>
+              <span style={{ fontSize: '12px', color: '#6B5C90' }}>
+                {paginaActual * POR_PAGINA + 1}–{Math.min((paginaActual + 1) * POR_PAGINA, total)} de {total}
+              </span>
+              <div style={{ display: 'flex', gap: '4px' }}>
+                <button onClick={() => setPagina(Math.max(0, paginaActual - 1))} disabled={paginaActual === 0}
+                  style={{ background: 'white', border: '2px solid #D4C9E8', borderRadius: '8px', padding: '4px 12px', fontSize: '13px', cursor: 'pointer', color: '#4A3B6B', opacity: paginaActual === 0 ? 0.4 : 1 }}>←</button>
+                {Array.from({ length: totalPaginas }, (_, i) => (
+                  <button key={i} onClick={() => setPagina(i)}
+                    style={{ background: i === paginaActual ? '#2D1464' : 'white', color: i === paginaActual ? 'white' : '#4A3B6B', border: '2px solid #D4C9E8', borderRadius: '8px', padding: '4px 10px', fontSize: '13px', cursor: 'pointer', fontWeight: i === paginaActual ? 700 : 400 }}>
+                    {i + 1}
+                  </button>
+                ))}
+                <button onClick={() => setPagina(Math.min(totalPaginas - 1, paginaActual + 1))} disabled={paginaActual >= totalPaginas - 1}
+                  style={{ background: 'white', border: '2px solid #D4C9E8', borderRadius: '8px', padding: '4px 12px', fontSize: '13px', cursor: 'pointer', color: '#4A3B6B', opacity: paginaActual >= totalPaginas - 1 ? 0.4 : 1 }}>→</button>
+              </div>
+            </div>
+          )}
+
+          {/* Panel lateral */}
+          {panelUsuario && (
+            <>
+              <div onClick={() => setPanelId(null)}
+                style={{ position: 'fixed', inset: 0, background: 'rgba(26,10,60,0.35)', zIndex: 200, backdropFilter: 'blur(2px)' }} />
+              <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: 'min(560px, 100vw)', background: '#FDFAF6', zIndex: 201, boxShadow: '-4px 0 40px rgba(26,10,60,0.18)', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 20px', borderBottom: '2px solid #E8E0D4', background: 'white', position: 'sticky', top: 0, zIndex: 1 }}>
+                  <div>
+                    <div style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '15px', color: '#1A0A3C' }}>{panelUsuario.nombre}</div>
+                    <div style={{ fontSize: '12px', color: '#9B8AB8', marginTop: '2px' }}>{panelUsuario.email}</div>
+                  </div>
+                  <button onClick={() => setPanelId(null)} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#6B5C90', padding: '4px 8px', lineHeight: 1 }}>×</button>
+                </div>
+                <div style={{ padding: '16px', flex: 1 }}>
+                  <ClienteCard
+                    u={panelUsuario}
+                    compitas={compitas}
+                    onAsignar={onAsignar}
+                    onEliminar={(id) => { onEliminar(id); setPanelId(null) }}
+                    onMarcar={onMarcar}
+                    inactivo={clientesInactivosSet.has(panelUsuario.id)}
+                    seleccionado={seleccionados.has(panelUsuario.id)}
+                    onToggleSeleccion={toggleUno}
+                  />
+                </div>
+              </div>
+            </>
+          )}
+        </>
       )}
     </div>
   )
