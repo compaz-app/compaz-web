@@ -90,6 +90,7 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
   const [resenasCargadas, setResenasCargadas] = useState(false)
   const [compitaPanelId, setCompitaPanelId] = useState<string | null>(null)
   const [compitasPagina, setCompitasPagina] = useState(0)
+  const [filtroEstadoCompitas, setFiltroEstadoCompitas] = useState<'todas' | 'pendientes' | 'sin_telegram' | 'en_mapa' | 'demo'>('todas')
   const COMPITAS_POR_PAGINA = 25
 
   useEffect(() => {
@@ -636,12 +637,18 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
 
             {/* Tabla paginada de compitas activas */}
             {tab === 'compitas' && (() => {
-              const lista = filtrar([...compitas].filter((c) => c.estado !== 'inactivo' && c.estado !== 'bloqueado'))
-                .sort((a, b) => {
-                  const pa = (a.apellido || a.nombre).toLowerCase()
-                  const pb = (b.apellido || b.nombre).toLowerCase()
-                  return pa.localeCompare(pb, 'es')
-                })
+              const todas = filtrar([...compitas].filter((c) => c.estado !== 'inactivo' && c.estado !== 'bloqueado'))
+              const cPendientes = todas.filter((c) => !c.verificado)
+              const cSinTelegram = todas.filter((c) => c.verificado && c.estado === 'activo' && !c.telegram_chat_id && !c.es_demo)
+              const cEnMapa = todas.filter((c) => c.verificado && c.estado === 'activo' && (!!c.telegram_chat_id || c.es_demo) && !c.es_demo)
+              const cDemo = todas.filter((c) => c.es_demo)
+
+              const mapaFiltro: Record<string, Compita[]> = { todas, pendientes: cPendientes, sin_telegram: cSinTelegram, en_mapa: cEnMapa, demo: cDemo }
+              const lista = (mapaFiltro[filtroEstadoCompitas] ?? todas).sort((a, b) => {
+                const pa = (a.apellido || a.nombre).toLowerCase()
+                const pb = (b.apellido || b.nombre).toLowerCase()
+                return pa.localeCompare(pb, 'es')
+              })
               const total = lista.length
               const totalPaginas = Math.max(1, Math.ceil(total / COMPITAS_POR_PAGINA))
               const paginaActual = Math.min(compitasPagina, totalPaginas - 1)
@@ -656,8 +663,34 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
                 return { label: 'Sin Telegram', bg: '#FFFBEB', color: '#B45309', border: '#f59e0b' }
               }
 
+              type FiltroKey = 'todas' | 'pendientes' | 'sin_telegram' | 'en_mapa' | 'demo'
+              const filtros: { key: FiltroKey; label: string; count: number; dot?: string }[] = [
+                { key: 'todas', label: 'Todas', count: todas.length },
+                { key: 'pendientes', label: '⏳ Pendientes', count: cPendientes.length, dot: cPendientes.length > 0 ? '#FF6B2B' : undefined },
+                { key: 'sin_telegram', label: '⚠️ Sin Telegram', count: cSinTelegram.length, dot: cSinTelegram.length > 0 ? '#f59e0b' : undefined },
+                { key: 'en_mapa', label: '✓ En mapa', count: cEnMapa.length },
+                { key: 'demo', label: '🎭 Demo', count: cDemo.length },
+              ]
+
               return (
                 <>
+                  {/* Filtros de estado */}
+                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                    {filtros.map(({ key, label, count, dot }) => {
+                      const activo = filtroEstadoCompitas === key
+                      return (
+                        <button key={key}
+                          onClick={() => { setFiltroEstadoCompitas(key); setCompitasPagina(0); setCompitaPanelId(null) }}
+                          style={{ display: 'flex', alignItems: 'center', gap: '5px', background: activo ? '#2D1464' : 'white', color: activo ? 'white' : '#4A3B6B', border: `2px solid ${activo ? '#2D1464' : dot ?? 'rgba(45,20,100,0.2)'}`, borderRadius: '9999px', padding: '6px 14px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                          {label}
+                          <span style={{ background: activo ? 'rgba(255,255,255,0.25)' : dot ? dot : 'rgba(45,20,100,0.1)', color: activo ? 'white' : dot ? 'white' : '#6B5C90', borderRadius: '9999px', padding: '0 7px', fontSize: '11px', fontWeight: 800, minWidth: '20px', textAlign: 'center' }}>
+                            {count}
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+
                   {/* Barra bulk */}
                   {seleccionadosCompitas.size > 0 && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 14px', background: '#FEF2F2', border: '2px solid #fca5a5', borderRadius: '10px', flexWrap: 'wrap' }}>
