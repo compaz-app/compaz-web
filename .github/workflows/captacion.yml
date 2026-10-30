@@ -1,0 +1,206 @@
+# Compaz · Bloque 1 · Validación de la captación en Supabase
+#
+# Se ejecuta en cada PR que toque la captación. No despliega nada, no usa
+# producción y no necesita secretos salvo para la prueba opcional de Airtable.
+#
+#   app       · tipos y pruebas de la aplicación (node:test con dobles)
+#   base      · migración + pruebas SQL + concurrencia sobre la imagen oficial de
+#               Supabase con PostgreSQL 17.6 (mismos roles y permisos por defecto)
+#   airtable  · API real de Airtable contra una base de PRUEBAS
+#   e2e       · Supabase local completo (CLI oficial) + la web compilada + Airtable
+#               de PRUEBAS: los escenarios de extremo a extremo, incluido apagar
+#               Supabase de verdad para probar la ruta de respaldo
+# airtable y e2e se saltan si no existen los secretos AIRTABLE_TEST_API_KEY y
+# AIRTABLE_TEST_BASE_ID (token y base de Airtable de pruebas).
+name: captacion
+
+on:
+  pull_request:
+    paths:
+      - 'supabase/migrations/**'
+      - 'lib/captacion.ts'
+      - 'lib/airtable.ts'
+      - 'app/api/waitlist/**'
+      - 'app/api/cron/reintentar-airtable/**'
+      - 'app/api/cron/conciliar-airtable/**'
+      - 'app/api/admin/postulaciones/**'
+      - 'app/admin/postulaciones/**'
+      - 'tests/**'
+      - '.github/workflows/captacion.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: captacion-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  app:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Tipos
+        run: npx tsc --noEmit -p .
+      - name: Pruebas de captación (obligatorias)
+        run: node tests/run.mjs 18
+      - name: Suite completa (informativa; tiene fallos previos en main)
+        continue-on-error: true
+        run: node tests/run.mjs 2>&1 | grep -E '^# (tests|pass|fail)'
+
+  base:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      db:
+        image: supabase/postgres:17.6.1.173
+        env:
+          POSTGRES_PASSWORD: ci-solo-pruebas
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -h localhost"
+          --health-interval 5s --health-timeout 5s --health-retries 30
+    env:
+      DB_URL: postgresql://postgres:ci-solo-pruebas@localhost:5432/postgres
+    steps:
+      - uses: actions/checkout@v4
+      - name: Versión y roles de la imagen
+        run: psql "$DB_URL" -At -c "select version()" -c "select string_agg(rolname, ', ' order by rolname) from pg_roles where rolname in ('anon','authenticated','service_role')"
+      - name: Verificación previa del esquema (no debe existir nada del Bloque 1)
+        run: |
+          n=$(psql "$DB_URL" -At -c "select count(*) from information_schema.tables where table_schema='public' and table_name in ('personas','postulaciones','eventos')")
+          test "$n" = "0"
+          # La consulta de verificación pensada para producción también debe correr en una base vacía
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f tests/sql/verificar_esquema_bloque1.sql > /dev/null
+      - name: Migración
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f supabase/migrations/20261022_captacion.sql
+      - name: Migración idempotente ante reintento (debe fallar sin cambiar nada)
+        run: |
+          if psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f supabase/migrations/20261022_captacion.sql 2>/dev/null; then echo "La migración se aplicó dos veces"; exit 1; fi
+          psql "$DB_URL" -At -c "select count(*) from public.postulaciones" | grep -qx 0
+      - name: Pruebas SQL (19 casos)
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f tests/sql/captacion.sql
+      - name: Concurrencia (10 envíos simultáneos de la misma persona)
+        run: N=10 bash tests/sql/concurrencia.sh
+
+  airtable:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      AIRTABLE_API_KEY: ${{ secrets.AIRTABLE_TEST_API_KEY }}
+      AIRTABLE_BASE_ID: ${{ secrets.AIRTABLE_TEST_BASE_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Secretos de Airtable de pruebas (sin mostrar valores)
+        run: |
+          [ -n "$AIRTABLE_API_KEY" ] && echo "::notice title=Secreto AIRTABLE_TEST_API_KEY::presente (${#AIRTABLE_API_KEY} caracteres)" || echo "::warning title=Secreto AIRTABLE_TEST_API_KEY::ausente"
+          [ -n "$AIRTABLE_BASE_ID" ] && echo "::notice title=Secreto AIRTABLE_TEST_BASE_ID::presente (empieza por ${AIRTABLE_BASE_ID:0:3}, ${#AIRTABLE_BASE_ID} caracteres, distinto de producción: $([ "$AIRTABLE_BASE_ID" != appd3xCmNZEIJ0rWS ] && echo sí || echo NO))" || echo "::warning title=Secreto AIRTABLE_TEST_BASE_ID::ausente"
+          if [ -n "$AIRTABLE_API_KEY" ] && [ -n "$AIRTABLE_BASE_ID" ]; then echo "AIRTABLE_OBLIGATORIA=si" >> "$GITHUB_ENV"; fi
+          # Diagnóstico de formato del token (sin mostrar su valor)
+          k="$AIRTABLE_API_KEY"
+          a=no; [[ "$k" == pat* ]] && a=sí
+          b=no; [[ "$k" == Bearer* ]] && b=sí
+          c=no; [[ "$k" =~ [[:space:]] ]] && c=sí
+          d=no; [[ "$k" == *'"'* || "$k" == *"'"* ]] && d=sí
+          e=no; [[ "$k" =~ ^pat[A-Za-z0-9]{14}[.][a-f0-9]{64}$ ]] && e=sí
+          pos=$(awk -v s="$k" 'BEGIN{print index(s, "pat")}')
+          echo "::notice title=Formato del token::empieza por pat: $a · empieza por Bearer: $b · espacios o saltos: $c · comillas: $d · 'pat' aparece en la posición $pos · formato estándar (pat + 14 + punto + 64): $e"
+      - name: API real de Airtable (base de pruebas)
+        run: node --experimental-strip-types --no-warnings tests/integracion/airtable-real.mjs
+
+  e2e:
+    needs: [app, base]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      AIRTABLE_API_KEY: ${{ secrets.AIRTABLE_TEST_API_KEY }}
+      AIRTABLE_BASE_ID: ${{ secrets.AIRTABLE_TEST_BASE_ID }}
+      AIRTABLE_TABLE_NAME: Lista de Espera
+    steps:
+      - name: ¿Hay base de Airtable de pruebas?
+        id: secretos
+        run: |
+          if [ -n "$AIRTABLE_API_KEY" ] && [ -n "$AIRTABLE_BASE_ID" ]; then echo "hay=si" >> "$GITHUB_OUTPUT"; else echo "hay=no" >> "$GITHUB_OUTPUT"; echo "::notice::E2E SALTADA: faltan los secretos de Airtable de pruebas"; fi
+      - uses: actions/checkout@v4
+        if: steps.secretos.outputs.hay == 'si'
+      - uses: actions/setup-node@v4
+        if: steps.secretos.outputs.hay == 'si'
+        with:
+          node-version: 22
+          cache: npm
+      - uses: supabase/setup-cli@v1
+        if: steps.secretos.outputs.hay == 'si'
+        with:
+          version: 2.119.0
+      - name: Supabase local (aislado, se destruye al terminar)
+        if: steps.secretos.outputs.hay == 'si'
+        run: |
+          mkdir -p /tmp/e2e && cd /tmp/e2e
+          # Si un paso falla, sus últimas líneas quedan como anotaciones del trabajo
+          anotar() { local t="$1"; shift; "$@" > /tmp/e2e/paso.log 2>&1 || { tail -n 8 /tmp/e2e/paso.log | while IFS= read -r l; do echo "::error title=$t::${l//::/: :}"; done; exit 1; }; }
+          anotar "supabase init" supabase init
+          anotar "supabase start" supabase start -x studio,imgproxy,edge-runtime,logflare,vector,realtime,storage-api,postgres-meta
+          supabase status -o env > /tmp/e2e/estado.env
+          echo "::notice title=Supabase local::variables: $(cut -d= -f1 /tmp/e2e/estado.env | tr '\n' ' ')"
+          echo "::notice title=Contenedores::$(docker ps --format '{{.Names}}' | tr '\n' ' ')"
+          set -a; . /tmp/e2e/estado.env; set +a
+          SERVICIO="${SERVICE_ROLE_KEY:-$SECRET_KEY}"; ANONIMA="${ANON_KEY:-$PUBLISHABLE_KEY}"
+          {
+            echo "E2E_SUPABASE_URL=$API_URL"
+            echo "E2E_DB_URL=$DB_URL"
+            echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL"
+            echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$ANONIMA"
+            echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICIO"
+            echo "E2E_KONG_CONTAINER=supabase_kong_e2e"
+          } >> "$GITHUB_ENV"
+      - name: Migración de captación en el Supabase local
+        if: steps.secretos.outputs.hay == 'si'
+        run: |
+          anotar() { local t="$1"; shift; "$@" > /tmp/paso.log 2>&1 || { tail -n 8 /tmp/paso.log | while IFS= read -r l; do echo "::error title=$t::${l//::/: :}"; done; exit 1; }; }
+          case "$E2E_DB_URL" in *@127.0.0.1:*|*@localhost:*) echo "::notice title=Aislamiento::la base de datos de la prueba es local";; *) echo "::error title=Aislamiento::la base de datos no es local"; exit 1;; esac
+          anotar "fixture" psql "$E2E_DB_URL" -v ON_ERROR_STOP=1 -q -f tests/integracion/fixtures/operacion_minima.sql
+          anotar "migración" psql "$E2E_DB_URL" -v ON_ERROR_STOP=1 -q -f supabase/migrations/20261022_captacion.sql
+      - name: Compilar y arrancar la web contra el entorno aislado
+        if: steps.secretos.outputs.hay == 'si'
+        env:
+          POSTULACIONES_DESTINO: supabase_y_airtable
+          NEXT_PUBLIC_SITE_URL: http://localhost:3000
+          NEXT_PUBLIC_TURNSTILE_SITE_KEY: 1x00000000000000000000AA
+          TURNSTILE_SECRET_KEY: 1x0000000000000000000000000000000AA
+          RESEND_API_KEY: re_ci_sin_envios
+        run: |
+          echo "CRON_SECRET=$(openssl rand -hex 16)" >> "$GITHUB_ENV"
+          echo "CAPTACION_DESDE=$(date -u -d '-2 minutes' +%Y-%m-%dT%H:%M:%S.000Z)" >> "$GITHUB_ENV"
+          anotar() { local t="$1"; shift; "$@" > /tmp/paso.log 2>&1 || { tail -n 8 /tmp/paso.log | while IFS= read -r l; do echo "::error title=$t::${l//::/: :}"; done; exit 1; }; }
+          anotar "npm ci" npm ci --no-audit --no-fund
+          anotar "next build" npx next build
+      - name: Escenarios de extremo a extremo
+        if: steps.secretos.outputs.hay == 'si'
+        env:
+          POSTULACIONES_DESTINO: supabase_y_airtable
+          NEXT_PUBLIC_SITE_URL: http://localhost:3000
+          NEXT_PUBLIC_TURNSTILE_SITE_KEY: 1x00000000000000000000AA
+          TURNSTILE_SECRET_KEY: 1x0000000000000000000000000000000AA
+          RESEND_API_KEY: re_ci_sin_envios
+          AIRTABLE_OBLIGATORIA: si
+        run: |
+          npx next start -p 3000 > /tmp/e2e/web.log 2>&1 &
+          for i in $(seq 1 60); do curl -sf -o /dev/null http://localhost:3000/privacidad && break; sleep 2; done
+          node --experimental-strip-types --no-warnings tests/integracion/e2e-captacion.mjs
+      - name: Registro de la web (si algo falló)
+        if: failure() && steps.secretos.outputs.hay == 'si'
+        run: |
+          tail -n 200 /tmp/e2e/web.log || true
+          # Las últimas líneas de error, como anotaciones (sin secretos: la web no los registra)
+          grep -iE "error|falló|exception" /tmp/e2e/web.log | tail -n 8 | while IFS= read -r l; do echo "::warning title=web.log::${l//::/: :}"; done || true

@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { registrarPostulacion, claveIdempotencia, fuenteValida } from "@/lib/captacion";
+import { avisarAdmin } from "@/lib/telegram";
 
 // ── Dominios permitidos (CORS) ────────────────────────────────────────────────
 const ALLOWED_ORIGINS = [
@@ -89,6 +91,10 @@ function getClientIp(req: NextRequest): string {
   );
 }
 
+// Aviso de la ruta de respaldo: como mucho uno cada 15 min por instancia (Supabase está caído,
+// así que no se puede usar la deduplicación habitual de avisos).
+let ultimoAvisoRespaldo = 0;
+
 // ── Verificación Cloudflare Turnstile ────────────────────────────────────────
 async function verifyTurnstile(token: string, ip: string): Promise<boolean> {
   const secret = process.env.TURNSTILE_SECRET_KEY;
@@ -114,7 +120,7 @@ async function verifyTurnstile(token: string, ip: string): Promise<boolean> {
 }
 
 // ── Sanitización ──────────────────────────────────────────────────────────────
-const MAX_LEN = { nombre: 100, contacto: 200, ciudad: 100, whatsapp: 30, email: 100, utm: 50 };
+const MAX_LEN = { nombre: 100, contacto: 200, ciudad: 100, whatsapp: 30, email: 100, utm: 50, utmLargo: 100 };
 
 function stripHtml(value: string): string {
   return value.replace(/<[^>]*>/g, "").trim();
@@ -178,6 +184,9 @@ export async function POST(req: NextRequest) {
   const whatsapp = stripHtml(whatsappRaw).slice(0, MAX_LEN.whatsapp);
   const email = stripHtml(emailRaw).slice(0, MAX_LEN.email);
   const ciudad = stripHtml(ciudadRaw).slice(0, MAX_LEN.ciudad); const utmSource = stripHtml(utmSourceRaw).slice(0, MAX_LEN.utm); const utmMedium = stripHtml(utmMediumRaw).slice(0, MAX_LEN.utm); const utmCampaign = stripHtml(utmCampaignRaw).slice(0, MAX_LEN.utm);
+  // utm_content y utm_term solo se guardan en Supabase (Airtable no tiene esos campos)
+  const utmContent = stripHtml(typeof body.utmContent === "string" ? body.utmContent : "").slice(0, MAX_LEN.utmLargo);
+  const utmTerm = stripHtml(typeof body.utmTerm === "string" ? body.utmTerm : "").slice(0, MAX_LEN.utmLargo);
 
   if (!nombre || !contacto || !ciudad || !whatsapp || !email) {
     return NextResponse.json({ error: "Faltan campos" }, { status: 400, headers });
@@ -199,7 +208,31 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // 6. Guardar en Airtable
+  // 6. Guardar
+  let respaldo = false;
+  //    POSTULACIONES_DESTINO=supabase_y_airtable → Supabase primero (fuente principal) y copia a Airtable.
+  //    Sin la variable (o con "airtable") se mantiene el comportamiento anterior: solo Airtable.
+  if (process.env.POSTULACIONES_DESTINO === "supabase_y_airtable") {
+    const r = await registrarPostulacion({
+      clave: claveIdempotencia(body.claveIdempotencia),
+      fuente: fuenteValida(body.fuente),
+      nombre, whatsapp, email, contacto, ubicacion: ciudad,
+      utm: { source: utmSource, medium: utmMedium, campaign: utmCampaign, content: utmContent, term: utmTerm },
+    });
+    if (r.ok) {
+      registrarEnvioEmail(emailKey);
+      return NextResponse.json({ ok: true }, { headers });
+    }
+    // Supabase no respondió: se guarda como antes, directamente en Airtable, para no
+    // perder la postulación. El cron conciliar-airtable la importará después a Supabase.
+    console.error("[waitlist] Supabase falló; se guarda solo en Airtable");
+    respaldo = true;
+    if (!process.env.AIRTABLE_API_KEY || !process.env.AIRTABLE_BASE_ID) {
+      return NextResponse.json({ error: "Error guardando" }, { status: 500, headers });
+    }
+  }
+
+  // 6b. Guardar en Airtable (comportamiento anterior)
   const airtableKey = process.env.AIRTABLE_API_KEY;
   const baseId = process.env.AIRTABLE_BASE_ID;
   const tableName = process.env.AIRTABLE_TABLE_NAME ?? "Lista de Espera";
@@ -230,5 +263,9 @@ export async function POST(req: NextRequest) {
   }
 
   registrarEnvioEmail(emailKey);
+  if (respaldo && Date.now() - ultimoAvisoRespaldo > 15 * 60_000) {
+    ultimoAvisoRespaldo = Date.now();
+    await avisarAdmin("⚠️ <b>Supabase no respondió en /api/waitlist</b>\n\nAl menos una postulación se guardó solo en Airtable. La conciliación horaria la importará a Supabase.").catch(() => false);
+  }
   return NextResponse.json({ ok: true }, { headers });
 }

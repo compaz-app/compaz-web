@@ -174,6 +174,16 @@ Actualiza campos editables del perfil de una compita. Solo admin.
 
 ---
 
+## Captación
+
+| Método | Ruta | Acceso | Qué hace |
+| --- | --- | --- | --- |
+| POST | `/api/waitlist` | Público (Turnstile, honeypot, límites) | Recibe postulaciones de la home y de `/se-compita`. Con `POSTULACIONES_DESTINO=supabase_y_airtable` guarda en Supabase y copia a Airtable. Campos nuevos opcionales: `utmContent`, `utmTerm`, `fuente` (`home` o `se_compita`), `claveIdempotencia` (uuid por envío) |
+| POST | `/api/cron/reintentar-airtable` | `x-cron-secret` | Cada 15 min: retoma copias pendientes buscando antes su huella en Airtable; avisa de la bandeja |
+| POST | `/api/cron/conciliar-airtable` | `x-cron-secret` | Cada hora: importa o vincula registros de Airtable creados desde `CAPTACION_DESDE` que Supabase no tenga |
+| POST | `/api/admin/postulaciones/resolver` | Admin (sesión verificada) | Resuelve una postulación de la bandeja: `{ id, resolucion, nota?, airtableId? }` |
+| GET | `/admin/postulaciones` | Admin | Bandeja de postulaciones que no llegaron a Airtable |
+
 ## Errores comunes
 
 | Status | Descripción |
