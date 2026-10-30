@@ -25,6 +25,7 @@ import { responderSolicitud } from '@/lib/solicitudes'
 import { qRol } from '@/lib/links'
 import { sendEmail, SITE_URL as SITE_URL_PUBLICA } from '@/lib/email'
 import { esc, escLike } from '@/lib/html'
+import { detectarContacto, moderarMensaje } from '@/lib/chat-moderacion'
 import { formatSlotVE, formatFechaVE, hoyVE } from '@/lib/format'
 import { randomInt } from 'crypto'
 
@@ -1446,7 +1447,10 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
       return NextResponse.json({ ok: true })
     }
 
-    const contenido = text.slice(0, 1000)
+    const textoRaw = text.slice(0, 1000)
+    const { detectado, textoCensurado } = detectarContacto(textoRaw)
+    const contenido = textoCensurado
+
     const { error: errMsg } = await supabase
       .from('mensajes')
       .insert({ visit_id: visitaActiva.id, origen: 'compita', tipo: 'texto', contenido })
@@ -1454,6 +1458,24 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
       console.error('Error guardando mensaje de compita:', errMsg)
       await sendTelegramMessage(chatId, `No pudimos entregar tu mensaje. Intenta enviarlo de nuevo.`)
       return NextResponse.json({ ok: true })
+    }
+
+    // Moderar si hay datos de contacto
+    if (detectado) {
+      const { data: visitaExtra } = await supabase
+        .from('visitas')
+        .select('usuario_id, compita_id, usuario:usuarios(nombre)')
+        .eq('id', visitaActiva.id)
+        .single() as { data: { usuario_id: string; compita_id: string; usuario: { nombre: string } | null } | null }
+      moderarMensaje({
+        visitaId: visitaActiva.id,
+        compitaNombre: compita.nombre,
+        clienteNombre: visitaExtra?.usuario?.nombre ?? 'Cliente',
+        origen: 'compita',
+        textoOriginal: textoRaw,
+        clienteId: visitaExtra?.usuario_id ?? '',
+        compitaId: compita.id,
+      }).catch((e) => console.error('[telegram-webhook] moderacion:', e))
     }
     if (text.length > 1000) {
       await sendTelegramMessage(chatId, `Tu mensaje era muy largo: se envió solo la primera parte (1000 caracteres).`)

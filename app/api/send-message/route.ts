@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { getClienteActivo } from '@/lib/auth'
 import { sendTelegramMessage } from '@/lib/telegram'
+import { detectarContacto, moderarMensaje } from '@/lib/chat-moderacion'
 import type { Visita, Compita, Usuario } from '@/types'
 
 export async function POST(req: NextRequest) {
@@ -40,20 +41,36 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'No hay visita activa' }, { status: 400 })
   }
 
-  // Guardar mensaje en Supabase
+  // Detectar datos de contacto antes de guardar
+  const { detectado, textoCensurado } = detectarContacto(contenido)
+
+  // Guardar mensaje en Supabase (con texto censurado si aplica)
   const { data: mensaje, error } = await admin
     .from('mensajes')
     .insert({
       visit_id: visita.id,
       origen: 'cliente',
       tipo: 'texto',
-      contenido,
+      contenido: textoCensurado,
     })
     .select()
     .single()
 
   if (error) {
     return NextResponse.json({ error: 'Error guardando mensaje' }, { status: 500 })
+  }
+
+  // Moderar: aviso en chat + flag en Atención + Telegram admin
+  if (detectado) {
+    moderarMensaje({
+      visitaId: visita.id,
+      compitaNombre: visita.compita.nombre,
+      clienteNombre: visita.usuario?.nombre ?? 'Cliente',
+      origen: 'cliente',
+      textoOriginal: contenido,
+      clienteId: visita.usuario_id,
+      compitaId: visita.compita_id,
+    }).catch((e) => console.error('[send-message] moderacion:', e))
   }
 
   // Reenviar al Compita por Telegram
