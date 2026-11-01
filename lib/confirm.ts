@@ -28,8 +28,12 @@ export function pagina(titulo: string, texto: string, status = 200, boton?: { te
 /** Página intermedia: botón que hace POST a la misma URL (con su query string). */
 export function puertaConfirmacion(req: NextRequest, titulo: string, texto: string, boton: string): NextResponse {
   const action = req.nextUrl.pathname + req.nextUrl.search
+  const textoEsc = esc(boton)
   return paginaHtml(
     titulo,
-    `<p>${esc(texto)}</p><form method="POST" action="${esc(action)}"><button class="btn" type="submit">${esc(boton)}</button></form>`,
+    `<p>${esc(texto)}</p>
+<form method="POST" action="${esc(action)}" onsubmit="var b=this.querySelector('button');b.disabled=true;b.textContent='Entrando…';">
+  <button class="btn" type="submit">${textoEsc}</button>
+</form>`,
   )
 }
