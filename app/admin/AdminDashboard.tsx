@@ -804,7 +804,7 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
                           <button onClick={() => setCompitaPanelId(null)} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#6B5C90', padding: '4px 8px', lineHeight: 1 }}>×</button>
                         </div>
                         <div style={{ padding: '16px', flex: 1 }}>
-                          <CompitaCard c={panelCompita} onToggleVerificado={toggleVerificado} onToggleEstado={toggleEstado} onVerPerfil={(id) => { setCompitaPerfilId(id); setTab('perfil'); setCompitaPanelId(null) }} onToggleBloqueado={toggleBloqueado} onEliminar={(id, force) => eliminarCompita(id, force).then((r) => { if (r.ok) setCompitaPanelId(null); return r })} onMarcar={(id, nombreM) => setFlagModal({ entidad_tipo: 'compita', entidad_id: id, entidad_nombre: nombreM })} seleccionado={seleccionadosCompitas.has(panelCompita.id)} onToggleSeleccion={toggleUnoCompita} />
+                          <CompitaCard modo="panel" c={panelCompita} onToggleVerificado={toggleVerificado} onToggleEstado={toggleEstado} onVerPerfil={(id) => { setCompitaPerfilId(id); setTab('perfil'); setCompitaPanelId(null) }} onToggleBloqueado={toggleBloqueado} onEliminar={(id, force) => eliminarCompita(id, force).then((r) => { if (r.ok) setCompitaPanelId(null); return r })} onMarcar={(id, nombreM) => setFlagModal({ entidad_tipo: 'compita', entidad_id: id, entidad_nombre: nombreM })} seleccionado={seleccionadosCompitas.has(panelCompita.id)} onToggleSeleccion={toggleUnoCompita} />
                         </div>
                       </div>
                     </>
@@ -917,7 +917,7 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
                                 <button onClick={() => setCompitaPanelId(null)} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#6B5C90', padding: '4px 8px', lineHeight: 1 }}>×</button>
                               </div>
                               <div style={{ padding: '16px', flex: 1 }}>
-                                <CompitaCard c={panelDesactivada} onToggleVerificado={toggleVerificado} onToggleEstado={toggleEstado} onVerPerfil={(id) => { setCompitaPerfilId(id); setTab('perfil'); setCompitaPanelId(null) }} onToggleBloqueado={toggleBloqueado} onEliminar={(id, force) => eliminarCompita(id, force).then((r) => { if (r.ok) setCompitaPanelId(null); return r })} onMarcar={(id, nombreM) => setFlagModal({ entidad_tipo: 'compita', entidad_id: id, entidad_nombre: nombreM })} seleccionado={seleccionadosCompitas.has(panelDesactivada.id)} onToggleSeleccion={toggleUnoCompita} />
+                                <CompitaCard modo="panel" c={panelDesactivada} onToggleVerificado={toggleVerificado} onToggleEstado={toggleEstado} onVerPerfil={(id) => { setCompitaPerfilId(id); setTab('perfil'); setCompitaPanelId(null) }} onToggleBloqueado={toggleBloqueado} onEliminar={(id, force) => eliminarCompita(id, force).then((r) => { if (r.ok) setCompitaPanelId(null); return r })} onMarcar={(id, nombreM) => setFlagModal({ entidad_tipo: 'compita', entidad_id: id, entidad_nombre: nombreM })} seleccionado={seleccionadosCompitas.has(panelDesactivada.id)} onToggleSeleccion={toggleUnoCompita} />
                               </div>
                             </div>
                           </>
@@ -1405,6 +1405,7 @@ function ClientesTab({ usuarios, compitas, onAsignar, onEliminar, onEliminarLote
                 </div>
                 <div style={{ padding: '16px', flex: 1 }}>
                   <ClienteCard
+                    modo="panel"
                     u={panelUsuario}
                     compitas={compitas}
                     onAsignar={onAsignar}
@@ -1424,7 +1425,7 @@ function ClientesTab({ usuarios, compitas, onAsignar, onEliminar, onEliminarLote
   )
 }
 
-function ClienteCard({ u, compitas, onAsignar, onEliminar, onMarcar, inactivo = false, seleccionado = false, onToggleSeleccion }: {
+function ClienteCard({ u, compitas, onAsignar, onEliminar, onMarcar, inactivo = false, seleccionado = false, onToggleSeleccion, modo = 'lista' }: {
   u: UsuarioConCompita
   compitas: Compita[]
   inactivo?: boolean
@@ -1433,9 +1434,11 @@ function ClienteCard({ u, compitas, onAsignar, onEliminar, onMarcar, inactivo = 
   onAsignar: (usuarioId: string, compitaId: string) => void
   onEliminar: (usuarioId: string) => void
   onMarcar: (id: string, nombre: string) => void
+  modo?: 'lista' | 'panel'
 }) {
   const [confirmEliminar, setConfirmEliminar] = useState(false)
   const [bloqueado, setBloqueado] = useState((u as unknown as { plan: string | null }).plan === 'bloqueado')
+  const esPanel = modo === 'panel'
 
   async function toggleBloqueado() {
     const res = await fetch('/api/admin/bloquear-cliente', {
@@ -1447,61 +1450,81 @@ function ClienteCard({ u, compitas, onAsignar, onEliminar, onMarcar, inactivo = 
   }
 
   const borderColor = seleccionado ? '#7C4DFF' : bloqueado ? '#dc2626' : '#E8E0D4'
+  const btnR: React.CSSProperties = { borderRadius: '10px', padding: '9px 14px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap', border: '2px solid transparent' }
+
+  const infoSection = (
+    <div style={{ flex: esPanel ? undefined : 1, minWidth: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '4px' }}>
+        {!esPanel && onToggleSeleccion && (
+          <input type="checkbox" checked={seleccionado} onChange={() => onToggleSeleccion(u.id)} style={{ width: '18px', height: '18px', accentColor: '#7C4DFF', cursor: 'pointer', flexShrink: 0 }} />
+        )}
+        <span style={{ color: '#1A0A3C', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: esPanel ? '16px' : undefined }}>{u.nombre}</span>
+        {bloqueado && <span style={{ background: '#FEE2E2', color: '#B91C1C', border: '1px solid #FCA5A5', borderRadius: '9999px', padding: '2px 8px', fontSize: '11px', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif' }}>🚫 Bloqueado</span>}
+        {inactivo && <span style={{ background: '#FFF7ED', color: '#C2410C', border: '1.5px solid #FED7AA', borderRadius: '9999px', padding: '2px 9px', fontSize: '11px', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif', whiteSpace: 'nowrap' }}>⚠️ Sin visita +30 días</span>}
+      </div>
+      <div style={{ color: '#4A3B6B', fontSize: '13px', marginTop: '3px' }}>✉️ {u.email}</div>
+      <div style={{ color: '#6B5C90', fontSize: '13px', marginTop: '2px' }}>{u.zona ?? 'Sin zona'} · {u.plan ?? 'Sin plan'}</div>
+      <div style={{ color: '#4A3B6B', fontSize: '13px', marginTop: '2px' }}>
+        Compita: {u.compita ? `${u.compita.nombre} (${u.compita.zona})` : <em>Sin asignar</em>}
+      </div>
+    </div>
+  )
+
+  const botonesCliente = (
+    <div style={esPanel
+      ? { display: 'flex', flexDirection: 'column', gap: '10px' }
+      : { display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }
+    }>
+      {/* Asignar compita — full width en panel */}
+      <select defaultValue={u.compita_id ?? ''} onChange={(e) => onAsignar(u.id, e.target.value)}
+        style={{ border: '2px solid rgba(45,20,100,0.2)', borderRadius: '10px', padding: '9px 12px', fontFamily: 'Inter, sans-serif', color: '#1A0A3C', background: 'white', cursor: 'pointer', width: esPanel ? '100%' : undefined }}>
+        <option value="">Sin Compita</option>
+        {compitas.map((c) => <option key={c.id} value={c.id}>{c.nombre} — {c.zona}</option>)}
+      </select>
+      <div style={esPanel ? { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' } : { display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+        <a href={`/dashboard?preview=${u.id}`} target="_blank" rel="noreferrer"
+          style={{ ...btnR, background: 'white', color: '#16a34a', borderColor: '#22c55e', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+          👁 Ver
+        </a>
+        <button onClick={toggleBloqueado}
+          style={{ ...btnR, background: bloqueado ? '#16a34a' : '#FEF3C7', color: bloqueado ? 'white' : '#92400E', borderColor: bloqueado ? '#22c55e' : '#FCD34D' }}>
+          {bloqueado ? '✓ Desbloquear' : '🚫 Bloquear'}
+        </button>
+        <button onClick={() => onMarcar(u.id, u.nombre)}
+          style={{ ...btnR, background: 'none', borderColor: '#dc2626', color: '#dc2626', padding: '6px 12px' }}>
+          ⚑ Marcar
+        </button>
+        {confirmEliminar ? (
+          <>
+            <button onClick={() => onEliminar(u.id)} style={{ ...btnR, background: '#B91C1C', color: 'white', border: 'none' }}>Sí, eliminar</button>
+            <button onClick={() => setConfirmEliminar(false)} style={{ ...btnR, background: 'white', color: '#6B5C90', borderColor: '#D1C8E0' }}>Cancelar</button>
+          </>
+        ) : (
+          <button onClick={() => setConfirmEliminar(true)} style={{ ...btnR, background: 'white', color: '#B91C1C', borderColor: '#FCA5A5' }}>🗑 Eliminar</button>
+        )}
+      </div>
+      <RegistrarPago usuarioId={u.id} nombre={u.nombre} />
+    </div>
+  )
+
+  if (esPanel) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '4px 0' }}>
+        {infoSection}
+        <div style={{ borderTop: '1.5px solid #E8E0D4', paddingTop: '16px' }}>
+          {botonesCliente}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div style={{ background: seleccionado ? '#F5F0FF' : 'white', border: `2px solid ${borderColor}`, borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
       {onToggleSeleccion && (
-        <input
-          type="checkbox"
-          checked={seleccionado}
-          onChange={() => onToggleSeleccion(u.id)}
-          style={{ width: '18px', height: '18px', accentColor: '#7C4DFF', cursor: 'pointer', flexShrink: 0 }}
-        />
+        <input type="checkbox" checked={seleccionado} onChange={() => onToggleSeleccion(u.id)} style={{ width: '18px', height: '18px', accentColor: '#7C4DFF', cursor: 'pointer', flexShrink: 0 }} />
       )}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-          <span style={{ color: '#1A0A3C', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700 }}>{u.nombre}</span>
-          {bloqueado && <span style={{ background: '#FEE2E2', color: '#B91C1C', border: '1px solid #FCA5A5', borderRadius: '9999px', padding: '2px 8px', fontSize: '11px', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif' }}>🚫 Bloqueado</span>}
-          {inactivo && <span style={{ background: '#FFF7ED', color: '#C2410C', border: '1.5px solid #FED7AA', borderRadius: '9999px', padding: '2px 9px', fontSize: '11px', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif', whiteSpace: 'nowrap' }}>⚠️ Sin visita +30 días</span>}
-        </div>
-        <div style={{ color: '#4A3B6B', fontSize: '13px', marginTop: '3px' }}>✉️ {u.email}</div>
-        <div style={{ color: '#6B5C90', fontSize: '13px', marginTop: '2px' }}>{u.zona ?? 'Sin zona'} · {u.plan ?? 'Sin plan'}</div>
-        <div style={{ color: '#4A3B6B', fontSize: '13px', marginTop: '2px' }}>
-          Compita: {u.compita ? `${u.compita.nombre} (${u.compita.zona})` : <em>Sin asignar</em>}
-        </div>
-      </div>
-      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-        <button
-          onClick={() => onMarcar(u.id, u.nombre)}
-          style={{ background: 'none', border: '1.5px solid #dc2626', color: '#dc2626', borderRadius: '9999px', padding: '6px 12px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Bricolage Grotesque, sans-serif', whiteSpace: 'nowrap' }}
-        >
-          ⚑ Marcar
-        </button>
-        <a href={`/dashboard?preview=${u.id}`} target="_blank" rel="noreferrer"
-          style={{ background: 'white', color: '#16a34a', border: '2px solid #22c55e', borderRadius: '9999px', padding: '8px 14px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', textDecoration: 'none', whiteSpace: 'nowrap' }}>
-          👁 Ver
-        </a>
-        <select defaultValue={u.compita_id ?? ''} onChange={(e) => onAsignar(u.id, e.target.value)}
-          style={{ border: '2px solid rgba(45,20,100,0.2)', borderRadius: '12px', padding: '8px 12px', fontFamily: 'Inter, sans-serif', color: '#1A0A3C', background: 'white', cursor: 'pointer' }}>
-          <option value="">Sin Compita</option>
-          {compitas.map((c) => <option key={c.id} value={c.id}>{c.nombre} — {c.zona}</option>)}
-        </select>
-        <button onClick={toggleBloqueado}
-          style={{ background: bloqueado ? '#16a34a' : '#FEF3C7', color: bloqueado ? 'white' : '#92400E', border: `2px solid ${bloqueado ? '#22c55e' : '#FCD34D'}`, borderRadius: '9999px', padding: '8px 14px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-          {bloqueado ? '✓ Desbloquear' : '🚫 Bloquear'}
-        </button>
-        {confirmEliminar ? (
-          <>
-            <button onClick={() => onEliminar(u.id)} style={{ background: '#B91C1C', color: 'white', border: 'none', borderRadius: '9999px', padding: '8px 14px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap' }}>Sí, eliminar</button>
-            <button onClick={() => setConfirmEliminar(false)} style={{ background: 'white', color: '#6B5C90', border: '2px solid #D1C8E0', borderRadius: '9999px', padding: '8px 12px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', cursor: 'pointer' }}>Cancelar</button>
-          </>
-        ) : (
-          <button onClick={() => setConfirmEliminar(true)} style={{ background: 'white', color: '#B91C1C', border: '2px solid #FCA5A5', borderRadius: '9999px', padding: '8px 14px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-            🗑 Eliminar
-          </button>
-        )}
-      </div>
-      <RegistrarPago usuarioId={u.id} nombre={u.nombre} />
+      {infoSection}
+      {botonesCliente}
     </div>
   )
 }
@@ -1634,7 +1657,7 @@ function ClientePreview({ usuarioId }: { usuarioId: string }) {
 
 type DeletePhase = 'idle' | 'confirm' | 'warn' | 'loading' | 'error'
 
-function CompitaCard({ c, onToggleVerificado, onToggleEstado, onVerPerfil, onToggleBloqueado, onEliminar, onMarcar, seleccionado = false, onToggleSeleccion }: {
+function CompitaCard({ c, onToggleVerificado, onToggleEstado, onVerPerfil, onToggleBloqueado, onEliminar, onMarcar, seleccionado = false, onToggleSeleccion, modo = 'lista' }: {
   c: Compita
   onToggleVerificado: (id: string, actual: boolean) => void
   onToggleEstado: (id: string, estado: string) => void
@@ -1644,6 +1667,7 @@ function CompitaCard({ c, onToggleVerificado, onToggleEstado, onVerPerfil, onTog
   onMarcar: (id: string, nombre: string) => void
   seleccionado?: boolean
   onToggleSeleccion?: (id: string) => void
+  modo?: 'lista' | 'panel'
 }) {
   const [deletePhase, setDeletePhase] = useState<DeletePhase>('idle')
   const [warnVisitas, setWarnVisitas] = useState(0)
@@ -1663,116 +1687,90 @@ function CompitaCard({ c, onToggleVerificado, onToggleEstado, onVerPerfil, onTog
 
   const cardBg = seleccionado ? '#F5F0FF' : isBloqueada ? '#FEF2F2' : 'white'
 
-  return (
-    <div style={{ background: cardBg, border: `2px solid ${borderColor}`, borderRadius: '16px', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
-      {onToggleSeleccion && (
-        <input
-          type="checkbox"
-          checked={seleccionado}
-          onChange={() => onToggleSeleccion(c.id)}
-          style={{ width: '18px', height: '18px', accentColor: '#7C4DFF', cursor: 'pointer', flexShrink: 0 }}
-        />
-      )}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '6px' }}>
-          <span style={{ color: isBloqueada ? '#B91C1C' : '#1A0A3C', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700 }}>{c.nombre}</span>
-          {c.codigo && <span style={{ fontSize: '11px', background: '#F5F0E8', color: '#4A3B6B', borderRadius: '6px', padding: '2px 8px', fontFamily: 'monospace' }}>{c.codigo}</span>}
-          <span style={{ fontSize: '11px', background: badgeBg, color: badgeColor, borderRadius: '9999px', padding: '2px 10px', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif', whiteSpace: 'nowrap' }}>{badgeText}</span>
-        </div>
-        <div style={{ color: '#6B5C90', fontSize: '13px', marginBottom: '4px' }}>
-          {c.zona} · {c.visitas_realizadas} visitas
-          {c.rating_promedio != null && c.total_ratings > 0 ? (
-            <span style={{ marginLeft: '8px', color: '#F59E0B', fontWeight: 700 }}>
-              ★ {Number(c.rating_promedio).toFixed(1)}{' '}
-              <span style={{ color: '#9B8AB8', fontWeight: 400 }}>({c.total_ratings})</span>
-            </span>
-          ) : (
-            <span style={{ marginLeft: '8px', color: '#9B8AB8' }}>☆ Sin calificaciones</span>
-          )}
-        </div>
-        {c.email && (
-          <div style={{ color: '#4A3B6B', fontSize: '13px', marginBottom: '4px' }}>✉️ {c.email}</div>
+  const esPanel = modo === 'panel'
+  const btnBase: React.CSSProperties = { borderRadius: '10px', padding: esPanel ? '10px 16px' : '8px 16px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap', border: '2px solid transparent' }
+
+  const infoSection = (
+    <div style={{ flex: esPanel ? undefined : 1, minWidth: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '6px' }}>
+        {!esPanel && onToggleSeleccion && (
+          <input type="checkbox" checked={seleccionado} onChange={() => onToggleSeleccion(c.id)} style={{ width: '18px', height: '18px', accentColor: '#7C4DFF', cursor: 'pointer', flexShrink: 0 }} />
         )}
-        {c.telegram_chat_id && (
-          <div style={{ color: '#4A3B6B', fontSize: '13px', fontFamily: 'monospace', marginBottom: '4px' }}>
-            💬 {c.telegram_chat_id}
-          </div>
-        )}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <span style={{
-            fontSize: '12px', fontWeight: 700, borderRadius: '9999px', padding: '2px 10px',
-            background: c.telegram_chat_id ? '#DCFCE7' : '#FEF3C7',
-            color: c.telegram_chat_id ? '#15803d' : '#92400E',
-            border: `1px solid ${c.telegram_chat_id ? '#86EFAC' : '#FCD34D'}`,
-          }}>
-            {c.telegram_chat_id ? '✓ Telegram activo' : '✗ Telegram no vinculado'}
-          </span>
-        </div>
+        <span style={{ color: isBloqueada ? '#B91C1C' : '#1A0A3C', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: esPanel ? '16px' : undefined }}>{c.nombre}</span>
+        {c.codigo && <span style={{ fontSize: '11px', background: '#F5F0E8', color: '#4A3B6B', borderRadius: '6px', padding: '2px 8px', fontFamily: 'monospace' }}>{c.codigo}</span>}
+        <span style={{ fontSize: '11px', background: badgeBg, color: badgeColor, borderRadius: '9999px', padding: '2px 10px', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif', whiteSpace: 'nowrap' }}>{badgeText}</span>
       </div>
-      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', flexShrink: 0, alignItems: 'center' }}>
-        <button
-          onClick={() => onMarcar(c.id, c.nombre)}
-          style={{ background: 'none', border: '1.5px solid #dc2626', color: '#dc2626', borderRadius: '9999px', padding: '6px 12px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Bricolage Grotesque, sans-serif', whiteSpace: 'nowrap' }}
-        >
-          ⚑ Marcar
-        </button>
-        <button
-          onClick={() => onVerPerfil(c.id)}
-          style={{ background: 'white', color: '#7C3AED', border: '2px solid #8B5CF6', borderRadius: '9999px', padding: '8px 16px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap' }}
-        >
-          ✏️ Ver perfil
-        </button>
-        {!isBloqueada && !isDesactivada && (
-          <button
-            onClick={() => onToggleVerificado(c.id, c.verificado)}
-            style={{ background: (isVerificada || isVerificadaSinTelegram) ? '#F0FDF4' : '#2D1464', color: (isVerificada || isVerificadaSinTelegram) ? '#15803d' : 'white', border: `2px solid ${(isVerificada || isVerificadaSinTelegram) ? '#22c55e' : '#2D1464'}`, borderRadius: '9999px', padding: '8px 16px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap' }}
-          >
-            {isVerificada || isVerificadaSinTelegram ? '✓ Verificado — Quitar' : '✓ Verificar'}
-          </button>
+      <div style={{ color: '#6B5C90', fontSize: '13px', marginBottom: '4px' }}>
+        {c.zona} · {c.visitas_realizadas} visitas
+        {c.rating_promedio != null && c.total_ratings > 0 ? (
+          <span style={{ marginLeft: '8px', color: '#F59E0B', fontWeight: 700 }}>
+            ★ {Number(c.rating_promedio).toFixed(1)}{' '}
+            <span style={{ color: '#9B8AB8', fontWeight: 400 }}>({c.total_ratings})</span>
+          </span>
+        ) : (
+          <span style={{ marginLeft: '8px', color: '#9B8AB8' }}>☆ Sin calificaciones</span>
         )}
-        {!isBloqueada && (
-          <button
-            onClick={() => onToggleEstado(c.id, c.estado)}
-            style={{ background: 'white', color: isDesactivada ? '#22c55e' : '#6B5C90', border: `2px solid ${isDesactivada ? '#22c55e' : '#D1C8E0'}`, borderRadius: '9999px', padding: '8px 16px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap' }}
-          >
-            {isDesactivada ? 'Reactivar' : 'Desactivar'}
-          </button>
-        )}
-        <button
-          onClick={() => onToggleBloqueado(c.id, isBloqueada)}
-          style={{ background: isBloqueada ? '#FEF2F2' : 'white', color: isBloqueada ? '#15803d' : '#B91C1C', border: `2px solid ${isBloqueada ? '#22c55e' : '#FCA5A5'}`, borderRadius: '9999px', padding: '8px 16px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap' }}
-        >
-          {isBloqueada ? 'Desbloquear' : '🚫 Bloquear'}
+      </div>
+      {c.email && <div style={{ color: '#4A3B6B', fontSize: '13px', marginBottom: '4px' }}>✉️ {c.email}</div>}
+      {c.telegram_chat_id && <div style={{ color: '#4A3B6B', fontSize: '13px', fontFamily: 'monospace', marginBottom: '4px' }}>💬 {c.telegram_chat_id}</div>}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
+        <span style={{ fontSize: '12px', fontWeight: 700, borderRadius: '9999px', padding: '2px 10px', background: c.telegram_chat_id ? '#DCFCE7' : '#FEF3C7', color: c.telegram_chat_id ? '#15803d' : '#92400E', border: `1px solid ${c.telegram_chat_id ? '#86EFAC' : '#FCD34D'}` }}>
+          {c.telegram_chat_id ? '✓ Telegram activo' : '✗ Telegram no vinculado'}
+        </span>
+      </div>
+    </div>
+  )
+
+  const botonesAccion = (
+    <div style={esPanel
+      ? { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '4px' }
+      : { display: 'flex', gap: '8px', flexWrap: 'wrap', flexShrink: 0, alignItems: 'center' }
+    }>
+      <button onClick={() => onVerPerfil(c.id)}
+        style={{ ...btnBase, background: 'white', color: '#7C3AED', borderColor: '#8B5CF6', gridColumn: esPanel ? '1 / -1' : undefined }}>
+        ✏️ Ver perfil
+      </button>
+      {!isBloqueada && !isDesactivada && (
+        <button onClick={() => onToggleVerificado(c.id, c.verificado)}
+          style={{ ...btnBase, background: isVerificadaAny ? '#F0FDF4' : '#2D1464', color: isVerificadaAny ? '#15803d' : 'white', borderColor: isVerificadaAny ? '#22c55e' : '#2D1464' }}>
+          {isVerificadaAny ? '✓ Verificado — Quitar' : '✓ Verificar'}
         </button>
-        {deletePhase === 'idle' && (
-          <button
-            onClick={() => setDeletePhase('confirm')}
-            style={{ background: 'white', color: '#6B5C90', border: '2px solid #E8E0D4', borderRadius: '9999px', padding: '8px 14px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap' }}
-          >
-            🗑 Eliminar
-          </button>
-        )}
+      )}
+      {!isBloqueada && (
+        <button onClick={() => onToggleEstado(c.id, c.estado)}
+          style={{ ...btnBase, background: 'white', color: isDesactivada ? '#22c55e' : '#6B5C90', borderColor: isDesactivada ? '#22c55e' : '#D1C8E0' }}>
+          {isDesactivada ? 'Reactivar' : 'Desactivar'}
+        </button>
+      )}
+      <button onClick={() => onToggleBloqueado(c.id, isBloqueada)}
+        style={{ ...btnBase, background: isBloqueada ? '#FEF2F2' : 'white', color: isBloqueada ? '#15803d' : '#B91C1C', borderColor: isBloqueada ? '#22c55e' : '#FCA5A5' }}>
+        {isBloqueada ? 'Desbloquear' : '🚫 Bloquear'}
+      </button>
+      <button onClick={() => onMarcar(c.id, c.nombre)}
+        style={{ ...btnBase, background: 'none', borderColor: '#dc2626', color: '#dc2626', padding: '6px 12px' }}>
+        ⚑ Marcar
+      </button>
+      {deletePhase === 'idle' && (
+        <button onClick={() => setDeletePhase('confirm')}
+          style={{ ...btnBase, background: 'white', color: '#6B5C90', borderColor: '#E8E0D4' }}>
+          🗑 Eliminar
+        </button>
+      )}
         {deletePhase === 'confirm' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', background: '#FEF2F2', border: '2px solid #FCA5A5', borderRadius: '12px', padding: '12px 16px', maxWidth: '320px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', background: '#FEF2F2', border: '2px solid #FCA5A5', borderRadius: '12px', padding: '12px 16px', gridColumn: esPanel ? '1 / -1' : undefined }}>
             <span style={{ fontSize: '13px', color: '#B91C1C', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif' }}>¿Eliminar a {c.nombre}?</span>
             <span style={{ fontSize: '12px', color: '#7F1D1D', lineHeight: '1.5' }}>Se borrarán su perfil, sus solicitudes pendientes y su registro de Telegram en el sistema. Esta acción no se puede deshacer.</span>
             <div style={{ display: 'flex', gap: '6px' }}>
-              <button
-                onClick={async () => {
-                  setDeletePhase('loading')
-                  const result = await onEliminar(c.id, false)
-                  if (result.ok) return
-                  if (result.visitas != null) { setWarnVisitas(result.visitas); setDeletePhase('warn') }
-                  else { setDeleteError(result.error ?? 'Error desconocido'); setDeletePhase('error') }
-                }}
-                style={{ background: '#B91C1C', color: 'white', border: 'none', borderRadius: '9999px', padding: '8px 14px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap' }}
-              >Sí, eliminar</button>
+              <button onClick={async () => { setDeletePhase('loading'); const r = await onEliminar(c.id, false); if (r.ok) return; if (r.visitas != null) { setWarnVisitas(r.visitas); setDeletePhase('warn') } else { setDeleteError(r.error ?? 'Error desconocido'); setDeletePhase('error') } }}
+                style={{ background: '#B91C1C', color: 'white', border: 'none', borderRadius: '9999px', padding: '8px 14px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                Sí, eliminar
+              </button>
               <button onClick={() => setDeletePhase('idle')} style={{ background: 'white', color: '#6B5C90', border: '2px solid #D1C8E0', borderRadius: '9999px', padding: '8px 12px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', cursor: 'pointer' }}>Cancelar</button>
             </div>
           </div>
         )}
         {deletePhase === 'warn' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', background: '#FFFBEB', border: '2px solid #FCD34D', borderRadius: '12px', padding: '12px 16px', maxWidth: '340px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', background: '#FFFBEB', border: '2px solid #FCD34D', borderRadius: '12px', padding: '12px 16px', gridColumn: esPanel ? '1 / -1' : undefined }}>
             <span style={{ fontSize: '13px', color: '#92400E', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif' }}>No se puede eliminar a {c.nombre}</span>
             <span style={{ fontSize: '12px', color: '#78350F', lineHeight: '1.5' }}>
               Este compita tiene {warnVisitas} {warnVisitas === 1 ? 'visita registrada' : 'visitas registradas'} con clientes. Las visitas son el historial de trabajo y están vinculadas a los clientes que atendió.
@@ -1781,31 +1779,45 @@ function CompitaCard({ c, onToggleVerificado, onToggleEstado, onVerPerfil, onTog
               Si igual quieres eliminarlo, se borrarán permanentemente {warnVisitas === 1 ? 'esa visita y todos sus mensajes' : `esas ${warnVisitas} visitas y todos sus mensajes`}, sus solicitudes pendientes y su acceso al sistema por Telegram.
             </span>
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-              <button
-                onClick={async () => {
-                  setDeletePhase('loading')
-                  const result = await onEliminar(c.id, true)
-                  if (result.ok) return
-                  setDeleteError(result.error ?? 'Error desconocido')
-                  setDeletePhase('error')
-                }}
-                style={{ background: '#B91C1C', color: 'white', border: 'none', borderRadius: '9999px', padding: '8px 14px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap' }}
-              >Eliminar de todas formas</button>
+              <button onClick={async () => { setDeletePhase('loading'); const r = await onEliminar(c.id, true); if (r.ok) return; setDeleteError(r.error ?? 'Error desconocido'); setDeletePhase('error') }}
+                style={{ background: '#B91C1C', color: 'white', border: 'none', borderRadius: '9999px', padding: '8px 14px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                Eliminar de todas formas
+              </button>
               <button onClick={() => setDeletePhase('idle')} style={{ background: 'white', color: '#6B5C90', border: '2px solid #D1C8E0', borderRadius: '9999px', padding: '8px 12px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', cursor: 'pointer' }}>Cancelar</button>
             </div>
           </div>
         )}
         {deletePhase === 'loading' && (
-          <span style={{ fontSize: '13px', color: '#6B5C90', fontFamily: 'Bricolage Grotesque, sans-serif' }}>Eliminando...</span>
+          <span style={{ fontSize: '13px', color: '#6B5C90', fontFamily: 'Bricolage Grotesque, sans-serif', gridColumn: esPanel ? '1 / -1' : undefined }}>Eliminando...</span>
         )}
         {deletePhase === 'error' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', background: '#FEF2F2', border: '2px solid #FCA5A5', borderRadius: '12px', padding: '10px 14px', maxWidth: '300px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', background: '#FEF2F2', border: '2px solid #FCA5A5', borderRadius: '12px', padding: '10px 14px', gridColumn: esPanel ? '1 / -1' : undefined }}>
             <span style={{ fontSize: '12px', color: '#B91C1C', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif' }}>Error al eliminar</span>
             <span style={{ fontSize: '11px', color: '#7F1D1D', fontFamily: 'monospace' }}>{deleteError}</span>
             <button onClick={() => setDeletePhase('idle')} style={{ background: 'white', color: '#6B5C90', border: '2px solid #D1C8E0', borderRadius: '9999px', padding: '6px 12px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '12px', cursor: 'pointer', alignSelf: 'flex-start' }}>Cerrar</button>
           </div>
         )}
+    </div>
+  )
+
+  if (esPanel) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '4px 0' }}>
+        {infoSection}
+        <div style={{ borderTop: '1.5px solid #E8E0D4', paddingTop: '16px' }}>
+          {botonesAccion}
+        </div>
       </div>
+    )
+  }
+
+  return (
+    <div style={{ background: cardBg, border: `2px solid ${borderColor}`, borderRadius: '16px', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
+      {onToggleSeleccion && (
+        <input type="checkbox" checked={seleccionado} onChange={() => onToggleSeleccion(c.id)} style={{ width: '18px', height: '18px', accentColor: '#7C4DFF', cursor: 'pointer', flexShrink: 0 }} />
+      )}
+      {infoSection}
+      {botonesAccion}
     </div>
   )
 }
