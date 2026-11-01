@@ -1190,6 +1190,12 @@ function ClientesTab({ usuarios, compitas, onAsignar, onEliminar, onEliminarLote
   const [pagina, setPagina] = useState(0)
   const POR_PAGINA = 25
 
+  useEffect(() => {
+    const fn = (e: KeyboardEvent) => { if (e.key === 'Escape') setPanelId(null) }
+    document.addEventListener('keydown', fn)
+    return () => document.removeEventListener('keydown', fn)
+  }, [])
+
   const activos = usuarios.filter((u) => u.activado && u.plan !== 'bloqueado')
   const invitados = usuarios.filter((u) => !u.activado && u.plan !== 'bloqueado')
   const bloqueados = usuarios.filter((u) => u.plan === 'bloqueado')
@@ -2354,6 +2360,12 @@ function SolicitudesTab({ solicitudes }: { solicitudes: SolicitudAdmin[] }) {
   const [panelId, setPanelId] = useState<string | null>(null)
   const [pagina, setPagina] = useState(0)
   const S_POR_PAGINA = 25
+
+  useEffect(() => {
+    const fn = (e: KeyboardEvent) => { if (e.key === 'Escape') setPanelId(null) }
+    document.addEventListener('keydown', fn)
+    return () => document.removeEventListener('keydown', fn)
+  }, [])
 
   useEffect(() => {
     const id = setInterval(() => setAhora(Date.now()), 60_000)

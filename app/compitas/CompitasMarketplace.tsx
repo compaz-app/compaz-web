@@ -134,6 +134,14 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
 
   useEffect(() => { history.scrollRestoration = 'auto' }, [])
 
+  useEffect(() => {
+    const fn = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { setSeleccionada(null); setMostrarFormulario(false) }
+    }
+    document.addEventListener('keydown', fn)
+    return () => document.removeEventListener('keydown', fn)
+  }, [])
+
   // Abrir modal directamente si viene ?compita=<id> en la URL (ej: link desde email de rechazo)
   // Solo cuando NO es reagendado — en ese caso el useEffect de mis-solicitudes ya setea seleccionada
   useEffect(() => {
