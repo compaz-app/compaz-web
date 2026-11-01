@@ -388,44 +388,79 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
           )}
         </div>
 
-        {/* Carrito de solicitudes */}
-        {solicitudesActivas.length > 0 && (
-          <div style={{ background: '#1A0A3C', borderRadius: '16px', padding: '20px 24px', marginBottom: '24px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
-              <div>
-                <span style={{ color: 'white', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '16px' }}>
-                  Mis solicitudes
-                </span>
-                <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '13px', marginLeft: '10px' }}>
-                  {solicitudesActivas.length}/{MAX_SOLICITUDES} — esperando respuesta del compita
-                </span>
+        {/* Banner de solicitudes */}
+        {(() => {
+          const restantes = MAX_SOLICITUDES - solicitudesActivas.length
+          const lleno = restantes === 0
+          return (
+            <div style={{ background: lleno ? '#1A0A3C' : '#F5F0FF', border: `2px solid ${lleno ? 'transparent' : '#D4C0FF'}`, borderRadius: '16px', padding: '20px 24px', marginBottom: '24px' }}>
+              {/* Slots visuales */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: solicitudesActivas.length > 0 ? '16px' : '0', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  {Array.from({ length: MAX_SOLICITUDES }, (_, i) => {
+                    const usado = i < solicitudesActivas.length
+                    return (
+                      <div key={i} style={{ width: '28px', height: '28px', borderRadius: '9999px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', background: usado ? '#FF6B2B' : lleno ? 'rgba(255,255,255,0.12)' : 'rgba(45,20,100,0.1)', border: usado ? 'none' : `2px dashed ${lleno ? 'rgba(255,255,255,0.25)' : 'rgba(45,20,100,0.2)'}` }}>
+                        {usado ? <span style={{ color: 'white', fontWeight: 800, fontSize: '11px' }}>✓</span> : <span style={{ color: lleno ? 'rgba(255,255,255,0.3)' : 'rgba(45,20,100,0.25)', fontWeight: 700, fontSize: '14px' }}>+</span>}
+                      </div>
+                    )
+                  })}
+                </div>
+                <div>
+                  {lleno ? (
+                    <>
+                      <div style={{ color: 'white', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '15px' }}>Límite de solicitudes alcanzado</div>
+                      <div style={{ color: 'rgba(255,255,255,0.55)', fontSize: '13px', marginTop: '2px' }}>Tienes {MAX_SOLICITUDES} solicitudes pendientes. Cuando una se resuelva, podrás enviar otra.</div>
+                    </>
+                  ) : solicitudesActivas.length === 0 ? (
+                    <>
+                      <div style={{ color: '#1A0A3C', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '15px' }}>Puedes solicitar entrevista a hasta {MAX_SOLICITUDES} compitas</div>
+                      <div style={{ color: '#6B5C90', fontSize: '13px', marginTop: '2px' }}>Elige las que más te interesen y envíales una solicitud de entrevista de 20 min.</div>
+                    </>
+                  ) : (
+                    <>
+                      <div style={{ color: '#1A0A3C', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '15px' }}>
+                        {solicitudesActivas.length === 1 ? 'Enviaste 1 solicitud' : `Enviaste ${solicitudesActivas.length} solicitudes`} · Puedes enviar {restantes} {restantes === 1 ? 'más' : 'más'}
+                      </div>
+                      <div style={{ color: '#6B5C90', fontSize: '13px', marginTop: '2px' }}>Sigue buscando mientras esperas respuesta.</div>
+                    </>
+                  )}
+                </div>
               </div>
-              {solicitudesActivas.length >= MAX_SOLICITUDES && (
-                <span style={{ background: '#FF6B2B', color: 'white', borderRadius: '9999px', padding: '4px 12px', fontSize: '12px', fontWeight: 800, fontFamily: 'Bricolage Grotesque, sans-serif' }}>
-                  Límite alcanzado
-                </span>
+              {/* Barra de progreso */}
+              <div style={{ marginBottom: solicitudesActivas.length > 0 ? '14px' : '0' }}>
+                <div style={{ height: '6px', borderRadius: '9999px', background: lleno ? 'rgba(255,255,255,0.12)' : 'rgba(45,20,100,0.1)', overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${(solicitudesActivas.length / MAX_SOLICITUDES) * 100}%`, borderRadius: '9999px', background: lleno ? '#FF6B2B' : '#7C3AED', transition: 'width 0.4s ease' }} />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
+                  <span style={{ fontSize: '11px', color: lleno ? 'rgba(255,255,255,0.4)' : '#9B8AB8' }}>0</span>
+                  <span style={{ fontSize: '11px', color: lleno ? 'rgba(255,255,255,0.4)' : '#9B8AB8' }}>{MAX_SOLICITUDES} máx.</span>
+                </div>
+              </div>
+              {/* Lista de solicitudes activas */}
+              {solicitudesActivas.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {solicitudesActivas.map((s) => (
+                    <div key={s.id} style={{ background: lleno ? 'rgba(255,255,255,0.07)' : 'white', borderRadius: '12px', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px', border: lleno ? 'none' : '1.5px solid #E8E0D4' }}>
+                      {s.compita_foto
+                        // eslint-disable-next-line @next/next/no-img-element
+                        ? <img src={s.compita_foto} alt={s.compita_nombre ?? ''} style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                        : <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: lleno ? 'rgba(255,255,255,0.15)' : '#F0EBF8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0 }}>👤</div>
+                      }
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ color: lleno ? 'white' : '#1A0A3C', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '14px' }}>{s.compita_nombre}</div>
+                        {s.compita_zona && <div style={{ color: lleno ? 'rgba(255,255,255,0.5)' : '#9B8AB8', fontSize: '12px', marginTop: '1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.compita_zona}</div>}
+                      </div>
+                      <span style={{ background: lleno ? 'rgba(255,107,43,0.2)' : '#FFF3E8', color: lleno ? '#FF9E6B' : '#C84B0E', borderRadius: '9999px', padding: '3px 10px', fontSize: '11px', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif', whiteSpace: 'nowrap', flexShrink: 0, border: lleno ? 'none' : '1.5px solid #FFD0B5' }}>
+                        ⏳ En revisión
+                      </span>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {solicitudesActivas.map((s) => (
-                <div key={s.id} style={{ background: 'rgba(255,255,255,0.07)', borderRadius: '12px', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  {s.compita_foto
-                    // eslint-disable-next-line @next/next/no-img-element
-                    ? <img src={s.compita_foto} alt={s.compita_nombre} style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-                    : <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}>👤</div>
-                  }
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ color: 'white', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '15px' }}>{s.compita_nombre}</div>
-                    {s.compita_zona && <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '12px', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.compita_zona}</div>}
-                  </div>
-                  <span style={{ background: 'rgba(255,107,43,0.2)', color: '#FF9E6B', borderRadius: '9999px', padding: '4px 12px', fontSize: '12px', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                    ⏳ En revisión
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+          )
+        })()}
 
         {/* Resultados */}
         <div ref={resultadosRef} />
@@ -453,67 +488,62 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
           </div>
         )}
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
-          {lista.map((compita) => (
-            <div
-              key={compita.id}
-              onClick={() => setSeleccionada(compita)}
-              style={{ background: 'white', border: '2px solid #E8E0D4', borderRadius: '16px', overflow: 'hidden', cursor: 'pointer', transition: 'border-color 0.15s', position: 'relative' }}
-              onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#FF6B2B')}
-              onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#E8E0D4')}
-            >
-              {compita.foto_url
-                // eslint-disable-next-line @next/next/no-img-element
-                ? <img src={compita.foto_url} alt={compita.nombre} style={{ width: '100%', height: '200px', objectFit: 'cover' }} />
-                : <div style={{ width: '100%', height: '200px', background: '#F5F0E8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '48px' }}>👤</div>
-              }
-              <div style={{ padding: '20px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                  <h3 style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '18px', color: '#1A0A3C', margin: 0 }}>{compita.nombre}</h3>
-                  {compita.verificado && <span style={s.badge}>✓ Verificada</span>}
-                </div>
-                {compita.descripcion && (
-                  <p style={{ color: '#4A3B6B', fontSize: '14px', lineHeight: '1.5', marginBottom: '12px', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                    {compita.descripcion}
-                  </p>
-                )}
-                {compita.servicios && compita.servicios.length > 0 && (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', marginBottom: '14px' }}>
-                    {compita.servicios.slice(0, 4).map((sv) => (
-                      <span key={sv} style={s.chip}>{sv}</span>
-                    ))}
-                    {compita.servicios.length > 4 && <span style={s.chip}>+{compita.servicios.length - 4} más</span>}
-                  </div>
-                )}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                    {compita.rating_promedio != null && compita.total_ratings > 0 && (
-                      <span style={{ fontSize: '13px', color: '#F59E0B', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '3px' }}>
-                        ★ <span style={{ color: '#1A0A3C' }}>{compita.rating_promedio.toFixed(1)}</span>
-                        <span style={{ color: '#9B8AB8', fontWeight: 400 }}>({compita.total_ratings})</span>
-                      </span>
-                    )}
-                    <span style={{ color: '#6B5C90', fontSize: '13px' }}>{compita.visitas_realizadas} visitas</span>
-                    {compita.tasa_aceptacion != null && (
-                      <span style={{
-                        fontSize: '11px', fontWeight: 700, borderRadius: '9999px', padding: '2px 8px',
-                        fontFamily: 'Bricolage Grotesque, sans-serif',
-                        background: compita.tasa_aceptacion >= 80 ? '#DCFCE7' : compita.tasa_aceptacion >= 60 ? '#FEF9C3' : '#FEE2E2',
-                        color: compita.tasa_aceptacion >= 80 ? '#166534' : compita.tasa_aceptacion >= 60 ? '#854D0E' : '#991B1B',
-                      }}>
-                        {compita.tasa_aceptacion}% acepta
-                      </span>
-                    )}
-                  </div>
-                  {idsYaSolicitados.has(compita.id)
-                    ? <span style={{ color: '#FF6B2B', fontSize: '12px', fontWeight: 700, background: 'rgba(255,107,43,0.08)', borderRadius: '9999px', padding: '3px 10px' }}>⏳ En revisión</span>
-                    : <span style={{ color: '#FF6B2B', fontSize: '13px', fontWeight: 700 }}>Ver perfil →</span>
-                  }
-                </div>
+        {/* Lista compacta — excluye las ya solicitadas (aparecen en el banner) */}
+        {(() => {
+          const disponibles = lista.filter((c) => !idsYaSolicitados.has(c.id))
+          if (zonaFiltro && disponibles.length === 0 && lista.length > 0) {
+            return (
+              <div style={{ background: 'white', border: '2px solid #E8E0D4', borderRadius: '16px', padding: '32px', textAlign: 'center' }}>
+                <p style={{ color: '#6B5C90', fontSize: '15px', marginBottom: '6px' }}>Ya enviaste solicitudes a todas las compitas de {zonaFiltro}.</p>
+                <p style={{ color: '#9B8AB8', fontSize: '13px' }}>Espera su respuesta o busca en otra zona.</p>
               </div>
+            )
+          }
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {disponibles.map((compita) => (
+                <div
+                  key={compita.id}
+                  onClick={() => setSeleccionada(compita)}
+                  style={{ background: 'white', border: '2px solid #E8E0D4', borderRadius: '14px', padding: '14px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '14px', transition: 'border-color 0.12s' }}
+                  onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#FF6B2B')}
+                  onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#E8E0D4')}
+                >
+                  {/* Avatar */}
+                  {compita.foto_url
+                    // eslint-disable-next-line @next/next/no-img-element
+                    ? <img src={compita.foto_url} alt={compita.nombre} style={{ width: '52px', height: '52px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                    : <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: '#F0EBF8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', flexShrink: 0 }}>👤</div>
+                  }
+                  {/* Info principal */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '3px' }}>
+                      <span style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '15px', color: '#1A0A3C' }}>{compita.nombre}</span>
+                      {compita.verificado && <span style={{ ...s.badge, fontSize: '10px', padding: '1px 7px' }}>✓ Verificada</span>}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                      <span style={{ color: '#9B8AB8', fontSize: '12px' }}>{compita.zona?.split(',')[0]?.split('—')[1]?.trim() ?? compita.zona}</span>
+                      {compita.visitas_realizadas > 0 && <span style={{ color: '#9B8AB8', fontSize: '12px' }}>· {compita.visitas_realizadas} visitas</span>}
+                      {compita.rating_promedio != null && compita.total_ratings > 0 && (
+                        <span style={{ color: '#F59E0B', fontSize: '12px', fontWeight: 700 }}>★ {compita.rating_promedio.toFixed(1)}</span>
+                      )}
+                    </div>
+                    {compita.servicios && compita.servicios.length > 0 && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '6px' }}>
+                        {compita.servicios.slice(0, 3).map((sv) => (
+                          <span key={sv} style={{ ...s.chip, fontSize: '11px', padding: '2px 8px' }}>{sv}</span>
+                        ))}
+                        {compita.servicios.length > 3 && <span style={{ ...s.chip, fontSize: '11px', padding: '2px 8px' }}>+{compita.servicios.length - 3}</span>}
+                      </div>
+                    )}
+                  </div>
+                  {/* CTA */}
+                  <span style={{ color: '#FF6B2B', fontSize: '13px', fontWeight: 700, flexShrink: 0, whiteSpace: 'nowrap' }}>Ver perfil →</span>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          )
+        })()}
       </div>
 
       {/* Modal de perfil */}
