@@ -51,6 +51,7 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
   const searchParams = useSearchParams()
   const [estado, setEstadoState] = useState(searchParams.get('estado') ?? '')
   const [municipio, setMunicipioState] = useState(searchParams.get('municipio') ?? '')
+  const [mapaAbierto, setMapaAbierto] = useState(searchParams.get('mapa') === '1')
   const [seleccionada, setSeleccionada] = useState<Compita | null>(null)
   const [enviando, setEnviando] = useState(false)
   const [enviado, setEnviado] = useState<string | null>(null)
@@ -163,6 +164,15 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
     setMunicipioState(v)
     const p = new URLSearchParams(searchParams.toString())
     p.set('municipio', v)
+    router.replace(`/compitas?${p.toString()}`, { scroll: false })
+  }
+
+  function toggleMapa() {
+    const nuevo = !mapaAbierto
+    setMapaAbierto(nuevo)
+    const p = new URLSearchParams(searchParams.toString())
+    if (nuevo) p.set('mapa', '1')
+    else p.delete('mapa')
     router.replace(`/compitas?${p.toString()}`, { scroll: false })
   }
 
@@ -352,9 +362,6 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
             ✓ {compitas.length} {compitas.length === 1 ? 'Compita disponible' : 'Compitas disponibles'}
           </span>
         </div>
-        <p style={{ color: '#6B5C90', marginBottom: '32px', lineHeight: '1.6' }}>
-          Selecciona la zona donde está tu familiar y te mostramos los compitas disponibles en esa área.
-        </p>
 
         {/* Aviso de entrevistas confirmadas — arriba del mapa */}
         {solicitudesAceptadas.length > 0 && (
@@ -378,18 +385,8 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
           </div>
         )}
 
-        {/* Mapa de cobertura */}
-        <MapaCoberturaWrapper
-          hideToggle
-          selectedEstado={estado}
-          selectedMunicipio={municipio}
-          onEstadoSelect={(est) => setZona(est, '')}
-          onMunicipioSelect={(est, mun) => setZona(est, mun)}
-        />
-
-        {/* Selector de zona — barra compacta */}
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '13px', color: '#9B8AB8', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 600, whiteSpace: 'nowrap' }}>O busca por nombre:</span>
+        {/* Selector de zona */}
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap' }}>
           <select value={estado} onChange={(e) => { setEstado(e.target.value); setMunicipioState('') }} style={{ ...s.selectCompact, flex: 1, minWidth: '140px' }}>
             <option value="">Estado…</option>
             {Object.keys(ZONAS).sort().map((est) => (
@@ -411,6 +408,24 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
             </button>
           )}
         </div>
+
+        {/* Mapa plegable */}
+        <button
+          onClick={toggleMapa}
+          style={{ background: 'none', border: 'none', padding: '4px 0', cursor: 'pointer', color: '#6B5C90', fontSize: '13px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, marginBottom: '12px' }}
+        >
+          {mapaAbierto ? 'Ocultar mapa ▲' : 'Elegir en el mapa ▼'}
+        </button>
+        {mapaAbierto && (
+          <MapaCoberturaWrapper
+            hideToggle
+            selectedEstado={estado}
+            selectedMunicipio={municipio}
+            onEstadoSelect={(est) => setZona(est, '')}
+            onMunicipioSelect={(est, mun) => setZona(est, mun)}
+          />
+        )}
+        <div style={{ height: '12px' }} />
 
         {/* Banner de solicitudes pendientes */}
         {(() => {
@@ -459,7 +474,7 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
         <div ref={resultadosRef} />
         {!zonaFiltro && !estado && (
           <div style={{ textAlign: 'center', padding: '48px', color: '#6B5C90' }}>
-            Selecciona un estado en el mapa o en el menú para ver los compitas disponibles.
+            Elige el estado donde vive tu familiar para ver los compitas disponibles.
           </div>
         )}
         {estado && !municipio && (
@@ -521,17 +536,9 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
                         <span style={{ color: '#F59E0B', fontSize: '12px', fontWeight: 700 }}>★ {compita.rating_promedio.toFixed(1)}</span>
                       )}
                     </div>
-                    {compita.servicios && compita.servicios.length > 0 && (
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '6px' }}>
-                        {compita.servicios.slice(0, 3).map((sv) => (
-                          <span key={sv} style={{ ...s.chip, fontSize: '11px', padding: '2px 8px' }}>{sv}</span>
-                        ))}
-                        {compita.servicios.length > 3 && <span style={{ ...s.chip, fontSize: '11px', padding: '2px 8px' }}>+{compita.servicios.length - 3}</span>}
-                      </div>
-                    )}
                   </div>
                   {/* CTA */}
-                  <span style={{ color: '#FF6B2B', fontSize: '13px', fontWeight: 700, flexShrink: 0, whiteSpace: 'nowrap' }}>Ver perfil →</span>
+                  <span style={{ color: '#FF6B2B', fontSize: '18px', fontWeight: 700, flexShrink: 0 }}>›</span>
                 </div>
               ))}
             </div>
