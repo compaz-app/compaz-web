@@ -555,16 +555,17 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
           <div style={{ background: '#FDFAF6', borderRadius: '24px', maxWidth: '560px', width: '100%', maxHeight: '90vh', overflowY: 'auto', position: 'relative' }}>
             <button onClick={() => { setSeleccionada(null); setMostrarFormulario(false); setSlotsElegidos([]); setFormMensaje(''); setReagendando(false) }} style={{ position: 'absolute', top: '16px', right: '16px', background: 'white', border: '2px solid #E8E0D4', borderRadius: '9999px', width: '32px', height: '32px', cursor: 'pointer', fontSize: '16px', zIndex: 10 }}>×</button>
 
-            {seleccionada.foto_url
-              // eslint-disable-next-line @next/next/no-img-element
-              ? <img src={seleccionada.foto_url} alt={seleccionada.nombre} style={{ width: '100%', height: '240px', objectFit: 'cover', borderRadius: '24px 24px 0 0' }} />
-              : <div style={{ width: '100%', height: '180px', background: '#F5F0E8', borderRadius: '24px 24px 0 0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '64px' }}>👤</div>
-            }
-
             <div style={{ padding: '28px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-                <h2 style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '24px', color: '#1A0A3C', margin: 0 }}>{seleccionada.nombre}</h2>
-                {seleccionada.verificado && <span style={s.badge}>✓ Verificada</span>}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '12px', paddingRight: '28px' }}>
+                {seleccionada.foto_url
+                  // eslint-disable-next-line @next/next/no-img-element
+                  ? <img src={seleccionada.foto_url} alt={seleccionada.nombre} style={{ width: '80px', height: '80px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                  : <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: '#F0EBF8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '36px', flexShrink: 0 }}>👤</div>
+                }
+                <div style={{ minWidth: 0 }}>
+                  <h2 style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '22px', color: '#1A0A3C', margin: '0 0 4px' }}>{seleccionada.nombre}</h2>
+                  {seleccionada.verificado && <span style={s.badge}>✓ Verificada</span>}
+                </div>
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' }}>
@@ -709,8 +710,7 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
                   {/* Aviso llamada 20 min */}
                   {!reagendando && (
                     <div style={{ background: '#FFF3E8', border: '2px solid #FF6B2B', borderRadius: '12px', padding: '12px 16px' }}>
-                      <p style={{ color: '#C84B0E', fontWeight: 700, fontSize: '13px', margin: '0 0 4px', fontFamily: 'Bricolage Grotesque, sans-serif' }}>⏱️ La llamada de presentación es de 20 minutos</p>
-                      <p style={{ color: '#6B5C90', fontSize: '12px', margin: 0 }}>La sala se cierra automáticamente a los 23 min. Úsalos bien.</p>
+                      <p style={{ color: '#C84B0E', fontWeight: 700, fontSize: '13px', margin: 0, fontFamily: 'Bricolage Grotesque, sans-serif' }}>⏱️ Llamada de presentación de 20 minutos. La sala se cierra a los 23.</p>
                     </div>
                   )}
 
@@ -748,7 +748,7 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
                       Elige uno o varios horarios *
                     </label>
                     <p style={{ color: '#6B5C90', fontSize: '12px', marginBottom: '4px' }}>
-                      {seleccionada.nombre} confirmará uno. Puedes proponer hasta 3 para darle más opciones. La llamada es de 20 minutos.
+                      {seleccionada.nombre} confirmará uno. Puedes proponer hasta 3 para darle más opciones.
                     </p>
                     <p style={{ color: '#9B8AB8', fontSize: '11px', marginBottom: '10px' }}>
                       🕐 Horarios en hora de Venezuela (UTC−4) — ahora son las {new Date().toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Caracas' })} VET
@@ -821,12 +821,9 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
                     if (slotsElegidos.length === 0) falta.push('al menos un horario')
                     if (falta.length === 0) return null
                     return (
-                      <div style={{ background: '#FFF3E8', border: '2px solid #FF6B2B', borderRadius: '12px', padding: '10px 14px' }}>
-                        <p style={{ color: '#C84B0E', fontSize: '13px', fontWeight: 700, margin: '0 0 4px', fontFamily: 'Bricolage Grotesque, sans-serif' }}>Para enviar la solicitud falta:</p>
-                        <ul style={{ margin: 0, paddingLeft: '18px', color: '#C84B0E', fontSize: '13px', lineHeight: '1.8' }}>
-                          {falta.map((f) => <li key={f}>{f}</li>)}
-                        </ul>
-                      </div>
+                      <p style={{ color: '#9B8AB8', fontSize: '13px', margin: 0, textAlign: 'center' }}>
+                        Falta: {falta.join(' y ')}
+                      </p>
                     )
                   })()}
 
