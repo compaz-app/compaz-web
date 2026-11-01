@@ -200,7 +200,16 @@ jobs:
           for i in $(seq 1 60); do curl -sf -o /dev/null http://localhost:3000/privacidad && break; sleep 2; done
           node --experimental-strip-types --no-warnings tests/integracion/e2e-captacion.mjs
           # Vigilancia de crons contra telegram_estados con la estructura real de producción
-          node tests/integracion/vigilancia-crons.mjs
+          # (en el mismo paso: necesita la web arrancada; sus anotaciones van a un archivo)
+          node tests/integracion/vigilancia-crons.mjs | tee /tmp/e2e/vigilancia.log
+      - name: Resultado de la vigilancia de crons
+        if: always() && steps.secretos.outputs.hay == 'si'
+        run: |
+          grep -E '^(OK   |FALLO) V' /tmp/e2e/vigilancia.log > /tmp/e2e/v.txt || { echo "::error::sin resultados de vigilancia"; exit 1; }
+          # Un aviso por cada 4 comprobaciones (GitHub muestra como mucho 10 avisos por paso)
+          split -l 4 /tmp/e2e/v.txt /tmp/e2e/v_
+          for f in /tmp/e2e/v_*; do echo "::notice title=Vigilancia::$(tr '\n' ' ' < "$f" | sed 's/::/: :/g')"; done
+          ! grep -q '^FALLO' /tmp/e2e/v.txt
       - name: Registro de la web (si algo falló)
         if: failure() && steps.secretos.outputs.hay == 'si'
         run: |
