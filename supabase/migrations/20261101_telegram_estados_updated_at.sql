@@ -10,7 +10,10 @@
 -- Solo añade la columna. No toca filas ni permisos: las filas existentes toman la
 -- hora de la migración (valor por defecto no volátil, sin reescribir la tabla).
 -- Idempotente: si la columna ya existe, no hace nada.
+-- lock_timeout: si otra transacción retiene la tabla, falla en 5 s sin bloquear al bot
+-- (se reintenta); nunca deja en cola a las peticiones de la web.
 -- ══════════════════════════════════════════════════════════════════════════════
 begin;
+set local lock_timeout = '5s';
 alter table public.telegram_estados add column if not exists updated_at timestamptz not null default now();
 commit;
