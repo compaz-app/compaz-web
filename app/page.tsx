@@ -863,12 +863,12 @@ function Formulario({ rolInicial }: { rolInicial: string }) {
               className="w-full rounded-xl px-5 py-4 text-base outline-none focus:ring-2 focus:ring-[#2D1464]"
               style={{ backgroundColor: "white", color: "#1A0A3C", fontFamily: "var(--font-inter)" }}
             />
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <select
                 value={form.countryCode}
                 onChange={(e) => { setForm({ ...form, countryCode: e.target.value, phone: "" }); setPhoneError(""); }}
-                className="rounded-xl px-3 py-4 text-sm outline-none focus:ring-2 focus:ring-[#2D1464] flex-shrink-0"
-                style={{ backgroundColor: "white", color: "#1A0A3C", fontFamily: "var(--font-inter)", width: "180px" }}
+                className="min-w-0 flex-1 sm:flex-none sm:w-[180px] rounded-xl px-3 py-4 text-sm outline-none focus:ring-2 focus:ring-[#2D1464]"
+                style={{ backgroundColor: "white", color: "#1A0A3C", fontFamily: "var(--font-inter)" }}
               >
                 {COUNTRY_CODES.map((c) => (
                   <option key={c.code} value={c.code}>{c.label}</option>
@@ -878,8 +878,8 @@ function Formulario({ rolInicial }: { rolInicial: string }) {
                 <select
                   value={form.vePrefijo}
                   onChange={(e) => { setForm({ ...form, vePrefijo: e.target.value, phone: "" }); setPhoneError(""); }}
-                  className="rounded-xl px-3 py-4 text-sm outline-none focus:ring-2 focus:ring-[#2D1464] flex-shrink-0"
-                  style={{ backgroundColor: "white", color: "#1A0A3C", fontFamily: "var(--font-inter)", width: "200px" }}
+                  className="min-w-0 flex-1 sm:flex-none sm:w-[200px] rounded-xl px-3 py-4 text-sm outline-none focus:ring-2 focus:ring-[#2D1464]"
+                  style={{ backgroundColor: "white", color: "#1A0A3C", fontFamily: "var(--font-inter)" }}
                 >
                   {VE_PREFIJOS.map((o) => (
                     <option key={o.code} value={o.code}>{o.label}</option>
@@ -897,7 +897,7 @@ function Formulario({ rolInicial }: { rolInicial: string }) {
                   setForm({ ...form, phone: val });
                   setPhoneError("");
                 }}
-                className="flex-1 rounded-xl px-5 py-4 text-base outline-none focus:ring-2 focus:ring-[#2D1464]"
+                className="min-w-0 basis-full sm:basis-0 flex-1 rounded-xl px-5 py-4 text-base outline-none focus:ring-2 focus:ring-[#2D1464]"
                 style={{ backgroundColor: "white", color: "#1A0A3C", fontFamily: "var(--font-inter)" }}
               />
             </div>
