@@ -11,7 +11,7 @@
 -- hora de la migración (valor por defecto no volátil, sin reescribir la tabla).
 -- Idempotente: si la columna ya existe, no hace nada.
 -- lock_timeout: si otra transacción retiene la tabla, falla en 5 s sin bloquear al bot
--- (se reintenta); nunca deja en cola a las peticiones de la web.
+-- (se reintenta); como mucho, las peticiones de la web esperan esos 5 s.
 -- ══════════════════════════════════════════════════════════════════════════════
 begin;
 set local lock_timeout = '5s';
