@@ -420,9 +420,11 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
         {/* Mapa plegable */}
         <button
           onClick={toggleMapa}
-          style={{ background: 'none', border: 'none', padding: '4px 0', cursor: 'pointer', color: '#6B5C90', fontSize: '13px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, marginBottom: '12px' }}
+          style={{ background: mapaAbierto ? '#EDE8FF' : 'white', border: `2px solid ${mapaAbierto ? '#7C3AED' : '#D4C9E8'}`, borderRadius: '9999px', padding: '10px 18px', cursor: 'pointer', color: mapaAbierto ? '#2D1464' : '#4A3B6B', fontSize: '14px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}
         >
-          {mapaAbierto ? 'Ocultar mapa ▲' : 'Elegir en el mapa ▼'}
+          <span style={{ fontSize: '16px' }}>🗺️</span>
+          {mapaAbierto ? 'Ocultar mapa' : 'Buscar en el mapa'}
+          <span style={{ fontSize: '11px', marginLeft: '2px' }}>{mapaAbierto ? '▲' : '▼'}</span>
         </button>
         {mapaAbierto && (
           <MapaCoberturaWrapper
