@@ -20,6 +20,7 @@ on:
       - 'supabase/migrations/**'
       - 'lib/captacion.ts'
       - 'lib/airtable.ts'
+      - 'lib/cron.ts'
       - 'app/api/waitlist/**'
       - 'app/api/cron/reintentar-airtable/**'
       - 'app/api/cron/conciliar-airtable/**'
@@ -198,6 +199,8 @@ jobs:
           npx next start -p 3000 > /tmp/e2e/web.log 2>&1 &
           for i in $(seq 1 60); do curl -sf -o /dev/null http://localhost:3000/privacidad && break; sleep 2; done
           node --experimental-strip-types --no-warnings tests/integracion/e2e-captacion.mjs
+          # Vigilancia de crons contra telegram_estados con la estructura real de producción
+          node tests/integracion/vigilancia-crons.mjs
       - name: Registro de la web (si algo falló)
         if: failure() && steps.secretos.outputs.hay == 'si'
         run: |
