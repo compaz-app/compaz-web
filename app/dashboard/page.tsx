@@ -556,7 +556,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             )}
             {visitaActiva.estado === 'en_curso' && previewUid && visitaActiva.room_url && (
               <div style={{ marginBottom: '16px' }}>
-                <a href={visitaActiva.room_url} target="_blank" rel="noreferrer"
+                <a href={`${visitaActiva.room_url}${visitaActiva.room_url.includes('?') ? '&' : '?'}lang=es`} target="_blank" rel="noreferrer"
                   style={{ background: '#2D1464', color: 'white', borderRadius: '9999px', padding: '10px 20px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '14px', textDecoration: 'none' }}>
                   📹 Unirse a la llamada activa
                 </a>

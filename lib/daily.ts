@@ -16,7 +16,7 @@ export async function getOrCreateDailyRoom(visitId: string, existingRoom?: strin
         await fetch(`${DAILY_API}/rooms/${existingRoom}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.DAILY_API_KEY}` },
-          body: JSON.stringify({ properties: { exp: now + 60 * 60 * 4 } }),
+          body: JSON.stringify({ properties: { exp: now + 60 * 60 * 4, lang: 'es' } }),
         })
       }
       return room
@@ -38,6 +38,7 @@ export async function getOrCreateDailyRoom(visitId: string, existingRoom?: strin
         enable_screenshare: false,
         exp: Math.floor(Date.now() / 1000) + 60 * 60 * 4,
         max_participants: 3,
+        lang: 'es',
         start_video_off: soloAudio,
       },
     }),
@@ -77,6 +78,7 @@ export async function createEntrevistaRoom(solicitudId: string, slotConfirmado: 
         enable_screenshare: false,
         exp,
         max_participants: 3, // cliente + compita + admin supervisor
+        lang: 'es',
         start_video_off: false,
         eject_at_room_exp: true, // expulsa automáticamente al llegar a los 23 min
       },
