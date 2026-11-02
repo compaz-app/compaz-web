@@ -738,6 +738,8 @@ function Formulario({ rolInicial }: { rolInicial: string }) {
   const [status, setStatus] = useState<"idle" | "loading" | "ok" | "error">("idle");
   // Textos según el rol elegido. Sin rol o con "familia" se mantienen los de siempre.
   const esCompita = form.rol === "compa";
+  // Rol con el que se envió (el formulario se vacía al terminar): decide el mensaje de éxito
+  const [rolEnviado, setRolEnviado] = useState("");
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -786,6 +788,7 @@ function Formulario({ rolInicial }: { rolInicial: string }) {
         }),
       });
       if (!res.ok) throw new Error("Error");
+      setRolEnviado(form.rol);
       setStatus("ok");
       setForm({ nombre: "", countryCode: "+58", vePrefijo: "0412", phone: "", email: "", estado: "", ciudad: "", rol: "", website: "" });
       (window as typeof window & { gtag?: (...args: unknown[]) => void }).gtag?.("event", "form_submit", { event_category: "waitlist" });
@@ -840,13 +843,15 @@ function Formulario({ rolInicial }: { rolInicial: string }) {
               className="text-xl font-extrabold mb-2"
               style={{ color: "#2D1464", fontFamily: "var(--font-display)" }}
             >
-              ¡Ya estás en la lista!
+              {rolEnviado === "compa" ? "¡Recibimos tu postulación!" : "¡Ya estás en la lista!"}
             </p>
             <p
               className="text-sm"
               style={{ color: "#6B5C90", fontFamily: "var(--font-inter)" }}
             >
-              Te escribimos antes del lanzamiento con todos los detalles.
+              {rolEnviado === "compa"
+                ? "Te contactaremos para informarte sobre los próximos pasos."
+                : "Te escribimos antes del lanzamiento con todos los detalles."}
             </p>
           </div>
         ) : (
@@ -925,7 +930,7 @@ function Formulario({ rolInicial }: { rolInicial: string }) {
               estado={form.estado}
               ciudad={form.ciudad}
               onChange={({ estado, ciudad }) => setForm({ ...form, estado, ciudad })}
-              placeholderEstado={esCompita ? "Estado de Venezuela donde puedes prestar servicios" : "Estado donde vive tu familiar"}
+              placeholderEstado={esCompita ? "Estado donde puedes trabajar" : "Estado donde vive tu familiar"}
             />
 
             {/* Selector de rol */}
