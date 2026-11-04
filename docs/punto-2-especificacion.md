@@ -83,3 +83,16 @@ Derivado en otros frentes:
 4. Modelo de datos (aditivo): `tipo` en solicitudes (entrevista o directa); `lugar_privado`; campos de la cita (dirección, indicaciones, contacto en el sitio); fotos; bloqueos compita-cliente; tipo en `admin_flags`; `canal` de `avisos` ampliable a WhatsApp o SMS cuando se automatice.
 5. Auditoría del admin: registrar cada vez que el admin consulta un teléfono o dato sensible (propuesta del mentor).
 6. Eventos nuevos: `llegada_registrada`, `llegada_sin_acceso`, `visita_sin_acceso`, `salida_por_seguridad`, `visita_alargada`, `reporte_cliente`.
+
+## 10. Precios y mandados (decisiones del usuario, 2026-11-04)
+
+1. TODO pasa a 22 dólares la hora. Cambiarlo en todo el sitio. El mínimo de 2 horas de "A la carta" se elimina: sin límite mínimo, desde 1 hora.
+2. Mandados: tarifa plana inicial de 22 dólares (equivale a la primera hora) y después 22 la hora, según lo que se describa y el estimado de duración.
+3. Compras: NO entran en el sistema en esta fase. El familiar paga sus cosas; si hay que comprar algo y el familiar no puede, se coordina directamente con el cliente (por el chat de Compaz, sin mover dinero por la plataforma). La idea del servicio es acompañar, no gestionar compras.
+4. Mandado que dura más que el estimado: pendiente, el usuario pidió ideas (ver la respuesta del mentor).
+
+Inventario de dónde cambian los precios (verificado en el código):
+1. `lib/planes.ts` es la fuente única: planes (A la carta 45, Compañía 75, Compañía Plus 140), `PRECIO_HORA_EXTRA_USD` (hoy 20) y `HORAS_MINIMAS_EXTRA` (hoy 2). De ahí leen la página de pago, `PlanesPago`, `RegistrarPago` (admin), `AgendarOtraVisita`, el cron `recordatorio-pago`, `solicitudes-pago` y `pagos`.
+2. `app/api/chat/route.ts` (el asistente de la página) cita los precios en su texto (líneas 58 a 63): hay que actualizarlo a mano.
+3. La página de inicio no muestra precios. `tests/10-planes-y-creditos.test.ts` fija los valores actuales y hay que actualizarlo.
+4. Pendiente de decidir: cómo quedan los planes mensuales. Con 22 la hora: 2 horas = 44 (hoy 45), 2 visitas de 2 horas = 88 (hoy 75), 4 visitas de 2 horas = 176 (hoy 140). Opción A: sin descuento, todo a 22 la hora (88 y 176). Opción B: los planes conservan su descuento (75 y 140) y solo cambian A la carta, la hora extra y los mandados. Propuesta de diseño: "A la carta" deja de ser un producto fijo y pasa a ser "elige cuántas horas" (mínimo 1) a 22 la hora.
