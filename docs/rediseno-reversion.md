@@ -23,4 +23,4 @@
 
 ## Pendiente de lanzamiento: respaldo de datos
 
-Ver `CLAUDE.md`, sección 6. Hoy no hay copias de seguridad en Supabase y los compitas son personas reales. Antes del primer cliente real que pague: copias automáticas con restauración probada y base de desarrollo separada de la de producción.
+Ver `CLAUDE.md`, sección 6. Hoy no hay copias de seguridad en Supabase y todos los datos actuales (clientes y compitas) son de prueba. Antes del primer cliente real que pague: copias automáticas con restauración probada y base de desarrollo separada de la de producción.

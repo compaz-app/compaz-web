@@ -2,11 +2,11 @@
 
 Rama de trabajo: `rediseno`. Punto de retorno: etiqueta `antes-del-rediseno`. Cada paso es pequeño, se prueba solo (`node tests/run.mjs`, `npx tsc --noEmit`) y se puede deshacer. Solo commit; el push lo decide el usuario. Las migraciones solo agregan tablas o columnas. Cada paso se marca como hecho al terminar.
 
-Aclaración (2026-11-03): los clientes registrados en el sistema son de prueba y se pueden borrar; los compitas son reales.
+Aclaración (2026-11-03): todo lo que hay hoy en el sistema, clientes y compitas, es de prueba y se puede borrar. No se exporta ni se respalda nada de lo actual.
 
 ## Fase 0. Preparar (casi sin código)
 
-0.1 Exportación única de la tabla de compitas (datos reales). Pendiente de decidir quién la hace.
+0.1 Descartado: no hace falta exportar compitas porque son de prueba.
 0.2 Revisar los registros de Netlify del día de la prueba para saber por qué fallaron los avisos de Telegram.
 0.3 Confirmar en la base si la migración de captación (`postulaciones`, `eventos`) está aplicada.
 0.4 Decisiones abiertas: canal humano para pedir ayuda; video o solo reportes durante la visita; cómo pasa un postulante a cliente (hoy invitación manual).
