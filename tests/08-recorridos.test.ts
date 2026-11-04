@@ -1,6 +1,6 @@
 /* eslint-disable */
 // Recorridos completos y encadenados: admin + compita + cliente + crons + Daily sobre la MISMA base de datos.
-import { db, net, session, limpiar, req, tgText, tgBtn, tgFoto, ultimoTg, tgPara, emailsA, cron, ahoraMas, hoyVEstr, firmaDaily, mkCompita, mkCliente } from './harness'
+import { db, net, session, limpiar, req, tgText, tgBtn, tgFoto, ultimoTg, tgPara, emailsA, cron, ahoraMas, hoyVEstr, firmaDaily, mkCompita, mkCliente, confirmarLlegada } from './harness'
 import { beforeEach, test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import { tokenRating } from '@/lib/links'
@@ -131,7 +131,7 @@ describe('RECORRIDO 1: de la invitación de la compita hasta la valoración, tod
 
     // ── 11. El día de la visita: inicia, conversan, foto, termina, cuestionario
     visita.fecha_programada = hoyVEstr()
-    await webhook(tgText(2000, '▶️ Iniciar visita')); await webhook(tgText(2000, '✅ Sí, iniciar'))
+    await webhook(tgText(2000, '▶️ Iniciar visita')); await webhook(tgText(2000, '✅ Sí, iniciar')); await confirmarLlegada()
     assert.equal(visita.estado, 'en_curso')
     await webhook(tgText(2000, 'Llegué, la señora está bien'))
     await webhook(tgFoto(2000))
@@ -245,7 +245,7 @@ describe('RECORRIDO 3: el admin interviene a mitad de los flujos', () => {
 
   test('bloquean a la compita con la visita en curso: ya no puede escribir, terminar ni usar emergencia', async () => {
     const { lucia, v } = await mundoContratado()
-    await webhook(tgText(2200, '▶️ Iniciar visita')); await webhook(tgText(2200, '✅ Sí, iniciar'))
+    await webhook(tgText(2200, '▶️ Iniciar visita')); await webhook(tgText(2200, '✅ Sí, iniciar')); await confirmarLlegada()
     admin(); await bloquearCompita(req('/api/admin/bloquear-compita', { json: { compita_id: lucia.id, bloquear: true } }))
     net.tg = []
     for (const t of ['hola', '🔴 Terminar visita']) await webhook(tgText(2200, t))
@@ -257,7 +257,7 @@ describe('RECORRIDO 3: el admin interviene a mitad de los flujos', () => {
 
   test('borrar al cliente con una visita activa: el bot no se rompe y la compita queda utilizable', async () => {
     const { lucia, carlos, v } = await mundoContratado()
-    await webhook(tgText(2200, '▶️ Iniciar visita')); await webhook(tgText(2200, '✅ Sí, iniciar'))
+    await webhook(tgText(2200, '▶️ Iniciar visita')); await webhook(tgText(2200, '✅ Sí, iniciar')); await confirmarLlegada()
     admin()
     assert.equal((await eliminarCliente(req('/api/admin/eliminar-cliente', { method: 'DELETE', json: { usuario_id: carlos.id } }))).status, 200)
     assert.equal(db.rows('usuarios').length, 0)
@@ -321,8 +321,8 @@ describe('RECORRIDO 4: varios usuarios a la vez sobre la misma plataforma', () =
     assert.equal(carlos.compita_id, lucia.id); assert.equal(pedro.compita_id, ana.id)
     for (const v of db.rows('visitas')) { v.estado = 'programada'; v.fecha_programada = hoyVEstr(); v.hora_inicio_programada = '10:00'; v.hora_fin_programada = '11:00' }
     // Visitas simultáneas: lo que escribe cada compita va a su propio cliente
-    await webhook(tgText(2300, '▶️ Iniciar visita')); await webhook(tgText(2300, '✅ Sí, iniciar'))
-    await webhook(tgText(2301, '▶️ Iniciar visita')); await webhook(tgText(2301, '✅ Sí, iniciar'))
+    await webhook(tgText(2300, '▶️ Iniciar visita')); await webhook(tgText(2300, '✅ Sí, iniciar')); await confirmarLlegada()
+    await webhook(tgText(2301, '▶️ Iniciar visita')); await webhook(tgText(2301, '✅ Sí, iniciar')); await confirmarLlegada()
     net.emails = []
     await webhook(tgText(2300, 'mensaje de Lucía para Carlos')); await webhook(tgText(2301, 'mensaje de Ana para Pedro'))
     const vCarlos = db.rows('visitas').find((v) => v.usuario_id === carlos.id)!; const vPedro = db.rows('visitas').find((v) => v.usuario_id === pedro.id)!

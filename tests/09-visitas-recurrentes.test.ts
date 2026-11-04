@@ -1,6 +1,6 @@
 /* eslint-disable */
 // Visitas 2, 3, 4...: el cliente agenda otra con su compita y se repite el mismo flujo completo.
-import { db, net, session, limpiar, req, tgText, tgBtn, tgFoto, ultimoTg, tgPara, emailsA, cron, ahoraMas, hoyVEstr, mkCompita, mkCliente, mkSolicitud } from './harness'
+import { db, net, session, limpiar, req, tgText, tgBtn, tgFoto, ultimoTg, tgPara, emailsA, cron, ahoraMas, hoyVEstr, mkCompita, mkCliente, mkSolicitud, confirmarLlegada } from './harness'
 import { beforeEach, test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import { tokenRating } from '@/lib/links'
@@ -43,7 +43,7 @@ async function visitaCompleta(carlos: any, lucia: any, n: number) {
   await manana(cron('m'))
   assert.ok(tgPara(3000).some((m) => m.text.includes('visita mañana')), `visita ${n}: recordatorio de 24 h`)
   v.fecha_programada = hoyVEstr()
-  await webhook(tgText(3000, '▶️ Iniciar visita')); await webhook(tgText(3000, '✅ Sí, iniciar'))
+  await webhook(tgText(3000, '▶️ Iniciar visita')); await webhook(tgText(3000, '✅ Sí, iniciar')); await confirmarLlegada()
   assert.equal(v.estado, 'en_curso', `visita ${n}: inicia`)
   await webhook(tgFoto(3000)); como(carlos)
   await sendMessage(req('/api/send-message', { json: { contenido: `mensaje del cliente ${n}` } }))

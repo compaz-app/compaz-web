@@ -176,3 +176,7 @@ CORRECCIÓN DEL PUNTO 5 (usuario, 2026-11-04): el umbral es DOS detecciones, no 
 Hallazgos corregidos: carrera de doble envío en `despachar` (ahora reserva atómica del intento); contadores de acceso y avisos crecían sin límite (limpieza diaria, avisos con retención de 90 días); faltaban índices en `avisos` (migración `20261104_avisos_indices.sql`, pendiente de aplicar en Supabase).
 Pruebas nuevas: `tests/30-limpieza-avisos.test.ts` y `tests/31-recorrido-automatico.test.ts` (tres recorridos encadenados con paso del tiempo).
 Pendientes anotados: botón "Reenviar confirmación" necesita su propio camino con clave nueva; recordatorios que se pueden solapar tras la llamada (escalera ~2h, cron de seguimiento 24h, tarea admin); bloquear /prototipo en producción antes de main; 21 pruebas fallidas heredadas.
+
+## SUITE EN VERDE (2026-11-04)
+Las 21 pruebas heredadas fallaban por pruebas viejas, no por el código: no pasaban por la confirmación del cliente (`confirmando_inicio`), esperaban un margen de 30 min en horarios (quitado a propósito), esperaban un párrafo de revisión en la bienvenida del compita (quitado a propósito el 29-oct), y el simulador de base no entendía `.or('col.not.is.null')`. Resultado: 338 de 338.
+Hallazgo real: los índices únicos de visitas no incluían `confirmando_inicio`. Migración nueva y aditiva `20261104_visitas_confirmando_unico.sql` (pendiente de aplicar).

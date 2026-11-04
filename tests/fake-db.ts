@@ -81,8 +81,8 @@ export class FakeDB {
     if (t === 'compitas' && row.telegram_chat_id && others.some((r) => r.telegram_chat_id === row.telegram_chat_id)) return dupError('compitas_telegram_chat_id_key')
     if (t === 'usuarios' && row.email && others.some((r) => r.email === row.email)) return dupError('usuarios_email_key')
     // Índices de la migración 20261009
-    if (t === 'visitas' && row.estado === 'en_curso' && others.some((r) => r.compita_id === row.compita_id && r.estado === 'en_curso')) return dupError('visitas_una_en_curso_por_compita')
-    if (t === 'visitas' && ['pre_visita', 'programada', 'en_curso'].includes(row.estado) && others.some((r) => r.usuario_id === row.usuario_id && ['pre_visita', 'programada', 'en_curso'].includes(r.estado))) return dupError('visitas_una_activa_por_cliente')
+    if (t === 'visitas' && ['confirmando_inicio', 'en_curso'].includes(row.estado) && others.some((r) => r.compita_id === row.compita_id && ['confirmando_inicio', 'en_curso'].includes(r.estado))) return dupError('visitas_una_en_curso_por_compita')
+    if (t === 'visitas' && ['pre_visita', 'programada', 'confirmando_inicio', 'en_curso'].includes(row.estado) && others.some((r) => r.usuario_id === row.usuario_id && ['pre_visita', 'programada', 'confirmando_inicio', 'en_curso'].includes(r.estado))) return dupError('visitas_una_activa_por_cliente')
     if (t === 'solicitudes' && row.estado === 'pendiente' && others.some((r) => r.cliente_id === row.cliente_id && r.compita_id === row.compita_id && r.estado === 'pendiente')) return dupError('solicitudes_una_pendiente_por_par')
     if (t === 'avisos' && row.clave_unica && others.some((r) => r.clave_unica === row.clave_unica)) return dupError('avisos_clave_unica_key')
     if (t === 'reportes_visita' && others.some((r) => r.visita_id === row.visita_id)) return dupError('reportes_visita_unico_por_visita')
@@ -203,6 +203,8 @@ class Query {
   }
   or(expr: string) {
     const conds = splitTop(expr).map((c) => {
+      const n = c.match(/^(\w+)\.not\.(\w+)\.(.*)$/) // col.not.op.valor → negación (como PostgREST)
+      if (n) { const p = predicate(n[1], n[2], parseVal(n[2], n[3])); return (r: Row) => !p(r) }
       const m = c.match(/^(\w+)\.(\w+)\.(.*)$/)
       if (!m) throw new Error(`or() no soportado: ${c}`)
       return predicate(m[1], m[2], parseVal(m[2], m[3]))

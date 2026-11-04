@@ -1,5 +1,5 @@
 /* eslint-disable */
-import { db, net, session, limpiar, req, tgText, tgPara, emailsA, ahoraMas, hoyVEstr, mkCompita, mkCliente, mkSolicitud } from './harness'
+import { db, net, session, limpiar, req, tgText, tgPara, emailsA, ahoraMas, hoyVEstr, mkCompita, mkCliente, mkSolicitud, confirmarLlegada } from './harness'
 import { beforeEach, test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import { calcularCreditos } from '@/lib/creditos'
@@ -94,7 +94,7 @@ describe('Agendar otra visita con créditos', () => {
   test('CICLO VENCIDO sin pagar: puede usar una visita ya programada, pero no agendar nuevas', async () => {
     const { lucia, carlos } = mundoCon([{ inicioDias: -61, venceDias: -1, visitas: 2 }], [])
     const v = db.seed('visitas', { usuario_id: carlos.id, compita_id: lucia.id, estado: 'programada', fecha_programada: hoyVEstr(), hora_inicio_programada: '10:00', hora_fin_programada: '12:00' })
-    await webhook(tgText(5000, '▶️ Iniciar visita')); await webhook(tgText(5000, '✅ Sí, iniciar'))
+    await webhook(tgText(5000, '▶️ Iniciar visita')); await webhook(tgText(5000, '✅ Sí, iniciar')); await confirmarLlegada()
     assert.equal(v.estado, 'en_curso', 'la visita ya programada se realiza')
     terminarActiva(carlos); como(carlos)
     assert.equal((await nueva()).status, 409)

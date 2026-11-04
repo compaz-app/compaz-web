@@ -142,3 +142,15 @@ export function firmaDaily(body: string, ts = Math.floor(Date.now() / 1000)) {
   const key = Buffer.from(process.env.DAILY_WEBHOOK_SECRET!, 'base64')
   return { 'x-webhook-timestamp': String(ts), 'x-webhook-signature': createHmac('sha256', key).update(`${ts}.${body}`).digest('base64') }
 }
+
+/** El cliente confirma en su panel que el compita llegó (confirmando_inicio → en_curso), como en producción. */
+export async function confirmarLlegada() {
+  const { POST } = await import('@/app/api/visita/confirmar-inicio/route')
+  const previo = session.user
+  for (const v of db.rows('visitas').filter((x) => x.estado === 'confirmando_inicio')) {
+    const cli = db.rows('usuarios').find((u) => u.id === v.usuario_id)
+    session.user = { id: cli!.id, email: cli!.email }
+    await POST(req('/api/visita/confirmar-inicio', { json: { visitaId: v.id } }))
+  }
+  session.user = previo
+}

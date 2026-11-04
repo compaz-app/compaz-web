@@ -23,7 +23,7 @@ describe('POST /api/solicitudes (cliente pide entrevista)', () => {
     const malos: Array<[string, any]> = [
       ['slot pasado', { ...base, slots_propuestos: [new Date(Date.now() - 3600_000).toISOString()] }],
       ['slot NaN', { ...base, slots_propuestos: ['no-es-fecha'] }],
-      ['slot en 5 min (menos de 30)', { ...base, slots_propuestos: [ahoraMas(5)] }],
+      ['slot ya pasado (hace 5 min)', { ...base, slots_propuestos: [ahoraMas(-5)] }],
       ['4 slots', { ...base, slots_propuestos: [...ok3(), ahoraMas(500)] }],
       ['0 slots', { ...base, slots_propuestos: [] }],
       ['slot a 1 año', { ...base, slots_propuestos: [ahoraMas(60 * 24 * 365)] }],
