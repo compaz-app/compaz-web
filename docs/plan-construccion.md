@@ -8,7 +8,12 @@ Aclaración (2026-11-03): todo lo que hay hoy en el sistema, clientes y compitas
 
 0.1 Descartado: no hace falta exportar compitas porque son de prueba.
 0.2 Revisar los registros de Netlify del día de la prueba para saber por qué fallaron los avisos de Telegram.
-0.3 Confirmar en la base si la migración de captación (`postulaciones`, `eventos`) está aplicada.
+0.3 HECHO (2026-11-03, lectura de solo existencia y conteo, sin leer datos personales). Resultados:
+    1. La migración de captación está aplicada: existen `eventos` (4 filas), `postulaciones` (2) y `personas` (2).
+    2. `eventos` solo tiene eventos del módulo `captacion` (`postulacion_recibida`, `airtable_enviada`). El módulo `operacion` está permitido por la restricción pero nadie escribe en él. `eventos` es de solo inserción, `entidad_id` debe ser un uuid (hoy la alerta de emergencia usa el texto "sin-visita" en `admin_flags`, que no cabría) y `datos` es jsonb. Decisión de 1.2: reutilizar `eventos` con módulo `operacion`.
+    3. La tabla `avisos` NO existe: el nombre está libre para 1.1.
+    4. Existen también `solicitudes` (10), `solicitudes_pago` (3), `pagos_plan` (6), `admin_flags` (12), `reportes_visita` (3), `telegram_estados` (60), `compitas` (23), `usuarios` (8), `visitas` (6).
+    5. HALLAZGO a verificar: la tabla `resenas` da "permission denied" (código 42501) incluso con la clave de servicio. `api/admin/resenas` usa esa clave, así que aprobar reseñas podría estar fallando hoy. Falta confirmarlo en la app y, si es así, arreglarlo con un GRANT aditivo.
 0.4 Decisiones abiertas: canal humano para pedir ayuda; video o solo reportes durante la visita; cómo pasa un postulante a cliente (hoy invitación manual).
 0.5 Diseñar el ciclo del compita con la escalera de Telegram, correo y Bandeja.
 
