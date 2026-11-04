@@ -1,4 +1,3 @@
-/* eslint-disable */
 // Registro de eventos de operación (lib/eventos.ts): llama a la función SQL con los parámetros correctos
 // y nunca rompe el flujo que lo origina.
 import './harness'

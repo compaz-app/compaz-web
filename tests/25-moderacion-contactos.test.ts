@@ -1,4 +1,3 @@
-/* eslint-disable */
 // Filtro de contactos (lib/chat-moderacion.ts): censura el teléfono o el correo COMPLETOS, también los de
 // otros países (los clientes viven en el exterior), y no toca los textos normales.
 // Límite conocido: números escritos con palabras ("cero cuatro uno cuatro...") no se detectan.
