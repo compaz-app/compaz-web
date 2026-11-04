@@ -7,6 +7,9 @@
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { makeInlineKeyboard } from '@/lib/telegram'
 import { esc } from '@/lib/html'
+import { SITE_URL } from '@/lib/email'
+import { qRol } from '@/lib/links'
+import { armarSolicitudCompita } from '@/lib/resend'
 
 export type Canal = 'telegram' | 'correo'
 
@@ -38,7 +41,7 @@ const etiquetaSlot = (iso: string) =>
 // Paso 5 del ciclo: el cliente pide una entrevista y el compita la recibe por Telegram con botones.
 // El texto es el que ya usa hoy app/api/solicitudes/route.ts (se migra en el paso 1.4).
 const solicitudNueva: Plantilla = {
-  canales: ['telegram'],
+  canales: ['telegram', 'correo'],
   async render(v) {
     const solicitudId = String(v.solicitudId ?? '')
     if (!solicitudId) return null
@@ -73,7 +76,18 @@ const solicitudNueva: Plantilla = {
       ...conEtiqueta.map(({ i, label }) => [{ text: `✅ ${label}`, callback_data: `slot:${i}:${s.token_respuesta}` }]),
       [{ text: '❌ No puedo atender', callback_data: `rechazar:${s.token_respuesta}` }],
     ])
-    return { telegram: { texto, teclado } }
+
+    // Correo de respaldo: mismos horarios, con enlaces firmados que funcionan sin iniciar sesión.
+    const { data: compita } = await admin.from('compitas').select('nombre').eq('id', s.compita_id).maybeSingle()
+    const base = `${SITE_URL}/api/solicitud/responder?token=${s.token_respuesta}`
+    const firma = qRol(String(s.token_respuesta), 'compita')
+    const correo = armarSolicitudCompita(
+      compita?.nombre ?? '',
+      clienteNombre,
+      conEtiqueta.map(({ i, label }) => ({ label, url: `${base}&slot=${i}&${firma}` })),
+      `${base}&slot=-1&${firma}`,
+    )
+    return { telegram: { texto, teclado }, correo: { asunto: correo.asunto, html: correo.html } }
   },
 }
 

@@ -248,21 +248,20 @@ export async function sendBienvenidaCliente(email: string, nombre: string, enlac
   })
 }
 
-export async function sendSolicitudCompita(
-  email: string,
+/** Arma el correo de nueva solicitud al compita (sin enviarlo). Lo usa también la plantilla de avisos. */
+export function armarSolicitudCompita(
   nombre: string,
   clienteNombre: string,
   slots: { label: string; url: string }[],
   urlRechazar: string,
-): Promise<void> {
+): { asunto: string; html: string } {
   const primero = escapeHtml(nombre.split(' ')[0])
   const botonesSlots = slots.map(({ label, url }) => `
     <a href="${escapeHtml(url)}" style="display:block;background:#7C4DFF;color:white;padding:12px 20px;border-radius:9999px;text-decoration:none;font-weight:700;font-size:14px;margin-bottom:8px;text-align:center">
       ✅ ${escapeHtml(label)}
     </a>`).join('')
-  await sendEmail({
-    to: email,
-    subject: `Nueva solicitud de entrevista — ${escapeHtml(clienteNombre)}`,
+  return {
+    asunto: `Nueva solicitud de entrevista — ${escapeHtml(clienteNombre)}`,
     html: `
       <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px;background:#FDFAF6">
         <h2 style="color:#2D1464;font-size:22px;margin-bottom:4px">¡Hola, ${primero}! 👋</h2>
@@ -279,7 +278,18 @@ export async function sendSolicitudCompita(
         <p style="color:#9990A8;font-size:13px;margin-top:20px">Compaz — <em>Cerca aunque estés lejos</em></p>
       </div>
     `,
-  })
+  }
+}
+
+export async function sendSolicitudCompita(
+  email: string,
+  nombre: string,
+  clienteNombre: string,
+  slots: { label: string; url: string }[],
+  urlRechazar: string,
+): Promise<void> {
+  const { asunto, html } = armarSolicitudCompita(nombre, clienteNombre, slots, urlRechazar)
+  await sendEmail({ to: email, subject: asunto, html })
 }
 
 export async function sendVisitaInicio(

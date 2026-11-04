@@ -12,6 +12,8 @@ import { formatSlotVE, esSlotFuturo } from '@/lib/format'
 import { avisarAdmin } from '@/lib/telegram'
 import { qRol } from '@/lib/links'
 import { detectarContacto, reportarContactoEnTexto } from '@/lib/chat-moderacion'
+import { notificar } from '@/lib/avisos'
+import { registrarEvento } from '@/lib/eventos'
 
 const MENSAJES_NEGOCIO = ['Límite de', 'Ya tienes una solicitud']
 
@@ -104,71 +106,29 @@ export async function POST(req: NextRequest) {
   }
 
   const clienteNombre = cliente?.nombre ?? 'Un cliente'
-  const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? ''
-
-  // Construir labels y URLs firmadas de cada slot (usados en Telegram y correo)
-  const slotsConLabel = slots_propuestos.map((iso, i) => {
-    const label = new Date(iso).toLocaleString('es-VE', {
-      timeZone: 'America/Caracas',
-      weekday: 'short', day: 'numeric', month: 'short',
-      hour: '2-digit', minute: '2-digit', hour12: true,
-    })
-    const url = `${SITE_URL}/api/solicitud/responder?token=${solicitud.token_respuesta}&slot=${i}&${qRol(solicitud.token_respuesta, 'compita')}`
-    return { iso, i, label, url }
+  await registrarEvento({
+    entidad: 'solicitud', entidadId: solicitud.id, tipo: 'solicitud_creada', actor: `cliente:${user.id}`,
+    datos: { compita_id, horarios: slots_propuestos.length },
   })
-  const urlRechazar = `${SITE_URL}/api/solicitud/responder?token=${solicitud.token_respuesta}&slot=-1&${qRol(solicitud.token_respuesta, 'compita')}`
 
-  // Correo al compita (funciona aunque Telegram no esté activo)
-  if (compita.email) {
-    try {
-      await sendSolicitudCompita(
-        compita.email,
-        compita.nombre,
-        clienteNombre,
-        slotsConLabel.map(({ label, url }) => ({ label, url })),
-        urlRechazar,
-      )
-    } catch (e) { console.error('Email solicitud compita:', e) }
+  // Telegram primero, con registro. Si no se pudo entregar, el correo de respaldo sale en ese momento.
+  // (Antes el correo y Telegram salían a la vez y un fallo de Telegram no quedaba registrado.)
+  const pedido = {
+    plantilla: 'solicitud_nueva' as const,
+    destinatario: { tipo: 'compita' as const, id: compita_id },
+    variables: { solicitudId: solicitud.id },
+    entidad: 'solicitud' as const, entidadId: solicitud.id, paso: 5,
+    plazoAccionMin: 360, // si en 6 h no responde, la escalera (paso 1.5) manda el respaldo
   }
-
-  // Telegram: notificación con botones inline para respuesta rápida
-  if (!compita.telegram_chat_id) {
+  const porTelegram = await notificar({ ...pedido, canal: 'telegram' })
+  if (!porTelegram.ok) {
+    const porCorreo = compita.email ? await notificar({ ...pedido, canal: 'correo', respaldoDe: porTelegram.avisoId }) : null
+    const sinTelegram = porTelegram.error === 'sin Telegram vinculado'
     await avisarAdmin([
-      `⚠️ <b>Solicitud sin Telegram</b>`, ``,
-      `<b>${esc(clienteNombre)}</b> solicitó a <b>${esc(compita.nombre)}</b> pero no tiene Telegram vinculado.`,
-      compita.email ? `Se le notificó por correo.` : `No tiene correo registrado. Contáctala directamente.`,
+      sinTelegram ? `⚠️ <b>Solicitud sin Telegram</b>` : `🚨 <b>No se pudo notificar por Telegram</b>`, ``,
+      `<b>${esc(clienteNombre)}</b> solicitó a <b>${esc(compita.nombre)}</b>${sinTelegram ? ' pero no tiene Telegram vinculado.' : ', y el aviso por Telegram falló.'}`,
+      porCorreo?.ok ? `Se le notificó por correo.` : compita.email ? `Tampoco se pudo por correo. Contáctala directamente.` : `No tiene correo registrado. Contáctala directamente.`,
     ].join('\n'))
-  } else {
-    const slotLabels = slotsConLabel.map(({ i, label }) => `${['1️⃣', '2️⃣', '3️⃣'][i]} ${label}`).join('\n')
-    const partesSobre: string[] = []
-    if (sobre_cliente?.trim()) partesSobre.push(`<b>Sobre el cliente:</b>`, esc(sobre_cliente.trim()), ``)
-
-    const mensajeTelegram = [
-      `🔔 <b>Nueva solicitud de entrevista</b>`,
-      ``,
-      `<b>${esc(clienteNombre)}</b> quiere conocerte.`,
-      ``,
-      ...partesSobre,
-      `<b>Sobre su familiar:</b>`,
-      esc(mensaje),
-      ``,
-      `<b>Horarios propuestos (llamada de 20 min):</b>`,
-      slotLabels,
-      ``,
-      `👇 <b>Toca el botón del horario que te funcione para confirmar.</b>`,
-    ].join('\n')
-
-    const teclado = makeInlineKeyboard([
-      ...slotsConLabel.map(({ i, label }) => [{ text: `✅ ${label}`, callback_data: `slot:${i}:${solicitud.token_respuesta}` }]),
-      [{ text: '❌ No puedo atender', callback_data: `rechazar:${solicitud.token_respuesta}` }],
-    ])
-
-    try {
-      await sendTelegramMessage(compita.telegram_chat_id, mensajeTelegram, teclado)
-    } catch (e) {
-      console.error('Error Telegram solicitud:', e)
-      await avisarAdmin(`🚨 <b>Telegram falló para solicitud</b>\n\n<b>${esc(clienteNombre)}</b> → <b>${esc(compita.nombre)}</b>. ${compita.email ? 'Se le notificó por correo.' : 'Sin correo registrado.'}`)
-    }
   }
 
   return ok({ solicitud_id: solicitud.id, estado: solicitud.estado })

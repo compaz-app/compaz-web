@@ -30,6 +30,7 @@ const DEFAULTS: Record<string, () => Row> = {
   pagos_plan: () => ({ id: randomUUID(), estado: 'activo', horas: null, referencia: null, created_at: nowIso() }),
   admin_flags: () => ({ id: randomUUID(), resuelto: false, created_at: nowIso() }),
   resenas: () => ({ id: randomUUID(), publicada: false, created_at: nowIso() }),
+  eventos: () => ({ id: randomUUID(), modulo: 'operacion', actor: 'sistema', datos: {}, creado_en: nowIso() }),
   avisos: () => ({ id: randomUUID(), estado: 'pendiente', intentos: 0, variables: {}, error: null, accion_en: null, plazo_accion_hasta: null, ultimo_intento_en: null, creado_en: nowIso() }),
 }
 
@@ -52,7 +53,14 @@ export class FakeDB {
     this.tables = {}
     for (const t of Object.keys(DEFAULTS)) this.tables[t] = []
     this.fail = {}
-    this.rpcs = {}
+    // registrar_evento existe en la base real; aquí guarda el evento en memoria.
+    this.rpcs = {
+      registrar_evento: (a: any) => {
+        const r = { ...DEFAULTS.eventos(), entidad: a.p_entidad, entidad_id: a.p_entidad_id, tipo: a.p_tipo, actor: a.p_actor, datos: a.p_datos }
+        this.tables.eventos.push(r)
+        return { data: this.tables.eventos.length, error: null }
+      },
+    }
     this.rpcLlamadas = []
   }
   rows(t: string): Row[] { return this.tables[t] }

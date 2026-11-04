@@ -31,6 +31,8 @@ export interface PedidoAviso {
   plazoAccionMin?: number
   /** Idempotencia. Por defecto: plantilla + entidad + destinatario + canal. */
   claveUnica?: string
+  /** Si este aviso es el respaldo de otro que falló o no tuvo acción. */
+  respaldoDe?: string
 }
 
 export interface ResultadoAviso {
@@ -159,6 +161,7 @@ export async function notificar(p: PedidoAviso, admin: Admin = createAdminSupaba
       programado_para: ahora.toISOString(),
       plazo_accion_hasta: p.plazoAccionMin ? new Date(ahora.getTime() + p.plazoAccionMin * 60_000).toISOString() : null,
       clave_unica: clave,
+      respaldo_de: p.respaldoDe ?? null,
     }).select('id').single()
 
     if (error?.code === '23505') return { ok: true, estado: 'duplicado' } // el mismo hecho ya se avisó

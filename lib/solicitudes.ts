@@ -1,6 +1,8 @@
 // ══════════════════════════════════════════════════════════════════════════════
 // Compaz — Lógica de negocio para solicitudes de entrevista
 // ══════════════════════════════════════════════════════════════════════════════
+import { registrarAccion } from '@/lib/avisos'
+import { registrarEvento } from '@/lib/eventos'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import type { Solicitud, SolicitudEstado } from '@/types'
 
@@ -185,6 +187,13 @@ export async function responderSolicitud(
 
   const ahora = new Date().toISOString()
 
+  // Tras responder: la persona ya actuó (se cancelan avisos pendientes) y queda el evento. Nunca lanzan.
+  const tras = async (sol: Solicitud, tipo: 'solicitud_aceptada' | 'solicitud_rechazada'): Promise<ResultadoRespuesta> => {
+    await registrarAccion({ entidad: 'solicitud', entidadId: sol.id, paso: 5 })
+    await registrarEvento({ entidad: 'solicitud', entidadId: sol.id, tipo, actor: `compita:${sol.compita_id}`, datos: { slot: sol.slot_confirmado ?? null } })
+    return { ok: true, solicitud: sol }
+  }
+
   if (slotIndex === -1) {
     const { data: updated } = await supabase
       .from('solicitudes')
@@ -193,7 +202,7 @@ export async function responderSolicitud(
       .eq('estado', 'pendiente')
       .select(SELECT_FIELDS)
       .maybeSingle()
-    return updated ? { ok: true, solicitud: mapRow(updated as Record<string, unknown>) } : { ok: false, motivo: 'no_encontrada' }
+    return updated ? await tras(mapRow(updated as Record<string, unknown>), 'solicitud_rechazada') : { ok: false, motivo: 'no_encontrada' }
   }
 
   const slot = Number.isInteger(slotIndex) ? solicitud.slots_propuestos[slotIndex] : undefined
@@ -208,7 +217,7 @@ export async function responderSolicitud(
     .select(SELECT_FIELDS)
     .maybeSingle()
 
-  return updated ? { ok: true, solicitud: mapRow(updated as Record<string, unknown>) } : { ok: false, motivo: 'no_encontrada' }
+  return updated ? await tras(mapRow(updated as Record<string, unknown>), 'solicitud_aceptada') : { ok: false, motivo: 'no_encontrada' }
 }
 
 /** Compatibilidad: devuelve la solicitud o null. */

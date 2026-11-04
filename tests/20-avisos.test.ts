@@ -107,7 +107,7 @@ describe('notificar', () => {
   test('pedidos inválidos devuelven error sin lanzar ni enviar', async () => {
     const { pedido } = escenario()
     assert.equal((await notificar({ ...pedido, plantilla: 'no_existe' as any })).ok, false)
-    assert.equal((await notificar({ ...pedido, canal: 'correo' })).ok, false) // la plantilla solo soporta Telegram
+    assert.equal((await notificar({ ...pedido, canal: 'sms' as any })).ok, false) // canal que la plantilla no soporta
     assert.equal((await notificar({ ...pedido, destinatario: { tipo: 'compita' } })).ok, false)
     assert.equal((await notificar({ ...pedido, entidadId: 'sin-visita' })).ok, false)
     assert.equal(net.tg.length, 0)
