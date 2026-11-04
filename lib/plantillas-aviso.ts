@@ -88,7 +88,9 @@ const solicitudNueva: Plantilla = {
       conEtiqueta.map(({ i, label }) => ({ label, url: `${base}&slot=${i}&${firma}` })),
       `${base}&slot=-1&${firma}`,
     )
-    return { telegram: { texto, teclado }, correo: { asunto: correo.asunto, html: correo.html } }
+    // Variable `recordatorio`: el aviso es el respaldo de uno anterior sin respuesta (lo manda la escalera).
+    const asunto = v.recordatorio === true ? `Recordatorio: ${correo.asunto}` : correo.asunto
+    return { telegram: { texto, teclado }, correo: { asunto, html: correo.html } }
   },
 }
 
@@ -169,7 +171,7 @@ const llamadaTerminadaCliente: Plantilla = {
     const botonContratar = corta ? '' : `<a href="${d.contratarUrl}" style="display:block;background:#22C55E;color:white;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:16px;text-align:center;margin-bottom:12px">✅ Sí, quiero contratar a ${esc(d.compitaNombre)}</a>`
     return {
       correo: {
-        asunto: titulo,
+        asunto: v.recordatorio === true ? `Recordatorio: ${titulo}` : titulo,
         html: `
             <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px">
               <h2 style="color:#2D1464;font-size:22px">${esc(titulo)}</h2>
