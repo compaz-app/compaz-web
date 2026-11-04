@@ -79,6 +79,17 @@ Aclaración (2026-11-03): todo lo que hay hoy en el sistema, clientes y compitas
 3. La suite tiene 22 pruebas que ya fallaban en el código publicado (una espera rechazar un horario a 5 minutos y lo acepta, parece depender de la hora). Pendiente de investigar.
 4. La tabla `resenas` da permiso denegado a la clave de servicio; podría estar rompiendo la aprobación de reseñas del admin. Sin confirmar.
 
+## Revisión de lo hecho (2026-11-03)
+
+Hallazgos de revisar el trabajo de la Fase 1 y su corrección:
+1. CORREGIDO: el filtro de contactos solo detectaba teléfonos venezolanos y +58; un cliente en Miami, Madrid o Bogotá podía escribir su número ("+1 305 555 1234", "(305) 555-1234", "3055551234") y llegaba entero al compita. Ahora detecta rachas de 9 a 15 dígitos con cualquier formato y también el correo escrito con palabras ("nombre arroba gmail punto com"). Afecta también al chat de la visita, que usaba el mismo filtro.
+2. CORREGIDO: el filtro "censuraba" solo los últimos 4 dígitos ("0414 123****") y dejaba legible la mayor parte del número, no por completo como se pidió. Ahora reemplaza el número completo por "[teléfono eliminado]". 20 pruebas en `tests/25-moderacion-contactos.test.ts`, incluidos 7 textos normales que no deben tocarse (edades, años, fechas, precios).
+3. CORREGIDO: 7 errores de lint en el prototipo (comillas sin escapar y un efecto que cambiaba el estado), que podían romper una compilación al unir la rama.
+4. LÍMITE CONOCIDO: un número escrito con palabras ("cero cuatro uno cuatro...") no se detecta. Ningún filtro de texto lo resuelve del todo; la defensa de fondo es el aviso a los administradores y los términos de uso.
+5. RIESGO ABIERTO, importante: desde el flujo A, un compita con Telegram activo ya no recibe el correo a la vez. Hasta que exista la escalera (paso 1.5), si no ve el mensaje de Telegram no hay respaldo. No se debe llevar el paso 1.4 a producción sin el 1.5.
+6. RIESGO ABIERTO: si el servidor se cae entre guardar un aviso y enviarlo, queda "pendiente" para siempre. El proceso de la escalera (1.5) debe barrer los avisos pendientes de más de unos minutos y despacharlos.
+7. Pendiente: la ruta `confirmar-solicitud` no tiene prueba de ruta (la BD falsa no tiene `solicitudes_pago`).
+
 ## Cómo se trabaja cada paso
 
 1. Se explica qué se hará y qué se toca.

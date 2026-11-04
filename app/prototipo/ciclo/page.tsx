@@ -64,7 +64,7 @@ function Inner() {
             </li>
           ))}
         </ul>
-        <p className="mt-4 text-sm text-[var(--text-light)]">Las etiquetas "Existe" y "Nuevo" salen de lo que se revisó en el código; se confirman flujo por flujo antes de construir.</p>
+        <p className="mt-4 text-sm text-[var(--text-light)]">Las etiquetas &quot;Existe&quot; y &quot;Nuevo&quot; salen de lo que se revisó en el código; se confirman flujo por flujo antes de construir.</p>
       </section>
     </main>
   )

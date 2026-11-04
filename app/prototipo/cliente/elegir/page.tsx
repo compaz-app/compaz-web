@@ -37,7 +37,8 @@ function Inner() {
   }, [zona, orden, soloVideo])
   const p = PERFILES.find((x) => x.id === sel)
 
-  useEffect(() => { setPaso('perfil'); setHorarios([]) }, [sel])
+  // Al abrir un perfil se reinicia el paso y los horarios (en el clic, no en un efecto).
+  const abrir = (id: string) => { setPaso('perfil'); setHorarios([]); setSel(id) }
   useEffect(() => {
     const h = (e: KeyboardEvent) => { if (e.key === 'Escape') setSel(null) }
     document.addEventListener('keydown', h)
@@ -70,7 +71,7 @@ function Inner() {
       <ul className="mt-4 divide-y divide-[var(--border-muted)] overflow-hidden rounded-2xl border border-[var(--border-muted)] bg-white">
         {lista.map((x) => (
           <li key={x.id}>
-            <button onClick={() => setSel(x.id)} className="flex min-h-20 w-full items-center gap-3 px-4 py-3 text-left active:bg-[var(--warm-gray)]">
+            <button onClick={() => abrir(x.id)} className="flex min-h-20 w-full items-center gap-3 px-4 py-3 text-left active:bg-[var(--warm-gray)]">
               <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[var(--orange)] text-xl font-extrabold text-white">{x.nombre[0]}</div>
               <div className="min-w-0 flex-1">
                 <div className="text-lg font-extrabold">{x.nombre}</div>

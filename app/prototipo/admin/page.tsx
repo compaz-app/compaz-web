@@ -434,7 +434,7 @@ function Visitas({ abrir }: { abrir: (id: string) => void }) {
   return (
     <section>
       <h1 className="text-2xl font-extrabold">Visitas</h1>
-      <p className="text-[var(--text-mid)]">Hoy es martes 3 de noviembre (fecha de la maqueta). Lo cerrado se consulta en Terminadas. "Con problema" muestra el motivo de cada fila.</p>
+      <p className="text-[var(--text-mid)]">Hoy es martes 3 de noviembre (fecha de la maqueta). Lo cerrado se consulta en Terminadas. &quot;Con problema&quot; muestra el motivo de cada fila.</p>
       <div className="mt-3 flex flex-wrap gap-2">
         {VISTAS_VISITA.map((v) => (
           <button key={v.id} onClick={() => { setVista(v.id); setPag('1') }} aria-pressed={vista === v.id} className={`min-h-10 rounded-full px-3 text-sm font-bold ${vista === v.id ? 'bg-[var(--purple)] text-white' : 'border border-[var(--border-muted)] bg-white'}`}>
