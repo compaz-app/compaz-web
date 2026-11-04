@@ -14,6 +14,7 @@ export type TipoEvento =
   | 'visita_programada' | 'visita_iniciada' | 'visita_confirmada' | 'visita_terminada'
   | 'calificacion' | 'reporte_enviado' | 'emergencia'
   | 'etapa_cambiada' | 'ayuda_tocada' | 'ayuda_humano' | 'aviso_fallido'
+  | 'motivo_no_contratar' | 'motivo_rechazo'
 
 export type ActorEvento = 'sistema' | `cliente:${string}` | `compita:${string}` | `admin:${string}`
 

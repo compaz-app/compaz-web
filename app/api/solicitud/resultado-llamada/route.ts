@@ -7,7 +7,7 @@ import { createAdminSupabase } from '@/lib/supabase-server'
 import { sendTelegramMessage, avisarAdmin } from '@/lib/telegram'
 import { sendEmail, SITE_URL } from '@/lib/email'
 import { esc } from '@/lib/html'
-import { rolValido } from '@/lib/links'
+import { rolValido, qRol } from '@/lib/links'
 import { registrarAccion } from '@/lib/avisos'
 import { registrarEvento } from '@/lib/eventos'
 import { pagina, puertaConfirmacion } from '@/lib/confirm'
@@ -160,6 +160,7 @@ async function ejecutar(req: NextRequest, p: NonNullable<ReturnType<typeof leer>
   }
   if (!cambiada) return NextResponse.redirect(`${origin}/compitas`, 303)
   await anotarDecision(solicitud, 'no_contratar')
+  const irAMotivo = () => NextResponse.redirect(`${origin}/api/solicitud/motivo?token=${encodeURIComponent(token)}&${qRol(token, 'cliente')}`, 303)
 
   if (compita?.telegram_chat_id) {
     try {
@@ -171,5 +172,6 @@ async function ejecutar(req: NextRequest, p: NonNullable<ReturnType<typeof leer>
   }
   await avisarAdmin(`ℹ️ <b>${esc(cliente?.nombre ?? 'Un cliente')}</b> decidió no contratar a <b>${esc(solicitud.compita_nombre)}</b> después de la llamada.`)
 
-  return NextResponse.redirect(`${origin}/compitas`, 303)
+  // Antes llevaba directo a /compitas; ahora primero se le pregunta (opcional) por qué, y desde ahí puede seguir.
+  return irAMotivo()
 }

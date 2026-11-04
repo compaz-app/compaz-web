@@ -21,7 +21,8 @@ import {
 import { generarTokenPerfil } from '@/lib/compita-tokens'
 import { getOrCreateDailyRoom } from '@/lib/daily'
 import { sendVisitaInicio, sendVisitaResumen, sendResumenConReporte, sendCodigoTelegram } from '@/lib/resend'
-import { responderSolicitud } from '@/lib/solicitudes'
+import { responderSolicitud, getSolicitudPorToken } from '@/lib/solicitudes'
+import { registrarMotivo, MOTIVOS } from '@/lib/motivos'
 import { qRol } from '@/lib/links'
 import { sendEmail, SITE_URL as SITE_URL_PUBLICA } from '@/lib/email'
 import { esc, escLike } from '@/lib/html'
@@ -1085,6 +1086,25 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
       chatId,
       `Entendido. ¿Puedes sugerir otros horarios que sí te funcionen?\n\n✍️ <b>Responde a este mensaje</b> con los horarios y se los haremos llegar a ${esc(clienteNombre)} por email.\n\n📅 <i>Incluye el día y la hora exacta de cada opción. Por ejemplo: lunes 6 de octubre a las 3:00pm.</i>`,
     )
+    // Motivo opcional, de un toque (dato para mejorar las solicitudes que le llegan)
+    await sendTelegramMessage(
+      chatId,
+      `Si quieres, cuéntanos por qué no pudiste (un toque). Nos ayuda a enviarte solicitudes que sí te encajen.`,
+      makeInlineKeyboard(MOTIVOS.compita.map((m) => [{ text: m.texto, callback_data: `motivo:${token}:${m.id}` }])),
+    )
+    return NextResponse.json({ ok: true })
+  }
+
+  // ── Solicitud: motivo del rechazo (botón de un toque) ────────────────────────
+  if (isCallback && text.startsWith('motivo:')) {
+    const [, tokenMotivo, codigo] = text.split(':')
+    const sol = tokenMotivo ? await getSolicitudPorToken(tokenMotivo) : null
+    if (!sol || sol.compita_id !== compita.id || sol.estado !== 'rechazada') {
+      await sendTelegramMessage(chatId, `Este enlace ya no está disponible.`, TECLADO_SIN_VISITA)
+      return NextResponse.json({ ok: true })
+    }
+    const r = await registrarMotivo({ solicitudId: sol.id, rol: 'compita', actorId: compita.id, motivo: codigo ?? '' })
+    await sendTelegramMessage(chatId, r === 'invalido' ? `No pudimos anotarlo. Intenta de nuevo.` : `Gracias, lo anotamos. 💙`)
     return NextResponse.json({ ok: true })
   }
 

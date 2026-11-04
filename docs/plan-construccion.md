@@ -74,6 +74,15 @@ Detalle original del paso 1.5: escalera de respaldo del compita: correo si Teleg
 5.5 Bloquear o quitar `app/prototipo/` antes de publicar.
 5.6 Stripe y lista de seguridad de `CLAUDE.md`.
 
+## Motivo cuando dicen que no: HECHO (2026-11-03)
+
+Dato prioritario 2 de `docs/crm-datos-pendientes.md`. Opcional y de un toque; queda como evento (`motivo_no_contratar` del cliente y `motivo_rechazo` del compita) con el motivo en `datos`. No requirió migración.
+1. Cliente: al decir que no tras la entrevista (correo de `resultado-llamada` o de `seguimiento`) llega a una pantalla `/api/solicitud/motivo` con 5 opciones (no conecté, precio, prefiero otro compita, más tiempo, otro) y una salida "Omitir" hacia los compitas. Cada botón hace POST, así un escáner de enlaces no registra nada, y el enlace va firmado por rol.
+2. Compita: al rechazar una solicitud en Telegram recibe 4 botones (sin tiempo, zona lejos, horarios, otro) y un toque lo guarda.
+3. Se guarda una sola vez por solicitud y rol; un código inventado se rechaza; otro compita no puede anotar en una solicitud ajena.
+4. Código: `lib/motivos.ts`, `app/api/solicitud/motivo/route.ts`, y cableado en `resultado-llamada`, `seguimiento` y el webhook de Telegram. 12 pruebas en `tests/28-motivos.test.ts` (4 fallan sin el cableado). Suite: 312 pruebas, 21 fallos previos, ninguno nuevo.
+5. Pendiente: verlo en el admin (Más, una vista de motivos agrupados) llega con la Fase 2; hoy se lee en la tabla `eventos`.
+
 ## Hallazgos pendientes (2026-11-03)
 
 1. ARREGLADO (2026-11-03, decisión del usuario: censurar como en el chat). El filtro de teléfonos y correos (`lib/chat-moderacion.ts`) solo se aplicaba en el chat de la visita. Los textos libres de la solicitud (`mensaje` y `sobre_cliente`) llegaban al compita sin filtrar, y el texto de los horarios sugeridos por el compita (`mensaje_compita_reagendar`) llegaba al cliente sin filtrar. Ahora ambos se censuran antes de guardarse y de enviarse, se crea una alerta en Atención (`admin_flags`) y se avisa al admin por Telegram, con la nueva `reportarContactoEnTexto`. Cambios en `app/api/solicitudes/route.ts`, `app/api/telegram-webhook/route.ts` y `lib/chat-moderacion.ts`. Pruebas en `tests/21-contacto-solicitud.test.ts` (5, comprobado que fallan sin el arreglo). Sigue pendiente la auditoría completa de otros posibles caminos de fuga (nombres completos, fotos, enlaces).
