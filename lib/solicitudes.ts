@@ -269,11 +269,14 @@ export async function guardarRoomUrl(solicitudId: string, roomUrl: string): Prom
 /**
  * Solicitudes listas para "¿quieres contratar?":
  * - Ambas partes confirmaron YES, o
- * - Han pasado 4h desde el slot y ninguna dijo NO (timeout: asumimos que ocurrió)
+ * - El cliente confirmó YES y el compita no respondió, 45 min después del horario (el cliente es quien decide:
+ *   antes esperaba hasta 4 h porque el compita no tocaba su botón), o
+ * - Han pasado 90 min desde el slot y ninguna parte dijo NO (timeout: asumimos que ocurrió; antes eran 4 h)
  */
 export async function getSolicitudesParaSeguimiento(): Promise<Solicitud[]> {
   const supabase = createAdminSupabase()
-  const hace4h = new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString()
+  const hace90min = new Date(Date.now() - 90 * 60 * 1000).toISOString()
+  const hace45min = new Date(Date.now() - 45 * 60 * 1000).toISOString()
 
   // Caso A: ambas confirmaron
   const { data: ambas, error: e1 } = await supabase
@@ -286,7 +289,7 @@ export async function getSolicitudesParaSeguimiento(): Promise<Solicitud[]> {
 
   if (e1) throw new Error(e1.message)
 
-  // Caso B: timeout 4h — confirmación enviada, nadie dijo NO, slot ya pasó
+  // Caso B: timeout 90 min — confirmación enviada, nadie dijo NO, slot ya pasó
   const { data: timeout, error: e2 } = await supabase
     .from('solicitudes')
     .select(SELECT_FIELDS)
@@ -296,14 +299,27 @@ export async function getSolicitudesParaSeguimiento(): Promise<Solicitud[]> {
     // PostgREST: neq excluye NULL. Se necesita "null o true" explícito.
     .or('confirmacion_cliente.is.null,confirmacion_cliente.eq.true')
     .or('confirmacion_compita.is.null,confirmacion_compita.eq.true')
-    .lte('slot_confirmado', hace4h)
+    .lte('slot_confirmado', hace90min)
 
   if (e2) throw new Error(e2.message)
 
-  // Deduplicar por id (Caso A puede solaparse con Caso B después de 4h)
+  // Caso C: el cliente confirmó que la llamada ocurrió y el compita no ha respondido (no se le espera)
+  const { data: soloCliente, error: e3 } = await supabase
+    .from('solicitudes')
+    .select(SELECT_FIELDS)
+    .in('estado', ['aceptada', 'completada'])
+    .eq('seguimiento_enviado', false)
+    .eq('confirmacion_llamada_enviada', true)
+    .eq('confirmacion_cliente', true)
+    .is('confirmacion_compita', null)
+    .lte('slot_confirmado', hace45min)
+
+  if (e3) throw new Error(e3.message)
+
+  // Deduplicar por id (los casos pueden solaparse)
   const vistos = new Set<string>()
   const resultado: Solicitud[] = []
-  for (const row of [...(ambas ?? []), ...(timeout ?? [])]) {
+  for (const row of [...(ambas ?? []), ...(soloCliente ?? []), ...(timeout ?? [])]) {
     const s = mapRow(row as Record<string, unknown>)
     if (!vistos.has(s.id)) { vistos.add(s.id); resultado.push(s) }
   }
