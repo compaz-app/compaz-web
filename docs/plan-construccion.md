@@ -26,6 +26,7 @@ Aclaración (2026-11-03): todo lo que hay hoy en el sistema, clientes y compitas
 ## Fase 1. Base de avisos y eventos (invisible, lo más importante)
 
 1.1 Tabla `avisos`: destinatario, canal, plantilla, estado (enviado, fallido), error, intentos, fechas. Migración aditiva.
+    ESCRITA, NO APLICADA (2026-11-03): `supabase/migrations/20261103_avisos.sql`. Verificado antes en la base real: todos los `id` de `compitas`, `usuarios`, `visitas`, `solicitudes`, `solicitudes_pago` y `admin_flags` son uuid; `usuarios.id` es el de `auth.users`; `usuarios` aún no tiene `etapa`; `admin_flags.entidad_id` es texto. Decisiones del usuario sobre el esquema: una etapa por cliente en `usuarios`; avisos guardados 90 días; plantilla con variables. Falta: aplicarla en el SQL Editor (la base es compartida con producción, pero la migración solo agrega una tabla), y comprobar que el servidor puede escribir en ella.
 1.2 Registro de eventos de operación: reutilizar `eventos` o crear una propia (según 0.3).
 1.3 `lib/avisos.ts` con `notificar()`: envía con `sendTelegramMessage` o `sendEmail` actuales, registra el resultado y permite reintentar.
 1.4 Migrar tres flujos críticos a `notificar()`: solicitud al compita, pago confirmado, pregunta de contratar.

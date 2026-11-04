@@ -75,7 +75,13 @@ Columna `tipo` ('emergencia', 'contacto_bloqueado', 'manual'). Hoy la emergencia
 
 Es una consulta que junta: pagos por confirmar (`solicitudes_pago` pendientes), avisos fallidos o sin acción vencidos, emergencias y alertas sin resolver, mensajes del equipo sin atender, entrevistas sin decisión. Ordenada por urgencia con los umbrales del semáforo.
 
-## Preguntas abiertas
+## Decisiones (2026-11-03)
+
+1. Una etapa por cliente, en `usuarios`.
+2. Los avisos se guardan 90 días (cron de limpieza existente); los eventos no se borran.
+3. Se guarda la plantilla con variables, no el texto armado.
+
+## Preguntas abiertas (resueltas arriba)
 
 1. Etapa del cliente: ¿una sola por cliente (en `usuarios`) o por solicitud? Un cliente puede tener hasta 3 solicitudes a la vez. Recomendación: una por cliente, y el detalle de cada solicitud ya está en `solicitudes`.
 2. Cuánto tiempo guardar los avisos (propuesta: 90 días, con el cron de limpieza que ya existe). Los eventos no se borran.
