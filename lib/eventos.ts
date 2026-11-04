@@ -1,0 +1,62 @@
+// Registro de eventos de operación (historial inmutable en public.eventos, módulo 'operacion').
+// El servidor no puede insertar directo en esa tabla: escribe mediante la función SQL registrar_evento.
+// Ver docs/esquema-avisos-eventos.md. Un evento es un hecho ya ocurrido (quién, cuándo y qué).
+// REGLA: en `datos` nunca van teléfono, correo ni Telegram de una parte para la otra.
+
+import { createAdminSupabase } from '@/lib/supabase-server'
+
+export type EntidadEvento = 'solicitud' | 'visita' | 'pago' | 'cliente' | 'compita' | 'aviso'
+
+export type TipoEvento =
+  | 'solicitud_creada' | 'solicitud_aceptada' | 'solicitud_rechazada' | 'horario_confirmado'
+  | 'entrevista_entro' | 'entrevista_terminada' | 'decision_contratar'
+  | 'pago_solicitado' | 'pago_confirmado'
+  | 'visita_programada' | 'visita_iniciada' | 'visita_confirmada' | 'visita_terminada'
+  | 'calificacion' | 'reporte_enviado' | 'emergencia'
+  | 'etapa_cambiada' | 'ayuda_tocada' | 'ayuda_humano' | 'aviso_fallido'
+
+export type ActorEvento = 'sistema' | `cliente:${string}` | `compita:${string}` | `admin:${string}`
+
+/** Datos planos (sin anidar) para que sea difícil colar información que no corresponde. */
+export type DatosEvento = Record<string, string | number | boolean | null>
+
+export interface NuevoEvento {
+  entidad: EntidadEvento
+  /** uuid de la solicitud, visita, pago, cliente (usuarios.id), compita o aviso */
+  entidadId: string
+  tipo: TipoEvento
+  actor?: ActorEvento
+  datos?: DatosEvento
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+type ClienteRpc = { rpc: (fn: string, args: Record<string, unknown>) => PromiseLike<{ data: unknown; error: { message: string } | null }> }
+
+/**
+ * Registra un evento. Nunca lanza: un fallo del historial no debe romper el flujo que lo origina.
+ * Devuelve true si quedó guardado.
+ */
+export async function registrarEvento(e: NuevoEvento, cliente: ClienteRpc = createAdminSupabase()): Promise<boolean> {
+  if (!UUID.test(e.entidadId)) {
+    console.error('[eventos] entidadId no es un uuid:', e.tipo, e.entidad)
+    return false
+  }
+  try {
+    const { error } = await cliente.rpc('registrar_evento', {
+      p_entidad: e.entidad,
+      p_entidad_id: e.entidadId,
+      p_tipo: e.tipo,
+      p_actor: e.actor ?? 'sistema',
+      p_datos: e.datos ?? {},
+    })
+    if (error) {
+      console.error('[eventos] no se pudo registrar', e.tipo, error.message)
+      return false
+    }
+    return true
+  } catch (err) {
+    console.error('[eventos] error registrando', e.tipo, err)
+    return false
+  }
+}
