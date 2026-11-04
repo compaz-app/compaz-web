@@ -171,3 +171,8 @@ PUNTO 5 CERRADO (2026-11-04): contactos en el chat y en textos libres. Decidido 
 
 CORRECCIÓN DEL PUNTO 5 (usuario, 2026-11-04): el umbral es DOS detecciones, no tres, y hay que ADVERTIR que solo hay dos. Detección 1: aviso amable antes de enviar y, si lo envía igual, se censura sin alertar al admin; el aviso dice claramente que es el primero y que la segunda vez se avisa al equipo ("Este es el primer aviso. Si vuelve a pasar, avisaremos al equipo de Compaz."). Detección 2: se censura, se alerta al administrador (flag en Atención y tarea en la Bandeja) y queda en la ficha de la persona. Reemplaza lo anotado antes sobre la tercera detección. Ventana de 30 días y umbral editables en Ajustes.
 
+
+## VERIFICACIÓN GENERAL (2026-11-04)
+Hallazgos corregidos: carrera de doble envío en `despachar` (ahora reserva atómica del intento); contadores de acceso y avisos crecían sin límite (limpieza diaria, avisos con retención de 90 días); faltaban índices en `avisos` (migración `20261104_avisos_indices.sql`, pendiente de aplicar en Supabase).
+Pruebas nuevas: `tests/30-limpieza-avisos.test.ts` y `tests/31-recorrido-automatico.test.ts` (tres recorridos encadenados con paso del tiempo).
+Pendientes anotados: botón "Reenviar confirmación" necesita su propio camino con clave nueva; recordatorios que se pueden solapar tras la llamada (escalera ~2h, cron de seguimiento 24h, tarea admin); bloquear /prototipo en producción antes de main; 21 pruebas fallidas heredadas.

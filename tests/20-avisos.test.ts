@@ -153,3 +153,27 @@ describe('registrarAccion', () => {
     assert.equal((await reintentarAviso(fila.id)).ok, false, 'un aviso cancelado ya no se reintenta')
   })
 })
+
+describe('envío concurrente: un aviso nunca sale dos veces', () => {
+  test('dos reintentos a la vez del mismo aviso fallido: solo uno envía', async () => {
+    const { compita, pedido } = escenario()
+    net.tgFailFor.add(String(compita.telegram_chat_id))
+    const r = await notificar(pedido)
+    net.tgFailFor.clear()
+    const [a, b] = await Promise.all([reintentarAviso(r.avisoId!), reintentarAviso(r.avisoId!)])
+    assert.equal(net.tg.length, 1, 'un solo mensaje de Telegram')
+    assert.deepEqual([a.estado, b.estado].sort(), ['duplicado', 'enviado'])
+    assert.equal(db.rows('avisos')[0].intentos, 2, 'el intento se cuenta una vez')
+  })
+
+  test('un aviso pendiente tomado por dos procesos a la vez: solo uno envía', async () => {
+    const { compita, solicitud } = escenario()
+    const fila = db.seed('avisos', {
+      destinatario_tipo: 'compita', destinatario_id: compita.id, canal: 'telegram', plantilla: 'solicitud_nueva',
+      variables: { solicitudId: solicitud.id }, entidad: 'solicitud', entidad_id: solicitud.id, paso: 5, estado: 'pendiente',
+    })
+    await Promise.all([reintentarAviso(fila.id), reintentarAviso(fila.id), reintentarAviso(fila.id)])
+    assert.equal(net.tg.length, 1)
+  })
+})
+

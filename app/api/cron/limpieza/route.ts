@@ -12,6 +12,7 @@ export async function POST(req: NextRequest) {
   const ahora = new Date().toISOString()
   const hace1d = new Date(Date.now() - 86400_000).toISOString()
   const hace30d = new Date(Date.now() - 30 * 86400_000).toISOString()
+  const hace90d = new Date(Date.now() - 90 * 86400_000).toISOString()
 
   const tareas: Array<[string, PromiseLike<{ error: { message: string } | null }>]> = [
     ['onboarding_tokens', admin.from('onboarding_tokens').delete().or(`usado.eq.true,expires_at.lt.${ahora}`)],
@@ -20,6 +21,11 @@ export async function POST(req: NextRequest) {
     // Filas sintéticas: deduplicación de updates, confirmaciones, cooldowns y alertas de un solo uso
     ['telegram upd/conf/cod/recon', admin.from('telegram_estados').delete().or('chat_id.like.upd:%,chat_id.like.conf:%,chat_id.like.cod:%,chat_id.like.recon:%').lt('updated_at', hace1d)],
     ['telegram alertas viejas', admin.from('telegram_estados').delete().or('chat_id.like.noshow:%,chat_id.like.alerta_%,chat_id.like.sala_fail:%,chat_id.like.pend_%').lt('updated_at', hace30d)],
+    // Contadores del acceso (límites por IP y por correo, intentos de código): una fila por IP o correo, sin esto crecen sin fin
+    ['contadores de acceso vencidos', admin.from('telegram_estados').delete().or('chat_id.like.acc_ip:%,chat_id.like.cod_ip:%,chat_id.like.cod_fallos:%').lt('pendiente_expira', ahora)],
+    ['cooldown de acceso por correo', admin.from('telegram_estados').delete().like('chat_id', 'acc_mail:%').lt('updated_at', hace1d)],
+    // Retención de avisos: 90 días (decisión del usuario). Solo los que ya terminaron; un pendiente nunca se borra.
+    ['avisos de más de 90 días', admin.from('avisos').delete().lt('creado_en', hace90d).in('estado', ['enviado', 'cancelado', 'fallido'])],
   ]
   const fallos: string[] = []
   for (const [nombre, q] of tareas) {

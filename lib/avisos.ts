@@ -86,6 +86,19 @@ async function marcar(admin: Admin, id: string, estado: EstadoAviso, error: stri
 /** Arma el mensaje, lo envía y anota el resultado. Sirve para el primer envío y para los reintentos. */
 async function despachar(admin: Admin, fila: FilaAviso): Promise<ResultadoAviso> {
   const intentos = fila.intentos + 1
+
+  // Reserva atómica: solo UN proceso se queda con este intento. Si la escalera y un reintento (o dos instancias
+  // de la función) toman el mismo aviso a la vez, el segundo ve que `intentos` ya cambió y no envía otra vez.
+  // Si la propia reserva falla por un error de la base, se sigue: entregar importa más que evitar un duplicado raro.
+  if (fila.id) {
+    const { data: tomado, error: eReserva } = await admin.from('avisos')
+      .update({ intentos, ultimo_intento_en: new Date().toISOString() })
+      .eq('id', fila.id).eq('intentos', fila.intentos).in('estado', ['pendiente', 'fallido'])
+      .select('id').maybeSingle()
+    if (!eReserva && !tomado) return { ok: true, estado: 'duplicado', avisoId: fila.id }
+    if (eReserva) console.error('[avisos] no se pudo reservar el intento, se envía igual:', fila.id, eReserva.message)
+  }
+
   const plantilla = PLANTILLAS[fila.plantilla as NombrePlantilla]
   if (!plantilla || !plantilla.canales.includes(fila.canal)) {
     await marcar(admin, fila.id, 'fallido', `plantilla o canal no soportado: ${fila.plantilla}/${fila.canal}`, intentos)
