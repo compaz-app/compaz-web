@@ -31,6 +31,8 @@ Aclaración (2026-11-03): todo lo que hay hoy en el sistema, clientes y compitas
     APLICADA Y VERIFICADA (2026-11-03). Pruebas reales: rechaza entidad inválida, tipo inválido, sin id, actor vacío y datos enormes; el servidor sigue sin poder insertar directo (42501); un visitante sin sesión no puede ejecutarla (42501); una llamada válida del servidor guarda el evento (módulo operacion) y se lee de vuelta. Dejó 1 evento de prueba permanente (`verificacion_sistema`, id 5). Hallazgo previo: el servidor NO puede insertar directo en `eventos` (la migración de captación dejó a la clave de servicio solo con permiso de lectura, a propósito; los eventos se escriben con funciones SQL security definer). Por eso se crea `supabase/migrations/20261103b_registrar_evento.sql` (función `registrar_evento`, solo módulo operacion, valida entidad, tipo y tamaño, ejecutable solo por la clave de servicio) y `lib/eventos.ts` con `registrarEvento()`, que nunca lanza. Prueba: `tests/19-eventos.test.ts` (5 pruebas, pasan).
     Estado de la suite completa: 22 de 220 pruebas fallan, las mismas 22 que ya fallaban en el código publicado (etiqueta `antes-del-rediseno`: 22 de 215). No es un efecto de estos cambios; al menos una falla por hora (espera 400 con un horario a 5 minutos y recibe 200). Pendiente investigarlas.
 1.3 `lib/avisos.ts` con `notificar()`: envía con `sendTelegramMessage` o `sendEmail` actuales, registra el resultado y permite reintentar.
+    HECHO (2026-11-03), sin tocar ningún flujo existente. Archivos nuevos: `lib/avisos.ts` (`notificar`, `reintentarAviso`, `registrarAccion`), `lib/plantillas-aviso.ts` (registro de plantillas; la primera es `solicitud_nueva`, por Telegram, con el texto que ya usa `app/api/solicitudes/route.ts`) y `tests/20-avisos.test.ts` (12 pruebas, pasan). Se añadió la tabla `avisos` a `tests/fake-db.ts`. Diseño: nunca lanza; guarda el aviso antes de enviar (idempotencia por clave única); las direcciones (chat de Telegram, correo) se leen de la base al enviar y no se guardan en `avisos`; las plantillas reciben solo ids y leen datos frescos, y devuelven null si el hecho ya no aplica (se cancela); si no se puede guardar el registro, igual se envía; reintento con máximo de 5; `registrarAccion` anota que la persona actuó y cancela lo pendiente. Suite completa: 232 pruebas, 22 fallan, las mismas 22 que ya fallaban antes.
+    Falta para el 1.4: migrar los tres flujos (solicitud al compita, pago confirmado, pregunta de contratar) y añadir sus plantillas (la de correo incluida).
 1.4 Migrar tres flujos críticos a `notificar()`: solicitud al compita, pago confirmado, pregunta de contratar.
 1.5 Escalera de respaldo del compita: correo si Telegram falla o no actúa, luego tarea en la Bandeja.
 1.6 Registro de la etapa del cliente y desde cuándo (columna nueva aditiva).
@@ -66,6 +68,13 @@ Aclaración (2026-11-03): todo lo que hay hoy en el sistema, clientes y compitas
 5.4 Limpiar datos de prueba (clientes de prueba, pagos simulados).
 5.5 Bloquear o quitar `app/prototipo/` antes de publicar.
 5.6 Stripe y lista de seguridad de `CLAUDE.md`.
+
+## Hallazgos pendientes (2026-11-03)
+
+1. Posible fuga de contacto: el filtro de teléfonos y correos (`lib/chat-moderacion.ts`) solo se aplica en el chat de la visita (`api/send-message` y el bot de Telegram). Los textos libres de la solicitud (`mensaje` y `sobre_cliente`) y el `mensaje_compita_reagendar` llegan al compita sin filtrar. Un cliente podría escribir su teléfono ahí. Va a la auditoría de fugas de contacto; conviene arreglarlo al migrar la solicitud en el 1.4.
+2. Hoy, al crear una solicitud, el compita recibe el correo y el mensaje de Telegram a la vez. Contradice la regla 2 del ciclo (no avisar por dos canales desde el primer minuto). Se corrige al migrar el flujo.
+3. La suite tiene 22 pruebas que ya fallaban en el código publicado (una espera rechazar un horario a 5 minutos y lo acepta, parece depender de la hora). Pendiente de investigar.
+4. La tabla `resenas` da permiso denegado a la clave de servicio; podría estar rompiendo la aprobación de reseñas del admin. Sin confirmar.
 
 ## Cómo se trabaja cada paso
 

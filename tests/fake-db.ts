@@ -30,6 +30,7 @@ const DEFAULTS: Record<string, () => Row> = {
   pagos_plan: () => ({ id: randomUUID(), estado: 'activo', horas: null, referencia: null, created_at: nowIso() }),
   admin_flags: () => ({ id: randomUUID(), resuelto: false, created_at: nowIso() }),
   resenas: () => ({ id: randomUUID(), publicada: false, created_at: nowIso() }),
+  avisos: () => ({ id: randomUUID(), estado: 'pendiente', intentos: 0, variables: {}, error: null, accion_en: null, plazo_accion_hasta: null, ultimo_intento_en: null, creado_en: nowIso() }),
 }
 
 const PK: Record<string, string> = { telegram_estados: 'chat_id' }
@@ -75,6 +76,7 @@ export class FakeDB {
     if (t === 'visitas' && row.estado === 'en_curso' && others.some((r) => r.compita_id === row.compita_id && r.estado === 'en_curso')) return dupError('visitas_una_en_curso_por_compita')
     if (t === 'visitas' && ['pre_visita', 'programada', 'en_curso'].includes(row.estado) && others.some((r) => r.usuario_id === row.usuario_id && ['pre_visita', 'programada', 'en_curso'].includes(r.estado))) return dupError('visitas_una_activa_por_cliente')
     if (t === 'solicitudes' && row.estado === 'pendiente' && others.some((r) => r.cliente_id === row.cliente_id && r.compita_id === row.compita_id && r.estado === 'pendiente')) return dupError('solicitudes_una_pendiente_por_par')
+    if (t === 'avisos' && row.clave_unica && others.some((r) => r.clave_unica === row.clave_unica)) return dupError('avisos_clave_unica_key')
     if (t === 'reportes_visita' && others.some((r) => r.visita_id === row.visita_id)) return dupError('reportes_visita_unico_por_visita')
     for (const col of ['token']) if ((t === 'compita_edit_tokens' || t === 'onboarding_tokens' || t === 'action_tokens') && others.some((r) => r[col] === row[col])) return dupError(`${t}_token_key`)
     return null
