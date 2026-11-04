@@ -51,9 +51,9 @@ export default function Entrar() {
       {paso === 'codigo' && (
         <section className="mt-6 rounded-3xl border border-[var(--border-muted)] bg-white p-6">
           <h1 className="text-2xl font-extrabold">Escribe tu código</h1>
-          <p className="mt-2 text-lg text-[var(--text-mid)]">En el mismo correo hay un código de 6 números. Escríbelo aquí y entras, sin importar en qué app o teléfono abriste el correo.</p>
-          <input inputMode="numeric" maxLength={6} value={codigo} onChange={(e) => setCodigo(e.target.value.replace(/\D/g, ''))} placeholder="000000" aria-label="Código de 6 números" className="mt-4 min-h-16 w-full rounded-2xl border border-[var(--border-muted)] px-4 text-center text-3xl font-extrabold tracking-[0.4em]" />
-          <button disabled={codigo.length < 6} onClick={() => setPaso('dentro')} className="mt-4 min-h-14 w-full rounded-2xl bg-[var(--orange)] text-lg font-extrabold text-white disabled:opacity-40">Entrar</button>
+          <p className="mt-2 text-lg text-[var(--text-mid)]">En el mismo correo hay un código de 8 números. Escríbelo aquí y entras, sin importar en qué app o teléfono abriste el correo.</p>
+          <input inputMode="numeric" maxLength={8} value={codigo} onChange={(e) => setCodigo(e.target.value.replace(/\D/g, ''))} placeholder="00000000" aria-label="Código de 8 números" className="mt-4 min-h-16 w-full rounded-2xl border border-[var(--border-muted)] px-4 text-center text-3xl font-extrabold tracking-[0.4em]" />
+          <button disabled={codigo.length < 8} onClick={() => setPaso('dentro')} className="mt-4 min-h-14 w-full rounded-2xl bg-[var(--orange)] text-lg font-extrabold text-white disabled:opacity-40">Entrar</button>
           <button onClick={() => setPaso('enviado')} className="mt-3 min-h-12 w-full text-base font-bold text-[var(--text-mid)]">‹ Volver</button>
         </section>
       )}

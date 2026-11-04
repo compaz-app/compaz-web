@@ -12,6 +12,14 @@ const GUION: Omit<Msg, 'id' | 'resuelto'>[] = [
   { hora: '2:00', texto: '⏰ Tu entrevista es en 1 hora\nCuando sea la hora, toca el botón. Si se corta, vuelve a tocarlo.', botones: [{ id: 'e', texto: '🎥 Entrar a la entrevista', resultado: 'Abriendo la sala…' }] },
   { hora: '4:25', texto: '🎉 Ana te contrató\nTu primera visita es el jueves a las 10:00 am en Chacao.' },
   { hora: '10:05', texto: '🏠 Visita de hoy, 10:00 am\nCuando llegues, toca Iniciar visita. Durante la visita manda fotos y notas aquí mismo: la familia las ve en su portal.', botones: [{ id: 'l', texto: '▶️ Iniciar visita', resultado: 'Visita iniciada ✓ Esperando la confirmación del cliente.' }, { id: 'em', texto: '🚨 Emergencia', resultado: '🚨 Alerta enviada. El equipo de Compaz fue notificado y te contactará de inmediato. Si hay peligro inmediato, llama al 911.' }] },
+  { hora: '11:20', texto: '🤝 Contratación directa\nAna quiere contratarte directamente, sin entrevista.\nQué se hará: acompañar a su mamá a misa y a caminar.\nCuándo: jueves en la mañana.\n¿Lugar privado? Sí, la casa de su mamá en Chacao.\nFamiliar: 82 años, camina con bastón.\n📷 Foto de Ana', botones: [{ id: 'a', texto: '✅ Aceptar', resultado: 'Aceptaste ✓ Ana paga primero; te avisamos cuando esté confirmado.' }, { id: 'r', texto: 'No puedo', resultado: 'Anotado. ¿Nos cuentas por qué? (un toque)' }] },
+  { hora: '3:10', texto: '📅 Ana eligió tu horario\nJueves 5 nov, 10:00 am (hora de Caracas). Ya pagó y su ficha está completa: ahora ves su nombre completo, Ana Rojas, y la ficha de su mamá.', botones: [{ id: 'ok', texto: '✅ Confirmo la cita', resultado: 'Cita confirmada ✓ Te mandamos la dirección 3 horas antes.' }, { id: 'no', texto: 'No puedo ese día', resultado: 'Le avisamos a Ana y le ofrecemos otros horarios. Queda anotado.' }] },
+  { hora: '7:00', texto: '📍 Tu visita es en 3 horas\nDirección: Av. Francisco de Miranda, Edif. Sol, piso 3, apto 3B (Chacao).\nCómo entrar: avisa en conserjería.\nQuién abre: Rosa, la vecina.\nPor seguridad, el teléfono lo tiene el equipo de Compaz, no tú.', botones: [{ id: 'v', texto: '🚗 Voy en camino', resultado: 'Avisamos a Ana que vas en camino.' }] },
+  { hora: '9:58', texto: '📸 Llegaste\nToca el botón y manda una foto de la puerta o la fachada. La foto es obligatoria, sirve de prueba de llegada y se borra a los 90 días.', botones: [{ id: 'l', texto: '📍 Llegué (mandar foto)', resultado: 'Foto recibida a las 9:58 ✓ Se la mostramos a Ana si nadie abre.' }] },
+  { hora: '10:00', texto: '🔔 ¿Te abrieron?\nSi abren, toca Iniciar visita. Si no hay nadie, avísanos y empezamos a contar 30 minutos.', botones: [{ id: 'i', texto: '▶️ Iniciar visita', resultado: 'Esperando que Ana confirme (o se confirma sola en 5 minutos).' }, { id: 'n', texto: '🚪 Llegué y no hay nadie', resultado: 'Empezó la espera: 30 minutos. Le avisamos a Ana con tu foto y le escribimos al contacto en el sitio a los 5 y 15 minutos. Tú no tienes que hacer nada más que esperar aquí.' }] },
+  { hora: '10:30', texto: '🚪 Pasaron 30 minutos\nNadie apareció. Puedes cerrar la visita. Cuenta como usada por la familia y tú cobras el viaje. Si Ana tuvo una causa justificada, el equipo puede reprogramarla.', botones: [{ id: 'c', texto: 'Cerrar visita sin acceso', resultado: 'Cerrada ✓ Quedó registrada como "sin acceso".' }] },
+  { hora: '11:15', texto: '⏱️ ¿Todo bien?\nTu visita debía terminar a las 11:00. Si no respondes en 10 minutos, avisamos al equipo.', botones: [{ id: 'b', texto: '👍 Todo bien, termino pronto', resultado: 'Gracias. Cuando termines, toca Terminar visita.' }, { id: 'h', texto: '🆘 Necesito ayuda', resultado: 'Avisamos al equipo ahora mismo. Te llaman en un momento.' }] },
+  { hora: '6:00', texto: '🎥 Ana pide una videollamada con su mamá\nHoy a las 6:00 pm. Dura hasta 20 minutos. No se graba.', botones: [{ id: 'a', texto: '✅ Acepto', resultado: 'Aceptada ✓ Te mandamos el botón 5 minutos antes.' }, { id: 'o', texto: '🕒 Propongo otra hora', resultado: 'Le preguntamos a Ana si le sirve otra hora.' }] },
 ]
 
 const hora = () => '·'
@@ -42,6 +50,18 @@ function TelegramMock() {
       : 'Nada pendiente 🎉 Te avisamos cuando haya algo.'
     setMsgs((arr) => [...arr, { id: 100 + arr.length, hora: hora(), texto }])
   }
+
+  // Botones fijos del teclado: respuesta inmediata del bot, y opcionalmente motivos de un toque.
+  const decir = (propio: string, respuesta: string, motivos = false) =>
+    setMsgs((arr) => [...arr, { id: 200 + arr.length, hora: hora(), texto: propio, resuelto: undefined }, {
+      id: 300 + arr.length, hora: hora(), texto: respuesta,
+      botones: motivos ? [
+        { id: 'm1', texto: 'Me pidió algo fuera del servicio', resultado: 'Anotado ✓ El equipo lo revisa.' },
+        { id: 'm2', texto: 'Me sentí incómodo con alguien', resultado: 'Anotado ✓ El equipo lo revisa.' },
+        { id: 'm3', texto: 'El lugar no era seguro', resultado: 'Anotado ✓ El equipo lo revisa.' },
+        { id: 'm4', texto: '🚫 No quiero volver con este cliente', resultado: 'Listo ✓ No se te volverá a asignar este cliente.' },
+      ] : undefined,
+    }])
 
   const reiniciar = () => { setMsgs(inicial()); setSiguiente(hasta + 1) }
 
@@ -79,8 +99,10 @@ function TelegramMock() {
           <div ref={fin} />
         </div>
 
-        <div className="flex gap-2 border-t border-gray-300 bg-white p-2">
-          <button onClick={queToca} className="flex-1 rounded-xl bg-[var(--warm-gray)] py-3 text-[15px] font-bold text-[var(--purple)]">¿Qué me toca?</button>
+        <div className="grid grid-cols-2 gap-2 border-t border-gray-300 bg-white p-2">
+          <button onClick={queToca} className="col-span-2 rounded-xl bg-[var(--warm-gray)] py-3 text-[15px] font-bold text-[var(--purple)]">¿Qué me toca?</button>
+          <button onClick={() => decir('🚨 Emergencia', 'Avisamos al equipo ahora mismo. Si es una emergencia médica, llama también al 911 o a emergencias de tu zona. Este botón está siempre disponible, aunque no tengas visita.')} className="rounded-xl bg-[#FEE2E2] py-3 text-[15px] font-bold text-[#991B1B]">🚨 Emergencia</button>
+          <button onClick={() => decir('🛑 No me siento seguro', 'Tu visita se detuvo. No pasa nada y no hay penalización. Puedes irte ya. Al cliente le avisamos de forma neutra que la visita se interrumpió, y el equipo te llama. Si quieres, cuéntanos qué pasó:', true)} className="rounded-xl bg-[#FEF3C7] py-3 text-[15px] font-bold text-[#92400E]">🛑 No me siento seguro</button>
         </div>
       </div>
 

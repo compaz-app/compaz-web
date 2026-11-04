@@ -69,11 +69,22 @@ function urgenciaDe(p: Persona): Urgencia {
 type Tarea = { id: string; tipo: string; icono: string; clienteId: string; compitaId: string; que: string; hace: string; boton: string; resuelta: string }
 const TAREAS: Tarea[] = [
   { id: 't0', tipo: 'Emergencia', icono: '🚨', clienteId: 'p4', compitaId: 'p6', que: 'El compita activó el botón de emergencia durante una visita en curso', hace: 'hace 2 min', boton: 'Marcar atendida', resuelta: 'Atendida ✓' },
-  { id: 't1', tipo: 'Pago', icono: '💵', clienteId: 'p1', compitaId: 'p6', que: 'Dice que ya pagó $60. Referencia COMPAZ-4F7K2Q', hace: 'hace 12 min', boton: 'Confirmar pago', resuelta: 'Pago confirmado ✓' },
+  { id: 't1', tipo: 'Pago', icono: '💵', clienteId: 'p1', compitaId: 'p6', que: 'URGENTE: el cliente insistió hace 8 min. Dice que ya pagó $75. Referencia COMPAZ-4F7K2Q', hace: 'hace 3 h', boton: 'Confirmar pago', resuelta: 'Pago confirmado ✓' },
   { id: 't2', tipo: 'Decisión', icono: '⏳', clienteId: 'p2', compitaId: 'p7', que: 'La entrevista terminó y el cliente no ha decidido si contrata', hace: 'hace 3 h', boton: 'Recordar al cliente', resuelta: 'Recordatorio enviado ✓' },
   { id: 't3', tipo: 'Aviso fallido', icono: '⚠️', clienteId: 'p5', compitaId: 'p7', que: 'Telegram no entregó al compita el aviso de nueva solicitud', hace: 'hace 25 min', boton: 'Reintentar aviso', resuelta: 'Reintento enviado ✓' },
   { id: 't5', tipo: 'Contacto bloqueado', icono: '🔒', clienteId: 'p2', compitaId: 'p7', que: 'Un mensaje del chat intentó compartir un teléfono o correo y fue censurado', hace: 'hace 40 min', boton: 'Marcar revisada', resuelta: 'Revisada ✓' },
   { id: 't4', tipo: 'Sin respuesta', icono: '🔔', clienteId: 'p3', compitaId: 'p8', que: 'El cliente envió una solicitud y el compita no ha respondido', hace: 'hace 5 h', boton: 'Insistir al compita', resuelta: 'Aviso reenviado ✓' },
+]
+
+// Tareas nuevas de los puntos 2 a 5: la escalera las abre sola cuando algo no se resuelve por el camino automático.
+const NUEVAS: Tarea[] = [
+  { id: 'n1', tipo: 'Nadie abre', icono: '🚪', clienteId: 'p4', compitaId: 'p6', que: 'El compita llegó (foto enviada) y nadie abre. Van 15 de 30 minutos. Ya se le escribió al contacto en el sitio a los 5 minutos', hace: 'hace 15 min', boton: 'Escribir al contacto otra vez', resuelta: 'Mensaje enviado ✓' },
+  { id: 'n2', tipo: 'No me siento seguro', icono: '🛑', clienteId: 'p2', compitaId: 'p7', que: 'El compita salió de la visita por seguridad. El cliente recibió un aviso neutro. Decide si cobra la visita', hace: 'hace 6 min', boton: 'Llamar al compita y decidir', resuelta: 'Atendida ✓' },
+  { id: 'n3', tipo: 'Visita alargada', icono: '⏱️', clienteId: 'p3', compitaId: 'p8', que: 'La visita pasó 25 minutos de su hora de fin y el compita no respondió "¿Todo bien?" en 10 minutos', hace: 'hace 10 min', boton: 'Contactar al compita', resuelta: 'Contactado ✓' },
+  { id: 'n4', tipo: 'Ficha incompleta', icono: '📋', clienteId: 'p1', compitaId: 'p6', que: 'Pagó hace 2 días y aún no completa la ficha del familiar. No puede agendar su primera cita', hace: 'hace 2 d', boton: 'Llenarla por teléfono', resuelta: 'Ficha completada ✓' },
+  { id: 'n5', tipo: 'Reporte de un compita', icono: '🚩', clienteId: 'p5', compitaId: 'p7', que: 'El compita reportó un problema con este cliente: "Me pidió hacer algo fuera del servicio" y marcó no volver con él', hace: 'hace 1 h', boton: 'Revisar y decidir', resuelta: 'Revisado ✓' },
+  { id: 'n6', tipo: 'Cancelación tardía', icono: '📆', clienteId: 'p2', compitaId: 'p8', que: 'El compita canceló con menos de 24 horas. Es su segunda en 30 días: se abre revisión. La cita se reprograma sin costo', hace: 'hace 4 h', boton: 'Hablar con el compita', resuelta: 'Revisada ✓' },
+  { id: 'n7', tipo: 'Contacto bloqueado', icono: '🔒', clienteId: 'p3', compitaId: 'p7', que: 'Segunda detección en 30 días: este cliente volvió a intentar compartir un teléfono. Ya se le había avisado que sería la última', hace: 'hace 50 min', boton: 'Marcar revisada', resuelta: 'Revisada ✓' },
 ]
 
 function Ficha({ p, onClose }: { p: Persona; onClose: () => void }) {
@@ -117,8 +128,8 @@ const EXTRA: Tarea[] = Array.from({ length: 26 }, (_, i) => {
   const base = TAREAS.slice(1)[i % (TAREAS.length - 1)]
   return { ...base, id: `x${i}`, clienteId: `p${1 + (i % 5)}`, compitaId: `p${6 + (i % 3)}`, hace: `hace ${2 + i} h` }
 })
-const TODAS_TAREAS = [...TAREAS, ...EXTRA]
-const TIPOS = ['Todas', 'Emergencia', 'Pago', 'Decisión', 'Aviso fallido', 'Sin respuesta', 'Contacto bloqueado']
+const TODAS_TAREAS = [...TAREAS, ...NUEVAS, ...EXTRA]
+const TIPOS = ['Todas', 'Emergencia', 'No me siento seguro', 'Nadie abre', 'Visita alargada', 'Pago', 'Decisión', 'Ficha incompleta', 'Reporte de un compita', 'Cancelación tardía', 'Aviso fallido', 'Sin respuesta', 'Contacto bloqueado']
 const PAGINA = 10
 
 function Bandeja({ abrir }: { abrir: (id: string) => void }) {
@@ -498,6 +509,10 @@ const HUB: { id: string; i: string; t: string; d: string; m: Madurez; sub: boole
   { id: 'avisos', i: '📨', t: 'Avisos enviados', d: 'Qué se le mandó a cada persona, por qué canal y si llegó. Aquí se reintentan los fallidos.', m: 'base', sub: true },
   { id: 'cobertura', i: '🗺️', t: 'Cobertura y demanda', d: 'Por zona: compitas disponibles frente a solicitudes del mes. Dónde falta reclutar.', m: 'existe', sub: true },
   { id: 'umbrales', i: '🚦', t: 'Ajustes del semáforo', d: 'Cuántas horas son normales en cada etapa antes de pasar a amarillo y rojo.', m: 'base', sub: true },
+  { id: 'ajustes', i: '🎛️', t: 'Ajustes', d: 'Precios, plazos, topes y umbrales. Se cambian aquí, con registro de quién y cuándo; no hay que tocar el código.', m: 'base', sub: true },
+  { id: 'cancelaciones', i: '📆', t: 'Cancelaciones de compitas', d: 'Quién cancela, con cuánta anticipación y si fue justificada. Para decidir si un compita sigue.', m: 'base', sub: true },
+  { id: 'registro', i: '🗂️', t: 'Registro de actividad', d: 'Quién del equipo vio un teléfono o dato sensible, cuándo y por qué.', m: 'base', sub: true },
+  { id: 'estado', i: '🩺', t: 'Estado del sistema', d: 'Procesos automáticos, avisos fallidos y salud de Telegram, correo y videollamadas.', m: 'base', sub: true },
   { id: 'invitar', i: '✉️', t: 'Invitar cliente y registrar compita', d: 'Ya están en el admin actual. Se mantienen tal cual.', m: 'existe', sub: false },
 ]
 
@@ -683,6 +698,63 @@ function VistaUmbrales() {
   )
 }
 
+function Fila({ t, v }: { t: string; v: string }) {
+  return <li className="flex items-center justify-between gap-3 px-3 py-3"><span className="text-base">{t}</span><b className="shrink-0 text-base">{v}</b></li>
+}
+
+function VistaAjustes() {
+  const [ok, setOk] = useState(false)
+  const grupos: { t: string; filas: [string, string][] }[] = [
+    { t: 'Precios', filas: [['Hora de servicio', '$22'], ['Mandado (tarifa plana, máximo 1 hora)', '$22'], ['Plan Compañía (2 visitas de 2 h)', '$75'], ['Plan Compañía Plus (4 visitas de 2 h)', '$140']] },
+    { t: 'Plazos de las citas', filas: [['Cancelación gratuita', '24 horas antes'], ['Espera si nadie abre', '30 minutos'], ['Contactos si nadie abre', 'a los 5 y 15 min'], ['"¿Todo bien?" si la visita se alarga', '15 minutos después'], ['Dirección exacta al compita', '3 horas antes']] },
+    { t: 'Llamadas', filas: [['Llamada durante una visita', 'hasta 5 min'], ['Llamada fuera de una visita', 'hasta 20 min'], ['Videollamadas por cliente', '1 al día, 3 a la semana']] },
+    { t: 'Seguridad y datos', filas: [['Detecciones de contacto antes de alertar al equipo', '2'], ['Ventana de conteo', '30 días'], ['Borrado de fotos de llegada', '90 días tras la visita'], ['Retención de avisos', '90 días']] },
+  ]
+  return (
+    <>
+      <p className="text-[var(--text-mid)]">Hoy estos valores están escondidos en el código. Aquí se cambian sin publicar nada. Cada cambio queda con quién lo hizo, cuándo y desde qué fecha vale; lo ya pagado no se altera.</p>
+      {grupos.map((g) => (
+        <div key={g.t} className="mt-4"><h3 className="text-sm font-extrabold uppercase tracking-wider text-[var(--text-light)]">{g.t}</h3><Lista>{g.filas.map(([t, v]) => <Fila key={t} t={t} v={v} />)}</Lista></div>
+      ))}
+      <button onClick={() => setOk(true)} className="mt-4 min-h-12 rounded-xl bg-[var(--orange)] px-5 font-extrabold text-white">Guardar cambios</button>
+      {ok && <span className="ml-3 font-bold text-green-700">Guardado en la maqueta ✓</span>}
+    </>
+  )
+}
+
+function VistaCancelaciones() {
+  const filas = [['Mariela R.', '3', '2', '1', 'Revisar: 2 tardías en 30 días'], ['Yoselin P.', '1', '0', '1', 'Sin alerta'], ['Gladys M.', '0', '0', '0', 'Sin alerta'], ['Carmen S.', '4', '3', '2', 'Pausar solicitudes nuevas']]
+  return (
+    <>
+      <p className="text-[var(--text-mid)]">Cada cancelación del compita queda registrada con su anticipación y su motivo. Las justificadas (enfermedad, emergencia familiar) no cuentan en su contra. Umbrales de partida: 2 tardías en 30 días abren revisión; 3 o más pausan sus solicitudes nuevas.</p>
+      <Lista>
+        <li className="grid grid-cols-5 gap-2 bg-[var(--warm-gray)] px-3 py-2 text-xs font-extrabold uppercase text-[var(--text-light)]"><span className="col-span-2">Compita</span><span>30 días</span><span>Tardías</span><span>90 días</span></li>
+        {filas.map(([n, a, b, c, e]) => <li key={n} className="grid grid-cols-5 items-center gap-2 px-3 py-3"><span className="col-span-2 font-bold">{n}<span className="block text-xs font-normal text-[var(--text-mid)]">{e}</span></span><span>{a}</span><span>{b}</span><span>{c}</span></li>)}
+      </Lista>
+    </>
+  )
+}
+
+function VistaRegistro() {
+  const filas = [['hoy 10:42', 'Admin Juan', 'Vio el teléfono del contacto en el sitio', 'Nadie abre, visita de Carolina'], ['hoy 09:15', 'Admin Juan', 'Vio el teléfono del cliente', 'Confirmar pago'], ['ayer 18:03', 'Admin Ana', 'Llenó la ficha por teléfono', 'Ficha incompleta']]
+  return (
+    <>
+      <p className="text-[var(--text-mid)]">Cada vez que alguien del equipo consulta un teléfono o un dato sensible queda anotado. Protege a los clientes y al equipo.</p>
+      <Lista>{filas.map(([c, q, a, m]) => <li key={c + a} className="px-3 py-3"><div className="text-xs text-[var(--text-light)]">{c} · {q}</div><div className="font-bold">{a}</div><div className="text-sm text-[var(--text-mid)]">Motivo: {m}</div></li>)}</Lista>
+    </>
+  )
+}
+
+function VistaEstado() {
+  const filas: [string, string, boolean][] = [['Revisión de avisos (cada 5 min)', 'corrió hace 2 min', true], ['Avisos fallidos sin resolver', '0', true], ['Telegram', 'responde', true], ['Correo', 'responde', true], ['Videollamadas', 'responde', true], ['Limpieza diaria', 'corrió hoy 3:00 am', true]]
+  return (
+    <>
+      <p className="text-[var(--text-mid)]">Si algo automático deja de correr, aquí se ve en rojo y llega una alerta. Hoy esto solo se ve en los registros de la plataforma.</p>
+      <Lista>{filas.map(([t, v, b]) => <li key={t} className="flex items-center gap-3 px-3 py-3"><span className={`h-3 w-3 rounded-full ${b ? 'bg-[#1f9d6b]' : 'bg-[#D93A3A]'}`} /><span className="flex-1">{t}</span><span className="text-sm text-[var(--text-mid)]">{v}</span></li>)}</Lista>
+    </>
+  )
+}
+
 function Mas() {
   const [sub, setSub] = useUrlState('mas', '')
   const actual = HUB.find((h) => h.id === sub && h.sub)
@@ -698,6 +770,10 @@ function Mas() {
         {sub === 'avisos' && <VistaAvisos />}
         {sub === 'cobertura' && <VistaCobertura />}
         {sub === 'umbrales' && <VistaUmbrales />}
+        {sub === 'ajustes' && <VistaAjustes />}
+        {sub === 'cancelaciones' && <VistaCancelaciones />}
+        {sub === 'registro' && <VistaRegistro />}
+        {sub === 'estado' && <VistaEstado />}
       </section>
     )
   }

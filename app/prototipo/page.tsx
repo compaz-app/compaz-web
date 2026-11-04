@@ -2,8 +2,8 @@ import Link from 'next/link'
 
 const PANTALLAS = [
   { href: '/prototipo/ciclo', t: 'El ciclo encadenado: reglas y avisos', d: 'Las 8 reglas y, para cada paso: quién actúa, qué aviso recibe, con qué botón y a dónde llega. Es el mapa que evita que la gente se pierda.' },
-  { href: '/prototipo/recorrido', t: 'Empieza aquí: recorrido de un cliente nuevo', d: 'Los 16 pasos del flujo completo, en orden. En cada paso ves lo que ve el cliente, lo que recibe el compita y lo que ve el admin.' },
-  { href: '/prototipo/cliente/entrar', t: 'Entrar al portal (login)', d: 'Correo, enlace o código de 6 números, con cuenta atrás visible. Es lo primero que ve el cliente.' },
+  { href: '/prototipo/recorrido', t: 'Empieza aquí: recorrido de un cliente nuevo', d: 'Los 25 pasos del flujo completo, en orden. En cada paso ves lo que ve el cliente, lo que recibe el compita y lo que ve el admin.' },
+  { href: '/prototipo/cliente/entrar', t: 'Entrar al portal (login)', d: 'Correo, enlace o código de 8 números, con cuenta atrás visible. Es lo primero que ve el cliente.' },
   { href: '/prototipo/cliente', t: 'Portal del cliente', d: 'Una línea de 5 pasos y una sola tarjeta con lo que toca ahora. Cambia de estado con el selector de arriba.' },
   { href: '/prototipo/compita', t: 'Telegram del compita', d: 'Maqueta del chat: un mensaje, una acción, botones dentro del mensaje, y "¿Qué me toca?".' },
   { href: '/prototipo/admin', t: 'Admin tipo CRM', d: 'Bandeja "Requiere atención", Seguimiento por etapas, Personas con ficha y línea de tiempo.' },

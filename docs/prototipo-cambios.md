@@ -147,3 +147,9 @@ Los 5 datos que se recomienda empezar a registrar (visitas al perfil y clics en 
 ## Viabilidad con datos reales
 
 Ver `docs/crm-datos-pendientes.md`. Base obligatoria: registro de eventos y tabla de avisos con `notificar()`.
+
+## Actualización del prototipo con las decisiones de los puntos 1 a 6 (2026-11-04)
+Cliente: formulario nuevo `/prototipo/cliente/solicitar` (Hablar primero, Contratarlo directo, Mandado de $22; "¿Qué necesitan?", nota opcional de 300 caracteres con primer aviso de contacto, lugar privado, foto opcional, familia precargada, sin horarios); el perfil del compita ya no pide horarios y muestra "María P." hasta el pago; portal con estados nuevos (contratación directa, pago en revisión con "¿No recibiste el correo?", ficha obligatoria con consentimiento, agendar con horarios del compita y dirección por cita, esperando confirmación, llegada con foto, nadie abre con cuenta atrás de 30 min, visita interrumpida, videollamada posterior al pago, cancelación gratis a 24 h); precios a $22 y planes reales.
+Compita (Telegram): contratación directa, cita para confirmar, dirección 3 horas antes, llegada con foto, "nadie abre", "¿Todo bien?", videollamada; teclado fijo con Emergencia y "No me siento seguro" (con motivos y "no quiero volver con este cliente").
+Admin: tareas nuevas en la Bandeja (nadie abre, no me siento seguro, visita alargada, ficha incompleta, reporte de un compita, cancelación tardía, segunda detección de contacto, pago urgente) y en Más: Ajustes, Cancelaciones de compitas, Registro de actividad y Estado del sistema.
+Ciclo y recorrido: 25 pasos alineados (antes 16). Código de acceso de 8 dígitos.
