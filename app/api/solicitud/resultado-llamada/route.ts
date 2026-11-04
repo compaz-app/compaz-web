@@ -8,6 +8,8 @@ import { sendTelegramMessage, avisarAdmin } from '@/lib/telegram'
 import { sendEmail, SITE_URL } from '@/lib/email'
 import { esc } from '@/lib/html'
 import { rolValido } from '@/lib/links'
+import { registrarAccion } from '@/lib/avisos'
+import { registrarEvento } from '@/lib/eventos'
 import { pagina, puertaConfirmacion } from '@/lib/confirm'
 
 type Resultado = 'contratar' | 'reagendar' | 'no_contratar' | 'bien'
@@ -20,6 +22,15 @@ function leer(req: NextRequest) {
   if (!token || !resultado || !['contratar', 'reagendar', 'no_contratar', 'bien'].includes(resultado)) return null
   const firmado = rolValido(token, quienRaw, sp.get('s'))
   return { token, resultado, quien: (quienRaw === 'compita' ? 'compita' : 'cliente') as 'cliente' | 'compita', firmado }
+}
+
+/** El cliente decidió (paso 10): se anota la acción para que no le lleguen recordatorios, y queda el evento. Nunca lanzan. */
+async function anotarDecision(solicitud: { id: string; cliente_id: string }, resultado: Resultado) {
+  await registrarAccion({ entidad: 'solicitud', entidadId: solicitud.id, paso: 10 })
+  await registrarEvento({
+    entidad: 'solicitud', entidadId: solicitud.id, tipo: 'decision_contratar',
+    actor: `cliente:${solicitud.cliente_id}`, datos: { resultado },
+  })
 }
 
 /** ¿Esta acción cambia estado y por tanto requiere firma + POST? */
@@ -126,11 +137,13 @@ async function ejecutar(req: NextRequest, p: NonNullable<ReturnType<typeof leer>
       }
       return pagina('Reagendado iniciado', 'Escríbenos en Telegram los nuevos horarios y se los haremos llegar al cliente.')
     }
+    await anotarDecision(solicitud, 'reagendar')
     return NextResponse.redirect(`${origin}/compitas?compita=${encodeURIComponent(solicitud.compita_id)}&reagendar=${encodeURIComponent(solicitud.id)}`, 303)
   }
 
   // ── Cliente contrata → paywall ────────────────────────────────────────────
   if (resultado === 'contratar') {
+    await anotarDecision(solicitud, 'contratar')
     return NextResponse.redirect(`${origin}/pago?solicitud=${encodeURIComponent(solicitud.id)}`, 303)
   }
 
@@ -146,6 +159,7 @@ async function ejecutar(req: NextRequest, p: NonNullable<ReturnType<typeof leer>
     return pagina('Error', 'No pudimos registrar tu decisión. Intenta de nuevo.', 500)
   }
   if (!cambiada) return NextResponse.redirect(`${origin}/compitas`, 303)
+  await anotarDecision(solicitud, 'no_contratar')
 
   if (compita?.telegram_chat_id) {
     try {
