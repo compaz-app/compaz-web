@@ -5,7 +5,7 @@ import { useUrlState } from '../useUrlState'
 type Etapa = 'Solicitud' | 'Entrevista' | 'Decisión' | 'Pago' | 'Activo'
 const ETAPAS: Etapa[] = ['Solicitud', 'Entrevista', 'Decisión', 'Pago', 'Activo']
 
-type EstadoCompita = 'Disponible' | 'Con cupo' | 'En pausa' | 'Nueva'
+type EstadoCompita = 'Disponible' | 'Con cupo' | 'En pausa' | 'Nuevo'
 type StatsCompita = { estado: EstadoCompita; activos: number; visitas: number; rating: number; respuesta: number; inactivoH: number }
 
 type Persona = { id: string; nombre: string; tipo: 'Cliente' | 'Compita'; zona: string; etapa?: Etapa; horas?: number; compita?: string; stats?: StatsCompita; nota: string; linea: { cuando: string; texto: string }[] }
@@ -30,12 +30,12 @@ const STATS_BASE: Record<string, StatsCompita> = {
 const NOM = ['Carmen', 'Yoselin', 'Gladys', 'Mariela', 'Yaneth', 'Beatriz', 'Alexandra', 'Nelly', 'Irene', 'Milagros', 'Josefina', 'Dayana', 'Karina', 'Omaira', 'Zuleima', 'Flor', 'Aracelis', 'Thais', 'Noris', 'Lisbeth']
 const APE = ['Pérez', 'Gómez', 'Rojas', 'Mendoza', 'Silva', 'Castro', 'Ortega', 'Navas', 'Paredes', 'Quintero', 'Salas', 'Vargas', 'Ríos', 'Medina', 'Lara']
 const ZONAS = ['Chacao', 'Altamira', 'Los Palos Grandes', 'El Rosal', 'La Castellana', 'Sabana Grande', 'Los Chaguaramos', 'El Paraíso']
-const ESTADOS: EstadoCompita[] = ['Disponible', 'Con cupo', 'Con cupo', 'Disponible', 'En pausa', 'Nueva']
+const ESTADOS: EstadoCompita[] = ['Disponible', 'Con cupo', 'Con cupo', 'Disponible', 'En pausa', 'Nuevo']
 let semilla = 7
 const azar = () => { semilla = (semilla * 16807) % 2147483647; return semilla / 2147483647 }
 const GENERADAS: Persona[] = Array.from({ length: 97 }, (_, i) => {
   const estado = ESTADOS[Math.floor(azar() * ESTADOS.length)]
-  const nueva = estado === 'Nueva'
+  const nueva = estado === 'Nuevo'
   const stats: StatsCompita = {
     estado,
     activos: nueva || estado === 'En pausa' ? 0 : Math.floor(azar() * 4),
@@ -68,12 +68,12 @@ function urgenciaDe(p: Persona): Urgencia {
 
 type Tarea = { id: string; tipo: string; icono: string; clienteId: string; compitaId: string; que: string; hace: string; boton: string; resuelta: string }
 const TAREAS: Tarea[] = [
-  { id: 't0', tipo: 'Emergencia', icono: '🚨', clienteId: 'p4', compitaId: 'p6', que: 'La compita activó el botón de emergencia durante una visita en curso', hace: 'hace 2 min', boton: 'Marcar atendida', resuelta: 'Atendida ✓' },
+  { id: 't0', tipo: 'Emergencia', icono: '🚨', clienteId: 'p4', compitaId: 'p6', que: 'El compita activó el botón de emergencia durante una visita en curso', hace: 'hace 2 min', boton: 'Marcar atendida', resuelta: 'Atendida ✓' },
   { id: 't1', tipo: 'Pago', icono: '💵', clienteId: 'p1', compitaId: 'p6', que: 'Dice que ya pagó $60. Referencia COMPAZ-4F7K2Q', hace: 'hace 12 min', boton: 'Confirmar pago', resuelta: 'Pago confirmado ✓' },
   { id: 't2', tipo: 'Decisión', icono: '⏳', clienteId: 'p2', compitaId: 'p7', que: 'La entrevista terminó y el cliente no ha decidido si contrata', hace: 'hace 3 h', boton: 'Recordar al cliente', resuelta: 'Recordatorio enviado ✓' },
-  { id: 't3', tipo: 'Aviso fallido', icono: '⚠️', clienteId: 'p5', compitaId: 'p7', que: 'Telegram no entregó a la compita el aviso de nueva solicitud', hace: 'hace 25 min', boton: 'Reintentar aviso', resuelta: 'Reintento enviado ✓' },
+  { id: 't3', tipo: 'Aviso fallido', icono: '⚠️', clienteId: 'p5', compitaId: 'p7', que: 'Telegram no entregó al compita el aviso de nueva solicitud', hace: 'hace 25 min', boton: 'Reintentar aviso', resuelta: 'Reintento enviado ✓' },
   { id: 't5', tipo: 'Contacto bloqueado', icono: '🔒', clienteId: 'p2', compitaId: 'p7', que: 'Un mensaje del chat intentó compartir un teléfono o correo y fue censurado', hace: 'hace 40 min', boton: 'Marcar revisada', resuelta: 'Revisada ✓' },
-  { id: 't4', tipo: 'Sin respuesta', icono: '🔔', clienteId: 'p3', compitaId: 'p8', que: 'El cliente envió una solicitud y la compita no ha respondido', hace: 'hace 5 h', boton: 'Insistir a la compita', resuelta: 'Aviso reenviado ✓' },
+  { id: 't4', tipo: 'Sin respuesta', icono: '🔔', clienteId: 'p3', compitaId: 'p8', que: 'El cliente envió una solicitud y el compita no ha respondido', hace: 'hace 5 h', boton: 'Insistir al compita', resuelta: 'Aviso reenviado ✓' },
 ]
 
 function Ficha({ p, onClose }: { p: Persona; onClose: () => void }) {
@@ -189,17 +189,17 @@ function Bandeja({ abrir }: { abrir: (id: string) => void }) {
 }
 
 function Seguimiento({ abrir }: { abrir: (id: string) => void }) {
-  const [etapa, setEtapa] = useUrlState('etapa', 'Todas')
+  const [etapa, setEtapa] = useUrlState('etapa', 'Todos')
   const clientes = PERSONAS.filter((p) => p.etapa)
-  const lista = clientes.filter((p) => etapa === 'Todas' || p.etapa === etapa)
+  const lista = clientes.filter((p) => etapa === 'Todos' || p.etapa === etapa)
   return (
     <section>
       <h1 className="text-2xl font-extrabold">Seguimiento</h1>
       <p className="text-[var(--text-mid)]">Dónde está cada cliente. Elige una etapa para ver su lista.</p>
 
       <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-6">
-        {['Todas', ...ETAPAS].map((et) => {
-          const n = et === 'Todas' ? clientes.length : clientes.filter((p) => p.etapa === et).length
+        {['Todos', ...ETAPAS].map((et) => {
+          const n = et === 'Todos' ? clientes.length : clientes.filter((p) => p.etapa === et).length
           const activa = etapa === et
           return (
             <button key={et} onClick={() => setEtapa(et)} aria-pressed={activa} className={`min-h-16 rounded-2xl border-2 px-2 py-2 text-center ${activa ? 'border-[var(--purple)] bg-[var(--purple)] text-white' : 'border-[var(--border-muted)] bg-white'}`}>
@@ -250,15 +250,15 @@ function Seguimiento({ abrir }: { abrir: (id: string) => void }) {
 }
 
 const VISTAS: { id: string; t: string; f: (s: StatsCompita) => boolean }[] = [
-  { id: 'todas', t: 'Todas', f: () => true },
+  { id: 'todas', t: 'Todos', f: () => true },
   { id: 'disponibles', t: 'Disponibles', f: (s) => s.estado === 'Disponible' },
   { id: 'cupo', t: 'Con cupo', f: (s) => s.estado === 'Con cupo' },
-  { id: 'sinrespuesta', t: 'Sin respuesta 24h', f: (s) => s.estado !== 'En pausa' && s.estado !== 'Nueva' && s.inactivoH >= 24 },
+  { id: 'sinrespuesta', t: 'Sin respuesta 24h', f: (s) => s.estado !== 'En pausa' && s.estado !== 'Nuevo' && s.inactivoH >= 24 },
   { id: 'pausa', t: 'En pausa', f: (s) => s.estado === 'En pausa' },
-  { id: 'nuevas', t: 'Nuevas sin verificar', f: (s) => s.estado === 'Nueva' },
+  { id: 'nuevas', t: 'Nuevos sin verificar', f: (s) => s.estado === 'Nuevo' },
 ]
 function urgCompita(s: StatsCompita): Urgencia {
-  if (s.estado === 'Nueva' || s.estado === 'En pausa') return 'verde'
+  if (s.estado === 'Nuevo' || s.estado === 'En pausa') return 'verde'
   if (s.respuesta < 50 || (s.rating > 0 && s.rating < 4) || s.inactivoH > 72) return 'rojo'
   if (s.respuesta < 75 || s.inactivoH > 24) return 'amarillo'
   return 'verde'
@@ -310,7 +310,7 @@ function Personas({ abrir }: { abrir: (id: string) => void }) {
   return (
     <section>
       <h1 className="text-2xl font-extrabold">Compitas</h1>
-      <p className="text-[var(--text-mid)]">{compitas.length} en total. Por defecto, primero las que necesitan atención.</p>
+      <p className="text-[var(--text-mid)]">{compitas.length} en total. Por defecto, primero los que necesitan atención.</p>
 
       <div className="mt-3 flex flex-wrap gap-2">
         {VISTAS.map((v) => {
@@ -492,7 +492,7 @@ const MADUREZ: Record<Madurez, { t: string; c: string }> = {
   base: { t: 'Requiere base nueva', c: 'bg-[#F5B800]/25 text-[#7a5b00]' },
 }
 const HUB: { id: string; i: string; t: string; d: string; m: Madurez; sub: boolean }[] = [
-  { id: 'resenas', i: '⭐', t: 'Reseñas por aprobar', d: 'Aprueba u oculta lo que el cliente escribe antes de que se vea en el perfil de la compita.', m: 'existe', sub: true },
+  { id: 'resenas', i: '⭐', t: 'Reseñas por aprobar', d: 'Aprueba u oculta lo que el cliente escribe antes de que se vea en el perfil del compita.', m: 'existe', sub: true },
   { id: 'postulaciones', i: '📥', t: 'Postulaciones y origen', d: 'Quién se postuló, desde qué página o campaña llegó y si calificó.', m: 'existe', sub: true },
   { id: 'pagos', i: '💵', t: 'Pagos', d: 'Pagos registrados, con la opción de anular uno si hubo un error.', m: 'existe', sub: true },
   { id: 'avisos', i: '📨', t: 'Avisos enviados', d: 'Qué se le mandó a cada persona, por qué canal y si llegó. Aquí se reintentan los fallidos.', m: 'base', sub: true },
@@ -598,7 +598,7 @@ function VistaPagos() {
 
 function VistaAvisos() {
   const datos = [
-    { id: 'a1', cuando: 'hoy 10:05', canal: 'Telegram', para: 'Rosa Linares', rol: 'Compita', tipo: 'Nueva solicitud', ok: false, motivo: 'La compita bloqueó el bot' },
+    { id: 'a1', cuando: 'hoy 10:05', canal: 'Telegram', para: 'Rosa Linares', rol: 'Compita', tipo: 'Nueva solicitud', ok: false, motivo: 'El compita bloqueó el bot' },
     { id: 'a2', cuando: 'hoy 09:41', canal: 'Correo', para: 'Carolina Pérez', rol: 'Cliente', tipo: 'Pago recibido', ok: true, motivo: '' },
     { id: 'a3', cuando: 'hoy 09:30', canal: 'Telegram', para: 'María Fuentes', rol: 'Compita', tipo: 'Entrevista en 1 hora', ok: true, motivo: '' },
     { id: 'a4', cuando: 'hoy 08:50', canal: 'Correo', para: 'Luis Andrade', rol: 'Cliente', tipo: '¿Contratas a Rosa?', ok: false, motivo: 'El correo rebotó (buzón lleno)' },
@@ -644,12 +644,12 @@ function VistaCobertura() {
   }).sort((a, b) => Number(b.falta) - Number(a.falta) || b.dem - a.dem)
   return (
     <>
-      <p className="text-[var(--text-mid)]">Compitas activas por zona contra solicitudes del mes. En rojo, donde la demanda duplica a la oferta: ahí conviene reclutar.</p>
+      <p className="text-[var(--text-mid)]">Compitas activos por zona contra solicitudes del mes. En rojo, donde la demanda duplica a la oferta: ahí conviene reclutar.</p>
       <Lista>
         {filas.map((f) => (
           <li key={f.z} className="px-3 py-2">
             <div className="flex items-center justify-between"><b>{f.z}</b>{f.falta && <span className="rounded-full bg-[#D93A3A] px-2 py-0.5 text-xs font-bold text-white">Faltan compitas</span>}</div>
-            <div className="mt-1 text-sm text-[var(--text-mid)]">{f.comp} compitas activas · {f.dem} solicitudes este mes</div>
+            <div className="mt-1 text-sm text-[var(--text-mid)]">{f.comp} compitas activos · {f.dem} solicitudes este mes</div>
             <div className="mt-1 h-2 overflow-hidden rounded-full bg-[var(--warm-gray)]"><div className={`h-full ${f.falta ? 'bg-[#D93A3A]' : 'bg-[#1f9d6b]'}`} style={{ width: `${Math.min(100, (f.dem / 14) * 100)}%` }} /></div>
           </li>
         ))}

@@ -5,9 +5,9 @@ Documento de trabajo del rediseño (prototipo en `/prototipo`, solo maqueta con 
 ## Los 5 datos prioritarios a registrar (recomendación del mentor, 2026-11-03)
 
 1. Visitas al perfil y clics en "solicitar" de cada compita. Muestran si el problema es el perfil o la oferta. Solo cuentan desde que se activan.
-2. Motivo cuando alguien dice que no: la compita al rechazar y el cliente al no contratar tras la entrevista. Una pregunta de un toque. Es la información más valiosa para mejorar el servicio y hoy se pierde.
+2. Motivo cuando alguien dice que no: el compita al rechazar y el cliente al no contratar tras la entrevista. Una pregunta de un toque. Es la información más valiosa para mejorar el servicio y hoy se pierde.
 3. Origen del cliente (de qué anuncio o campaña llegó). Con los anuncios en marcha, permite saber cuáles traen clientes que sí contratan.
-4. Entrega de avisos: si el bot de la compita está bloqueado o falla. Una compita "sin respuesta" a veces es una compita a la que nunca le llegó el aviso.
+4. Entrega de avisos: si el bot del compita está bloqueado o falla. Un compita "sin respuesta" a veces es un compita a la que nunca le llegó el aviso.
 5. Oferta contra demanda por zona: dónde faltan compitas. Guía el reclutamiento.
 
 Criterio: cada dato debe responder a una decisión concreta (a quién llamar, a quién retirar, dónde reclutar, qué anuncio seguir). Si no sirve a una decisión, no se registra todavía.
@@ -19,7 +19,7 @@ Criterio: cada dato debe responder a una decisión concreta (a quién llamar, a 
 3. Etapa explícita de cada cliente y desde cuándo está en ella (hoy se deduce de varias columnas).
 4. Notas internas (tabla pequeña; `admin_flags` son alertas, no notas).
 
-## Datos de la compita
+## Datos del compita
 
 Existe ya:
 1. Estado, verificada, visitas realizadas, calificación y total de reseñas, zona, horarios disponibles.
@@ -40,7 +40,7 @@ Nuevo, empezar a registrar ya (sin historial hacia atrás):
 4. Entrega de avisos de Telegram (bot bloqueado, chat inválido).
 5. Motivo cuando rechaza una solicitud.
 
-Uso: vistas de rendimiento (mejores, menos activas, no responden, en riesgo), y mensaje de mejora de perfil cuando hay muchas visitas pero pocas solicitudes.
+Uso: vistas de rendimiento (mejores, menos activos, no responden, en riesgo), y mensaje de mejora de perfil cuando hay muchas visitas pero pocas solicitudes.
 
 ## Datos del cliente
 
@@ -61,7 +61,7 @@ Nuevo:
 4. Porcentaje de avisos fallidos por canal.
 5. Ingreso por mes y por plan.
 
-## Acciones sobre la compita (dependen de avisos y notas)
+## Acciones sobre el compita (dependen de avisos y notas)
 
 1. Escribirle por Telegram con plantilla (mejorar perfil, responder más rápido).
 2. Pausar o retirar del sistema.

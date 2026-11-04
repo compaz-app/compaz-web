@@ -24,7 +24,7 @@ Problema observado en las pruebas: entre correos, Telegram y portal la gente se 
 
 1. Tiempo de respuesta al lead (postulación nueva): meta de contactar en menos de 2 horas.
 2. Resumen diario al admin en lugar de ráfagas de avisos.
-3. Horas de silencio y zona horaria de cada persona (el cliente puede estar en EE.UU. y la compita en Venezuela).
+3. Horas de silencio y zona horaria de cada persona (el cliente puede estar en EE.UU. y el compita en Venezuela).
 4. Plantillas de aviso en un solo lugar y con versión, para no tener 25 textos sueltos ni copy inventado.
 5. Embudo con conversión y tiempo por etapa.
 6. Salud del cliente y riesgo de abandono (renovación a tiempo, calificaciones, avisos sin respuesta).
@@ -77,11 +77,17 @@ Datos que se registran: evento por cada toque de ayuda con el paso, el número d
 
 Pendiente de definir: el canal humano (por dónde escribe la persona y quién responde). Una bienvenida de 3 pantallas en el primer acceso queda para después, y un asistente con IA para el final (riesgo de errores, costo y de compartir contactos).
 
+## Decisiones del 2026-11-03
+
+1. Visita: el cliente recibe reportes con fotos y texto durante y después de la visita; no hay videollamada en las visitas. La sala de Daily queda solo para las entrevistas.
+2. Ayuda: el canal humano aparece después de 3 o 4 intentos en el mismo paso, no de inmediato. La emergencia mantiene su botón directo.
+3. Entrada: por invitación de los administradores, para clientes y compitas, en esta fase inicial.
+
 ## Cómo entra la gente hoy (confirmado por el usuario, 2026-11-03)
 
-Por ahora los clientes y las compitas entran solo por invitación del equipo (`invitar-cliente`, `generar-invite`, `registrar-compita`). Consecuencias para el diseño:
+Por ahora los clientes y los compitas entran solo por invitación del equipo (`invitar-cliente`, `generar-invite`, `registrar-compita`). Consecuencias para el diseño:
 1. El primer paso del cliente es una tarea humana: la postulación debe aparecer en la Bandeja con semáforo de tiempo de respuesta.
-2. Falta diseñar el ciclo paralelo de la compita (postulación, evaluación, invitación, activación en Telegram, primera visita). Está pendiente y debe seguir las mismas 8 reglas.
+2. Falta diseñar el ciclo paralelo del compita (postulación, evaluación, invitación, activación en Telegram, primera visita). Está pendiente y debe seguir las mismas 8 reglas.
 3. Más adelante, cuando se abra al público, el registro propio sustituye a la invitación manual sin cambiar el resto del ciclo.
 
 ## Estado

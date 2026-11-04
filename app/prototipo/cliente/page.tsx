@@ -17,18 +17,19 @@ type Estado = {
   href?: string
   secHref?: string
   extra?: 'chat' | 'reporte'
+  sinBoton?: boolean
 }
 
 const ESTADOS: Estado[] = [
-  { id: 'enviada', etiqueta: '1. Solicitud enviada', paso: 0, titulo: 'Esperando a María', texto: 'Le avisamos que quieres conocerla. Te escribimos apenas responda, normalmente en pocas horas.', boton: 'Ver otras compitas', href: '/prototipo/cliente/elegir', tono: 'espera' },
+  { id: 'enviada', etiqueta: '1. Solicitud enviada', paso: 0, titulo: 'Esperando a María', texto: 'Le avisamos que quieres conocerla. Te escribimos apenas responda, normalmente en pocas horas.', boton: 'Ver otros compitas', href: '/prototipo/cliente/elegir', tono: 'espera' },
   { id: 'aceptada', etiqueta: '2. Aceptó, elegir horario', paso: 1, titulo: 'María aceptó. Elige tu horario', texto: 'La entrevista dura 20 minutos, por video o solo con voz. Escoge el momento que te quede mejor.', boton: 'Elegir horario' },
   { id: 'programada', etiqueta: '3. Entrevista programada', paso: 1, titulo: 'Entrevista mañana a las 4:00 pm', texto: 'Hora de Miami. Te mandamos un recordatorio una hora antes, con el botón para entrar.', boton: 'Cambiar horario', tono: 'espera' },
   { id: 'ahora', etiqueta: '4. Entrevista ahora', paso: 1, titulo: 'Tu entrevista con María es ahora', texto: 'Ya puedes entrar. Si se corta la conexión, vuelve a pulsar el mismo botón y sigues donde estabas.', boton: 'Entrar a la entrevista' },
-  { id: 'decidir', etiqueta: '5. Decidir', paso: 2, titulo: '¿Contratas a María?', texto: 'Si dices que sí, pasamos al pago. Si dices que no, te mostramos otras compitas sin costo.', boton: 'Sí, quiero contratarla', secundario: 'No, ver otras', secHref: '/prototipo/cliente/elegir' },
+  { id: 'decidir', etiqueta: '5. Decidir', paso: 2, titulo: '¿Contratas a María?', texto: 'Si dices que sí, pasamos al pago. Si dices que no, te mostramos otros compitas sin costo.', boton: 'Sí, quiero contratarla', secundario: 'No, ver otras', secHref: '/prototipo/cliente/elegir' },
   { id: 'pagar', etiqueta: '6. Pagar', paso: 3, titulo: 'Un último paso: el pago', texto: 'Envía el pago y escribe esta referencia. Cuando lo recibamos, confirmamos tus visitas.', boton: 'Ya hice el pago' },
   { id: 'activo', etiqueta: '7. Visitas activas', paso: 4, titulo: 'Próxima visita: jueves 10:00 am', texto: 'María visitará a tu mamá en Chacao. Te avisamos cuando llegue y cuando termine.', boton: 'Ver mis visitas', tono: 'espera' },
-  { id: 'llego', etiqueta: '8. Visita: la compita llegó', paso: 4, titulo: '¡María llegó a casa de tu mamá!', texto: 'Confirma que puede empezar la visita. Si no respondes, se confirma sola en 5 minutos.', boton: 'Confirmar y empezar' },
-  { id: 'curso', etiqueta: '9. Visita en curso', paso: 4, titulo: 'Visita en curso', texto: 'Entra a la videollamada para ver y hablar con tu mamá. Abajo puedes escribirle a María.', boton: 'Entrar a la videollamada', extra: 'chat' },
+  { id: 'llego', etiqueta: '8. Visita: el compita llegó', paso: 4, titulo: '¡María llegó a casa de tu mamá!', texto: 'Confirma que puede empezar la visita. Si no respondes, se confirma sola en 5 minutos.', boton: 'Confirmar y empezar' },
+  { id: 'curso', etiqueta: '9. Visita en curso', paso: 4, titulo: 'María está con tu mamá', texto: 'Aquí verás las fotos y notas que María envíe durante la visita. También puedes escribirle.', boton: '', sinBoton: true, extra: 'chat' },
   { id: 'fin', etiqueta: '10. Visita terminada', paso: 4, titulo: 'La visita terminó. ¿Cómo te fue?', texto: 'Tu calificación ayuda a otras familias y a mejorar el servicio. Aquí tienes el reporte de María.', boton: 'Enviar calificación', extra: 'reporte' },
 ]
 
@@ -40,6 +41,28 @@ function Avatar({ nombre }: { nombre: string }) {
   )
 }
 
+
+function Novedades() {
+  const items = [
+    { h: '10:12', t: 'Llegué. Tu mamá me recibió con café y está de buen ánimo.', foto: false },
+    { h: '10:40', t: 'Estamos viendo sus fotos del jardín.', foto: true },
+    { h: '11:05', t: 'Desayunó bien y tomó su medicina.', foto: false },
+  ]
+  return (
+    <section className="mt-5 rounded-3xl border-2 border-[#1f9d6b] bg-white p-4">
+      <h2 className="text-lg font-extrabold">Novedades de la visita</h2>
+      <ul className="mt-3 grid gap-3">
+        {items.map((n) => (
+          <li key={n.h} className="rounded-2xl bg-[var(--warm-gray)] p-3">
+            <div className="text-xs font-bold text-[var(--text-light)]">{n.h}</div>
+            {n.foto && <div className="mt-2 flex h-36 items-center justify-center rounded-xl bg-[var(--border-muted)] text-[var(--text-mid)]">📷 Foto</div>}
+            <p className="mt-1 text-base">{n.t}</p>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
 
 function ChatMock() {
   const [msgs, setMsgs] = useState([
@@ -80,6 +103,7 @@ function Reporte() {
     <>
       <section className="mt-5 rounded-3xl border border-[var(--border-muted)] bg-white p-4">
         <h2 className="text-lg font-extrabold">Reporte de bienestar</h2>
+        <div className="mt-3 grid grid-cols-3 gap-2">{[1, 2, 3].map((n) => <div key={n} className="flex h-20 items-center justify-center rounded-xl bg-[var(--border-muted)] text-sm text-[var(--text-mid)]">📷 Foto {n}</div>)}</div>
         <div className="mt-3 grid gap-2">
           {filas.map(([n, v]) => (
             <div key={n} className="flex items-center gap-3 text-base"><span className="w-32">{n}</span><div className="h-3 flex-1 overflow-hidden rounded-full bg-[var(--warm-gray)]"><div className="h-full bg-[var(--orange)]" style={{ width: `${(v / 5) * 100}%` }} /></div><b>{v}/5</b></div>
@@ -242,7 +266,7 @@ function Inner() {
           </div>
         )}
 
-        {respuesta ? (
+        {e.sinBoton ? null : respuesta ? (
           <div className="mt-5 rounded-2xl bg-[var(--warm-gray)] p-4 text-lg font-bold">✓ {respuesta}</div>
         ) : (
           <div className="mt-5 grid gap-3">
@@ -257,7 +281,7 @@ function Inner() {
               <Link href={e.secHref} className="flex min-h-14 items-center justify-center rounded-2xl border-2 border-[var(--border-muted)] bg-white px-5 text-lg font-bold text-[var(--text-mid)]">{e.secundario}</Link>
             )}
             {e.secundario && !e.secHref && (
-              <button onClick={() => setRespuesta('Entendido, te mostramos otras compitas sin costo.')} className="min-h-14 rounded-2xl border-2 border-[var(--border-muted)] bg-white px-5 text-lg font-bold text-[var(--text-mid)]">
+              <button onClick={() => setRespuesta('Entendido, te mostramos otros compitas sin costo.')} className="min-h-14 rounded-2xl border-2 border-[var(--border-muted)] bg-white px-5 text-lg font-bold text-[var(--text-mid)]">
                 {e.secundario}
               </button>
             )}
@@ -265,7 +289,7 @@ function Inner() {
         )}
       </section>
 
-      {e.extra === 'chat' && <ChatMock />}
+      {e.extra === 'chat' && <><Novedades /><ChatMock /></>}
       {e.extra === 'reporte' && <Reporte />}
       </>)}
 

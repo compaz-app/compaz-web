@@ -5,13 +5,13 @@ import { useParam } from '../useUrlState'
 type Boton = { id: string; texto: string; resultado: string }
 type Msg = { id: number; texto: string; botones?: Boton[]; resuelto?: string; hora: string }
 
-// Guion de avisos que Compaz le manda a la compita, uno por "evento".
+// Guion de avisos que Compaz le manda al compita, uno por "evento".
 const GUION: Omit<Msg, 'id' | 'resuelto'>[] = [
   { hora: '9:02', texto: '🆕 Nueva solicitud\nAna quiere conocerte. Su mamá vive en Chacao.\nTienes hasta las 6:00 pm para responder.', botones: [{ id: 'a', texto: '✅ Aceptar', resultado: 'Aceptaste ✓ Le avisamos a Ana.' }, { id: 'r', texto: 'No puedo', resultado: 'Rechazaste. No pasa nada.' }] },
   { hora: '9:40', texto: '📅 Ana eligió la entrevista\nMañana a las 4:00 pm (hora de Caracas 3:00 pm). Dura 20 minutos.', botones: [{ id: 'ok', texto: 'Confirmo que puedo', resultado: 'Confirmado ✓ Te recordamos 1 hora antes.' }, { id: 'no', texto: 'Necesito otra hora', resultado: 'Le pedimos a Ana otro horario.' }] },
   { hora: '2:00', texto: '⏰ Tu entrevista es en 1 hora\nCuando sea la hora, toca el botón. Si se corta, vuelve a tocarlo.', botones: [{ id: 'e', texto: '🎥 Entrar a la entrevista', resultado: 'Abriendo la sala…' }] },
   { hora: '4:25', texto: '🎉 Ana te contrató\nTu primera visita es el jueves a las 10:00 am en Chacao.' },
-  { hora: '10:05', texto: '🏠 Visita de hoy, 10:00 am\nCuando llegues, toca Iniciar visita. El cliente la confirma en su portal.', botones: [{ id: 'l', texto: '▶️ Iniciar visita', resultado: 'Visita iniciada ✓ Esperando la confirmación del cliente.' }, { id: 'em', texto: '🚨 Emergencia', resultado: '🚨 Alerta enviada. El equipo de Compaz fue notificado y te contactará de inmediato. Si hay peligro inmediato, llama al 911.' }] },
+  { hora: '10:05', texto: '🏠 Visita de hoy, 10:00 am\nCuando llegues, toca Iniciar visita. Durante la visita manda fotos y notas aquí mismo: la familia las ve en su portal.', botones: [{ id: 'l', texto: '▶️ Iniciar visita', resultado: 'Visita iniciada ✓ Esperando la confirmación del cliente.' }, { id: 'em', texto: '🚨 Emergencia', resultado: '🚨 Alerta enviada. El equipo de Compaz fue notificado y te contactará de inmediato. Si hay peligro inmediato, llama al 911.' }] },
 ]
 
 const hora = () => '·'

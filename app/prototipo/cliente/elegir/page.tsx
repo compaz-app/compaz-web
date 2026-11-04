@@ -63,7 +63,7 @@ function Inner() {
 
       <div className="mt-4 grid grid-cols-2 gap-2">
         <select value={zona} onChange={(e) => setZona(e.target.value)} aria-label="Zona" className="min-h-12 rounded-xl border border-[var(--border-muted)] bg-white px-2 text-base">{ZONAS.map((z) => <option key={z}>{z}</option>)}</select>
-        <select value={orden} onChange={(e) => setOrden(e.target.value)} aria-label="Ordenar" className="min-h-12 rounded-xl border border-[var(--border-muted)] bg-white px-2 text-base"><option value="rating">Mejor calificadas</option><option value="visitas">Con más visitas</option></select>
+        <select value={orden} onChange={(e) => setOrden(e.target.value)} aria-label="Ordenar" className="min-h-12 rounded-xl border border-[var(--border-muted)] bg-white px-2 text-base"><option value="rating">Mejor calificados</option><option value="visitas">Con más visitas</option></select>
       </div>
       <button onClick={() => setSoloVideo(soloVideo === '1' ? '0' : '1')} aria-pressed={soloVideo === '1'} className={`mt-2 min-h-10 rounded-full px-4 text-sm font-bold ${soloVideo === '1' ? 'bg-[var(--purple)] text-white' : 'border border-[var(--border-muted)] bg-white'}`}>🎥 Con video de presentación</button>
 

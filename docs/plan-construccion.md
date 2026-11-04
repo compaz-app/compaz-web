@@ -14,7 +14,12 @@ Aclaración (2026-11-03): todo lo que hay hoy en el sistema, clientes y compitas
     3. La tabla `avisos` NO existe: el nombre está libre para 1.1.
     4. Existen también `solicitudes` (10), `solicitudes_pago` (3), `pagos_plan` (6), `admin_flags` (12), `reportes_visita` (3), `telegram_estados` (60), `compitas` (23), `usuarios` (8), `visitas` (6).
     5. HALLAZGO a verificar: la tabla `resenas` da "permission denied" (código 42501) incluso con la clave de servicio. `api/admin/resenas` usa esa clave, así que aprobar reseñas podría estar fallando hoy. Falta confirmarlo en la app y, si es así, arreglarlo con un GRANT aditivo.
-0.4 Decisiones abiertas: canal humano para pedir ayuda; video o solo reportes durante la visita; cómo pasa un postulante a cliente (hoy invitación manual).
+0.4 DECIDIDO (2026-11-03):
+    1. Durante la visita el cliente recibe reportes con fotos y texto, sin videollamada. Notas de voz: se podrían pedir al compita por Telegram, pero no entran en la primera versión (ver riesgos abajo). Las entrevistas siguen usando Daily.
+    2. Canal humano: último recurso. Aparece solo después de 3 o 4 intentos de "no entiendo" en el mismo paso, nunca de inmediato, para que no se abuse. La única excepción es la emergencia, que ya tiene su propio botón.
+    3. En esta fase inicial los administradores invitan a clientes y compitas. Más adelante será automático (registro propio).
+    Pendiente de definir: por dónde se contacta al humano y quién responde.
+    Riesgos de las notas de voz: Telegram las entrega en formato ogg/opus, que no suena en todos los navegadores de iPhone sin convertirlo; y un audio puede decir un teléfono en voz alta, algo que hoy el filtro de contactos del chat no detecta (choca con el requisito de que cliente y compita no se contacten fuera).
 0.5 Diseñar el ciclo del compita con la escalera de Telegram, correo y Bandeja.
 
 ## Fase 1. Base de avisos y eventos (invisible, lo más importante)
