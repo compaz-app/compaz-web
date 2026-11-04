@@ -1,5 +1,6 @@
 // Pagos registrados (plan mensual o visita extra). Cada pago crea un paquete de visitas que vence a los 60 días.
 import { createAdminSupabase } from '@/lib/supabase-server'
+import { registrarEvento } from '@/lib/eventos'
 import {
   PLANES, PLANES_IDS, METODOS_PAGO, VIGENCIA_CREDITOS_DIAS, PRECIO_HORA_EXTRA_USD, HORAS_MINIMAS_EXTRA,
   type PlanId, type MetodoPago,
@@ -74,6 +75,12 @@ export async function registrarPago(i: PagoInput): Promise<{ ok: true; pago: Pag
   if (i.tipo === 'plan') {
     await supabase.from('usuarios').update({ plan_contratado: plan, plan_inicio: ahora.toISOString() }).eq('id', i.usuarioId)
   }
+  // Queda el evento (no lanza). Si lo registró una persona del equipo, su correo es el actor.
+  await registrarEvento({
+    entidad: 'pago', entidadId: (data as PagoRow).id, tipo: 'pago_confirmado',
+    actor: i.registradoPor.includes('@') ? `admin:${i.registradoPor}` : 'sistema',
+    datos: { usuario_id: i.usuarioId, tipo: i.tipo, plan, monto_usd: monto, metodo: i.metodo },
+  })
   return { ok: true, pago: data as PagoRow }
 }
 

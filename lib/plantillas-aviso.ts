@@ -10,6 +10,7 @@ import { esc } from '@/lib/html'
 import { SITE_URL } from '@/lib/email'
 import { qRol } from '@/lib/links'
 import { armarSolicitudCompita } from '@/lib/resend'
+import { PLANES, ETIQUETA_METODO, TEXTO_REEMBOLSO, type PlanId, type MetodoPago } from '@/lib/planes'
 
 export type Canal = 'telegram' | 'correo'
 
@@ -29,7 +30,7 @@ export interface Plantilla {
 }
 
 /** Cada plantilla nueva se agrega aquí y en el tipo NombrePlantilla. */
-export type NombrePlantilla = 'solicitud_nueva'
+export type NombrePlantilla = 'solicitud_nueva' | 'pago_confirmado'
 
 const etiquetaSlot = (iso: string) =>
   new Date(iso).toLocaleString('es-VE', {
@@ -91,6 +92,44 @@ const solicitudNueva: Plantilla = {
   },
 }
 
+// Paso 12 del ciclo: se confirmó el pago y el cliente recibe el correo. Dos variantes de texto, las mismas que
+// ya usaban app/api/admin/confirmar-solicitud ('confirmacion') y app/api/admin/registrar-pago ('registro').
+// El botón sigue llevando a /dashboard sin llave de acceso: el ciclo de login se arregla en el paso 3.1.
+const pagoConfirmado: Plantilla = {
+  canales: ['correo'],
+  async render(v) {
+    const pagoId = String(v.pagoId ?? '')
+    if (!pagoId) return null
+    const admin = createAdminSupabase()
+    const { data: p } = await admin.from('pagos_plan').select('*').eq('id', pagoId).maybeSingle()
+    if (!p || p.estado !== 'activo') return null // el pago se anuló: no se confirma lo que ya no vale
+    const { data: cli } = await admin.from('usuarios').select('nombre').eq('id', p.usuario_id).maybeSingle()
+    const primero = esc(String(cli?.nombre ?? '').split(' ')[0])
+    const que = p.tipo === 'plan' ? `plan ${PLANES[p.plan as PlanId].nombre}` : `visita extra de ${p.horas} horas`
+    const vence = new Date(p.vence).toLocaleDateString('es-VE', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'America/Caracas' })
+    const visitas = `${p.visitas} ${p.visitas === 1 ? 'visita' : 'visitas'}`
+    const metodo = esc(ETIQUETA_METODO[p.metodo as MetodoPago])
+    const boton = `<a href="${SITE_URL}/dashboard" style="display:inline-block;background:#FF6B2B;color:white;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:15px;margin-top:8px">Ir a mi portal →</a>`
+    const reembolso = `<p style="color:#9990A8;font-size:12px;margin-top:28px">${esc(TEXTO_REEMBOLSO)}</p>`
+    const monto = `<strong>$${p.monto_usd}</strong>`
+    const cuerpo = v.origen === 'registro'
+      ? `<p style="color:#4A3B6B;font-size:16px;line-height:1.6">Hola, ${primero}. Registramos tu pago de ${monto} por ${metodo} correspondiente a: <strong>${esc(que)}</strong> (${visitas}).</p>
+          <p style="color:#4A3B6B;font-size:15px;line-height:1.6">Las visitas que no uses este mes siguen disponibles hasta el <strong>${esc(vence)}</strong>.</p>`
+      : `<p style="color:#4A3B6B;font-size:16px;line-height:1.6">Hola, ${primero}. Confirmamos tu pago de ${monto} por ${metodo}: <strong>${esc(que)}</strong> (${visitas}), disponibles hasta el <strong>${esc(vence)}</strong>.</p>`
+    return {
+      correo: {
+        asunto: 'Recibimos tu pago en Compaz',
+        html: `<div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px">
+          <h2 style="color:#2D1464;font-size:22px">¡Recibimos tu pago!</h2>
+          ${cuerpo}
+          ${boton}
+          ${reembolso}</div>`,
+      },
+    }
+  },
+}
+
 export const PLANTILLAS: Record<NombrePlantilla, Plantilla> = {
   solicitud_nueva: solicitudNueva,
+  pago_confirmado: pagoConfirmado,
 }
