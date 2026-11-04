@@ -20,3 +20,7 @@
 4. La base de datos es compartida entre local y producción: cualquier migración afecta producción. Confirmar las copias de seguridad de Supabase antes de la primera migración.
 5. Cada capa se prueba con `node tests/run.mjs` y `npx tsc --noEmit`, y debe poder deshacerse sola.
 6. Solo commit; el push lo decide el usuario. Hoy `main` pide pull request y la cuenta del usuario salta esa regla por permisos de administrador.
+
+## Pendiente de lanzamiento: respaldo de datos
+
+Ver `CLAUDE.md`, sección 6. Hoy no hay copias de seguridad en Supabase y los compitas son personas reales. Antes del primer cliente real que pague: copias automáticas con restauración probada y base de desarrollo separada de la de producción.

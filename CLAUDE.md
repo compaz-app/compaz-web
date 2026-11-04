@@ -38,6 +38,13 @@ Pendientes de seguridad antes de abrir al público (informes completos en `~/sec
 6. Limpiar datos de prueba: filas de `pagos_plan` con referencia "pago simulado", solicitudes de prueba y grabaciones de Clarity.
 7. Tercera pasada de la auditoría sobre lo que run-2 dejó sin cubrir (rutas admin cliente-preview, flags, invitar-cliente, toggle-estado, toggle-verificado; setup-webhook, setup-daily-webhook, auth/callback, login; perfil familiar y fechas de visita; cron y funciones Netlify restantes; componentes del dashboard).
 
+Datos y respaldo antes de abrir al público (decidido 2026-11-03, no olvidar):
+1. Hoy la base de datos de Supabase tiene solo datos de prueba de clientes, pero los compitas registrados son personas reales. No hay copias de seguridad configuradas. Se decidió dejarlo para antes del lanzamiento.
+2. Antes de que entre el primer cliente real que pague: activar copias de seguridad automáticas en Supabase (confirmar plan y retención) y probar una restauración.
+3. Antes de lanzar: separar la base de desarrollo de la de producción. Hoy local y producción comparten la misma base.
+4. Mientras tanto, toda migración solo AGREGA tablas o columnas, nunca cambia ni borra lo existente (para poder volver al código viejo).
+5. Recomendación opcional ya mismo: una exportación única de la tabla de compitas, porque su información no se puede reconstruir fácilmente.
+
 ---
 
 ## Arquitectura de referencia
