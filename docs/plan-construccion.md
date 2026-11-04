@@ -18,7 +18,8 @@ Aclaración (2026-11-03): todo lo que hay hoy en el sistema, clientes y compitas
     1. Durante la visita el cliente recibe reportes con fotos y texto, sin videollamada. Notas de voz: DESCARTADAS por decisión del usuario (2026-11-03); solo fotos y texto. Las entrevistas siguen usando Daily.
     2. Canal humano: último recurso. Aparece solo después de 3 o 4 intentos de "no entiendo" en el mismo paso, nunca de inmediato, para que no se abuse. La única excepción es la emergencia, que ya tiene su propio botón.
     3. En esta fase inicial los administradores invitan a clientes y compitas. Más adelante será automático (registro propio).
-    Pendiente de definir: por dónde se contacta al humano y quién responde.
+    4. Canal humano DECIDIDO: botón "Pedir que me ayude una persona" que crea una tarea "Pidió ayuda" en la Bandeja del admin (paso, intentos y desde cuándo). Respaldo: correo visible para quien no pueda entrar al portal. Responden los administradores, en menos de 2 horas en horario laboral. Se queda solo en la Bandeja (sin aviso extra por Telegram); si el plazo vence, sube a amarillo y rojo.
+    5. Compitas: "Hablar con el equipo" en Telegram. El mensaje se guarda (tabla nueva `mensajes_equipo`, aditiva), aparece en la Bandeja como "Mensaje del compita" y el admin responde desde el portal; el sistema lo envía por el bot con `notificar()`. Hoy el bot solo reenvía el texto libre al cliente durante una visita; fuera de la visita no hay camino al admin. El botón explícito evita mezclar ambos. Si el compita bloqueó el bot, cae en la escalera (correo y Bandeja).
     Riesgos de las notas de voz: Telegram las entrega en formato ogg/opus, que no suena en todos los navegadores de iPhone sin convertirlo; y un audio puede decir un teléfono en voz alta, algo que hoy el filtro de contactos del chat no detecta (choca con el requisito de que cliente y compita no se contacten fuera).
 0.5 Diseñar el ciclo del compita con la escalera de Telegram, correo y Bandeja.
 
@@ -51,6 +52,7 @@ Aclaración (2026-11-03): todo lo que hay hoy en el sistema, clientes y compitas
 ## Fase 4. El compita en Telegram
 
 4.1 "¿Qué me toca?" y `/ayuda` contextual.
+4.1b "Hablar con el equipo": mensajes del compita al admin y respuesta desde el portal (depende de 1.3).
 4.2 Botones únicos por aviso y mensajes que se editan al responder.
 
 ## Fase 5. Escala y lanzamiento
