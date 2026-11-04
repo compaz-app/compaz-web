@@ -79,7 +79,7 @@ Pendiente de definir: el canal humano (por dónde escribe la persona y quién re
 
 ## Decisiones del 2026-11-03
 
-1. Visita: el cliente recibe reportes con fotos y texto durante y después de la visita; no hay videollamada en las visitas. La sala de Daily queda solo para las entrevistas.
+1. Visita: el cliente recibe reportes con fotos y texto durante y después de la visita; no hay videollamada ni notas de voz. La sala de Daily queda solo para las entrevistas.
 2. Ayuda: el canal humano aparece después de 3 o 4 intentos en el mismo paso, no de inmediato. La emergencia mantiene su botón directo.
 3. Entrada: por invitación de los administradores, para clientes y compitas, en esta fase inicial.
 
