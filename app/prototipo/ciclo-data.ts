@@ -1,0 +1,44 @@
+// Matriz del ciclo: por cada paso, quién actúa, qué aviso recibe, con qué botón y a dónde llega.
+// Es el diseño objetivo. "existe" = ya hay algo parecido en el código y se reordena; "nuevo" = hay que construirlo.
+export type Madurez = 'existe' | 'nuevo'
+export type FilaCiclo = {
+  fase: string
+  titulo: string
+  actor: 'Cliente' | 'Compita' | 'Admin' | 'Sistema'
+  aviso: string     // a quién, por qué canal
+  boton: string     // el único botón del aviso
+  aterriza: string  // a dónde lleva
+  siNo: string      // escalera si no actúa
+  registra: string  // evento que queda guardado
+  madurez: Madurez
+}
+
+export const REGLAS: { t: string; d: string }[] = [
+  { t: 'Un estado, un responsable', d: 'En cada momento el cliente está en una etapa y hay una sola persona que debe actuar. Nunca dos.' },
+  { t: 'Se avisa solo a quien le toca', d: 'Cuando cambia el turno, se avisa a quien debe actuar. A la otra parte no le llega nada: lo ve en su pantalla.' },
+  { t: 'Un canal principal por persona', d: 'Cliente: correo y portal. Compita: Telegram. Admin: Bandeja, y Telegram solo si es urgente.' },
+  { t: 'Un aviso, un botón, un destino', d: 'Cada aviso tiene un solo botón y siempre lleva a la tarjeta "lo que toca ahora". Nadie tiene que buscar.' },
+  { t: 'Nunca se pide entrar dos veces', d: 'Sesión larga en el teléfono. Si no hay sesión, el código se pide en la misma pantalla, con el correo ya puesto. Un enlace viejo no deja a nadie en un ciclo.' },
+  { t: 'Si ya lo hizo, el aviso muere', d: 'Al actuar se cancelan los recordatorios pendientes. Un botón antiguo muestra "Ya lo hiciste" y lleva al siguiente paso.' },
+  { t: 'Escalera de insistencia', d: 'Aviso, recordatorio, tarea en la Bandeja. El admin nunca se entera por casualidad.' },
+  { t: 'Todo deja registro', d: 'Cada cambio guarda quién, cuándo, por qué canal y si llegó. De ahí salen la línea de tiempo, el semáforo y las métricas.' },
+]
+
+export const CICLO: FilaCiclo[] = [
+  { fase: '1. Llegar', titulo: 'Deja su teléfono', actor: 'Sistema', aviso: 'Admin: tarea "Postulación nueva" en la Bandeja (hoy el equipo invita a mano)', boton: 'Invitar al cliente', aterriza: 'Más, Postulaciones; la invitación ya existe (`invitar-cliente`)', siNo: 'Pasa a amarillo a las 2 h y a rojo a las 6 h sin contactar', registra: 'Postulación con fuente y campaña; tiempo hasta el primer contacto', madurez: 'nuevo' },
+  { fase: '2. Entrar', titulo: 'Entra con su correo', actor: 'Cliente', aviso: 'Cliente: el correo de invitación que manda el admin', boton: 'Entrar a Compaz', aterriza: 'Primer acceso en el portal', siNo: 'Recordatorio a las 24 h; a las 72 h, tarea para el admin', registra: 'Correo enviado, abierto y sesión iniciada', madurez: 'existe' },
+  { fase: '2. Entrar', titulo: 'Cuenta de quién es su familiar', actor: 'Cliente', aviso: 'Ninguno: es el siguiente paso del primer acceso', boton: 'Guardar', aterriza: 'Inicio, tarjeta "Elige tu compita"', siNo: 'Recordatorio a las 24 h', registra: 'Perfil del familiar completo', madurez: 'existe' },
+  { fase: '3. Elegir', titulo: 'Busca y compara compitas', actor: 'Cliente', aviso: 'Ninguno mientras navega', boton: 'Pedir entrevista', aterriza: 'Solicitud enviada', siNo: 'A las 48 h sin elegir: "¿Te ayudamos a escoger?"', registra: 'Visitas al perfil y clics en solicitar', madurez: 'nuevo' },
+  { fase: '3. Elegir', titulo: 'Pide una entrevista', actor: 'Compita', aviso: 'Compita: Telegram "Nueva solicitud" con la zona y el primer nombre', boton: 'Aceptar o No puedo', aterriza: 'El mismo mensaje se edita con el resultado', siNo: 'Recordatorio a las 6 h; a las 24 h, tarea en la Bandeja; a las 48 h, se le sugiere otra compita al cliente', registra: 'Solicitud, respuesta y tiempo de respuesta', madurez: 'existe' },
+  { fase: '3. Elegir', titulo: 'Espera la respuesta', actor: 'Compita', aviso: 'Ninguno: la espera no se notifica, se ve en la tarjeta', boton: 'Ver otras compitas', aterriza: 'Elegir compita', siNo: 'Igual que el paso anterior', registra: 'Tiempo en espera (alimenta el semáforo)', madurez: 'existe' },
+  { fase: '4. Entrevista', titulo: 'La compita acepta, el cliente elige horario', actor: 'Cliente', aviso: 'Cliente: correo "María aceptó"', boton: 'Elegir horario', aterriza: 'Inicio, tarjeta "Elige tu horario"', siNo: 'Recordatorio a las 24 h; a las 48 h, tarea en la Bandeja', registra: 'Horario confirmado', madurez: 'existe' },
+  { fase: '4. Entrevista', titulo: 'Entrevista programada', actor: 'Cliente', aviso: 'Una hora antes, a los dos: cliente por correo, compita por Telegram, en la hora de cada uno', boton: 'Entrar a la entrevista', aterriza: 'La sala, con un solo enlace por persona', siNo: 'Si pasan 10 min y falta uno, se avisa al otro y se abre tarea para el admin', registra: 'Aviso enviado y su resultado', madurez: 'existe' },
+  { fase: '4. Entrevista', titulo: 'La entrevista', actor: 'Sistema', aviso: 'Ninguno durante la llamada', boton: 'Volver a entrar (si se corta)', aterriza: 'La misma sala, sin perder tiempo', siNo: 'Se cierra por reloj a los 23 min, no solo por el aviso de Daily', registra: 'Quién entró, cuándo y cuánto duró', madurez: 'existe' },
+  { fase: '4. Entrevista', titulo: 'Decide si la contrata', actor: 'Cliente', aviso: 'Cliente: correo "¿Contratas a María?"; la compita solo ve "Te avisamos"', boton: 'Sí o No', aterriza: 'Pagar, o Elegir otra compita', siNo: 'Recordatorio a las 2 h; a las 24 h, tarea en la Bandeja', registra: 'Decisión y motivo si dice que no', madurez: 'existe' },
+  { fase: '5. Pagar', titulo: 'Paga', actor: 'Cliente', aviso: 'Admin: Telegram y Bandeja "Pago por confirmar"', boton: 'Confirmar pago (admin)', aterriza: 'Cliente: sigue en su tarjeta de pago', siNo: 'Amarillo a las 2 h y rojo a las 12 h', registra: 'Solicitud de pago con referencia', madurez: 'existe' },
+  { fase: '5. Pagar', titulo: 'Confirmamos el pago y empieza', actor: 'Admin', aviso: 'Cliente: correo "Ya estás activo". Compita: Telegram "Te contrató"', boton: 'Ver mi próxima visita', aterriza: 'Inicio ya con sesión; si no la hay, código en la misma pantalla', siNo: 'No aplica: es el final de la etapa', registra: 'Pago, etapa "Activo" y su fecha', madurez: 'existe' },
+  { fase: '6. Visitas', titulo: 'La compita llega', actor: 'Compita', aviso: 'Cliente: portal y correo "María llegó"', boton: 'Iniciar visita (compita) y Confirmar (cliente)', aterriza: 'Visita en curso', siNo: 'A los 5 min se confirma sola; si no inicia 30 min tarde, alerta al admin', registra: 'Hora real de inicio (puntualidad)', madurez: 'existe' },
+  { fase: '6. Visitas', titulo: 'Visita en curso', actor: 'Compita', aviso: 'Admin si hay emergencia: Telegram, correo y Bandeja', boton: 'Emergencia (compita)', aterriza: 'Bandeja, fija arriba y en rojo', siNo: 'Hasta que alguien marque "Atendida"', registra: 'Mensajes, contactos bloqueados y emergencias con quién la atendió', madurez: 'existe' },
+  { fase: '6. Visitas', titulo: 'Visita terminada', actor: 'Cliente', aviso: 'Cliente: correo con el reporte y las fotos', boton: 'Calificar la visita', aterriza: 'Inicio, tarjeta de calificación', siNo: 'Un solo recordatorio a las 48 h', registra: 'Reporte, calificación y comentario', madurez: 'existe' },
+  { fase: '7. Después', titulo: 'Sigue o renueva su plan', actor: 'Cliente', aviso: 'Cliente: correo 3 días antes de que se acaben las visitas', boton: 'Renovar mi plan', aterriza: 'Mi plan', siNo: 'Sin renovar: tarea "Riesgo de abandono" en la Bandeja', registra: 'Renovación o baja, con motivo', madurez: 'existe' },
+]
