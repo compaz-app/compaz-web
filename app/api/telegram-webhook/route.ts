@@ -25,7 +25,7 @@ import { responderSolicitud } from '@/lib/solicitudes'
 import { qRol } from '@/lib/links'
 import { sendEmail, SITE_URL as SITE_URL_PUBLICA } from '@/lib/email'
 import { esc, escLike } from '@/lib/html'
-import { detectarContacto, moderarMensaje } from '@/lib/chat-moderacion'
+import { detectarContacto, moderarMensaje, reportarContactoEnTexto } from '@/lib/chat-moderacion'
 import { formatSlotVE, formatFechaVE, hoyVE } from '@/lib/format'
 import { randomInt } from 'crypto'
 
@@ -1241,10 +1241,19 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
       return NextResponse.json({ ok: true })
     }
 
+    // El cliente nunca debe recibir teléfonos ni correos del compita: se censuran igual que en el chat.
+    const sugerido = detectarContacto(text.slice(0, 2000))
+    if (sugerido.detectado) {
+      await reportarContactoEnTexto({
+        origen: 'compita', donde: 'los horarios sugeridos al cliente', quien: compita.nombre,
+        entidadTipo: 'compita', entidadId: compita.id, textoOriginal: text.slice(0, 2000),
+      })
+    }
+
     // Guardar el mensaje del compita en la solicitud para mostrarlo en el dashboard
     await supabase
       .from('solicitudes')
-      .update({ mensaje_compita_reagendar: text.slice(0, 2000) })
+      .update({ mensaje_compita_reagendar: sugerido.textoCensurado })
       .eq('id', solicitudId)
 
     // Enviar email al cliente con los horarios sugeridos
@@ -1261,7 +1270,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
                 <strong>${esc(compita.nombre)}</strong> no pudo en los horarios que propusiste, pero sugiere lo siguiente:
               </p>
               <blockquote style="background:#F5F0FF;border-left:4px solid #7C4DFF;border-radius:8px;padding:16px 20px;color:#1A0A3C;font-size:16px;line-height:1.6;margin:16px 0">
-                ${esc(text.slice(0, 1500)).replace(/\n/g, '<br>')}
+                ${esc(sugerido.textoCensurado.slice(0, 1500)).replace(/\n/g, '<br>')}
               </blockquote>
               <p style="color:#4A3B6B;font-size:15px;line-height:1.6">
                 Si alguno te funciona, haz clic aquí para enviar una nueva solicitud directamente con ${esc(compita.nombre)}:

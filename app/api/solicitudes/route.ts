@@ -11,6 +11,7 @@ import { esc } from '@/lib/html'
 import { formatSlotVE, esSlotFuturo } from '@/lib/format'
 import { avisarAdmin } from '@/lib/telegram'
 import { qRol } from '@/lib/links'
+import { detectarContacto, reportarContactoEnTexto } from '@/lib/chat-moderacion'
 
 const MENSAJES_NEGOCIO = ['Límite de', 'Ya tienes una solicitud']
 
@@ -28,20 +29,26 @@ export async function POST(req: NextRequest) {
   if (!body) return err('Solicitud inválida')
 
   const compita_id = body.compita_id
-  const mensaje = typeof body.mensaje === 'string' ? body.mensaje.trim() : ''
-  const sobre_cliente = typeof body.sobre_cliente === 'string' ? body.sobre_cliente.trim() : null
+  const mensajeOriginal = typeof body.mensaje === 'string' ? body.mensaje.trim() : ''
+  const sobreOriginal = typeof body.sobre_cliente === 'string' ? body.sobre_cliente.trim() : null
   const franja_horaria = typeof body.franja_horaria === 'string' ? body.franja_horaria.trim().slice(0, 200) : undefined
   const slotsRaw = body.slots_propuestos
 
-  if (!compita_id || !mensaje) return err('Faltan campos requeridos')
-  if (mensaje.length > 1500) return err('El mensaje es demasiado largo (máximo 1500 caracteres)')
-  if (sobre_cliente && sobre_cliente.length > 1000) return err('La descripción del cliente es demasiado larga (máximo 1000 caracteres)')
+  if (!compita_id || !mensajeOriginal) return err('Faltan campos requeridos')
+  if (mensajeOriginal.length > 1500) return err('El mensaje es demasiado largo (máximo 1500 caracteres)')
+  if (sobreOriginal && sobreOriginal.length > 1000) return err('La descripción del cliente es demasiado larga (máximo 1000 caracteres)')
   if (!Array.isArray(slotsRaw) || slotsRaw.length === 0 || slotsRaw.length > 3) {
     return err('Debes proponer entre 1 y 3 horarios')
   }
   if (!slotsRaw.every((s) => esSlotFuturo(s, 0))) return err('Todos los horarios deben ser válidos y estar en el futuro')
   if ((slotsRaw as string[]).some((s) => new Date(s).getTime() > Date.now() + 60 * 86400_000)) return err('Los horarios deben estar dentro de los próximos 60 días')
   const slots_propuestos = [...new Set((slotsRaw as string[]).map((s) => new Date(s).toISOString()))]
+
+  // El compita nunca debe recibir teléfonos ni correos del cliente: se censuran igual que en el chat.
+  const mensajeCensurado = detectarContacto(mensajeOriginal)
+  const sobreCensurado = sobreOriginal ? detectarContacto(sobreOriginal) : null
+  const mensaje = mensajeCensurado.textoCensurado
+  const sobre_cliente = sobreCensurado ? sobreCensurado.textoCensurado : null
 
   // Traer datos del cliente y del compita
   const admin = createAdminSupabase()
@@ -86,6 +93,14 @@ export async function POST(req: NextRequest) {
     if (/duplicate|unique/i.test(msg)) return err('Ya tienes una solicitud pendiente con este compita')
     // Solo se muestran los mensajes de negocio; los errores de BD no se filtran al cliente
     return MENSAJES_NEGOCIO.some((m) => msg.startsWith(m)) ? err(msg) : err('No pudimos crear la solicitud. Intenta de nuevo.', 500)
+  }
+
+  if (mensajeCensurado.detectado || sobreCensurado?.detectado) {
+    await reportarContactoEnTexto({
+      origen: 'cliente', donde: 'la solicitud de entrevista', quien: cliente?.nombre ?? 'Un cliente',
+      entidadTipo: 'cliente', entidadId: user.id,
+      textoOriginal: [mensajeCensurado.detectado ? mensajeOriginal : '', sobreCensurado?.detectado ? sobreOriginal : ''].filter(Boolean).join(' | '),
+    })
   }
 
   const clienteNombre = cliente?.nombre ?? 'Un cliente'

@@ -109,3 +109,41 @@ export async function moderarMensaje({
 
   await avisarAdmin(msg).catch(() => {})
 }
+
+// ── Contacto externo en textos que no son el chat (solicitud, horarios sugeridos) ──
+// Mismo criterio que el chat: el texto se censura antes de llegar a la otra parte y el equipo recibe una alerta.
+
+/** Crea el flag en Atención y avisa al admin. Nunca lanza: reportar no debe romper el flujo. */
+export async function reportarContactoEnTexto(p: {
+  origen: 'cliente' | 'compita'
+  /** dónde ocurrió, para la nota (ej. "la solicitud de entrevista") */
+  donde: string
+  quien: string
+  entidadTipo: 'cliente' | 'compita'
+  entidadId: string
+  textoOriginal: string
+}): Promise<void> {
+  try {
+    const admin = createAdminSupabase()
+    await admin.from('admin_flags').insert({
+      entidad_tipo: p.entidadTipo,
+      entidad_id: p.entidadId,
+      entidad_nombre: `🚨 Contacto externo — ${p.quien} (${p.origen})`,
+      nota:
+        `⚠️ Intento de contacto externo detectado en ${p.donde}.\n` +
+        `Quien lo escribió: ${p.quien} (${p.origen})\n` +
+        `Texto original: "${p.textoOriginal.slice(0, 200)}"`,
+      reportado_por: 'moderación automática',
+      resuelto: false,
+    })
+    await avisarAdmin(
+      `⚠️ <b>Contacto externo detectado</b>\n\n` +
+      `Dónde: ${p.donde}\n` +
+      `Quien: ${p.quien} (${p.origen})\n\n` +
+      `Texto: <i>${p.textoOriginal.slice(0, 300)}</i>`,
+    ).catch(() => {})
+  } catch (e) {
+    console.error('[moderación] no se pudo reportar el contacto externo:', e)
+  }
+}
+
