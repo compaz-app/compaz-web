@@ -119,3 +119,9 @@ Hallazgos de revisar el trabajo de la Fase 1 y su corrección:
 2. Se construye en la rama `rediseno`.
 3. Se prueba y se verifica que lo viejo sigue funcionando.
 4. Commit. El push solo cuando el usuario lo pida.
+
+## Reglas heredadas y fricción: decisiones (2026-11-04)
+
+El usuario pidió revisar reglas que se pusieron por intuición y quitar o relajar lo que estorbe ("cero fricciones"). Se decide punto por punto.
+
+1. CERRADO: contratación directa sin entrevista. La solicitud tendrá dos tipos (`tipo` en `solicitudes`: 'entrevista' por defecto, o 'directa'; columna aditiva). El cliente ve en el perfil "Hablar primero" o "Contratarlo directo". En la directa no hay horarios ni sala: el compita recibe en Telegram "quiere contratarte directamente" con Aceptar o No puedo. Si acepta, el cliente paga (pago existente) y empiezan las visitas; si rechaza, el cliente elige a otro sin haber pagado. DECISIÓN CLAVE: el compita acepta ANTES de que el cliente pague. La confianza que da la entrevista se sustituye con el perfil (video, calificación, reseñas), la primera hora de regalo y la política de reembolso de `lib/planes.ts`. El camino de la directa se salta los pasos de entrevista del ciclo (unos 9 pasos en vez de 16). Pendiente de construir.
