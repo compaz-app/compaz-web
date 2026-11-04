@@ -180,3 +180,12 @@ Pendientes anotados: botón "Reenviar confirmación" necesita su propio camino c
 ## SUITE EN VERDE (2026-11-04)
 Las 21 pruebas heredadas fallaban por pruebas viejas, no por el código: no pasaban por la confirmación del cliente (`confirmando_inicio`), esperaban un margen de 30 min en horarios (quitado a propósito), esperaban un párrafo de revisión en la bienvenida del compita (quitado a propósito el 29-oct), y el simulador de base no entendía `.or('col.not.is.null')`. Resultado: 338 de 338.
 Hallazgo real: los índices únicos de visitas no incluían `confirmando_inicio`. Migración nueva y aditiva `20261104_visitas_confirmando_unico.sql` (pendiente de aplicar).
+
+## PUNTO 6 CERRADO: formulario de solicitud (2026-11-04)
+1. Tres botones de entrada: Hablar primero, Contratarlo directo, Mandado.
+2. "¿Qué necesitan?": una línea con opciones rápidas más nota opcional de 300 caracteres (antes 1.500).
+3. "¿Lugar privado?": sí o no.
+4. Foto opcional con su nota de invitación.
+5. Datos de la familia precargados; el cliente no los reescribe.
+6. Sin horarios en el formulario: se eligen después (punto 3).
+Lista de puntos de fricción 1 a 6 cerrada. Pendiente: implementarlo en código y reflejar todo en el prototipo.
