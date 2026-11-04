@@ -2,7 +2,7 @@
 export type PlanId = 'carta' | 'quincenal' | 'semanal'
 
 export const PLANES: Record<PlanId, { nombre: string; descripcion: string; visitas: number; precioUsd: number }> = {
-  carta:     { nombre: 'A la carta',    descripcion: 'Una visita de 2 horas.',                  visitas: 1, precioUsd: 45 },
+  carta:     { nombre: 'A la carta',    descripcion: 'Una visita de 1 hora.',                   visitas: 1, precioUsd: 22 },
   quincenal: { nombre: 'Compañía',      descripcion: '2 visitas al mes de 2 horas cada una.',   visitas: 2, precioUsd: 75 },
   semanal:   { nombre: 'Compañía Plus', descripcion: '4 visitas al mes de 2 horas cada una.',   visitas: 4, precioUsd: 140 },
 }
@@ -13,9 +13,21 @@ export const VIGENCIA_CREDITOS_DIAS = 60
 /** Cada pago cubre un mes; a los 30 días corresponde pagar el siguiente (aviso al cliente). */
 export const CICLO_PAGO_DIAS = 30
 
-/** Visita extra fuera del plan: se cobra por hora, con un mínimo. */
-export const PRECIO_HORA_EXTRA_USD = 20
-export const HORAS_MINIMAS_EXTRA = 2
+/** Todo se cobra a 22 dólares la hora (decisión del 2026-11-04). Visita extra fuera del plan: por hora, desde 1 hora. */
+export const PRECIO_HORA_EXTRA_USD = 22
+export const HORAS_MINIMAS_EXTRA = 1
+
+/**
+ * Mandados (diligencias): tarifa plana por mandado, dure 15 minutos o 1 hora. No pueden pasar de 1 hora: si el
+ * compita tarda más es su problema y no se cobra de más; si el cliente ya sabe que durará más, debe hablar
+ * directamente con Compaz para gestionarlo. Las compras no entran en el sistema (se coordinan con el cliente).
+ * El botón "Mandados" se construye más adelante; estas son las cifras que usará.
+ */
+export const PRECIO_MANDADO_USD = 22
+export const DURACION_MAX_MANDADO_MIN = 60
+
+/** "1 hora" o "3 horas". */
+export const etiquetaHoras = (n: number) => `${n} ${n === 1 ? 'hora' : 'horas'}`
 
 export const METODOS_PAGO = ['zelle', 'transferencia', 'stripe', 'otro'] as const
 export type MetodoPago = (typeof METODOS_PAGO)[number]

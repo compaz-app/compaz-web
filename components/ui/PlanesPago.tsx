@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { colors } from '@/lib/design'
-import { PLANES, PLANES_IDS, ETIQUETA_METODO, PRECIO_HORA_EXTRA_USD, HORAS_MINIMAS_EXTRA, VIGENCIA_CREDITOS_DIAS, TEXTO_REEMBOLSO, type PlanId } from '@/lib/planes'
+import { PLANES, PLANES_IDS, ETIQUETA_METODO, PRECIO_HORA_EXTRA_USD, HORAS_MINIMAS_EXTRA, etiquetaHoras, VIGENCIA_CREDITOS_DIAS, TEXTO_REEMBOLSO, type PlanId } from '@/lib/planes'
 
 type Pendiente = { id: string; tipo: string; plan: string | null; horas: number | null; monto_usd: number; metodo: 'zelle' | 'transferencia'; referencia: string; lineas: string[]; configurado: boolean }
 const titulo = { fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800 } as const
@@ -63,7 +63,7 @@ export default function PlanesPago({ pendiente }: { pendiente: Pendiente | null 
         <button onClick={() => setPlan('extra')} style={tarjeta(plan === 'extra')}>
           <div style={{ ...titulo, fontSize: '15px', color: colors.moradoMedio }}>Visita extra</div>
           <div style={{ ...titulo, fontSize: '22px', color: colors.naranja }}>${PRECIO_HORA_EXTRA_USD}/h</div>
-          <div style={{ fontSize: '13px', color: colors.textoSutil }}>Mínimo {HORAS_MINIMAS_EXTRA} horas</div>
+          <div style={{ fontSize: '13px', color: colors.textoSutil }}>Mínimo {etiquetaHoras(HORAS_MINIMAS_EXTRA)}</div>
         </button>
       </div>
       {plan === 'extra' && (

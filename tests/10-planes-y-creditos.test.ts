@@ -105,7 +105,7 @@ describe('Agendar otra visita con créditos', () => {
     como(carlos); assert.equal((await nueva()).status, 409)
     const r = await pagar(carlos, { tipo: 'extra', plan: undefined, horas: 2, metodo: 'zelle' })
     assert.equal(r.status, 200)
-    assert.equal((await r.json()).data.pago.monto_usd, 40)
+    assert.equal((await r.json()).data.pago.monto_usd, 44) // 2 horas a 22 dólares
     como(carlos); assert.equal((await nueva()).status, 200)
     terminarActiva(carlos); assert.equal((await nueva()).status, 409)
   })
@@ -142,11 +142,11 @@ describe('Registrar pago (panel admin)', () => {
     assert.equal(carlos.plan_contratado, 'semanal')
   })
 
-  test('validaciones: método, plan, horas mínimas (2), monto, cliente inexistente', async () => {
+  test('validaciones: método, plan, horas mínimas (1), monto, cliente inexistente', async () => {
     const { carlos } = mundoCon([])
     assert.equal((await pagar(carlos, { metodo: 'bitcoin' })).status, 400)
     assert.equal((await pagar(carlos, { plan: 'platino' })).status, 400)
-    assert.equal((await pagar(carlos, { tipo: 'extra', horas: 1 })).status, 400)
+    assert.equal((await pagar(carlos, { tipo: 'extra', horas: 0 })).status, 400)
     assert.equal((await pagar(carlos, { tipo: 'extra', horas: 13 })).status, 400)
     assert.equal((await pagar(carlos, { monto_usd: -5 })).status, 400)
     assert.equal((await pagar({ id: 'no-existe' })).status, 404)
@@ -158,12 +158,14 @@ describe('Registrar pago (panel admin)', () => {
     assert.equal((await pagar(carlos, { plan: 'quincenal', monto_usd: 74 })).status, 400)
     assert.equal((await pagar(carlos, { plan: 'quincenal', monto_usd: 60 })).status, 400)
     assert.equal((await pagar(carlos, { plan: 'semanal', monto_usd: 0 })).status, 400)
-    assert.equal((await pagar(carlos, { tipo: 'extra', horas: 3, monto_usd: 59 })).status, 400)
+    assert.equal((await pagar(carlos, { tipo: 'extra', horas: 3, monto_usd: 60 })).status, 400)
     assert.equal(db.rows('pagos_plan').length, 0, 'ningún pago incorrecto queda guardado')
     assert.match((await (await pagar(carlos, { plan: 'quincenal', monto_usd: 74 })).json()).error, /exactamente \$75/)
     assert.equal((await (await pagar(carlos, { plan: 'quincenal', monto_usd: 75 })).json()).data.pago.monto_usd, 75)
     assert.equal((await (await pagar(carlos, { plan: 'quincenal' })).json()).data.pago.monto_usd, 75)
-    assert.equal((await (await pagar(carlos, { tipo: 'extra', horas: 3 })).json()).data.pago.monto_usd, 60)
+    assert.equal((await (await pagar(carlos, { tipo: 'extra', horas: 3 })).json()).data.pago.monto_usd, 66) // 3 horas a 22 dólares
+    assert.equal((await (await pagar(carlos, { tipo: 'extra', horas: 1 })).json()).data.pago.monto_usd, 22) // desde 1 hora, sin mínimo de 2
+    assert.equal((await (await pagar(carlos, { plan: 'carta' })).json()).data.pago.monto_usd, 22) // A la carta: 1 hora
   })
 
   test('anular un pago equivocado devuelve el cupo; no se puede anular dos veces; el historial lo muestra', async () => {

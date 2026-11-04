@@ -2,11 +2,11 @@
 
 import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { PLANES as CFG, PLANES_IDS, VIGENCIA_CREDITOS_DIAS, PRECIO_HORA_EXTRA_USD, HORAS_MINIMAS_EXTRA, TEXTO_REEMBOLSO, type PlanId } from '@/lib/planes'
+import { PLANES as CFG, PLANES_IDS, VIGENCIA_CREDITOS_DIAS, PRECIO_HORA_EXTRA_USD, HORAS_MINIMAS_EXTRA, etiquetaHoras, TEXTO_REEMBOLSO, type PlanId } from '@/lib/planes'
 
 // ── Planes (precios y visitas vienen de lib/planes.ts, única fuente) ─────────
 const DETALLES: Record<PlanId, string[]> = {
-  carta: ['Agenda cuando quieras', '2 horas por visita', 'Sin contrato fijo'],
+  carta: ['Agenda cuando quieras', '1 hora por visita', 'Sin contrato fijo'],
   quincenal: ['2 visitas al mes', '2 horas cada visita', 'Pago mes a mes, sin cobros automáticos'],
   semanal: ['4 visitas al mes', '2 horas cada visita', 'Pago mes a mes, sin cobros automáticos'],
 }
@@ -16,12 +16,13 @@ const PLANES = PLANES_IDS.map((id) => ({
   badge: id === 'semanal' ? 'RECOMENDADO' : null,
   precio: CFG[id].precioUsd,
   unidad: id === 'carta' ? 'por visita' : 'por mes',
-  descripcion: id === 'carta' ? 'Una visita de 2 horas cuando lo necesites. Sin compromiso.'
+  descripcion: id === 'carta' ? 'Una visita de 1 hora cuando lo necesites. Sin compromiso.'
     : id === 'quincenal' ? '2 visitas al mes con una rutina estable para tu familiar.'
     : 'Una visita por semana. Presencia constante, vínculo real con tu familiar.',
   detalles: DETALLES[id],
-  precioBase: id === 'quincenal' ? 90 : id === 'semanal' ? 180 : null,
-  ahorro: id === 'quincenal' ? 15 : id === 'semanal' ? 40 : null,
+  // Precio "normal" tachado: las visitas del plan (de 2 horas) pagadas hora por hora; el ahorro es la diferencia.
+  precioBase: id === 'carta' ? null : CFG[id].visitas * 2 * PRECIO_HORA_EXTRA_USD,
+  ahorro: id === 'carta' ? null : CFG[id].visitas * 2 * PRECIO_HORA_EXTRA_USD - CFG[id].precioUsd,
 }))
 
 type SolicitudInfo = {
@@ -250,7 +251,7 @@ function PagoContent() {
             <strong>Tus visitas no se pierden al cerrar el mes.</strong> Las que no uses siguen disponibles durante {VIGENCIA_CREDITOS_DIAS / 30} meses desde el pago.
           </p>
           <p style={{ color: '#4A3B6B', fontSize: '13px', margin: '0 0 6px', lineHeight: 1.5 }}>
-            <strong>¿Necesitas más visitas?</strong> Una visita extra cuesta ${PRECIO_HORA_EXTRA_USD} por hora, con un mínimo de {HORAS_MINIMAS_EXTRA} horas.
+            <strong>¿Necesitas más visitas?</strong> Una visita extra cuesta ${PRECIO_HORA_EXTRA_USD} por hora, con un mínimo de {etiquetaHoras(HORAS_MINIMAS_EXTRA)}.
           </p>
           <p style={{ color: '#6B5C90', fontSize: '12px', margin: 0, lineHeight: 1.5 }}>{TEXTO_REEMBOLSO}</p>
         </div>
