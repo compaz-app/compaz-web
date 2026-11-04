@@ -12,8 +12,11 @@ export async function createServerSupabase() { return makeClient(db, () => sessi
 export const otps = OTPS
 export function createRouteSupabase(_req: any, salida: Array<{ name: string; value: string; options: Record<string, unknown> }>) {
   const base: any = makeClient(db, () => session.user)
-  base.auth.verifyOtp = async ({ token_hash }: { type: string; token_hash: string }) => {
-    const o = otps.get(token_hash)
+  base.auth.verifyOtp = async (p: { type: string; token_hash?: string; email?: string; token?: string }) => {
+    // Con correo y código (8 dígitos) se busca la entrada vigente de esa persona; con token_hash, por el hash.
+    const o = p.token_hash
+      ? otps.get(p.token_hash)
+      : [...otps.values()].find((x) => x.email === p.email && x.codigo === p.token && !x.usado)
     if (!o || o.usado) return { data: { user: null }, error: { status: 403, code: 'otp_expired', message: 'Email link is invalid or has expired' } }
     o.usado = true
     salida.push({ name: 'sb-test-auth-token', value: `sesion-de-${o.id}`, options: { path: '/', httpOnly: false } })

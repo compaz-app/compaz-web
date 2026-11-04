@@ -50,7 +50,10 @@ export async function middleware(request: NextRequest) {
   if (isAreaCliente) {
     try {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user || isAdminEmail(user.email ?? '')) return response
+      // Sin sesión (por ejemplo el navegador interno de la app de correo): se va al login recordando a dónde iba,
+      // para que tras entrar llegue justo ahí (antes caía en un login que olvidaba el destino y entraba en un ciclo).
+      if (!user) return NextResponse.redirect(urlPublica(`/login?returnTo=${encodeURIComponent(pathname + request.nextUrl.search)}`, request))
+      if (isAdminEmail(user.email ?? '')) return response
       const { data: fila } = await supabase.from('usuarios').select('plan').eq('id', user.id).maybeSingle()
       if (fila?.plan === 'bloqueado') {
         await supabase.auth.signOut()
@@ -66,7 +69,7 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  if (!user) return NextResponse.redirect(urlPublica('/login', request))
+  if (!user) return NextResponse.redirect(urlPublica(`/login?returnTo=${encodeURIComponent(pathname + request.nextUrl.search)}`, request))
   if (!isAdminEmail(user.email ?? '')) return NextResponse.redirect(urlPublica('/dashboard', request))
 
   return response

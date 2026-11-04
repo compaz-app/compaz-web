@@ -38,7 +38,7 @@ const PK: Record<string, string> = { telegram_estados: 'chat_id' }
 
 function dupError(msg: string) { return { code: '23505', message: `duplicate key value violates unique constraint "${msg}"` } }
 
-export const OTPS = new Map<string, { id: string; email: string; usado: boolean }>()
+export const OTPS = new Map<string, { id: string; email: string; usado: boolean; codigo?: string }>()
 
 export class FakeDB {
   tables: Record<string, Row[]> = {}
@@ -330,9 +330,12 @@ export function makeClient(db: FakeDB, user: () => { id: string; email: string }
           const existente = db.tables.usuarios.find((u) => u.email === email)
           if (type === 'invite' && existente) return { data: null, error: { status: 422, code: 'email_exists', message: 'A user with this email address has already been registered' } }
           const id = existente?.id ?? randomUUID()
+          // Como en Supabase real (comprobado): un enlace nuevo invalida el anterior de la misma persona.
+          for (const o of OTPS.values()) if (o.email === email && o.codigo) o.usado = true
           const hashed = `hash-${type}-${id}-${OTPS.size}`
-          OTPS.set(hashed, { id, email, usado: false })
-          return { data: { user: { id, email }, properties: { hashed_token: hashed, action_link: 'x', verification_type: type } }, error: null }
+          const codigo = String(Math.floor(10_000_000 + Math.random() * 90_000_000)) // Supabase genera 8 dígitos
+          OTPS.set(hashed, { id, email, usado: false, codigo })
+          return { data: { user: { id, email }, properties: { hashed_token: hashed, action_link: 'x', verification_type: type, email_otp: codigo } }, error: null }
         },
         updateUserById: async (id: string, attrs: any) => { (db as any).bans = (db as any).bans ?? {}; (db as any).bans[id] = attrs.ban_duration; return { data: { user: { id } }, error: null } },
         deleteUser: async (id: string) => {

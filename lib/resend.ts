@@ -175,7 +175,14 @@ export async function sendBienvenidaCompita(
   })
 }
 
-export async function sendAccesoEmail(email: string, nombre: string, enlaceAcceso: string): Promise<void> {
+export async function sendAccesoEmail(email: string, nombre: string, enlaceAcceso: string, codigo?: string): Promise<void> {
+  // Solo dígitos: se muestra tal cual y se escribe en micompaz.com/login si el enlace se abrió en otra app o teléfono
+  const bloqueCodigo = codigo && /^\d{6,10}$/.test(codigo)
+    ? `<div style="background:#F5F0FF;border-radius:12px;padding:14px 18px;margin:20px 0 0">
+          <p style="color:#4A3B6B;font-size:14px;line-height:1.6;margin:0 0 6px">¿Abriste este correo en otra app o en otro teléfono y el botón no funciona? Escribe este código en micompaz.com/login:</p>
+          <p style="color:#2D1464;font-size:28px;font-weight:800;letter-spacing:6px;margin:0">${codigo}</p>
+        </div>`
+    : ''
   await sendEmail({
     to: email,
     subject: 'Tu acceso a Compaz',
@@ -184,7 +191,8 @@ export async function sendAccesoEmail(email: string, nombre: string, enlaceAcces
         <h2 style="color:#2D1464;font-size:24px;margin-bottom:8px">Hola, ${escapeHtml(nombre.split(' ')[0])}</h2>
         <p style="color:#4A3B6B;font-size:16px;line-height:1.6;margin-bottom:20px">Pulsa el botón para entrar a tu portal de Compaz.</p>
         <a href="${escapeHtml(enlaceAcceso)}" style="display:inline-block;background:#FF6B2B;color:white;padding:16px 32px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:17px">Entrar a Compaz →</a>
-        <p style="color:#6B5C90;font-size:13px;line-height:1.6;margin:16px 0 0">El enlace es personal, funciona una sola vez y <strong>vence en 1 hora</strong>. Si vence, vuelve a micompaz.com/login y pide uno nuevo. Si no lo pediste, ignora este correo.</p>
+        ${bloqueCodigo}
+        <p style="color:#6B5C90;font-size:13px;line-height:1.6;margin:16px 0 0">El enlace y el código son personales, funcionan una sola vez y <strong>vencen en 1 hora</strong>. Si pides otro, <strong>usa siempre el correo más reciente</strong>: el anterior deja de servir. Si no lo pediste, ignora este correo.</p>
         <p style="color:#9990A8;font-size:13px;margin-top:20px">Compaz, <em>Cerca aunque estés lejos</em></p>
       </div>
     `,

@@ -74,6 +74,18 @@ Detalle original del paso 1.5: escalera de respaldo del compita: correo si Teleg
 5.5 Bloquear o quitar `app/prototipo/` antes de publicar.
 5.6 Stripe y lista de seguridad de `CLAUDE.md`.
 
+## 3.1 Ciclo de login: HECHO (2026-11-03)
+
+Causa confirmada contra Supabase real (con un usuario desechable que se borró): `generateLink` devuelve junto al enlace un código de 8 dígitos (no 6), y **cada enlace nuevo invalida el anterior**, también el código. Eso, más el límite silencioso de 1 por minuto y que el navegador interno de la app de correo no comparte la sesión, producía el ciclo.
+1. Recordar el destino: el middleware manda a `/login?returnTo=<ruta con su consulta>` a quien entra sin sesión a `/dashboard`, `/compitas`, `/pago` o `/admin` (antes caía en un login que olvidaba a dónde iba). Solo rutas internas (`rutaInterna`).
+2. Entrar directo: `/login` es ahora una página de servidor; con sesión redirige a donde iba o al portal (admin a `/admin`), sin pedir el correo.
+3. Espera visible: `solicitar-acceso` devuelve `espera` (segundos) siempre, exista o no el correo, así que no revela quién existe; la pantalla muestra la cuenta atrás y, si ya se había enviado uno, lo dice ("Ya te enviamos un correo hace un momento").
+4. Código numérico: el correo de acceso trae el código además del botón (mismo token que el enlace) y dice "usa siempre el correo más reciente". Nueva ruta `POST /api/auth/verificar-codigo` (`verifyOtp` con correo y código, `type: email`), mismo destino y mismas reglas que `/auth/confirm` (activa la cuenta, bloqueados y no invitados no entran, `returnTo` solo interno). Límite: 5 fallos por correo y 30 intentos por IP en 15 minutos (`lib/limite.ts`, sobre `telegram_estados`). La pantalla pide el código en un campo de un toque.
+5. Sesión larga: no hizo falta código. La sesión de Supabase ya es larga; lo que fallaba era entrar desde otro navegador. Para revisar en el panel de Supabase: Authentication, ajustes de sesión (tiempo máximo e inactividad) y la longitud del código por correo (hoy 8).
+6. Pruebas: 17 nuevas en `tests/29-login-codigo.test.ts` (comprobado que las de límites fallan sin ellos). La base falsa de autenticación ahora imita a Supabase real: un enlace nuevo invalida el anterior y el código es de 8 dígitos. Se actualizaron 4 pruebas existentes por el campo nuevo `espera` y el texto "vencen". Suite: 329 pruebas, 21 fallos previos, ninguno nuevo. Verificado en el navegador a 375 px: sin scroll lateral y con cuenta atrás.
+7. PENDIENTE: el correo de pago ("Ir a mi portal") sigue llevando a `/dashboard` sin llave: ahora, sin sesión, cae en `/login?returnTo=/dashboard`, el cliente pide el correo y entra con el código o el enlace, y llega a `/dashboard`. El ciclo está roto, pero el correo con el correo ya escrito (código opaco en la dirección, sin datos personales) queda para después.
+8. Falta probar el flujo completo con un correo real (envío con Resend y código real) desde el navegador, que no se hizo para no enviar correos a usuarios de prueba.
+
 ## Motivo cuando dicen que no: HECHO (2026-11-03)
 
 Dato prioritario 2 de `docs/crm-datos-pendientes.md`. Opcional y de un toque; queda como evento (`motivo_no_contratar` del cliente y `motivo_rechazo` del compita) con el motivo en `datos`. No requirió migración.
