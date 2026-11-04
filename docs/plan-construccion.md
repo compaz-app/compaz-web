@@ -1,0 +1,60 @@
+# Plan de construcción del rediseño, paso a paso
+
+Rama de trabajo: `rediseno`. Punto de retorno: etiqueta `antes-del-rediseno`. Cada paso es pequeño, se prueba solo (`node tests/run.mjs`, `npx tsc --noEmit`) y se puede deshacer. Solo commit; el push lo decide el usuario. Las migraciones solo agregan tablas o columnas. Cada paso se marca como hecho al terminar.
+
+Aclaración (2026-11-03): los clientes registrados en el sistema son de prueba y se pueden borrar; los compitas son reales.
+
+## Fase 0. Preparar (casi sin código)
+
+0.1 Exportación única de la tabla de compitas (datos reales). Pendiente de decidir quién la hace.
+0.2 Revisar los registros de Netlify del día de la prueba para saber por qué fallaron los avisos de Telegram.
+0.3 Confirmar en la base si la migración de captación (`postulaciones`, `eventos`) está aplicada.
+0.4 Decisiones abiertas: canal humano para pedir ayuda; video o solo reportes durante la visita; cómo pasa un postulante a cliente (hoy invitación manual).
+0.5 Diseñar el ciclo del compita con la escalera de Telegram, correo y Bandeja.
+
+## Fase 1. Base de avisos y eventos (invisible, lo más importante)
+
+1.1 Tabla `avisos`: destinatario, canal, plantilla, estado (enviado, fallido), error, intentos, fechas. Migración aditiva.
+1.2 Registro de eventos de operación: reutilizar `eventos` o crear una propia (según 0.3).
+1.3 `lib/avisos.ts` con `notificar()`: envía con `sendTelegramMessage` o `sendEmail` actuales, registra el resultado y permite reintentar.
+1.4 Migrar tres flujos críticos a `notificar()`: solicitud al compita, pago confirmado, pregunta de contratar.
+1.5 Escalera de respaldo del compita: correo si Telegram falla o no actúa, luego tarea en la Bandeja.
+1.6 Registro de la etapa del cliente y desde cuándo (columna nueva aditiva).
+
+## Fase 2. Admin nuevo, al lado del actual
+
+2.1 Ruta nueva solo para admin con la Bandeja sobre datos reales: pagos por confirmar, emergencias, avisos fallidos, entrevistas sin decisión.
+2.2 Seguimiento por etapas con el semáforo y los umbrales como ajuste.
+2.3 Personas (compitas y clientes) con vistas, orden y paginación en servidor.
+2.4 Visitas con "Con problema" y su motivo.
+2.5 Más: reseñas, postulaciones, pagos, avisos enviados, cobertura y ajustes.
+2.6 Cuando iguale al admin actual, se redirige y se retira el viejo.
+
+## Fase 3. Acceso y portal del cliente
+
+3.1 Arreglar el ciclo de login: sesión larga, recordar el destino, cuenta atrás visible y código de 6 números.
+3.2 Portal nuevo con 4 secciones (Inicio, Visitas, Mi familiar, Mi plan) en ruta nueva.
+3.3 Elegir compita y flujo de la visita según la decisión de 0.4.
+3.4 Ayuda por paso con la escalera de tres intentos.
+3.5 Cuando iguale al dashboard actual, se redirige y se retira el viejo.
+
+## Fase 4. El compita en Telegram
+
+4.1 "¿Qué me toca?" y `/ayuda` contextual.
+4.2 Botones únicos por aviso y mensajes que se editan al responder.
+
+## Fase 5. Escala y lanzamiento
+
+5.1 Quitar la recarga de 15 s del portal, caché de la cobertura, índices y paginación en servidor.
+5.2 Prueba de carga con datos falsos.
+5.3 Copias de seguridad con restauración probada y base de desarrollo separada (ver `CLAUDE.md`, sección 6).
+5.4 Limpiar datos de prueba (clientes de prueba, pagos simulados).
+5.5 Bloquear o quitar `app/prototipo/` antes de publicar.
+5.6 Stripe y lista de seguridad de `CLAUDE.md`.
+
+## Cómo se trabaja cada paso
+
+1. Se explica qué se hará y qué se toca.
+2. Se construye en la rama `rediseno`.
+3. Se prueba y se verifica que lo viejo sigue funcionando.
+4. Commit. El push solo cuando el usuario lo pida.
