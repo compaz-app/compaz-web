@@ -183,6 +183,7 @@ Actualiza campos editables del perfil de una compita. Solo admin.
 | POST | `/api/cron/conciliar-airtable` | `x-cron-secret` | Cada hora: importa o vincula registros de Airtable creados desde `CAPTACION_DESDE` que Supabase no tenga |
 | POST | `/api/admin/postulaciones/resolver` | Admin (sesión verificada) | Resuelve una postulación de la bandeja: `{ id, resolucion, nota?, airtableId? }` |
 | GET | `/admin/postulaciones` | Admin | Bandeja de postulaciones que no llegaron a Airtable |
+| GET | `/api/cmc/postulaciones` | `Authorization: Bearer CMC_LECTURA_TOKEN` (sin él o sin `CAPTACION_DESDE`: 503) | Solo lectura para el Apps Script del CMC: postulaciones desde `CAPTACION_DESDE` con formato de Airtable (`{ ok, data: { records, offset } }`, `?offset=` para paginar). Ver `docs/cmc/fuente-supabase.md` |
 
 ## Errores comunes
 
