@@ -736,6 +736,10 @@ function Formulario({ rolInicial }: { rolInicial: string }) {
     setForm((f) => ({ ...f, rol: rolInicial }));
   }
   const [status, setStatus] = useState<"idle" | "loading" | "ok" | "error">("idle");
+  // Textos según el rol elegido. Sin rol o con "familia" se mantienen los de siempre.
+  const esCompita = form.rol === "compa";
+  // Rol con el que se envió (el formulario se vacía al terminar): decide el mensaje de éxito
+  const [rolEnviado, setRolEnviado] = useState("");
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -784,6 +788,7 @@ function Formulario({ rolInicial }: { rolInicial: string }) {
         }),
       });
       if (!res.ok) throw new Error("Error");
+      setRolEnviado(form.rol);
       setStatus("ok");
       setForm({ nombre: "", countryCode: "+58", vePrefijo: "0412", phone: "", email: "", estado: "", ciudad: "", rol: "", website: "" });
       (window as typeof window & { gtag?: (...args: unknown[]) => void }).gtag?.("event", "form_submit", { event_category: "waitlist" });
@@ -808,20 +813,26 @@ function Formulario({ rolInicial }: { rolInicial: string }) {
           className="text-3xl sm:text-4xl font-extrabold text-center mb-4 leading-tight"
           style={{ color: "#1A0A3C", fontFamily: "var(--font-display)", textWrap: "balance" }}
         >
-          Pronto iniciaremos en Venezuela. Solo 10 familias en el piloto.
+          {esCompita
+            ? "Buscamos Compitas en Venezuela."
+            : "Pronto iniciaremos en Venezuela. Solo 10 familias en el piloto."}
         </h2>
         <p
           className="text-center text-base font-medium mb-6"
           style={{ color: "#2D1464", fontFamily: "var(--font-inter)" }}
         >
-          Queremos conocer cada caso personalmente.
+          {esCompita
+            ? "Déjanos tus datos y te contactamos para conocerte."
+            : "Queremos conocer cada caso personalmente."}
         </p>
-        <p
-          className="text-center text-lg font-semibold mb-2"
-          style={{ color: "#2D1464", fontFamily: "var(--font-display)" }}
-        >
-          La primera hora del mes es nuestro regalo.
-        </p>
+        {!esCompita && (
+          <p
+            className="text-center text-lg font-semibold mb-2"
+            style={{ color: "#2D1464", fontFamily: "var(--font-display)" }}
+          >
+            La primera hora del mes es nuestro regalo.
+          </p>
+        )}
 
         {status === "ok" ? (
           <div
@@ -832,13 +843,15 @@ function Formulario({ rolInicial }: { rolInicial: string }) {
               className="text-xl font-extrabold mb-2"
               style={{ color: "#2D1464", fontFamily: "var(--font-display)" }}
             >
-              ¡Ya estás en la lista!
+              {rolEnviado === "compa" ? "¡Recibimos tu postulación!" : "¡Ya estás en la lista!"}
             </p>
             <p
               className="text-sm"
               style={{ color: "#6B5C90", fontFamily: "var(--font-inter)" }}
             >
-              Te escribimos antes del lanzamiento con todos los detalles.
+              {rolEnviado === "compa"
+                ? "Te contactaremos para informarte sobre los próximos pasos."
+                : "Te escribimos antes del lanzamiento con todos los detalles."}
             </p>
           </div>
         ) : (
@@ -917,7 +930,7 @@ function Formulario({ rolInicial }: { rolInicial: string }) {
               estado={form.estado}
               ciudad={form.ciudad}
               onChange={({ estado, ciudad }) => setForm({ ...form, estado, ciudad })}
-              placeholderEstado="Estado donde vive tu familiar"
+              placeholderEstado={esCompita ? "Estado donde puedes trabajar" : "Estado donde vive tu familiar"}
             />
 
             {/* Selector de rol */}
@@ -983,7 +996,7 @@ function Formulario({ rolInicial }: { rolInicial: string }) {
                 textDecoration: "none",
               }}
             >
-              {status === "loading" ? "Enviando…" : "Quiero ser parte del piloto"}
+              {status === "loading" ? "Enviando…" : esCompita ? "Postularme como Compita" : "Quiero ser parte del piloto"}
             </button>
 
             <p
