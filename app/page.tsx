@@ -790,7 +790,8 @@ function Formulario({ rolInicial }: { rolInicial: string }) {
       if (!res.ok) throw new Error("Error");
       setRolEnviado(form.rol);
       setStatus("ok");
-      setForm({ nombre: "", countryCode: "+58", vePrefijo: "0412", phone: "", email: "", estado: "", ciudad: "", rol: "", website: "" });
+      // Se conserva el rol enviado: los textos (título, subtítulo, oferta) siguen siendo los de ese rol tras el envío
+      setForm({ nombre: "", countryCode: "+58", vePrefijo: "0412", phone: "", email: "", estado: "", ciudad: "", rol: form.rol, website: "" });
       (window as typeof window & { gtag?: (...args: unknown[]) => void }).gtag?.("event", "form_submit", { event_category: "waitlist" });
       // Meta Pixel: evento de conversión (no solo PageView)
       (window as typeof window & { fbq?: (...args: unknown[]) => void }).fbq?.(

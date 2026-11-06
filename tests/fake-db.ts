@@ -30,6 +30,7 @@ const DEFAULTS: Record<string, () => Row> = {
   pagos_plan: () => ({ id: randomUUID(), estado: 'activo', horas: null, referencia: null, created_at: nowIso() }),
   admin_flags: () => ({ id: randomUUID(), resuelto: false, created_at: nowIso() }),
   resenas: () => ({ id: randomUUID(), publicada: false, created_at: nowIso() }),
+  postulaciones: () => ({ id: randomUUID(), clasificacion: 'nueva', resolucion: null, airtable_id: null, airtable_estado: 'pendiente', utm_source: null, utm_medium: null, utm_campaign: null, recibida_en: nowIso() }),
 }
 
 const PK: Record<string, string> = { telegram_estados: 'chat_id' }
