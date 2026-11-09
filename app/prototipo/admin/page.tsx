@@ -1,12 +1,12 @@
 'use client'
-import { Suspense, useEffect, useMemo, useState } from 'react'
-import { useUrlState } from '../useUrlState'
+import { Suspense, createContext, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { useEmbedded, useUrlState } from '../useUrlState'
 
-type Etapa = 'Solicitud' | 'Entrevista' | 'Decisión' | 'Pago' | 'Activo'
-const ETAPAS: Etapa[] = ['Solicitud', 'Entrevista', 'Decisión', 'Pago', 'Activo']
+type Etapa = 'Solicitud' | 'Entrevista' | 'Decisión' | 'Pago' | 'Ficha' | 'Activo'
+const ETAPAS: Etapa[] = ['Solicitud', 'Entrevista', 'Decisión', 'Pago', 'Ficha', 'Activo']
 
 type EstadoCompita = 'Disponible' | 'Con cupo' | 'En pausa' | 'Nuevo'
-type StatsCompita = { estado: EstadoCompita; activos: number; visitas: number; rating: number; respuesta: number; inactivoH: number }
+type StatsCompita = { estado: EstadoCompita; activos: number; visitas: number; rating: number; respuesta: number; inactivoH: number; canc: number; tardias: number }
 
 type Persona = { id: string; nombre: string; tipo: 'Cliente' | 'Compita'; zona: string; etapa?: Etapa; horas?: number; compita?: string; stats?: StatsCompita; nota: string; linea: { cuando: string; texto: string }[] }
 
@@ -16,6 +16,7 @@ const BASE: Persona[] = [
   { id: 'p3', horas: 8, nombre: 'Ana Gómez', tipo: 'Cliente', zona: 'Bogotá → Altamira', etapa: 'Solicitud', compita: 'Daniela', nota: '', linea: [{ cuando: 'Hoy 8:50', texto: 'Envió solicitud a Daniela' }] },
   { id: 'p4', horas: 0, nombre: 'Marta Salcedo', tipo: 'Cliente', zona: 'Panamá → Chacao', etapa: 'Activo', compita: 'María', nota: 'Madre de 82 años, usa bastón.', linea: [{ cuando: 'Mar 10:00', texto: 'Visita completada, 5 estrellas' }, { cuando: 'Lun 3:00 pm', texto: 'Pago confirmado' }] },
   { id: 'p5', horas: 0, nombre: 'Jorge Rivas', tipo: 'Cliente', zona: 'Lima → El Rosal', etapa: 'Entrevista', compita: 'Rosa', nota: '', linea: [{ cuando: 'Hoy 7:20', texto: 'Entrevista confirmada para mañana' }] },
+  { id: 'p9', horas: 48, nombre: 'Elena Duarte', tipo: 'Cliente', zona: 'Caracas → La Castellana', etapa: 'Ficha', compita: 'María', nota: '', linea: [{ cuando: 'Hace 2 días', texto: 'Pagó el Plan Compañía' }, { cuando: 'Hace 2 días', texto: 'Aún no completa la ficha del familiar' }] },
   { id: 'p6', nombre: 'María Fuentes', tipo: 'Compita', zona: 'Chacao', nota: 'Muy puntual. Excelente con adultos mayores.', linea: [{ cuando: 'Hoy 9:30', texto: 'Terminó entrevista con Carolina' }, { cuando: 'Mar 10:00', texto: 'Visita completada' }] },
   { id: 'p7', nombre: 'Rosa Linares', tipo: 'Compita', zona: 'Los Palos Grandes', nota: '', linea: [{ cuando: 'Hoy 10:05', texto: 'Aviso de Telegram sin entregar' }] },
   { id: 'p8', nombre: 'Daniela Torres', tipo: 'Compita', zona: 'Altamira', nota: '', linea: [{ cuando: 'Hoy 8:50', texto: 'Nueva solicitud sin responder' }] },
@@ -23,9 +24,9 @@ const BASE: Persona[] = [
 
 
 const STATS_BASE: Record<string, StatsCompita> = {
-  p6: { estado: 'Con cupo', activos: 2, visitas: 14, rating: 4.9, respuesta: 98, inactivoH: 1 },
-  p7: { estado: 'Disponible', activos: 1, visitas: 6, rating: 4.4, respuesta: 62, inactivoH: 30 },
-  p8: { estado: 'Disponible', activos: 0, visitas: 0, rating: 0, respuesta: 40, inactivoH: 80 },
+  p6: { estado: 'Con cupo', activos: 2, visitas: 14, rating: 4.9, respuesta: 98, inactivoH: 1, canc: 0, tardias: 0 },
+  p7: { estado: 'Disponible', activos: 1, visitas: 6, rating: 4.4, respuesta: 62, inactivoH: 30, canc: 1, tardias: 0 },
+  p8: { estado: 'Disponible', activos: 0, visitas: 0, rating: 0, respuesta: 40, inactivoH: 80, canc: 2, tardias: 2 },
 }
 const NOM = ['Carmen', 'Yoselin', 'Gladys', 'Mariela', 'Yaneth', 'Beatriz', 'Alexandra', 'Nelly', 'Irene', 'Milagros', 'Josefina', 'Dayana', 'Karina', 'Omaira', 'Zuleima', 'Flor', 'Aracelis', 'Thais', 'Noris', 'Lisbeth']
 const APE = ['Pérez', 'Gómez', 'Rojas', 'Mendoza', 'Silva', 'Castro', 'Ortega', 'Navas', 'Paredes', 'Quintero', 'Salas', 'Vargas', 'Ríos', 'Medina', 'Lara']
@@ -43,6 +44,9 @@ const GENERADAS: Persona[] = Array.from({ length: 97 }, (_, i) => {
     rating: nueva ? 0 : Math.round((3.4 + azar() * 1.6) * 10) / 10,
     respuesta: nueva ? 0 : Math.round(35 + azar() * 65),
     inactivoH: Math.floor(azar() * azar() * 120),
+    // Cancelaciones de los últimos 30 días (fijas por posición para no alterar el resto de los datos de ejemplo).
+    tardias: nueva ? 0 : i % 19 === 0 ? 3 : i % 11 === 0 ? 2 : i % 7 === 0 ? 1 : 0,
+    canc: nueva ? 0 : (i % 19 === 0 ? 3 : i % 11 === 0 ? 2 : i % 7 === 0 ? 1 : 0) + (i % 5 === 0 ? 1 : 0),
   }
   const nombre = `${NOM[i % NOM.length]} ${APE[Math.floor(azar() * APE.length)]}`
   return { id: `c${i}`, nombre, tipo: 'Compita', zona: ZONAS[Math.floor(azar() * ZONAS.length)], nota: '', stats, linea: [{ cuando: `Hace ${stats.inactivoH} h`, texto: 'Última actividad' }] }
@@ -57,7 +61,7 @@ const PERSONAS: Persona[] = [...BASE.map((x) => (STATS_BASE[x.id] ? { ...x, stat
 
 type Urgencia = 'verde' | 'amarillo' | 'rojo'
 // Horas en la etapa a partir de las cuales pasa a amarillo y a rojo (propuesta, se ajusta).
-const UMBRALES: Record<Etapa, [number, number]> = { Solicitud: [6, 24], Entrevista: [1, 3], Decisión: [2, 24], Pago: [2, 12], Activo: [24, 72] }
+const UMBRALES: Record<Etapa, [number, number]> = { Solicitud: [6, 24], Entrevista: [1, 3], Decisión: [2, 24], Pago: [2, 12], Ficha: [24, 48], Activo: [24, 72] }
 const URG_ESTILO: Record<Urgencia, string> = { verde: 'bg-[#1f9d6b] text-white', amarillo: 'bg-[#F5B800] text-[var(--purple-dark)]', rojo: 'bg-[#D93A3A] text-white' }
 function urgenciaDe(p: Persona): Urgencia {
   if (!p.etapa) return 'verde'
@@ -81,13 +85,271 @@ const NUEVAS: Tarea[] = [
   { id: 'n1', tipo: 'Nadie abre', icono: '🚪', clienteId: 'p4', compitaId: 'p6', que: 'El compita llegó (foto enviada) y nadie abre. Van 15 de 30 minutos. Ya se le escribió al contacto en el sitio a los 5 minutos', hace: 'hace 15 min', boton: 'Escribir al contacto otra vez', resuelta: 'Mensaje enviado ✓' },
   { id: 'n2', tipo: 'No me siento seguro', icono: '🛑', clienteId: 'p2', compitaId: 'p7', que: 'El compita salió de la visita por seguridad. El cliente recibió un aviso neutro. Decide si cobra la visita', hace: 'hace 6 min', boton: 'Llamar al compita y decidir', resuelta: 'Atendida ✓' },
   { id: 'n3', tipo: 'Visita alargada', icono: '⏱️', clienteId: 'p3', compitaId: 'p8', que: 'La visita pasó 25 minutos de su hora de fin y el compita no respondió "¿Todo bien?" en 10 minutos', hace: 'hace 10 min', boton: 'Contactar al compita', resuelta: 'Contactado ✓' },
-  { id: 'n4', tipo: 'Ficha incompleta', icono: '📋', clienteId: 'p1', compitaId: 'p6', que: 'Pagó hace 2 días y aún no completa la ficha del familiar. No puede agendar su primera cita', hace: 'hace 2 d', boton: 'Llenarla por teléfono', resuelta: 'Ficha completada ✓' },
+  { id: 'n4', tipo: 'Ficha incompleta', icono: '📋', clienteId: 'p9', compitaId: 'p6', que: 'Pagó hace 2 días y aún no completa la ficha del familiar. No puede agendar su primera cita', hace: 'hace 2 d', boton: 'Recordarle por correo', resuelta: 'Recordatorio enviado ✓' },
   { id: 'n5', tipo: 'Reporte de un compita', icono: '🚩', clienteId: 'p5', compitaId: 'p7', que: 'El compita reportó un problema con este cliente: "Me pidió hacer algo fuera del servicio" y marcó no volver con él', hace: 'hace 1 h', boton: 'Revisar y decidir', resuelta: 'Revisado ✓' },
   { id: 'n6', tipo: 'Cancelación tardía', icono: '📆', clienteId: 'p2', compitaId: 'p8', que: 'El compita canceló con menos de 24 horas. Es su segunda en 30 días: se abre revisión. La cita se reprograma sin costo', hace: 'hace 4 h', boton: 'Hablar con el compita', resuelta: 'Revisada ✓' },
-  { id: 'n7', tipo: 'Contacto bloqueado', icono: '🔒', clienteId: 'p3', compitaId: 'p7', que: 'Segunda detección en 30 días: este cliente volvió a intentar compartir un teléfono. Ya se le había avisado que sería la última', hace: 'hace 50 min', boton: 'Marcar revisada', resuelta: 'Revisada ✓' },
+  { id: 'n9', tipo: 'Duda sin resolver', icono: '❓', clienteId: 'p4', compitaId: 'p7', que: 'El compita preguntó por la dirección y por cómo entrar, y el bot no pudo resolverlo en 2 intentos. Responder por Telegram, nunca por llamada', hace: 'hace 20 min', boton: 'Responderle por Telegram', resuelta: 'Respondida ✓' },
+  { id: 'n10', tipo: 'Contacto bloqueado', icono: '🔒', clienteId: 'p4', compitaId: 'p7', que: 'Segunda detección en 30 días: este COMPITA compartió un teléfono con un cliente. Su disponibilidad quedó en pausa, sin fecha de fin, y sus visitas programadas en espera. Decide: reactivar, dar otra oportunidad o bloquear', hace: 'hace 35 min', boton: 'Decidir sobre el compita', resuelta: 'Decidido ✓' },
+  { id: 'n8', tipo: 'Cambio en el lugar', icono: '👥', clienteId: 'p4', compitaId: 'p6', que: 'El cliente cambió quién estará en la visita (agregó a 1 amigo) y el compita no responde si sigue. La visita es en 20 horas, ya pasó la espera de 5 horas. El cliente ya le escribió por el chat', hace: 'hace 3 h', boton: 'Insistir al compita', resuelta: 'Aviso reenviado ✓' },
+  { id: 'n7', tipo: 'Contacto bloqueado', icono: '🔒', clienteId: 'p3', compitaId: 'p7', que: 'Segunda detección en 30 días: este cliente volvió a intentar compartir un teléfono. Su cuenta quedó EN PAUSA, sin fecha de fin, y su próxima visita (jueves 10:00 am) quedó en espera hasta que intervengas. Decide: reactivar, dar otra oportunidad o bloquear', hace: 'hace 50 min', boton: 'Decidir sobre la cuenta', resuelta: 'Decidido ✓' },
 ]
 
+// Lo que el admin marca en esta sesión queda en el Registro de actividad (en el sistema real se guarda en la base).
+type EntradaRegistro = { cuando: string; quien: string; accion: string; motivo: string }
+const REGISTRO_EXTRA: EntradaRegistro[] = []
+const horaAhora = () => new Date().toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit', hour12: false })
+
+// Historial de cancelaciones del compita (en la ficha). El interruptor "justificada" las saca de su cuenta.
+const MOTIVOS_CANC = ['Enfermedad', 'Problema de transporte', 'Imprevisto personal', 'Emergencia familiar']
+function CancelacionesFicha({ p }: { p: Persona }) {
+  const s = p.stats!
+  const [just, setJust] = useState<Record<number, { quien: string; cuando: string } | undefined>>({})
+  const marcar = (i: number, c: { cuando: string; motivo: string }, on: boolean) => {
+    const hora = horaAhora()
+    setJust((o) => ({ ...o, [i]: on ? { quien: 'Admin Juan', cuando: `hoy ${hora}` } : undefined }))
+    REGISTRO_EXTRA.unshift({ cuando: `hoy ${hora}`, quien: 'Admin Juan', accion: `${on ? 'Marcó como justificada' : 'Quitó la justificación de'} una cancelación de ${p.nombre} (${c.cuando}, ${c.motivo})`, motivo: on ? 'Puede dejar de contar en contra del compita' : 'Vuelve a contar en contra del compita' })
+  }
+  if (s.canc === 0) return <p className="mt-2 text-sm text-[var(--text-mid)]">Sin cancelaciones en los últimos 30 días.</p>
+  const lista = Array.from({ length: s.canc }, (_, i) => ({ cuando: `hace ${3 + i * 6} días`, horas: i < s.tardias ? [3, 10, 18][i % 3] : 30 + i * 12, motivo: MOTIVOS_CANC[(i + p.nombre.length) % MOTIVOS_CANC.length] }))
+  const cuentan = lista.filter((c, i) => c.horas < 24 && !just[i]).length
+  return (
+    <>
+      <p className="mt-1 text-sm text-[var(--text-mid)]">{s.canc} en 30 días, {s.tardias} con menos de 24 horas de aviso. Cuentan en su contra: <b>{cuentan}</b>. Con 2 se abre una revisión y con 3 se pausan sus solicitudes nuevas.</p>
+      <ul className="mt-2 divide-y divide-[var(--border-muted)] overflow-hidden rounded-xl border border-[var(--border-muted)]">
+        {lista.map((c, i) => (
+          <li key={i} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2 text-sm">
+            <div className="min-w-[9rem] flex-1"><div className="font-bold">{c.cuando}</div><div className="text-[var(--text-mid)]">{c.motivo} · avisó con {c.horas} h {c.horas < 24 ? <b className="text-[#92400E]">(tardía)</b> : '(a tiempo)'}</div></div>
+            {c.horas < 24 && <label className="flex items-center gap-2 font-bold"><input type="checkbox" checked={!!just[i]} onChange={(e) => marcar(i, c, e.target.checked)} className="h-5 w-5" />Justificada</label>}
+            {just[i] && <div className="w-full text-xs text-[var(--text-mid)]">Marcada por {just[i]!.quien} · {just[i]!.cuando}. Queda en el Registro de actividad.</div>}
+          </li>
+        ))}
+      </ul>
+    </>
+  )
+}
+
+// ── Chat entre cliente y compita, visible solo para el equipo ───────────────────────────────────────
+// Se abre desde la Bandeja, Visitas y la ficha del cliente. Abrirlo queda anotado en el Registro de actividad.
+type MensajeChat = { de: 'Cliente' | 'Compita' | 'Compaz'; t: string; cuando: string; censurado?: boolean }
+const VerChatCtx = createContext<(clienteId: string, compitaId: string) => void>(() => {})
+// Rol de quien usa el panel. Los administradores (correo de administrador) no escriben motivo al ver datos sensibles;
+// cualquier otra persona con acceso (colaborador) debe indicar un motivo, y no tiene acceso al 100 %.
+type Rol = 'admin' | 'colaborador'
+const RolCtx = createContext<Rol>('admin')
+const NOMBRE_ROL: Record<Rol, string> = { admin: 'Admin Juan', colaborador: 'Colaborador Luis' }
+
+// ── Permisos por colaborador ─────────────────────────────────────────────────────────────────────────
+// El administrador activa o desactiva cada permiso de cada colaborador con interruptores (sí/no). Los cambios rigen
+// al instante, quedan en el Registro de actividad y se guardan en este navegador para la maqueta.
+type Permiso = 'monitorear' | 'atender' | 'chats' | 'telefonos' | 'pagos' | 'cuentas' | 'ajustes_ver' | 'ajustes_editar' | 'invitar'
+const PERMISOS_LISTA: { id: Permiso; t: string; d: string }[] = [
+  { id: 'monitorear', t: 'Ver Seguimiento, Personas y Visitas', d: 'Monitorear a compitas y clientes.' },
+  { id: 'atender', t: 'Ver la Bandeja y atender tareas del día', d: 'Insistir a un compita, reintentar un aviso, marcar revisada.' },
+  { id: 'chats', t: 'Ver el chat entre cliente y compita', d: 'Pide un motivo cada vez y queda anotado.' },
+  { id: 'telefonos', t: 'Ver teléfonos y datos sensibles', d: 'Pide un motivo cada vez y queda anotado.' },
+  { id: 'pagos', t: 'Confirmar pagos y ver el historial de pagos', d: 'Dinero: conviene dejarlo solo para administradores.' },
+  { id: 'cuentas', t: 'Pausar, reactivar o bloquear cuentas', d: 'Decisiones sobre clientes y compitas.' },
+  { id: 'ajustes_ver', t: 'Ver Ajustes', d: 'Solo lectura: precios, plazos y textos.' },
+  { id: 'ajustes_editar', t: 'Cambiar Ajustes', d: 'Cambia precios, plazos y textos para todo el sistema.' },
+  { id: 'invitar', t: 'Invitar clientes y compitas', d: 'Mandar invitaciones de acceso.' },
+]
+// Lo recomendado para un colaborador nuevo (el administrador lo cambia cuando quiera).
+const PERMISOS_BASE: Record<Permiso, boolean> = { monitorear: true, atender: true, chats: true, telefonos: true, pagos: false, cuentas: false, ajustes_ver: true, ajustes_editar: false, invitar: false }
+type Colaborador = { id: string; nombre: string; correo: string; desde: string; permisos: Record<Permiso, boolean> }
+const COLABS_INICIALES: Colaborador[] = [{ id: 'luis', nombre: 'Luis', correo: 'luis@micompaz.com', desde: 'Invitado por Juan el 2 nov', permisos: { ...PERMISOS_BASE } }]
+const CLAVE_LS = 'compaz_proto_colaboradores'
+type PermCtxValor = { colabs: Colaborador[]; cambiar: (id: string, p: Permiso, v: boolean) => void; restablecer: (id: string) => void; invitar: (correo: string) => void }
+const PermCtx = createContext<PermCtxValor>({ colabs: COLABS_INICIALES, cambiar: () => {}, restablecer: () => {}, invitar: () => {} })
+/** ¿Puede quien usa el panel hacer esto? Un administrador siempre; el colaborador (Luis en la maqueta) solo si se lo activaron. */
+function usePuede(): (p: Permiso) => boolean {
+  const rol = useContext(RolCtx)
+  const { colabs } = useContext(PermCtx)
+  const yo = colabs[0]
+  return (p) => rol === 'admin' || !!yo?.permisos[p]
+}
+
+// Almacén sencillo de colaboradores: se lee una vez del navegador y avisa a quien lo usa cuando cambia.
+let colabsGuardados: Colaborador[] | null = null
+const oyentesColabs = new Set<() => void>()
+function leerColabs(): Colaborador[] {
+  if (colabsGuardados) return colabsGuardados
+  colabsGuardados = COLABS_INICIALES
+  try {
+    const g = typeof localStorage !== 'undefined' ? localStorage.getItem(CLAVE_LS) : null
+    const v = g ? JSON.parse(g) : null
+    if (Array.isArray(v) && v.length) colabsGuardados = v as Colaborador[]
+  } catch { /* sin almacenamiento: se usan los valores iniciales */ }
+  return colabsGuardados
+}
+function escribirColabs(n: Colaborador[]) {
+  colabsGuardados = n
+  try { localStorage.setItem(CLAVE_LS, JSON.stringify(n)) } catch { /* la maqueta sigue funcionando sin guardar */ }
+  oyentesColabs.forEach((f) => f())
+}
+const suscribirColabs = (f: () => void) => { oyentesColabs.add(f); return () => { oyentesColabs.delete(f) } }
+const MOTIVOS_CHAT = ['Reclamo del cliente', 'Alerta de contacto compartido', 'Revisión de calidad de la visita', 'Otro (explicar)']
+
+function conversacion(clienteId: string, compitaId: string): MensajeChat[] {
+  const conBloqueo = TODAS_TAREAS.some((t) => t.tipo === 'Contacto bloqueado' && t.clienteId === clienteId && t.compitaId === compitaId)
+  const base: MensajeChat[] = [
+    { de: 'Compaz', t: 'Se abrió el chat para coordinar la próxima visita. Recuerda: no se pueden compartir teléfonos ni correos; quien lo haga puede ser penalizado.', cuando: 'hace 3 d, 10:02' },
+    { de: 'Compita', t: 'Hola, vi que quieres otra visita. ¿Qué día te queda bien?', cuando: 'hace 3 d, 10:05' },
+    { de: 'Cliente', t: 'Hola, ¿te sirve el jueves en la mañana?', cuando: 'hace 3 d, 10:31' },
+    { de: 'Compita', t: 'Sí, el jueves a las 10:00 am me queda perfecto.', cuando: 'hace 3 d, 10:40' },
+  ]
+  const bloqueo: MensajeChat[] = conBloqueo ? [
+    { de: 'Cliente', t: '[contacto eliminado]', cuando: 'hace 2 d, 18:12', censurado: true },
+    { de: 'Compaz', t: 'Por seguridad no se pueden compartir contactos. Este es el primer aviso.', cuando: 'hace 2 d, 18:12' },
+    { de: 'Cliente', t: '[contacto eliminado]', cuando: 'hace 50 min', censurado: true },
+    { de: 'Compaz', t: 'Se avisó al equipo y la cuenta quedó en pausa.', cuando: 'hace 50 min' },
+  ] : [{ de: 'Cliente', t: 'Perfecto, gracias. Nos vemos el jueves.', cuando: 'hace 3 d, 10:44' }]
+  return [...base, ...bloqueo]
+}
+
+function MotivoDialog({ titulo, texto, onListo, onCancelar }: { titulo: string; texto: string; onListo: (motivo: string) => void; onCancelar: () => void }) {
+  const [elegido, setElegido] = useState('')
+  const [detalle, setDetalle] = useState('')
+  const otro = elegido === MOTIVOS_CHAT[3]
+  const listo = !!elegido && (!otro || detalle.trim().length >= 5)
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center" onClick={onCancelar}>
+      <div onClick={(e) => e.stopPropagation()} role="dialog" aria-label={titulo} className="w-full max-w-md rounded-t-3xl bg-white p-5 sm:rounded-3xl">
+        <h2 className="text-xl font-extrabold">{titulo}</h2>
+        <p className="mt-1 text-sm text-[var(--text-mid)]">{texto}</p>
+        <div className="mt-3 grid gap-2">
+          {MOTIVOS_CHAT.map((m) => <button key={m} onClick={() => setElegido(m)} aria-pressed={elegido === m} className={`min-h-12 rounded-2xl border-2 px-4 text-left font-bold ${elegido === m ? 'border-[var(--purple)] bg-[var(--purple)]/5' : 'border-[var(--border-muted)]'}`}>{m}</button>)}
+        </div>
+        {otro && <label className="mt-3 block text-base font-bold">Explica el motivo<textarea value={detalle} onChange={(e) => setDetalle(e.target.value)} className="mt-1 min-h-20 w-full rounded-xl border border-[var(--border-muted)] p-3 text-base font-normal" /></label>}
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          <button onClick={onCancelar} className="min-h-12 rounded-xl border border-[var(--border-muted)] font-bold">Cancelar</button>
+          <button disabled={!listo} onClick={() => onListo(otro ? `Otro: ${detalle.trim()}` : elegido)} className="min-h-12 rounded-xl bg-[var(--orange)] font-extrabold text-white disabled:opacity-40">Continuar</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ChatAdmin({ clienteId, compitaId, onClose }: { clienteId: string; compitaId: string; onClose: () => void }) {
+  const cli = PERSONAS.find((x) => x.id === clienteId)
+  const cmp = PERSONAS.find((x) => x.id === compitaId)
+  const msgs = useMemo(() => conversacion(clienteId, compitaId), [clienteId, compitaId])
+  const rol = useContext(RolCtx)
+  // El administrador entra directo; el colaborador debe indicar un motivo antes de ver la conversación.
+  const [motivo, setMotivo] = useState<string | null>(rol === 'admin' ? 'Sin motivo requerido (administrador)' : null)
+  const [elegido, setElegido] = useState('')
+  const [detalle, setDetalle] = useState('')
+  const otro = elegido === MOTIVOS_CHAT[3]
+  const motivoListo = !!elegido && (!otro || detalle.trim().length >= 5)
+  // Consultar una conversación es consultar un dato sensible: queda anotado (una vez por apertura).
+  const anotado = useRef(false) // una sola anotación por apertura, aunque el efecto se ejecute dos veces
+  useEffect(() => {
+    if (!cli || !cmp || !motivo || anotado.current) return
+    anotado.current = true
+    REGISTRO_EXTRA.unshift({ cuando: `hoy ${horaAhora()}`, quien: NOMBRE_ROL[rol], accion: `Vio el chat entre ${cli.nombre} y ${cmp.nombre}`, motivo })
+  }, [cli, cmp, motivo, rol])
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', h)
+    return () => document.removeEventListener('keydown', h)
+  }, [onClose])
+  if (!cli || !cmp) return null
+  if (!motivo) {
+    return (
+      <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/40 sm:items-center" onClick={onClose}>
+        <div onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Motivo para ver el chat" className="w-full max-w-md rounded-t-3xl bg-white p-5 sm:rounded-3xl">
+          <h2 className="text-xl font-extrabold">¿Por qué necesitas ver este chat?</h2>
+          <p className="mt-1 text-sm text-[var(--text-mid)]">Es una conversación privada entre {cli.nombre} y {cmp.nombre}. Como colaborador, debes indicar un motivo. Queda anotado junto con tu nombre.</p>
+          <div className="mt-3 grid gap-2">
+            {MOTIVOS_CHAT.map((m) => <button key={m} onClick={() => setElegido(m)} aria-pressed={elegido === m} className={`min-h-12 rounded-2xl border-2 px-4 text-left font-bold ${elegido === m ? 'border-[var(--purple)] bg-[var(--purple)]/5' : 'border-[var(--border-muted)]'}`}>{m}</button>)}
+          </div>
+          {otro && <label className="mt-3 block text-base font-bold">Explica el motivo<textarea value={detalle} onChange={(e) => setDetalle(e.target.value)} className="mt-1 min-h-20 w-full rounded-xl border border-[var(--border-muted)] p-3 text-base font-normal" /></label>}
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <button onClick={onClose} className="min-h-12 rounded-xl border border-[var(--border-muted)] font-bold">Cancelar</button>
+            <button disabled={!motivoListo} onClick={() => setMotivo(otro ? `Otro: ${detalle.trim()}` : elegido)} className="min-h-12 rounded-xl bg-[var(--orange)] font-extrabold text-white disabled:opacity-40">Ver el chat</button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+  const color: Record<MensajeChat['de'], string> = { Cliente: 'bg-[var(--purple)]/10 border-[var(--purple)]/30', Compita: 'bg-[var(--orange)]/10 border-[var(--orange)]/30', Compaz: 'bg-[var(--warm-gray)] border-[var(--border-muted)]' }
+  return (
+    <div className="fixed inset-0 z-40 flex justify-end bg-black/30" onClick={onClose}>
+      <aside onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Chat entre cliente y compita" className="h-full w-full max-w-md overflow-y-auto bg-white p-5 shadow-2xl">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="text-xs font-bold uppercase tracking-wider text-[var(--text-light)]">Chat</div>
+            <h2 className="text-xl font-extrabold">{cli.nombre} <span className="text-[var(--text-light)]">↔</span> {cmp.nombre}</h2>
+          </div>
+          <button onClick={onClose} className="min-h-10 rounded-xl border border-[var(--border-muted)] px-3 font-bold" aria-label="Cerrar chat">Cerrar</button>
+        </div>
+        <p className="mt-3 rounded-xl bg-[#FFFBEB] p-3 text-sm font-bold text-[#92400E]">🔒 Solo el equipo ve esta conversación. Quedó anotado en el Registro de actividad que la abriste{rol === 'colaborador' ? ` (motivo: ${motivo})` : ''}.</p>
+        <ol className="mt-4 grid gap-2" aria-label="Mensajes">
+          {msgs.map((m, i) => (
+            <li key={i} className={`rounded-2xl border p-3 ${color[m.de]} ${m.de === 'Cliente' ? 'ml-6' : m.de === 'Compita' ? 'mr-6' : ''}`}>
+              <div className="flex items-center justify-between gap-2 text-xs font-extrabold uppercase tracking-wider text-[var(--text-mid)]"><span>{m.de}</span><span className="font-normal normal-case text-[var(--text-light)]">{m.cuando}</span></div>
+              <div className="mt-1 text-base">{m.t}</div>
+              {m.censurado && <div className="mt-1 text-xs font-bold text-[#991B1B]">⚠ Se intentó compartir un contacto. Se borró antes de llegar a la otra persona.</div>}
+            </li>
+          ))}
+        </ol>
+        <div className="mt-5 grid grid-cols-2 gap-2">
+          <button onClick={() => { onClose() }} className="min-h-12 rounded-xl border-2 border-[var(--purple)] font-extrabold text-[var(--purple)]">Ver ficha del cliente</button>
+          <button onClick={() => { onClose() }} className="min-h-12 rounded-xl border-2 border-[var(--orange)] font-extrabold text-[var(--orange-dark)]">Ver ficha del compita</button>
+        </div>
+      </aside>
+    </div>
+  )
+}
+
+/** Datos de contacto de prueba. En el sistema real salen de la base y solo los entrega el servidor con permiso. */
+function datosContacto(p: Persona) {
+  const num = p.id.replace(/\D/g, '').padStart(4, '0').slice(-4)
+  const telefono = `${p.tipo === 'Cliente' ? '+1 305' : '+58 414'} 555 ${num}`
+  const correo = `${p.nombre.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z]+/g, '.')}@example.com`
+  return { telefono, digitos: telefono.replace(/\D/g, ''), correo }
+}
+
+/** Iconos para escribirle al compita por WhatsApp o correo. El administrador entra directo; un colaborador necesita el permiso
+ *  de teléfonos y dar un motivo. Cada apertura queda en el registro de actividad. */
+function ContactoCompita({ p, etiqueta = false }: { p: Persona; etiqueta?: boolean }) {
+  const puede = usePuede()
+  const rol = useContext(RolCtx)
+  const [pidiendo, setPidiendo] = useState<null | 'whatsapp' | 'correo'>(null)
+  if (p.tipo !== 'Compita' || !puede('telefonos')) return null
+  const { digitos, correo } = datosContacto(p)
+  const abrirCanal = (canal: 'whatsapp' | 'correo', motivo: string) => {
+    setPidiendo(null)
+    REGISTRO_EXTRA.unshift({ cuando: `hoy ${horaAhora()}`, quien: NOMBRE_ROL[rol], accion: `Abrió ${canal === 'whatsapp' ? 'WhatsApp' : 'el correo'} para escribirle a ${p.nombre}`, motivo })
+    if (canal === 'whatsapp') window.open(`https://wa.me/${digitos}`, '_blank', 'noopener,noreferrer')
+    else window.location.href = `mailto:${correo}`
+  }
+  const pedir = (canal: 'whatsapp' | 'correo') => (rol === 'admin' ? abrirCanal(canal, 'Sin motivo requerido (administrador)') : setPidiendo(canal))
+  const base = 'inline-flex min-h-10 items-center justify-center gap-1.5 rounded-full border border-[var(--border-muted)] bg-white px-2.5 text-sm font-bold hover:bg-[var(--warm-gray)]'
+  return (
+    <span className="inline-flex shrink-0 items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+      <button type="button" onClick={() => pedir('whatsapp')} className={base} title={`Escribirle a ${p.nombre} por WhatsApp`} aria-label={`Escribirle a ${p.nombre} por WhatsApp`}>
+        <span aria-hidden>💬</span>{etiqueta && <span>WhatsApp</span>}
+      </button>
+      <button type="button" onClick={() => pedir('correo')} className={base} title={`Escribirle a ${p.nombre} por correo`} aria-label={`Escribirle a ${p.nombre} por correo`}>
+        <span aria-hidden>✉️</span>{etiqueta && <span>Correo</span>}
+      </button>
+      {pidiendo && <MotivoDialog titulo={`¿Por qué le escribes a ${p.nombre}?`} texto="Es un dato de contacto sensible. Debes indicar un motivo. Queda anotado junto con tu nombre." onListo={(m) => abrirCanal(pidiendo, m)} onCancelar={() => setPidiendo(null)} />}
+    </span>
+  )
+}
+
 function Ficha({ p, onClose }: { p: Persona; onClose: () => void }) {
+  const verChat = useContext(VerChatCtx)
+  const puede = usePuede()
+  const rolFicha = useContext(RolCtx)
+  const [pidiendoTel, setPidiendoTel] = useState(false)
+  const [telVisible, setTelVisible] = useState(false)
+  const { telefono } = datosContacto(p)
+  const revelarTel = (motivo: string) => {
+    setTelVisible(true); setPidiendoTel(false)
+    REGISTRO_EXTRA.unshift({ cuando: `hoy ${horaAhora()}`, quien: NOMBRE_ROL[rolFicha], accion: `Vio el teléfono de ${p.nombre}`, motivo })
+  }
+  const compitaDe = p.tipo === 'Cliente' && p.compita ? PERSONAS.find((x) => x.tipo === 'Compita' && x.nombre.startsWith(p.compita!)) : undefined
   const [nota, setNota] = useState(p.nota)
   useEffect(() => {
     const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
@@ -102,10 +364,16 @@ function Ficha({ p, onClose }: { p: Persona; onClose: () => void }) {
             <div className="text-xs font-bold uppercase tracking-wider text-[var(--text-light)]">{p.tipo}</div>
             <h2 className="text-2xl font-extrabold">{p.nombre}</h2>
             <div className="text-[var(--text-mid)]">{p.zona}</div>
+            {puede('telefonos') && (
+              <div className="mt-1 text-sm">Teléfono: {telVisible ? <b>{telefono}</b> : <><b>+•• ••• ••• ••••</b> <button onClick={() => (rolFicha === 'admin' ? revelarTel('Sin motivo requerido (administrador)') : setPidiendoTel(true))} className="ml-1 font-bold text-[var(--orange-dark)] underline">Ver teléfono</button></>}</div>
+            )}
           </div>
           <button onClick={onClose} className="min-h-10 rounded-xl border border-[var(--border-muted)] px-3 font-bold" aria-label="Cerrar ficha">Cerrar</button>
         </div>
+        {p.tipo === 'Compita' && <div className="mt-3"><ContactoCompita p={p} etiqueta /></div>}
         {p.etapa && <div className="mt-3 inline-block rounded-full bg-[var(--yellow)] px-3 py-1 text-sm font-bold">Etapa: {p.etapa}{p.compita ? ` · con ${p.compita}` : ''}</div>}
+        {compitaDe && puede('chats') && <button onClick={() => { onClose(); verChat(p.id, compitaDe.id) }} className="mt-4 min-h-12 w-full rounded-xl border-2 border-[var(--purple)] font-extrabold text-[var(--purple)]">💬 Ver el chat con {compitaDe.nombre}</button>}
+        {pidiendoTel && <MotivoDialog titulo="¿Por qué necesitas ver el teléfono?" texto={`Es un dato sensible de ${p.nombre}. Debes indicar un motivo. Queda anotado junto con tu nombre.`} onListo={revelarTel} onCancelar={() => setPidiendoTel(false)} />}
         <h3 className="mt-6 text-sm font-extrabold uppercase tracking-wider text-[var(--text-light)]">Línea de tiempo</h3>
         <ol className="mt-3 border-l-2 border-[var(--border-muted)] pl-4">
           {p.linea.map((l, i) => (
@@ -116,6 +384,7 @@ function Ficha({ p, onClose }: { p: Persona; onClose: () => void }) {
             </li>
           ))}
         </ol>
+        {p.tipo === 'Compita' && p.stats && (<><h3 className="mt-6 text-sm font-extrabold uppercase tracking-wider text-[var(--text-light)]">Cancelaciones</h3><CancelacionesFicha p={p} /></>)}
         <h3 className="mt-4 text-sm font-extrabold uppercase tracking-wider text-[var(--text-light)]">Notas internas</h3>
         <textarea value={nota} onChange={(e) => setNota(e.target.value)} placeholder="Escribe una nota que solo ve el equipo…" className="mt-2 min-h-24 w-full rounded-xl border border-[var(--border-muted)] p-3 text-base" />
         <p className="mt-2 text-xs text-[var(--text-light)]">Solo el admin ve esta ficha. Cliente y compita nunca ven el contacto del otro.</p>
@@ -129,10 +398,47 @@ const EXTRA: Tarea[] = Array.from({ length: 26 }, (_, i) => {
   return { ...base, id: `x${i}`, clienteId: `p${1 + (i % 5)}`, compitaId: `p${6 + (i % 3)}`, hace: `hace ${2 + i} h` }
 })
 const TODAS_TAREAS = [...TAREAS, ...NUEVAS, ...EXTRA]
-const TIPOS = ['Todas', 'Emergencia', 'No me siento seguro', 'Nadie abre', 'Visita alargada', 'Pago', 'Decisión', 'Ficha incompleta', 'Reporte de un compita', 'Cancelación tardía', 'Aviso fallido', 'Sin respuesta', 'Contacto bloqueado']
+const TIPOS = ['Todas', 'Emergencia', 'No me siento seguro', 'Nadie abre', 'Visita alargada', 'Pago', 'Decisión', 'Ficha incompleta', 'Cambio en el lugar', 'Duda sin resolver', 'Reporte de un compita', 'Cancelación tardía', 'Aviso fallido', 'Sin respuesta', 'Contacto bloqueado']
 const PAGINA = 10
+// Etiquetas cortas para que los filtros quepan en dos líneas (el filtro sigue usando el nombre completo).
+const ETIQ_TIPO: Record<string, string> = { 'No me siento seguro': 'Inseguro', 'Visita alargada': 'Alargada', 'Ficha incompleta': 'Ficha', 'Cambio en el lugar': 'Cambio lugar', 'Duda sin resolver': 'Dudas', 'Reporte de un compita': 'Reporte', 'Cancelación tardía': 'Cancelación', 'Aviso fallido': 'Fallido', 'Sin respuesta': 'Sin resp.', 'Contacto bloqueado': 'Contacto' }
+
+// Decidir sobre una cuenta pausada: el administrador elige qué pasa. Queda en el Registro de actividad.
+const OPCIONES_CUENTA = [
+  { id: 'reactivar', t: 'Reactivar la cuenta', d: 'Vuelve a usar el sistema con normalidad y sus visitas en espera siguen.' },
+  { id: 'otra', t: 'Dar otra oportunidad', d: 'Se reactiva con una advertencia por escrito. Si se repite, se bloquea.' },
+  { id: 'bloquear', t: 'Bloquear la cuenta', d: 'Pierde el acceso. Sus visitas en espera se cancelan y se avisa a la otra parte.' },
+]
+function DecisionCuenta({ cliente, compita, onListo, onCancelar }: { cliente: string; compita: string; onListo: (id: string) => void; onCancelar: () => void }) {
+  const [sel, setSel] = useState('')
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center" onClick={onCancelar}>
+      <div onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Decidir sobre la cuenta" className="w-full max-w-md rounded-t-3xl bg-white p-5 sm:rounded-3xl">
+        <h2 className="text-xl font-extrabold">¿Qué hacemos con la cuenta?</h2>
+        <p className="mt-1 text-sm text-[var(--text-mid)]">Cuenta en pausa por compartir contactos ({cliente}, con {compita}). Antes de decidir puedes revisar el chat. Tu decisión queda anotada.</p>
+        <div className="mt-3 grid gap-2">
+          {OPCIONES_CUENTA.map((o) => (
+            <button key={o.id} onClick={() => setSel(o.id)} aria-pressed={sel === o.id} className={`rounded-2xl border-2 px-4 py-3 text-left ${sel === o.id ? 'border-[var(--purple)] bg-[var(--purple)]/5' : 'border-[var(--border-muted)]'}`}>
+              <div className="font-extrabold">{o.t}</div><div className="text-sm text-[var(--text-mid)]">{o.d}</div>
+            </button>
+          ))}
+        </div>
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          <button onClick={onCancelar} className="min-h-12 rounded-xl border border-[var(--border-muted)] font-bold">Cancelar</button>
+          <button disabled={!sel} onClick={() => onListo(sel)} className="min-h-12 rounded-xl bg-[var(--orange)] font-extrabold text-white disabled:opacity-40">Confirmar decisión</button>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 function Bandeja({ abrir }: { abrir: (id: string) => void }) {
+  const verChat = useContext(VerChatCtx)
+  const puede = usePuede()
+  const [decidiendo, setDecidiendo] = useState<string | null>(null)
+  const rol = useContext(RolCtx)
+  // Confirmar pagos y decidir sobre una cuenta pausada dependen de su permiso.
+  const bloqueada = (t: Tarea) => (t.tipo === 'Pago' && !puede('pagos')) || (/^Decidir/.test(t.boton) && !puede('cuentas'))
   const [hechas, setHechas] = useState<Record<string, boolean>>({})
   const [tipo, setTipo] = useUrlState('tipo', 'Todas')
   const [mostrar, setMostrar] = useState(PAGINA)
@@ -149,12 +455,12 @@ function Bandeja({ abrir }: { abrir: (id: string) => void }) {
         </div>
       )}
 
-      <div className="mt-3 flex flex-wrap gap-2">
-        {TIPOS.map((t) => {
+      <div className="mt-2 flex flex-wrap gap-x-1 gap-y-0.5" role="group" aria-label="Filtrar por tipo de tarea">
+        {TIPOS.filter((t) => t === 'Todas' || t === tipo || activas.some((x) => x.tipo === t)).map((t) => {
           const n = t === 'Todas' ? activas.length : activas.filter((x) => x.tipo === t).length
           return (
-            <button key={t} onClick={() => { setTipo(t); setMostrar(PAGINA) }} aria-pressed={tipo === t} className={`min-h-10 rounded-full px-3 text-sm font-bold ${tipo === t ? 'bg-[var(--purple)] text-white' : 'border border-[var(--border-muted)] bg-white'}`}>
-              {t} <span className="opacity-70">{n}</span>
+            <button key={t} onClick={() => { setTipo(t); setMostrar(PAGINA) }} aria-pressed={tipo === t} className={`rounded-md px-1.5 py-0.5 text-xs font-bold ${tipo === t ? 'bg-[var(--purple)] text-white' : 'text-[var(--text-mid)] hover:bg-[var(--warm-gray)]'}`}>
+              {ETIQ_TIPO[t] ?? t} <span className="opacity-60">{n}</span>
             </button>
           )
         })}
@@ -165,9 +471,9 @@ function Bandeja({ abrir }: { abrir: (id: string) => void }) {
           const cli = PERSONAS.find((x) => x.id === t.clienteId)!
           const cmp = PERSONAS.find((x) => x.id === t.compitaId)!
           return (
-            <li key={t.id} className={`flex items-center gap-3 px-3 py-2 ${t.tipo === 'Emergencia' ? 'border-l-4 border-[#D93A3A] bg-[#FEF2F2]' : ''}`}>
+            <li key={t.id} className={`flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2 ${t.tipo === 'Emergencia' ? 'border-l-4 border-[#D93A3A] bg-[#FEF2F2]' : ''}`}>
               <span className="text-xl" aria-hidden>{t.icono}</span>
-              <div className="min-w-0 flex-1">
+              <div className="min-w-[12rem] flex-1">
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm">
                   <button onClick={() => abrir(cli.id)} className="flex min-w-0 items-center gap-1 font-extrabold hover:underline">
                     <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-[var(--purple)]" />
@@ -179,11 +485,13 @@ function Bandeja({ abrir }: { abrir: (id: string) => void }) {
                     <span className="truncate">{cmp.nombre}</span>
                     <span className="rounded bg-[var(--orange)]/15 px-1 text-[10px] font-extrabold uppercase text-[var(--orange-dark)]">Compita</span>
                   </button>
+                  <ContactoCompita p={cmp} />
                   <span className="text-xs text-[var(--text-light)]">{t.hace}</span>
                 </div>
-                <div className="truncate text-sm text-[var(--text-mid)]">{t.que}</div>
+                <div className="line-clamp-2 text-sm text-[var(--text-mid)]">{t.que}</div>
               </div>
-              <button onClick={() => setHechas((h) => ({ ...h, [t.id]: true }))} className="min-h-10 shrink-0 rounded-xl bg-[var(--orange)] px-3 text-sm font-extrabold text-white active:bg-[var(--orange-dark)]">{t.boton}</button>
+              {puede('chats') && <button onClick={() => verChat(cli.id, cmp.id)} aria-label={`Ver el chat de ${cli.nombre} y ${cmp.nombre}`} className="min-h-10 shrink-0 rounded-xl border border-[var(--border-muted)] bg-white px-3 text-sm font-bold text-[var(--text-mid)]">💬 Chat</button>}
+              <button disabled={bloqueada(t)} title={bloqueada(t) ? 'No tienes este permiso. Pídeselo a un administrador.' : undefined} onClick={() => (/^Decidir/.test(t.boton) ? setDecidiendo(t.id) : setHechas((h) => ({ ...h, [t.id]: true })))} className="min-h-10 shrink-0 rounded-xl bg-[var(--orange)] disabled:opacity-40 px-3 text-sm font-extrabold text-white active:bg-[var(--orange-dark)]">{t.boton}</button>
             </li>
           )
         })}
@@ -195,6 +503,15 @@ function Bandeja({ abrir }: { abrir: (id: string) => void }) {
           Ver {Math.min(PAGINA, lista.length - mostrar)} más ({lista.length - mostrar} restantes)
         </button>
       )}
+      {decidiendo && (() => {
+        const t = TODAS_TAREAS.find((x) => x.id === decidiendo)!
+        const cli = PERSONAS.find((x) => x.id === t.clienteId)!
+        const cmp = PERSONAS.find((x) => x.id === t.compitaId)!
+        return <DecisionCuenta cliente={cli.nombre} compita={cmp.nombre} onCancelar={() => setDecidiendo(null)} onListo={(op) => {
+          REGISTRO_EXTRA.unshift({ cuando: `hoy ${horaAhora()}`, quien: NOMBRE_ROL[rol], accion: `${OPCIONES_CUENTA.find((o) => o.id === op)!.t}: ${cli.nombre}`, motivo: 'Cuenta en pausa por compartir contactos' })
+          setHechas((h) => ({ ...h, [t.id]: true })); setDecidiendo(null)
+        }} />
+      })()}
     </section>
   )
 }
@@ -208,7 +525,7 @@ function Seguimiento({ abrir }: { abrir: (id: string) => void }) {
       <h1 className="text-2xl font-extrabold">Seguimiento</h1>
       <p className="text-[var(--text-mid)]">Dónde está cada cliente. Elige una etapa para ver su lista.</p>
 
-      <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-6">
+      <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-7">
         {['Todos', ...ETAPAS].map((et) => {
           const n = et === 'Todos' ? clientes.length : clientes.filter((p) => p.etapa === et).length
           const activa = etapa === et
@@ -236,15 +553,18 @@ function Seguimiento({ abrir }: { abrir: (id: string) => void }) {
                   <span className="truncate text-base font-extrabold">{p.nombre}</span>
                   <span className="shrink-0 rounded bg-[var(--purple)]/10 px-1.5 text-[10px] font-extrabold uppercase text-[var(--purple)]">Cliente</span>
                 </div>
+                <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
                 <button
                   onClick={(e) => { e.stopPropagation(); const c = PERSONAS.find((x) => x.tipo === 'Compita' && x.nombre.startsWith(p.compita ?? '')); if (c) abrir(c.id) }}
-                  className="mt-0.5 flex items-center gap-1.5 rounded-full py-0.5 pr-2 text-sm text-[var(--text-mid)] hover:bg-[var(--warm-gray)]"
+                  className="flex items-center gap-1.5 rounded-full py-0.5 pr-2 text-sm text-[var(--text-mid)] hover:bg-[var(--warm-gray)]"
                   title={`Ver ficha de ${p.compita}`}
                 >
                   <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--orange)] text-[10px] font-extrabold text-white">{p.compita?.[0]}</span>
                   <span className="truncate underline decoration-[var(--border-muted)] underline-offset-2">{p.compita}</span>
                   <span className="text-[10px] font-extrabold uppercase text-[var(--orange-dark)]">Compita ›</span>
                 </button>
+                  <ContactoCompita p={PERSONAS.find((x) => x.tipo === 'Compita' && x.nombre.startsWith(p.compita ?? '')) ?? p} />
+                </div>
               </div>
               <div className="shrink-0 text-right">
                 <span className="rounded-full bg-[var(--yellow)] px-2 py-0.5 text-xs font-bold">{p.etapa}</span>
@@ -260,34 +580,52 @@ function Seguimiento({ abrir }: { abrir: (id: string) => void }) {
   )
 }
 
-const VISTAS: { id: string; t: string; f: (s: StatsCompita) => boolean }[] = [
+
+// Botón "?" que explica en palabras simples qué significa una columna o un filtro (al pasar el cursor o al tocarlo).
+function Info({ texto, lado = 'centro' }: { texto: string; lado?: 'izq' | 'centro' | 'der' }) {
+  const [abierto, setAbierto] = useState(false)
+  const pos = lado === 'izq' ? 'left-0' : lado === 'der' ? 'right-0' : 'left-1/2 -translate-x-1/2'
+  return (
+    <span className="group relative inline-flex" onMouseLeave={() => setAbierto(false)}>
+      <button type="button" aria-label="¿Qué significa?" aria-expanded={abierto} onClick={(e) => { e.stopPropagation(); setAbierto(!abierto) }} className="flex h-5 w-5 items-center justify-center rounded-full border border-[var(--text-light)] text-[11px] font-extrabold normal-case text-[var(--text-mid)] hover:bg-[var(--purple)] hover:text-white">?</button>
+      <span role="tooltip" className={`pointer-events-none absolute top-full z-30 mt-1 w-56 rounded-xl bg-[var(--purple-dark)] p-2.5 text-left text-xs font-normal normal-case leading-snug tracking-normal text-white shadow-lg ${pos} ${abierto ? 'block' : 'hidden group-hover:block'}`}>{texto}</span>
+    </span>
+  )
+}
+
+const VISTAS: { id: string; t: string; ayuda?: string; f: (s: StatsCompita) => boolean }[] = [
   { id: 'todas', t: 'Todos', f: () => true },
   { id: 'disponibles', t: 'Disponibles', f: (s) => s.estado === 'Disponible' },
   { id: 'cupo', t: 'Con cupo', f: (s) => s.estado === 'Con cupo' },
-  { id: 'sinrespuesta', t: 'Sin respuesta 24h', f: (s) => s.estado !== 'En pausa' && s.estado !== 'Nuevo' && s.inactivoH >= 24 },
+  { id: 'sinrespuesta', t: 'Sin respuesta 24h', ayuda: 'Compitas activos que llevan 24 horas o más sin responder ni usar Telegram.', f: (s) => s.estado !== 'En pausa' && s.estado !== 'Nuevo' && s.inactivoH >= 24 },
+  { id: 'cancel', t: 'Cancelaciones tardías', ayuda: 'Compitas que en los últimos 30 días cancelaron con menos de 24 horas de aviso. Las justificadas (enfermedad, emergencia) no cuentan.', f: (s) => s.tardias >= 1 },
   { id: 'pausa', t: 'En pausa', f: (s) => s.estado === 'En pausa' },
-  { id: 'nuevas', t: 'Nuevos sin verificar', f: (s) => s.estado === 'Nuevo' },
+  { id: 'nuevas', t: 'Nuevos sin verificar', ayuda: 'Compitas que ya se registraron y que el equipo aún no ha verificado.', f: (s) => s.estado === 'Nuevo' },
 ]
 function urgCompita(s: StatsCompita): Urgencia {
   if (s.estado === 'Nuevo' || s.estado === 'En pausa') return 'verde'
-  if (s.respuesta < 50 || (s.rating > 0 && s.rating < 4) || s.inactivoH > 72) return 'rojo'
-  if (s.respuesta < 75 || s.inactivoH > 24) return 'amarillo'
+  if (s.respuesta < 50 || (s.rating > 0 && s.rating < 4) || s.inactivoH > 72 || s.tardias >= 3) return 'rojo'
+  if (s.respuesta < 75 || s.inactivoH > 24 || s.tardias >= 2) return 'amarillo'
   return 'verde'
 }
 const ORD_URG: Record<Urgencia, number> = { rojo: 0, amarillo: 1, verde: 2 }
-const COLUMNAS: { id: string; t: string; clase: string; v: (p: Persona) => number | string }[] = [
+const COLUMNAS: { id: string; t: string; ayuda?: string; clase: string; v: (p: Persona) => number | string }[] = [
   { id: 'nombre', t: 'Nombre', clase: '', v: (p) => p.nombre },
-  { id: 'zona', t: 'Zona', clase: 'hidden md:table-cell', v: (p) => p.zona },
-  { id: 'estado', t: 'Estado', clase: 'hidden sm:table-cell', v: (p) => p.stats!.estado },
-  { id: 'activos', t: 'Clientes', clase: 'hidden xl:table-cell', v: (p) => p.stats!.activos },
-  { id: 'visitas', t: 'Visitas mes', clase: 'hidden xl:table-cell', v: (p) => p.stats!.visitas },
-  { id: 'rating', t: '★', clase: '', v: (p) => p.stats!.rating },
-  { id: 'respuesta', t: 'Respuesta', clase: 'hidden sm:table-cell', v: (p) => p.stats!.respuesta },
-  { id: 'inactivo', t: 'Sin actividad', clase: 'hidden lg:table-cell', v: (p) => p.stats!.inactivoH },
+  { id: 'zona', ayuda: 'Zona de la ciudad donde atiende.', t: 'Zona', clase: 'hidden md:table-cell', v: (p) => p.zona },
+  { id: 'estado', ayuda: 'Si puede recibir solicitudes nuevas (Disponible, Con cupo), si está en pausa o si es nuevo y falta verificarlo.', t: 'Estado', clase: 'hidden sm:table-cell', v: (p) => p.stats!.estado },
+  { id: 'activos', ayuda: 'Familias que atiende ahora.', t: 'Clientes', clase: 'hidden xl:table-cell', v: (p) => p.stats!.activos },
+  { id: 'visitas', ayuda: 'Visitas que hizo en el último mes.', t: 'Visitas mes', clase: 'hidden xl:table-cell', v: (p) => p.stats!.visitas },
+  { id: 'rating', ayuda: 'Calificación promedio que le dan las familias, de 1 a 5. Menos de 4 se marca en rojo.', t: '★', clase: '', v: (p) => p.stats!.rating },
+  { id: 'respuesta', ayuda: 'Porcentaje de solicitudes que respondió. Menos de 75% se marca en amarillo y menos de 50% en rojo.', t: 'Respuesta', clase: 'hidden sm:table-cell', v: (p) => p.stats!.respuesta },
+  { id: 'canc', ayuda: 'Cancelaciones del compita en los últimos 30 días. Entre paréntesis, las tardías (con menos de 24 horas de aviso). Con 2 tardías se abre una revisión; con 3 o más se pausan sus solicitudes nuevas.', t: 'Cancelaciones', clase: 'hidden sm:table-cell', v: (p) => p.stats!.tardias * 100 + p.stats!.canc },
+  { id: 'inactivo', ayuda: 'Tiempo desde la última vez que respondió o usó Telegram. Más de 24 horas se marca en amarillo y más de 72 en rojo.', t: 'Sin actividad', clase: 'hidden lg:table-cell', v: (p) => p.stats!.inactivoH },
 ]
 const POR_PAG = 25
 
 function Personas({ abrir }: { abrir: (id: string) => void }) {
+  const embebido = useEmbedded()
+  // Dentro del recorrido el recuadro es angosto: solo nombre, calificación y respuesta (los saltos por ancho de ventana no sirven ahí).
+  const cc = (id: string) => (embebido ? (['nombre', 'rating', 'respuesta'].includes(id) ? '' : 'hidden') : COLUMNAS.find((c) => c.id === id)!.clase)
   const [q, setQ] = useUrlState('q', '')
   const [vista, setVista] = useUrlState('vista', 'todas')
   const [orden, setOrden] = useUrlState('orden', 'urgencia')
@@ -327,23 +665,29 @@ function Personas({ abrir }: { abrir: (id: string) => void }) {
         {VISTAS.map((v) => {
           const n = buscadas.filter((p) => v.f(p.stats!)).length
           return (
-            <button key={v.id} onClick={() => { setVista(v.id); setPag('1') }} aria-pressed={vista === v.id} className={`min-h-10 rounded-full px-3 text-sm font-bold ${vista === v.id ? 'bg-[var(--purple)] text-white' : 'border border-[var(--border-muted)] bg-white'}`}>
+            <span key={v.id} className="inline-flex items-center gap-1">
+            <button onClick={() => { setVista(v.id); setPag('1') }} aria-pressed={vista === v.id} className={`min-h-10 rounded-full px-3 text-sm font-bold ${vista === v.id ? 'bg-[var(--purple)] text-white' : 'border border-[var(--border-muted)] bg-white'}`}>
               {v.t} <span className="opacity-70">{n}</span>
             </button>
+            {v.ayuda && <Info texto={v.ayuda} lado={v.id === 'nuevas' ? 'der' : 'izq'} />}
+            </span>
           )
         })}
       </div>
       <input value={q} onChange={(e) => { setQ(e.target.value); setPag('1') }} placeholder="Buscar por nombre o zona" className="mt-3 min-h-12 w-full rounded-xl border border-[var(--border-muted)] bg-white px-3 text-base sm:w-80" />
 
-      <div className="mt-3 overflow-hidden rounded-2xl border border-[var(--border-muted)] bg-white">
+      <div className="mt-3 rounded-2xl border border-[var(--border-muted)] bg-white">
         <table className="w-full text-left text-sm">
-          <thead className="bg-[var(--warm-gray)] text-xs uppercase tracking-wider text-[var(--text-mid)]">
+          <thead className="bg-[var(--warm-gray)] text-xs uppercase tracking-wider text-[var(--text-mid)] [&_th:first-child]:rounded-tl-2xl [&_th:last-child]:rounded-tr-2xl">
             <tr>
-              {COLUMNAS.map((c) => (
-                <th key={c.id} className={`p-0 ${c.clase}`}>
-                  <button onClick={() => ordenar(c.id)} className="flex min-h-10 w-full items-center gap-1 px-3 text-left font-extrabold uppercase">
-                    {c.t}{orden === c.id ? (dir === 'asc' ? ' ▲' : ' ▼') : ''}
-                  </button>
+              {COLUMNAS.map((c, i) => (
+                <th key={c.id} className={`p-0 ${cc(c.id)}`}>
+                  <div className="flex items-center gap-1 px-3">
+                    <button onClick={() => ordenar(c.id)} className="flex min-h-10 min-w-0 items-center gap-1 text-left font-extrabold uppercase">
+                      {c.t}{orden === c.id ? (dir === 'asc' ? ' ▲' : ' ▼') : ''}
+                    </button>
+                    {c.ayuda && <span><Info texto={c.ayuda} lado={i <= 1 ? 'izq' : i >= COLUMNAS.length - 3 ? 'der' : 'centro'} /></span>}
+                  </div>
                 </th>
               ))}
               <th className="w-8" />
@@ -357,21 +701,25 @@ function Personas({ abrir }: { abrir: (id: string) => void }) {
                   <td className="px-3 py-2">
                     <div className="flex items-center gap-2">
                       <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-extrabold ${URG_ESTILO[urgCompita(s)]}`}>{p.nombre[0]}</span>
-                      <span className="min-w-0"><span className="block truncate font-bold">{p.nombre}</span><span className="block truncate text-xs text-[var(--text-mid)] md:hidden">{p.zona} · {s.estado}</span></span>
+                      <span className="min-w-0"><span className="block truncate font-bold">{p.nombre}</span><span className={`block truncate text-xs text-[var(--text-mid)] ${embebido ? '' : 'md:hidden'}`}>{p.zona} · {s.estado}{s.tardias > 0 && <b className="text-[#92400E]"> · {s.tardias} cancelación{s.tardias > 1 ? 'es' : ''} tardía{s.tardias > 1 ? 's' : ''}</b>}</span></span>
+                      <span className="ml-auto"><ContactoCompita p={p} /></span>
                     </div>
                   </td>
-                  <td className="hidden px-3 md:table-cell">{p.zona}</td>
-                  <td className="hidden px-3 sm:table-cell">{s.estado}</td>
-                  <td className="hidden px-3 xl:table-cell">{s.activos}</td>
-                  <td className="hidden px-3 xl:table-cell">{s.visitas}</td>
+                  <td className={`px-3 ${cc('zona')}`}>{p.zona}</td>
+                  <td className={`px-3 ${cc('estado')}`}>{s.estado}</td>
+                  <td className={`px-3 ${cc('activos')}`}>{s.activos}</td>
+                  <td className={`px-3 ${cc('visitas')}`}>{s.visitas}</td>
                   <td className="px-3">{s.rating ? s.rating.toFixed(1) : '·'}</td>
-                  <td className="hidden px-3 sm:table-cell">{s.respuesta ? `${s.respuesta}%` : '·'}</td>
-                  <td className="hidden px-3 lg:table-cell">{s.inactivoH < 1 ? 'ahora' : `${s.inactivoH} h`}</td>
+                  <td className={`px-3 ${cc('respuesta')}`}>{s.respuesta ? `${s.respuesta}%` : '·'}</td>
+                  <td className={`px-3 ${cc('canc')}`}>
+                    {s.canc === 0 ? <span className="text-[var(--text-light)]">·</span> : <span className={`rounded-full px-2 py-0.5 text-xs font-extrabold ${s.tardias >= 3 ? 'bg-[#D93A3A] text-white' : s.tardias >= 2 ? 'bg-[#F5B800] text-[var(--purple-dark)]' : 'bg-[var(--warm-gray)] text-[var(--text-mid)]'}`}>{s.canc}{s.tardias > 0 ? ` (${s.tardias} tardía${s.tardias > 1 ? 's' : ''})` : ''}</span>}
+                  </td>
+                  <td className={`px-3 ${cc('inactivo')}`}>{s.inactivoH < 1 ? 'ahora' : `${s.inactivoH} h`}</td>
                   <td className="px-2 text-lg text-[var(--text-light)]">›</td>
                 </tr>
               )
             })}
-            {!fila.length && <tr><td colSpan={9} className="p-6 text-center text-[var(--text-light)]">Sin resultados</td></tr>}
+            {!fila.length && <tr><td colSpan={10} className="p-6 text-center text-[var(--text-light)]">Sin resultados</td></tr>}
           </tbody>
         </table>
       </div>
@@ -389,7 +737,7 @@ function Personas({ abrir }: { abrir: (id: string) => void }) {
 }
 
 // ── Visitas ──────────────────────────────────────────────────────────────────
-type EstadoVisita = 'Programada' | 'En curso' | 'Terminada' | 'No se presentó'
+type EstadoVisita = 'Programada' | 'En curso' | 'Terminada' | 'No se presentó' | 'Sin acceso'
 type VisitaFalsa = { id: string; ts: number; estado: EstadoVisita; clienteId: string; compitaId: string; zona: string; rating: number | null }
 const AHORA = new Date(2026, 10, 3, 11, 0) // martes 3 nov, 11:00 (fecha ficticia fija)
 const DIAS = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb']
@@ -409,7 +757,7 @@ const VISITAS: VisitaFalsa[] = Array.from({ length: 140 }, (_, i) => {
   let estado: EstadoVisita
   if (ts >= -1 && ts <= 0) estado = 'En curso'
   else if (ts > 0) estado = 'Programada'
-  else estado = r < 0.08 ? 'No se presentó' : 'Terminada'
+  else estado = r < 0.08 ? 'No se presentó' : r < 0.12 ? 'Sin acceso' : 'Terminada'
   const compitaId = COMPITAS_IDS[Math.floor(azar() * COMPITAS_IDS.length)]
   const comp = PERSONAS.find((x) => x.id === compitaId)!
   const rating = estado === 'Terminada' ? Math.min(5, Math.max(2, Math.round(3.6 + azar() * 1.9))) : null
@@ -417,7 +765,7 @@ const VISITAS: VisitaFalsa[] = Array.from({ length: 140 }, (_, i) => {
 })
 // Cada regla corresponde a un dato real: el cron noshow-alerta (30 min) y visitas.rating_cliente.
 const motivoProblema = (v: VisitaFalsa): string | null =>
-  v.estado === 'No se presentó' ? 'No inició 30 min después de su hora' : v.rating !== null && v.rating <= 3 ? `El cliente la calificó con ${v.rating} estrellas` : null
+  v.estado === 'No se presentó' ? 'No inició 30 min después de su hora' : v.estado === 'Sin acceso' ? 'Llegó y nadie abrió en 30 min: cuenta como usada' : v.rating !== null && v.rating <= 3 ? `El cliente la calificó con ${v.rating} estrellas` : null
 const esProblema = (v: VisitaFalsa) => motivoProblema(v) !== null
 const VISTAS_VISITA: { id: string; t: string; f: (v: VisitaFalsa) => boolean; desc?: boolean }[] = [
   { id: 'hoy', t: 'Hoy', f: (v) => mismoDia(fechaDe(v.ts), AHORA) },
@@ -432,9 +780,12 @@ const CHIP_ESTADO: Record<EstadoVisita, string> = {
   'En curso': 'bg-[#1f9d6b] text-white',
   Terminada: 'bg-[var(--warm-gray)] text-[var(--text-mid)]',
   'No se presentó': 'bg-[#D93A3A] text-white',
+  'Sin acceso': 'bg-[#F5B800] text-[var(--purple-dark)]',
 }
 
 function Visitas({ abrir }: { abrir: (id: string) => void }) {
+  const verChat = useContext(VerChatCtx)
+  const puede = usePuede()
   const [vista, setVista] = useUrlState('vv', 'hoy')
   const [pag, setPag] = useUrlState('pv', '1')
   const def = VISTAS_VISITA.find((x) => x.id === vista) ?? VISTAS_VISITA[0]
@@ -445,7 +796,7 @@ function Visitas({ abrir }: { abrir: (id: string) => void }) {
   return (
     <section>
       <h1 className="text-2xl font-extrabold">Visitas</h1>
-      <p className="text-[var(--text-mid)]">Hoy es martes 3 de noviembre (fecha de la maqueta). Lo cerrado se consulta en Terminadas. &quot;Con problema&quot; muestra el motivo de cada fila.</p>
+      <p className="text-[var(--text-mid)]">Hoy es martes 3 de noviembre. Lo cerrado se consulta en Terminadas. &quot;Con problema&quot; muestra el motivo de cada fila.</p>
       <div className="mt-3 flex flex-wrap gap-2">
         {VISTAS_VISITA.map((v) => (
           <button key={v.id} onClick={() => { setVista(v.id); setPag('1') }} aria-pressed={vista === v.id} className={`min-h-10 rounded-full px-3 text-sm font-bold ${vista === v.id ? 'bg-[var(--purple)] text-white' : 'border border-[var(--border-muted)] bg-white'}`}>
@@ -472,9 +823,11 @@ function Visitas({ abrir }: { abrir: (id: string) => void }) {
                     <span className="truncate">{cmp.nombre}</span>
                     <span className="rounded bg-[var(--orange)]/15 px-1 text-[10px] font-extrabold uppercase text-[var(--orange-dark)]">Compita</span>
                   </button>
+                  <ContactoCompita p={cmp} />
                 </div>
                 {motivoProblema(v) ? <div className="truncate text-xs font-bold text-[#D93A3A]">⚠ {motivoProblema(v)}</div> : <div className="truncate text-xs text-[var(--text-light)]">{v.zona}</div>}
               </div>
+              {puede('chats') && <button onClick={() => verChat(cli.id, cmp.id)} aria-label={`Ver el chat de ${cli.nombre} y ${cmp.nombre}`} className="min-h-10 shrink-0 rounded-xl border border-[var(--border-muted)] bg-white px-3 text-sm font-bold text-[var(--text-mid)]">💬 Chat</button>}
               <div className="shrink-0 text-right">
                 <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${CHIP_ESTADO[v.estado]}`}>{v.estado}</span>
                 {v.rating !== null && <div className={`mt-1 text-xs font-bold ${v.rating <= 3 ? 'text-[#D93A3A]' : 'text-[var(--text-mid)]'}`}>{'★'.repeat(v.rating)}</div>}
@@ -498,10 +851,6 @@ function Visitas({ abrir }: { abrir: (id: string) => void }) {
 
 // ── Más ──────────────────────────────────────────────────────────────────────
 type Madurez = 'existe' | 'base'
-const MADUREZ: Record<Madurez, { t: string; c: string }> = {
-  existe: { t: 'Existe hoy', c: 'bg-[#1f9d6b]/15 text-[#146c49]' },
-  base: { t: 'Requiere base nueva', c: 'bg-[#F5B800]/25 text-[#7a5b00]' },
-}
 const HUB: { id: string; i: string; t: string; d: string; m: Madurez; sub: boolean }[] = [
   { id: 'resenas', i: '⭐', t: 'Reseñas por aprobar', d: 'Aprueba u oculta lo que el cliente escribe antes de que se vea en el perfil del compita.', m: 'existe', sub: true },
   { id: 'postulaciones', i: '📥', t: 'Postulaciones y origen', d: 'Quién se postuló, desde qué página o campaña llegó y si calificó.', m: 'existe', sub: true },
@@ -509,11 +858,10 @@ const HUB: { id: string; i: string; t: string; d: string; m: Madurez; sub: boole
   { id: 'avisos', i: '📨', t: 'Avisos enviados', d: 'Qué se le mandó a cada persona, por qué canal y si llegó. Aquí se reintentan los fallidos.', m: 'base', sub: true },
   { id: 'cobertura', i: '🗺️', t: 'Cobertura y demanda', d: 'Por zona: compitas disponibles frente a solicitudes del mes. Dónde falta reclutar.', m: 'existe', sub: true },
   { id: 'umbrales', i: '🚦', t: 'Ajustes del semáforo', d: 'Cuántas horas son normales en cada etapa antes de pasar a amarillo y rojo.', m: 'base', sub: true },
+  { id: 'equipo', i: '🧑‍🤝‍🧑', t: 'Equipo y permisos', d: 'Quién entra al panel, con qué rol y qué puede hacer cada uno.', m: 'base', sub: true },
   { id: 'ajustes', i: '🎛️', t: 'Ajustes', d: 'Precios, plazos, topes y umbrales. Se cambian aquí, con registro de quién y cuándo; no hay que tocar el código.', m: 'base', sub: true },
-  { id: 'cancelaciones', i: '📆', t: 'Cancelaciones de compitas', d: 'Quién cancela, con cuánta anticipación y si fue justificada. Para decidir si un compita sigue.', m: 'base', sub: true },
   { id: 'registro', i: '🗂️', t: 'Registro de actividad', d: 'Quién del equipo vio un teléfono o dato sensible, cuándo y por qué.', m: 'base', sub: true },
   { id: 'estado', i: '🩺', t: 'Estado del sistema', d: 'Procesos automáticos, avisos fallidos y salud de Telegram, correo y videollamadas.', m: 'base', sub: true },
-  { id: 'invitar', i: '✉️', t: 'Invitar cliente y registrar compita', d: 'Ya están en el admin actual. Se mantienen tal cual.', m: 'existe', sub: false },
 ]
 
 function Volver({ onClick }: { onClick: () => void }) {
@@ -585,10 +933,10 @@ function VistaPostulaciones() {
 
 function VistaPagos() {
   const datos = [
-    { id: 'g1', c: 'Carolina Pérez', plan: 'Quincenal', m: '$60', f: 'hoy', ref: 'COMPAZ-4F7K2Q' },
-    { id: 'g2', c: 'Marta Salcedo', plan: 'Semanal', m: '$110', f: 'lun 2 nov', ref: 'COMPAZ-9X2LMA' },
-    { id: 'g3', c: 'Jorge Rivas', plan: 'Carta', m: '$35', f: 'dom 1 nov', ref: 'COMPAZ-7TQ8RE' },
-    { id: 'g4', c: 'Luis Andrade', plan: 'Quincenal', m: '$60', f: 'sáb 31 oct', ref: 'COMPAZ-2BD5NW' },
+    { id: 'g1', c: 'Carolina Pérez', plan: 'Compañía', m: '$75', f: 'hoy', ref: 'COMPAZ-4F7K2Q' },
+    { id: 'g2', c: 'Marta Salcedo', plan: 'Compañía Plus', m: '$140', f: 'lun 2 nov', ref: 'COMPAZ-9X2LMA' },
+    { id: 'g3', c: 'Jorge Rivas', plan: 'Compañía', m: '$75', f: 'dom 1 nov', ref: 'COMPAZ-7TQ8RE' },
+    { id: 'g4', c: 'Luis Andrade', plan: 'Compañía', m: '$75', f: 'sáb 31 oct', ref: 'COMPAZ-2BD5NW' },
   ]
   const [anulados, setAnulados] = useState<Record<string, boolean>>({})
   return (
@@ -613,10 +961,10 @@ function VistaPagos() {
 
 function VistaAvisos() {
   const datos = [
-    { id: 'a1', cuando: 'hoy 10:05', canal: 'Telegram', para: 'Rosa Linares', rol: 'Compita', tipo: 'Nueva solicitud', ok: false, motivo: 'El compita bloqueó el bot' },
+    { id: 'a1', cuando: 'hoy 10:05', canal: 'Telegram', para: 'Rosa Linares', rol: 'Compita', tipo: 'Nueva solicitud', ok: false, motivo: 'Telegram no entregó: el compita bloqueó el bot', accion: 'Avisarle por correo', hecho: 'Correo enviado ✓' },
     { id: 'a2', cuando: 'hoy 09:41', canal: 'Correo', para: 'Carolina Pérez', rol: 'Cliente', tipo: 'Pago recibido', ok: true, motivo: '' },
     { id: 'a3', cuando: 'hoy 09:30', canal: 'Telegram', para: 'María Fuentes', rol: 'Compita', tipo: 'Entrevista en 1 hora', ok: true, motivo: '' },
-    { id: 'a4', cuando: 'hoy 08:50', canal: 'Correo', para: 'Luis Andrade', rol: 'Cliente', tipo: '¿Contratas a Rosa?', ok: false, motivo: 'El correo rebotó (buzón lleno)' },
+    { id: 'a4', cuando: 'hoy 08:50', canal: 'Correo', para: 'Luis Andrade', rol: 'Cliente', tipo: '¿Contratas a Rosa?', ok: false, motivo: 'El correo rebotó (buzón lleno)', accion: 'Reintentar', hecho: 'Reenviado ✓' },
     { id: 'a5', cuando: 'ayer 18:20', canal: 'Telegram', para: 'Daniela Torres', rol: 'Compita', tipo: 'Nueva solicitud', ok: true, motivo: '' },
     { id: 'a6', cuando: 'ayer 16:02', canal: 'Correo', para: 'Ana Gómez', rol: 'Cliente', tipo: 'Solicitud enviada', ok: true, motivo: '' },
   ]
@@ -625,7 +973,7 @@ function VistaAvisos() {
   const lista = datos.filter((d) => vista === 'todos' || !d.ok)
   return (
     <>
-      <p className="text-[var(--text-mid)]">Cada aviso queda guardado con su resultado. Reintentar reenvía el mismo aviso guardado. Esta pantalla depende de la tabla de avisos, que aún no existe.</p>
+      <p className="text-[var(--text-mid)]">Cada aviso queda guardado con su resultado. Si falla, se reintenta cuando el fallo es pasajero y se avisa por otro canal cuando no tiene arreglo, por ejemplo si el compita bloqueó el bot.</p>
       <div className="mt-3 flex gap-2">
         {[['todos', 'Todos', datos.length], ['fallidos', 'Fallidos', datos.filter((d) => !d.ok).length]].map(([id, t, n]) => (
           <button key={id as string} onClick={() => setVista(id as string)} aria-pressed={vista === id} className={`min-h-10 rounded-full px-3 text-sm font-bold ${vista === id ? 'bg-[var(--purple)] text-white' : 'border border-[var(--border-muted)] bg-white'}`}>{t} <span className="opacity-70">{n}</span></button>
@@ -640,8 +988,8 @@ function VistaAvisos() {
               <div className="truncate text-sm text-[var(--text-mid)]">{d.tipo}</div>
               {!d.ok && <div className="text-xs font-bold text-[#D93A3A]">⚠ {d.motivo}</div>}
             </div>
-            {d.ok ? <span className="shrink-0 text-sm font-bold text-green-700">Entregado</span> : rein[d.id] ? <span className="shrink-0 text-sm font-bold text-green-700">Reenviado ✓</span> : (
-              <button onClick={() => setRein((r) => ({ ...r, [d.id]: true }))} className="min-h-10 shrink-0 rounded-xl bg-[var(--orange)] px-3 text-sm font-extrabold text-white">Reintentar</button>
+            {d.ok ? <span className="shrink-0 text-sm font-bold text-green-700">Entregado</span> : rein[d.id] ? <span className="shrink-0 text-sm font-bold text-green-700">{d.hecho}</span> : (
+              <button onClick={() => setRein((r) => ({ ...r, [d.id]: true }))} className="min-h-10 shrink-0 rounded-xl bg-[var(--orange)] px-3 text-sm font-extrabold text-white">{d.accion}</button>
             )}
           </li>
         ))}
@@ -678,7 +1026,7 @@ function VistaUmbrales() {
   const [ok, setOk] = useState(false)
   return (
     <>
-      <p className="text-[var(--text-mid)]">Horas en una etapa antes de pasar a amarillo y a rojo. Quedarían como un ajuste guardado, no escondido en el código.</p>
+      <p className="text-[var(--text-mid)]">Horas en una etapa antes de pasar a amarillo y a rojo.</p>
       <Lista>
         {ETAPAS.map((e) => (
           <li key={e} className="flex items-center gap-3 px-3 py-2">
@@ -693,7 +1041,7 @@ function VistaUmbrales() {
         ))}
       </Lista>
       <button onClick={() => setOk(true)} className="mt-3 min-h-12 rounded-xl bg-[var(--orange)] px-5 font-extrabold text-white">Guardar ajustes</button>
-      {ok && <span className="ml-3 font-bold text-green-700">Guardado en la maqueta ✓</span>}
+      {ok && <span className="ml-3 font-bold text-green-700">Guardado ✓</span>}
     </>
   )
 }
@@ -702,46 +1050,200 @@ function Fila({ t, v }: { t: string; v: string }) {
   return <li className="flex items-center justify-between gap-3 px-3 py-3"><span className="text-base">{t}</span><b className="shrink-0 text-base">{v}</b></li>
 }
 
+type Ajuste = { id: string; t: string; v: string; unidad?: string; texto?: boolean; usa: string[]; min?: number; max?: number }
+const AJUSTES: { t: string; nota?: string; filas: Ajuste[] }[] = [
+  { t: 'Precios', filas: [
+    { id: 'hora', t: 'Hora de servicio', v: '22', unidad: '$', usa: ['Página de pago', 'Agendar otra visita', 'Registrar pago (admin)', 'Correos de pago', 'Asistente de la página', 'Precio tachado de los planes'], min: 1, max: 500 },
+    { id: 'mandado', t: 'Mandado (tarifa plana, máximo 1 hora)', v: '22', unidad: '$', usa: ['Formulario de mandado', 'Aviso al compita', 'Correos de pago', 'Asistente de la página'], min: 1, max: 500 },
+    { id: 'p1', t: 'Plan Compañía (2 visitas de 2 h)', v: '75', unidad: '$', usa: ['Página de pago', 'Registrar pago (admin)', 'Correos de pago', 'Asistente de la página'], min: 1, max: 5000 },
+    { id: 'p2', t: 'Plan Compañía Plus (4 visitas de 2 h)', v: '140', unidad: '$', usa: ['Página de pago', 'Registrar pago (admin)', 'Correos de pago', 'Asistente de la página'], min: 1, max: 5000 },
+  ] },
+  { t: 'Plazos de las citas', filas: [
+    { id: 'cancel', t: 'Cancelación gratuita, horas antes', v: '24', unidad: 'h', usa: ['Portal del cliente (cambiar o cancelar)', 'Términos que acepta el cliente', 'Reglas de "cuenta como usada"', 'Avisos al compita'], min: 1, max: 168 },
+    { id: 'espera', t: 'Espera si nadie abre', v: '30', unidad: 'min', usa: ['Cuenta atrás del cliente', 'Aviso al compita', 'Cierre automático', 'Términos que acepta el cliente'], min: 10, max: 120 },
+    { id: 'c1', t: 'Primer contacto si nadie abre', v: '5', unidad: 'min', usa: ['Tarea en la Bandeja', 'Mensaje al contacto en el sitio'], min: 1, max: 60 },
+    { id: 'c2', t: 'Segundo contacto si nadie abre', v: '15', unidad: 'min', usa: ['Tarea en la Bandeja', 'Mensaje al contacto en el sitio'], min: 2, max: 90 },
+    { id: 'todo', t: '"¿Todo bien?" después de la hora de fin', v: '15', unidad: 'min', usa: ['Aviso al compita', 'Alerta al equipo si no responde'], min: 5, max: 120 },
+    { id: 'espc', t: 'Cambio en el lugar sin respuesta del compita: avisar al admin tras este % del tiempo que falta para la visita', v: '25', unidad: '%', usa: ['Tarea "Cambio en el lugar" en la Bandeja'], min: 5, max: 100 },
+    { id: 'espmax', t: 'Cambio en el lugar: espera máxima antes de avisar al admin', v: '6', unidad: 'h', usa: ['Tarea "Cambio en el lugar" en la Bandeja'], min: 1, max: 48 },
+    { id: 'dir', t: 'Dirección exacta al compita, horas antes', v: '3', unidad: 'h', usa: ['Aviso al compita en Telegram'], min: 1, max: 24 },
+  ] },
+  { t: 'Cancelaciones de compitas', filas: [
+    { id: 'avisoc', t: 'Aviso mínimo para que una cancelación sea a tiempo', v: '24', unidad: 'h', usa: ['Columna y filtro de Personas', 'Ficha del compita', 'Aviso al compita al cancelar'], min: 1, max: 168 },
+    { id: 'revision', t: 'Cancelaciones tardías para abrir una revisión', v: '2', usa: ['Bandeja (tarea "Cancelación tardía")', 'Semáforo del compita (amarillo)'], min: 1, max: 10 },
+    { id: 'pausa', t: 'Cancelaciones tardías para pausar sus solicitudes nuevas', v: '3', usa: ['Solicitudes nuevas del compita', 'Semáforo del compita (rojo)', 'Bandeja'], min: 2, max: 20 },
+    { id: 'ventanac', t: 'Ventana para contar las cancelaciones', v: '30', unidad: 'días', usa: ['Columna y filtro de Personas', 'Ficha del compita'], min: 7, max: 365 },
+  ] },
+  { t: 'Ayuda automática', filas: [
+    { id: 'intentos', t: 'Intentos del bot antes de pasar la duda a una persona', v: '2', usa: ['Menú "Tengo una duda" del compita', 'Tarea "Duda sin resolver" en la Bandeja', 'Ayuda del cliente'], min: 1, max: 5 },
+  ] },
+  { t: 'Llamadas', nota: 'No hay límite de cuántas veces se puede llamar: Compaz es el puente entre el cliente y el compita. Solo se limita cuánto dura cada una.', filas: [
+    { id: 'llam', t: 'Duración de una llamada fuera de visita (aviso de fin)', v: '20', unidad: 'min', usa: ['Videollamadas', 'Llamadas de voz', 'Aviso de fin dentro de la sala'], min: 5, max: 60 },
+    { id: 'corte', t: 'Corte automático de la llamada', v: '23', unidad: 'min', usa: ['Salas de videollamada', 'Costo de la videollamada'], min: 6, max: 70 },
+    { id: 'visita', t: 'Llamada durante una visita', v: '5', unidad: 'min', usa: ['Botón "Llamar al cliente"', 'Aviso en la sala'], min: 1, max: 20 },
+  ] },
+  { t: 'Seguridad y datos', filas: [
+    { id: 'antifraude', t: 'Texto de la advertencia antifraude (no se puede quitar, solo cambiar el texto)', v: 'Compaz nunca te pedirá por teléfono, mensaje o llamada tus datos personales, claves, códigos, depósitos ni transferencias. Los pagos se hacen solo con los datos que ves aquí, en tu portal. Si alguien te los pide por otro medio, no respondas y avísanos.', texto: true, usa: ['Pantalla de acceso', 'Tarjeta de pago', 'Ficha', 'Chat de la visita', 'Pie del portal', 'Correos', 'Telegram del compita (versión para compitas)'] },
+    { id: 'detec', t: 'Detecciones de contacto antes de alertar al equipo', v: '2', usa: ['Aviso al escribir', 'Alerta en la Bandeja', 'Ficha de la persona'], min: 1, max: 10 },
+    { id: 'ventana', t: 'Ventana para contar las detecciones', v: '30', unidad: 'días', usa: ['Conteo por persona'], min: 1, max: 365 },
+    { id: 'foto', t: 'Borrado de fotos de llegada', v: '90', unidad: 'días', usa: ['Limpieza diaria', 'Aviso al cliente y al compita', 'Términos y /privacidad'], min: 7, max: 730 },
+    { id: 'avisosdias', t: 'Retención del registro de avisos', v: '90', unidad: 'días', usa: ['Limpieza diaria'], min: 30, max: 730 },
+  ] },
+]
+
 function VistaAjustes() {
-  const [ok, setOk] = useState(false)
-  const grupos: { t: string; filas: [string, string][] }[] = [
-    { t: 'Precios', filas: [['Hora de servicio', '$22'], ['Mandado (tarifa plana, máximo 1 hora)', '$22'], ['Plan Compañía (2 visitas de 2 h)', '$75'], ['Plan Compañía Plus (4 visitas de 2 h)', '$140']] },
-    { t: 'Plazos de las citas', filas: [['Cancelación gratuita', '24 horas antes'], ['Espera si nadie abre', '30 minutos'], ['Contactos si nadie abre', 'a los 5 y 15 min'], ['"¿Todo bien?" si la visita se alarga', '15 minutos después'], ['Dirección exacta al compita', '3 horas antes']] },
-    { t: 'Llamadas', filas: [['Llamada durante una visita', 'hasta 5 min'], ['Llamada fuera de una visita', 'hasta 20 min'], ['Videollamadas por cliente', '1 al día, 3 a la semana']] },
-    { t: 'Seguridad y datos', filas: [['Detecciones de contacto antes de alertar al equipo', '2'], ['Ventana de conteo', '30 días'], ['Borrado de fotos de llegada', '90 días tras la visita'], ['Retención de avisos', '90 días']] },
-  ]
+  const puedeAj = usePuede()
+  const soloLectura = !puedeAj('ajustes_editar')
+  const inicial = () => Object.fromEntries(AJUSTES.flatMap((g) => g.filas.map((f) => [f.id, f.v])))
+  const [v, setV] = useState<Record<string, string>>(inicial)
+  const [guardado, setGuardado] = useState<Record<string, string> | null>(null)
+  const sucio = Object.keys(v).filter((k) => v[k] !== (guardado ?? inicial())[k])
+  const todas = AJUSTES.flatMap((g) => g.filas)
+  const malos = sucio.filter((k) => { const f = todas.find((x) => x.id === k)!; if (f.texto) return !v[k].trim(); const n = Number(v[k]); return !Number.isFinite(n) || v[k] === '' || (f.min !== undefined && n < f.min) || (f.max !== undefined && n > f.max) })
+  const lugares = Array.from(new Set(sucio.flatMap((k) => todas.find((x) => x.id === k)!.usa)))
+  const hora = Number(v.hora) || 0
+  const [acepta, setAcepta] = useState(false)
+  const ahorro1 = hora * 4 - (Number(v.p1) || 0)
+  const ahorro2 = hora * 8 - (Number(v.p2) || 0)
+  // Un plan que sale más caro que comprar las horas sueltas no tiene sentido: se avisa y se pide confirmar.
+  const incoherente = sucio.length > 0 && (ahorro1 < 0 || ahorro2 < 0)
+  const campo = 'min-h-10 rounded-lg border border-[var(--border-muted)] bg-white px-2 text-base font-bold'
   return (
-    <>
-      <p className="text-[var(--text-mid)]">Hoy estos valores están escondidos en el código. Aquí se cambian sin publicar nada. Cada cambio queda con quién lo hizo, cuándo y desde qué fecha vale; lo ya pagado no se altera.</p>
-      {grupos.map((g) => (
-        <div key={g.t} className="mt-4"><h3 className="text-sm font-extrabold uppercase tracking-wider text-[var(--text-light)]">{g.t}</h3><Lista>{g.filas.map(([t, v]) => <Fila key={t} t={t} v={v} />)}</Lista></div>
+    <fieldset disabled={soloLectura} className="contents">
+      {soloLectura && <p role="note" className="rounded-xl bg-[#FEF3C7] p-3 text-sm font-bold text-[#92400E]">No tienes permiso para cambiar los ajustes. Puedes verlos; pídele el permiso a un administrador.</p>}
+      <p className="text-[var(--text-mid)]">Aquí se cambian precios, plazos y textos, y el cambio se aplica en todo el sistema a la vez: portal, página de pago, correos, Telegram, el asistente y la página web. Cada cambio queda registrado con quién lo hizo y desde cuándo vale; lo ya pagado no se altera.</p>
+      {AJUSTES.map((g) => (
+        <div key={g.t} className="mt-5">
+          <h3 className="text-sm font-extrabold uppercase tracking-wider text-[var(--text-light)]">{g.t}</h3>
+          {g.nota && <p className="mt-1 rounded-xl bg-[var(--warm-gray)] p-3 text-sm text-[var(--text-mid)]">{g.nota}</p>}
+          <Lista>
+            {g.filas.map((f) => (
+              <li key={f.id} className="px-3 py-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <label htmlFor={`aj-${f.id}`} className="min-w-[10rem] flex-1 text-base">{f.t}</label>
+                  {!f.texto && <span className="flex items-center gap-1">{f.unidad === '$' && <b>$</b>}<input id={`aj-${f.id}`} inputMode="numeric" value={v[f.id]} onChange={(e) => { setAcepta(false); setV((o) => ({ ...o, [f.id]: e.target.value })) }} className={`${campo} w-20 text-right ${malos.includes(f.id) ? 'border-[#D93A3A]' : ''}`} />{f.unidad && f.unidad !== '$' && <b>{f.unidad}</b>}</span>}
+                </div>
+                {f.texto && <textarea id={`aj-${f.id}`} value={v[f.id]} onChange={(e) => setV((o) => ({ ...o, [f.id]: e.target.value }))} className="mt-2 min-h-24 w-full rounded-lg border border-[var(--border-muted)] p-2 text-sm" />}
+                {malos.includes(f.id) && <div className="mt-1 text-xs font-bold text-[#D93A3A]">{f.texto ? 'No puede quedar vacío.' : `Debe estar entre ${f.min} y ${f.max}.`}</div>}
+                <div className="mt-1 text-xs text-[var(--text-light)]">Se usa en: {f.usa.join(', ')}.</div>
+              </li>
+            ))}
+            {g.t === 'Llamadas' && <li className="flex items-center justify-between gap-2 px-3 py-3"><span className="text-base">Veces que se puede llamar</span><b>Sin límite</b></li>}
+          </Lista>
+        </div>
       ))}
-      <button onClick={() => setOk(true)} className="mt-4 min-h-12 rounded-xl bg-[var(--orange)] px-5 font-extrabold text-white">Guardar cambios</button>
-      {ok && <span className="ml-3 font-bold text-green-700">Guardado en la maqueta ✓</span>}
-    </>
+
+      <section className="mt-5 rounded-2xl border border-[var(--border-muted)] bg-white p-4">
+        <h3 className="font-extrabold">Así quedarían los planes</h3>
+        <p className="text-sm text-[var(--text-mid)]">Se recalcula al instante con la hora de servicio.</p>
+        <ul className="mt-2 grid gap-1 text-base">
+          <li>A la carta, 1 hora: <b>${hora}</b></li>
+          <li>Plan Compañía: <b>${v.p1}</b> <span className="text-[var(--text-mid)]">(sin descuento serían ${hora * 4}; {ahorro1 < 0 ? <b className="text-[#D93A3A]">el plan sale ${-ahorro1} MÁS caro que las horas sueltas</b> : `el cliente ahorra $${ahorro1}`})</span></li>
+          <li>Plan Compañía Plus: <b>${v.p2}</b> <span className="text-[var(--text-mid)]">(sin descuento serían ${hora * 8}; {ahorro2 < 0 ? <b className="text-[#D93A3A]">el plan sale ${-ahorro2} MÁS caro que las horas sueltas</b> : `el cliente ahorra $${ahorro2}`})</span></li>
+        </ul>
+      </section>
+
+      {guardado && !sucio.length && <p className="mt-4 rounded-xl bg-[#1f9d6b]/10 p-3 font-bold text-[#146c49]">✓ Guardado y aplicado en todo el sistema.</p>}
+      {sucio.length > 0 && (
+        <div className="mt-4 rounded-2xl border-2 border-[var(--orange)] bg-white p-4">
+          <div className="font-extrabold">{sucio.length} {sucio.length === 1 ? 'cambio' : 'cambios'} sin guardar</div>
+          <p className="mt-1 text-sm text-[var(--text-mid)]">Al guardar se actualiza en: {lugares.join(', ')}. Vale desde hoy y no cambia lo ya pagado.</p>
+          {incoherente && (
+            <label className="mt-3 flex items-start gap-3 rounded-xl border-2 border-[#D93A3A] bg-[#FEF2F2] p-3 text-sm font-bold text-[#991B1B]">
+              <input type="checkbox" checked={acepta} onChange={(e) => setAcepta(e.target.checked)} className="mt-0.5 h-5 w-5 shrink-0" />
+              <span>Atención: con estos precios un plan sale más caro que comprar las mismas horas sueltas. Ningún cliente lo elegiría. Marca esta casilla si es lo que quieres.</span>
+            </label>
+          )}
+          <div className="mt-3 flex gap-2">
+            <button disabled={malos.length > 0 || (incoherente && !acepta)} onClick={() => setGuardado({ ...v })} className="min-h-12 flex-1 rounded-xl bg-[var(--orange)] font-extrabold text-white disabled:opacity-40">Guardar y aplicar</button>
+            <button onClick={() => setV(guardado ?? inicial())} className="min-h-12 rounded-xl border border-[var(--border-muted)] px-4 font-bold">Deshacer</button>
+          </div>
+        </div>
+      )}
+    </fieldset>
   )
 }
 
-function VistaCancelaciones() {
-  const filas = [['Mariela R.', '3', '2', '1', 'Revisar: 2 tardías en 30 días'], ['Yoselin P.', '1', '0', '1', 'Sin alerta'], ['Gladys M.', '0', '0', '0', 'Sin alerta'], ['Carmen S.', '4', '3', '2', 'Pausar solicitudes nuevas']]
+const ADMINS = [
+  { n: 'Juan', c: 'juan@micompaz.com' },
+  { n: 'Ana', c: 'ana@micompaz.com' },
+]
+function Interruptor({ activo, onCambia, etiqueta }: { activo: boolean; onCambia: (v: boolean) => void; etiqueta: string }) {
+  return (
+    <button type="button" role="switch" aria-checked={activo} aria-label={etiqueta} onClick={() => onCambia(!activo)} className={`relative h-8 w-14 shrink-0 rounded-full transition-colors ${activo ? 'bg-[#1f9d6b]' : 'bg-[var(--border-muted)]'}`}>
+      <span className={`absolute top-1 h-6 w-6 rounded-full bg-white shadow transition-all ${activo ? 'left-7' : 'left-1'}`} />
+      <span className="sr-only">{activo ? 'Sí' : 'No'}</span>
+    </button>
+  )
+}
+function VistaEquipo() {
+  const { colabs, cambiar, restablecer, invitar } = useContext(PermCtx)
+  const [correo, setCorreo] = useState('')
+  const [enviado, setEnviado] = useState<string | null>(null)
+  const [guardado, setGuardado] = useState<string | null>(null)
+  const valido = /^\S+@\S+\.\S+$/.test(correo) && !colabs.some((c) => c.correo === correo.trim().toLowerCase())
   return (
     <>
-      <p className="text-[var(--text-mid)]">Cada cancelación del compita queda registrada con su anticipación y su motivo. Las justificadas (enfermedad, emergencia familiar) no cuentan en su contra. Umbrales de partida: 2 tardías en 30 días abren revisión; 3 o más pausan sus solicitudes nuevas.</p>
-      <Lista>
-        <li className="grid grid-cols-5 gap-2 bg-[var(--warm-gray)] px-3 py-2 text-xs font-extrabold uppercase text-[var(--text-light)]"><span className="col-span-2">Compita</span><span>30 días</span><span>Tardías</span><span>90 días</span></li>
-        {filas.map(([n, a, b, c, e]) => <li key={n} className="grid grid-cols-5 items-center gap-2 px-3 py-3"><span className="col-span-2 font-bold">{n}<span className="block text-xs font-normal text-[var(--text-mid)]">{e}</span></span><span>{a}</span><span>{b}</span><span>{c}</span></li>)}
-      </Lista>
+      <p className="text-[var(--text-mid)]">Los administradores tienen acceso completo y no necesitan dar motivo. A cada colaborador le activas o desactivas permisos con un interruptor: el cambio rige al instante y queda anotado.</p>
+      <h3 className="mt-5 text-sm font-extrabold uppercase tracking-wider text-[var(--text-light)]">Administradores</h3>
+      <Lista>{ADMINS.map((m) => <li key={m.c} className="flex flex-wrap items-center justify-between gap-2 px-3 py-3"><div><b>{m.n}</b><div className="text-sm text-[var(--text-mid)]">{m.c} · Correo de administrador</div></div><span className="rounded-full bg-[var(--purple)] px-3 py-1 text-xs font-extrabold text-white">Acceso completo</span></li>)}</Lista>
+
+      <h3 className="mt-5 text-sm font-extrabold uppercase tracking-wider text-[var(--text-light)]">Colaboradores y sus permisos</h3>
+      <div role="status" aria-live="polite" className="mt-1 min-h-6 text-sm font-bold text-[#146c49]">{guardado}</div>
+      {colabs.map((c) => (
+        <section key={c.id} className="mt-2 rounded-2xl border border-[var(--border-muted)] bg-white p-4" aria-label={`Permisos de ${c.nombre}`}>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div><b className="text-lg">{c.nombre}</b><div className="text-sm text-[var(--text-mid)]">{c.correo} · {c.desde}</div></div>
+            <span className="rounded-full bg-[var(--yellow)] px-3 py-1 text-xs font-extrabold text-[var(--purple-dark)]">Colaborador</span>
+          </div>
+          <ul className="mt-3 divide-y divide-[var(--border-muted)]">
+            {PERMISOS_LISTA.map((pm) => (
+              <li key={pm.id} className="flex items-center justify-between gap-3 py-3">
+                <div className="min-w-0"><div className="text-base font-bold">{pm.t}</div><div className="text-sm text-[var(--text-mid)]">{pm.d}</div></div>
+                <Interruptor activo={c.permisos[pm.id]} etiqueta={`${pm.t}, ${c.nombre}`} onCambia={(v) => { cambiar(c.id, pm.id, v); setGuardado(`✓ Guardado: ${v ? 'activaste' : 'desactivaste'} "${pm.t}" para ${c.nombre}`) }} />
+              </li>
+            ))}
+            <li className="flex items-center justify-between gap-3 py-3 opacity-70"><div><div className="text-base font-bold">Gestionar el equipo y sus permisos</div><div className="text-sm text-[var(--text-mid)]">Solo los administradores pueden hacerlo.</div></div><span className="text-sm font-bold">🔒 No</span></li>
+          </ul>
+          <button onClick={() => { restablecer(c.id); setGuardado(`✓ Los permisos de ${c.nombre} volvieron a lo recomendado`) }} className="mt-3 min-h-12 w-full rounded-xl border border-[var(--border-muted)] font-bold text-[var(--text-mid)]">Volver a lo recomendado</button>
+        </section>
+      ))}
+
+      <h3 className="mt-5 text-sm font-extrabold uppercase tracking-wider text-[var(--text-light)]">Invitar a un colaborador</h3>
+      <div className="mt-2 flex flex-wrap gap-2">
+        <input value={correo} onChange={(e) => { setCorreo(e.target.value); setEnviado(null) }} inputMode="email" placeholder="correo@ejemplo.com" aria-label="Correo del colaborador" className="min-h-12 min-w-0 flex-1 rounded-xl border border-[var(--border-muted)] bg-white px-3 text-base" />
+        <button disabled={!valido} onClick={() => { invitar(correo.trim().toLowerCase()); setEnviado(correo.trim()); setCorreo('') }} className="min-h-12 rounded-xl bg-[var(--orange)] px-5 font-extrabold text-white disabled:opacity-40">Invitar</button>
+      </div>
+      {enviado && <p role="status" className="mt-2 rounded-xl bg-[#1f9d6b]/10 p-3 font-bold text-[#146c49]">✓ Invitación enviada a {enviado}. Entrará como colaborador con los permisos recomendados; ajústalos arriba.</p>}
     </>
   )
 }
 
 function VistaRegistro() {
-  const filas = [['hoy 10:42', 'Admin Juan', 'Vio el teléfono del contacto en el sitio', 'Nadie abre, visita de Carolina'], ['hoy 09:15', 'Admin Juan', 'Vio el teléfono del cliente', 'Confirmar pago'], ['ayer 18:03', 'Admin Ana', 'Llenó la ficha por teléfono', 'Ficha incompleta']]
+  const filas = [['hoy 10:42', 'Admin Juan', 'Vio el teléfono del contacto en el sitio', 'Nadie abre, visita de Marta'], ['hoy 09:15', 'Admin Juan', 'Vio el teléfono del cliente', 'Confirmar pago'], ['ayer 18:03', 'Admin Ana', 'Reenvió el recordatorio de la ficha', 'Ficha incompleta']]
   return (
     <>
       <p className="text-[var(--text-mid)]">Cada vez que alguien del equipo consulta un teléfono o un dato sensible queda anotado. Protege a los clientes y al equipo.</p>
-      <Lista>{filas.map(([c, q, a, m]) => <li key={c + a} className="px-3 py-3"><div className="text-xs text-[var(--text-light)]">{c} · {q}</div><div className="font-bold">{a}</div><div className="text-sm text-[var(--text-mid)]">Motivo: {m}</div></li>)}</Lista>
+      <Lista>{[...REGISTRO_EXTRA.map((e) => [e.cuando, e.quien, e.accion, e.motivo]), ...filas].map(([c, q, a, m]) => <li key={c + a} className="px-3 py-3"><div className="text-xs text-[var(--text-light)]">{c} · {q}</div><div className="font-bold">{a}</div><div className="text-sm text-[var(--text-mid)]">Motivo: {m}</div></li>)}</Lista>
     </>
+  )
+}
+
+function DudasCompitas() {
+  const filas: [string, number][] = [['No sé cómo entrar', 12], ['No encuentro la dirección', 9], ['Otra duda', 8], ['Necesito cambiar la hora', 7], ['Algo no está bien', 2]]
+  const total = filas.reduce((a, [, n]) => a + n, 0)
+  const sinResolver = 8 // dudas de esta semana que el bot no pudo resolver y pasaron a una persona (dato de ejemplo)
+  return (
+    <section className="mt-5 rounded-2xl border border-[var(--border-muted)] bg-white p-4">
+      <h3 className="flex items-center gap-2 font-extrabold">Dudas de los compitas esta semana <Info texto="Lo que preguntan los compitas en el botón Tengo una duda. Si un tipo domina, el problema está en el formulario o en el aviso, y conviene arreglarlo ahí en vez de responder cada vez." lado="izq" /></h3>
+      <p className="text-sm text-[var(--text-mid)]">{total} dudas, {sinResolver} ({Math.round((sinResolver / total) * 100)} %) no se resolvieron con el bot y pasaron a una persona.</p>
+      <ul className="mt-2 grid gap-2">
+        {filas.map(([t, n]) => (
+          <li key={t}><div className="flex justify-between text-sm"><span>{t}</span><b>{n} ({Math.round((n / total) * 100)} %)</b></div><div className="mt-1 h-2 overflow-hidden rounded-full bg-[var(--warm-gray)]"><div className="h-full bg-[var(--orange)]" style={{ width: `${(n / total) * 100}%` }} /></div></li>
+        ))}
+      </ul>
+      <p className="mt-3 rounded-xl bg-[#FEF3C7] p-3 text-sm font-bold text-[#92400E]">La duda más común es cómo entrar: conviene que el formulario de la dirección pida las indicaciones con más detalle.</p>
+    </section>
   )
 }
 
@@ -749,21 +1251,32 @@ function VistaEstado() {
   const filas: [string, string, boolean][] = [['Revisión de avisos (cada 5 min)', 'corrió hace 2 min', true], ['Avisos fallidos sin resolver', '0', true], ['Telegram', 'responde', true], ['Correo', 'responde', true], ['Videollamadas', 'responde', true], ['Limpieza diaria', 'corrió hoy 3:00 am', true]]
   return (
     <>
-      <p className="text-[var(--text-mid)]">Si algo automático deja de correr, aquí se ve en rojo y llega una alerta. Hoy esto solo se ve en los registros de la plataforma.</p>
+      <p className="text-[var(--text-mid)]">Si algo automático deja de funcionar, aquí se ve en rojo y llega una alerta.</p>
+      <DudasCompitas />
       <Lista>{filas.map(([t, v, b]) => <li key={t} className="flex items-center gap-3 px-3 py-3"><span className={`h-3 w-3 rounded-full ${b ? 'bg-[#1f9d6b]' : 'bg-[#D93A3A]'}`} /><span className="flex-1">{t}</span><span className="text-sm text-[var(--text-mid)]">{v}</span></li>)}</Lista>
     </>
   )
 }
 
 function Mas() {
+  const rol = useContext(RolCtx)
+  const puedeMas = usePuede()
+  // Lo que se ve en Más depende de los permisos de quien entra; Equipo y Postulaciones son solo de administradores.
+  const hub = HUB.filter((h) => {
+    if (h.id === 'pagos') return puedeMas('pagos')
+    if (h.id === 'invitar') return puedeMas('invitar')
+    if (h.id === 'ajustes') return puedeMas('ajustes_ver') || puedeMas('ajustes_editar')
+    if (h.id === 'equipo' || h.id === 'postulaciones') return rol === 'admin'
+    return true
+  })
   const [sub, setSub] = useUrlState('mas', '')
-  const actual = HUB.find((h) => h.id === sub && h.sub)
+  const actual = hub.find((h) => h.id === sub && h.sub)
   if (actual) {
     return (
       <section>
         <Volver onClick={() => setSub(null)} />
         <h1 className="text-2xl font-extrabold">{actual.i} {actual.t}</h1>
-        <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-bold ${MADUREZ[actual.m].c}`}>{MADUREZ[actual.m].t}</span>
+        
         {sub === 'resenas' && <VistaResenas />}
         {sub === 'postulaciones' && <VistaPostulaciones />}
         {sub === 'pagos' && <VistaPagos />}
@@ -771,7 +1284,7 @@ function Mas() {
         {sub === 'cobertura' && <VistaCobertura />}
         {sub === 'umbrales' && <VistaUmbrales />}
         {sub === 'ajustes' && <VistaAjustes />}
-        {sub === 'cancelaciones' && <VistaCancelaciones />}
+        {sub === 'equipo' && <VistaEquipo />}
         {sub === 'registro' && <VistaRegistro />}
         {sub === 'estado' && <VistaEstado />}
       </section>
@@ -780,12 +1293,12 @@ function Mas() {
   return (
     <section>
       <h1 className="text-2xl font-extrabold">Más</h1>
-      <p className="text-[var(--text-mid)]">Herramientas que no son del día a día, agrupadas. La etiqueta dice si ya existe o si necesita una base nueva.</p>
+      <p className="text-[var(--text-mid)]">Herramientas que no son del día a día.</p>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        {HUB.map((h) => {
+        {hub.map((h) => {
           const cuerpo = (
             <>
-              <div className="flex items-start justify-between gap-2"><div className="text-2xl">{h.i}</div><span className={`rounded-full px-2 py-0.5 text-xs font-bold ${MADUREZ[h.m].c}`}>{MADUREZ[h.m].t}</span></div>
+              <div className="flex items-start justify-between gap-2"><div className="text-2xl">{h.i}</div></div>
               <div className="mt-2 text-lg font-extrabold">{h.t}</div>
               <div className="text-sm text-[var(--text-mid)]">{h.d}</div>
             </>
@@ -814,32 +1327,74 @@ const MENU = [
 ]
 
 function Inner() {
+  const embebido = useEmbedded() // dentro del recorrido el recuadro es angosto: siempre diseño de teléfono
   const [tab, setTab] = useUrlState('tab', 'bandeja')
   const [ficha, setFicha] = useUrlState('ficha', '')
+  const [rolUrl, setRol] = useUrlState('rol', 'admin')
+  const rol: Rol = rolUrl === 'colaborador' ? 'colaborador' : 'admin'
+  const colabs = useSyncExternalStore(suscribirColabs, leerColabs, () => COLABS_INICIALES)
+  const puedeIn = (pm: Permiso) => rol === 'admin' || !!colabs[0]?.permisos[pm]
+  const permCtx: PermCtxValor = {
+    colabs,
+    cambiar: (id, pm, v) => {
+      const c = colabs.find((x) => x.id === id)
+      if (!c || c.permisos[pm] === v) return
+      escribirColabs(colabs.map((x) => (x.id === id ? { ...x, permisos: { ...x.permisos, [pm]: v } } : x)))
+      REGISTRO_EXTRA.unshift({ cuando: `hoy ${horaAhora()}`, quien: 'Admin Juan', accion: `${v ? 'Activó' : 'Desactivó'} el permiso "${PERMISOS_LISTA.find((x) => x.id === pm)!.t}" de ${c.nombre}`, motivo: 'Gestión de permisos del equipo' })
+    },
+    restablecer: (id) => {
+      const c = colabs.find((x) => x.id === id)
+      if (!c) return
+      escribirColabs(colabs.map((x) => (x.id === id ? { ...x, permisos: { ...PERMISOS_BASE } } : x)))
+      REGISTRO_EXTRA.unshift({ cuando: `hoy ${horaAhora()}`, quien: 'Admin Juan', accion: `Devolvió los permisos de ${c.nombre} a lo recomendado`, motivo: 'Gestión de permisos del equipo' })
+    },
+    invitar: (correoNuevo) => {
+      const nombre = correoNuevo.split('@')[0].replace(/^./, (l) => l.toUpperCase())
+      escribirColabs([...colabs, { id: correoNuevo, nombre, correo: correoNuevo, desde: 'Invitado hoy', permisos: { ...PERMISOS_BASE } }])
+      REGISTRO_EXTRA.unshift({ cuando: `hoy ${horaAhora()}`, quien: 'Admin Juan', accion: `Invitó a ${correoNuevo} como colaborador`, motivo: 'Gestión del equipo' })
+    },
+  }
+  const [chat, setChat] = useUrlState('chat', '') // "clienteId.compitaId": el chat abierto se conserva al recargar
+  const [chatC, chatM] = chat ? chat.split('.') : ['', '']
   const persona = PERSONAS.find((p) => p.id === ficha)
   const abrir = (id: string) => setFicha(id)
+  const menu = MENU.filter((m) => (m.id === 'bandeja' ? puedeIn('atender') : ['seguimiento', 'personas', 'visitas'].includes(m.id) ? puedeIn('monitorear') : true))
+  const tabPermitida = tab === 'bandeja' ? puedeIn('atender') : ['seguimiento', 'personas', 'visitas'].includes(tab) ? puedeIn('monitorear') : true
 
   return (
-    <div className="mx-auto flex max-w-5xl">
-      <nav className="sticky top-0 hidden h-screen w-52 shrink-0 flex-col gap-1 border-r border-[var(--border-muted)] p-4 lg:flex" aria-label="Menú del admin">
+    <RolCtx.Provider value={rol}>
+    <PermCtx.Provider value={permCtx}>
+    <VerChatCtx.Provider value={(c, m) => setChat(`${c}.${m}`)}>
+    <div className={`mx-auto flex max-w-5xl ${embebido ? 'min-h-full flex-col' : ''}`}>
+      <nav className={`sticky top-0 hidden h-screen w-52 shrink-0 flex-col gap-1 border-r border-[var(--border-muted)] p-4 ${embebido ? '' : 'lg:flex'}`} aria-label="Menú del admin">
         <div className="mb-4 text-lg font-extrabold text-[var(--purple)]">Compaz Admin</div>
-        {MENU.map((m) => (
+        {menu.map((m) => (
           <button key={m.id} onClick={() => setTab(m.id)} className={`flex min-h-12 items-center gap-3 rounded-xl px-3 text-left font-bold ${tab === m.id ? 'bg-[var(--purple)] text-white' : 'hover:bg-[var(--warm-gray)]'}`}>
             <span>{m.i}</span>{m.t}{m.id === 'bandeja' && <span className="ml-auto rounded-full bg-[var(--orange)] px-2 text-xs text-white">{TODAS_TAREAS.length}</span>}
           </button>
         ))}
       </nav>
 
-      <main className="min-w-0 flex-1 px-4 pb-28 pt-5 lg:pb-10">
-        {tab === 'bandeja' && <Bandeja abrir={abrir} />}
-        {tab === 'seguimiento' && <Seguimiento abrir={abrir} />}
-        {tab === 'personas' && <Personas abrir={abrir} />}
-        {tab === 'visitas' && <Visitas abrir={abrir} />}
+      <main className={`min-w-0 flex-1 px-4 pt-5 ${embebido ? 'pb-6' : 'pb-28 lg:pb-10'}`}>
+        {!embebido && (
+          <label className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-dashed border-[var(--border-muted)] bg-white p-3 text-xs font-bold uppercase tracking-wider text-[var(--text-light)]">
+            Ver el panel como
+            <select value={rol} onChange={(e) => setRol(e.target.value)} className="min-h-10 rounded-lg border border-[var(--border-muted)] bg-white px-2 text-base font-bold normal-case text-[var(--text-dark)]">
+              <option value="admin">Administrador</option>
+              <option value="colaborador">Colaborador (acceso limitado)</option>
+            </select>
+          </label>
+        )}
+        {!tabPermitida && <p role="alert" className="rounded-2xl border border-dashed border-[var(--border-muted)] bg-white p-6 text-center font-bold text-[var(--text-mid)]">No tienes permiso para ver esta pantalla. Pídeselo a un administrador.</p>}
+        {tabPermitida && tab === 'bandeja' && <Bandeja abrir={abrir} />}
+        {tabPermitida && tab === 'seguimiento' && <Seguimiento abrir={abrir} />}
+        {tabPermitida && tab === 'personas' && <Personas abrir={abrir} />}
+        {tabPermitida && tab === 'visitas' && <Visitas abrir={abrir} />}
         {tab === 'herramientas' && <Mas />}
       </main>
 
-      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-[var(--border-muted)] bg-white lg:hidden" aria-label="Menú del admin">
-        {MENU.map((m) => (
+      <nav className={`${embebido ? 'sticky' : 'fixed inset-x-0'} bottom-0 z-30 grid border-t border-[var(--border-muted)] bg-white ${embebido ? '' : 'lg:hidden'}`} aria-label="Menú del admin" style={{ gridTemplateColumns: `repeat(${menu.length}, minmax(0, 1fr))` }}>
+        {menu.map((m) => (
           <button key={m.id} onClick={() => setTab(m.id)} className={`relative flex min-h-16 flex-col items-center justify-center text-xs font-bold ${tab === m.id ? 'text-[var(--orange-dark)]' : 'text-[var(--text-mid)]'}`}>
             <span className="text-xl">{m.i}</span>{m.t}
             {m.id === 'bandeja' && <span className="absolute right-3 top-1 rounded-full bg-[var(--orange)] px-1.5 text-[10px] text-white">{TODAS_TAREAS.length}</span>}
@@ -848,7 +1403,11 @@ function Inner() {
       </nav>
 
       {persona && <Ficha p={persona} onClose={() => setFicha(null)} />}
+      {chatC && chatM && <ChatAdmin clienteId={chatC} compitaId={chatM} onClose={() => setChat(null)} />}
     </div>
+    </VerChatCtx.Provider>
+    </PermCtx.Provider>
+    </RolCtx.Provider>
   )
 }
 

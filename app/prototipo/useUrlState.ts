@@ -45,3 +45,8 @@ export function useUrlState(key: string, def: string) {
   )
   return [value, set] as const
 }
+
+// true cuando la pantalla va dentro del recorrido guiado (ahí se ocultan los controles y notas del prototipo).
+export function useEmbedded(): boolean {
+  return useContext(Ctx) !== null
+}

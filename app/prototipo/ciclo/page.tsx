@@ -26,7 +26,7 @@ function Inner() {
       <p className="mt-1 text-lg text-[var(--text-mid)]">Cada paso dice quién actúa, qué aviso recibe, con qué botón y a dónde llega. Así nadie se pierde entre correos, Telegram y portal.</p>
 
       <section className="mt-6">
-        <h2 className="text-xl font-extrabold">Las 8 reglas</h2>
+        <h2 className="text-xl font-extrabold">Las 9 reglas</h2>
         <ol className="mt-3 grid gap-3 md:grid-cols-2">
           {REGLAS.map((r, i) => (
             <li key={r.t} className="flex gap-3 rounded-2xl border border-[var(--border-muted)] bg-white p-4">

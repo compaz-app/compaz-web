@@ -53,13 +53,10 @@ function Inner() {
     <main className="mx-auto max-w-xl px-4 pb-16 pt-4">
       <Link href="/prototipo/cliente?estado=enviada" className="text-base font-bold text-[var(--text-mid)]">‹ Volver a mi portal</Link>
 
-      <Link href="/prototipo/cliente?estado=aceptada" className="mt-3 flex items-center justify-between rounded-2xl bg-[var(--orange)] px-4 py-3 text-white">
-        <span className="font-extrabold">María aceptó tu solicitud. Elige tu horario</span><span>›</span>
-      </Link>
+
 
       <h1 className="mt-5 text-2xl font-extrabold">Elige tu compita</h1>
       <p className="text-lg text-[var(--text-mid)]">Habla primero con hasta {MAX} compitas, o contrata directo al que más te guste.</p>
-      <Link href="/prototipo/cliente/solicitar?modo=mandado" className="mt-3 flex min-h-12 items-center justify-between rounded-2xl border border-[var(--border-muted)] bg-white px-4 font-bold"><span>¿Solo necesitas una diligencia? <span className="text-[var(--orange-dark)]">Pedir un mandado · $22</span></span><span>›</span></Link>
       <div className="mt-3 h-2 overflow-hidden rounded-full bg-[var(--warm-gray)]"><div className="h-full bg-[var(--orange)]" style={{ width: `${(enviadas.length / MAX) * 100}%` }} /></div>
       <p className="mt-1 text-sm font-bold text-[var(--text-mid)]">{enviadas.length} de {MAX} solicitudes enviadas</p>
 
@@ -113,6 +110,7 @@ function Inner() {
                   <div className="mt-4 grid gap-3">
                     <Link href={`/prototipo/cliente/solicitar?modo=entrevista&compita=${p.id}`} className="flex min-h-14 items-center justify-center rounded-2xl border-2 border-[var(--purple)] bg-white text-lg font-extrabold text-[var(--purple)]">Hablar primero (20 min)</Link>
                     <Link href={`/prototipo/cliente/solicitar?modo=directa&compita=${p.id}`} className="flex min-h-14 items-center justify-center rounded-2xl bg-[var(--orange)] text-lg font-extrabold text-white">Contratarlo directo</Link>
+                    <Link href={`/prototipo/cliente/solicitar?modo=mandado&compita=${p.id}`} className="flex min-h-12 items-center justify-center rounded-2xl border border-[var(--border-muted)] bg-white font-bold text-[var(--text-mid)]">¿Solo una diligencia? Pedirle un mandado ($22)</Link>
                     <p className="text-center text-sm text-[var(--text-mid)]">Ves su foto, su video y sus reseñas ahora. Su apellido completo lo ves cuando la contratación esté confirmada.</p>
                   </div>
                 )}
