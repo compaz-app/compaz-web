@@ -4,6 +4,8 @@ import { NextRequest } from 'next/server'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { cronAutorizado } from '@/lib/cron'
 import { ok, err } from '@/lib/api'
+import { getAjuste } from '@/lib/ajustes'
+import { borrarFotosVencidas } from '@/lib/fotos-privadas'
 
 export async function POST(req: NextRequest) {
   if (!cronAutorizado(req)) return err('No autorizado', 401)
@@ -12,7 +14,8 @@ export async function POST(req: NextRequest) {
   const ahora = new Date().toISOString()
   const hace1d = new Date(Date.now() - 86400_000).toISOString()
   const hace30d = new Date(Date.now() - 30 * 86400_000).toISOString()
-  const hace90d = new Date(Date.now() - 90 * 86400_000).toISOString()
+  // La retención de avisos sale de Ajustes (por defecto 90 días).
+  const hace90d = new Date(Date.now() - Number(await getAjuste('avisos_retencion_dias')) * 86400_000).toISOString()
 
   const tareas: Array<[string, PromiseLike<{ error: { message: string } | null }>]> = [
     ['onboarding_tokens', admin.from('onboarding_tokens').delete().or(`usado.eq.true,expires_at.lt.${ahora}`)],
@@ -32,5 +35,8 @@ export async function POST(req: NextRequest) {
     const { error } = await q
     if (error) { console.error(`[limpieza] ${nombre}:`, error.message); fallos.push(nombre) }
   }
+  // Fotos privadas cuyo plazo venció: se borran de verdad (archivo y marca) y queda un evento.
+  const fotos = await borrarFotosVencidas()
+  if (fotos.fallos > 0) fallos.push('fotos privadas')
   return fallos.length ? err(`Fallaron: ${fallos.join(', ')}`, 500) : ok(null)
 }

@@ -120,6 +120,11 @@ export interface CrearSolicitudInput {
   sobre_cliente?: string | null
   slots_propuestos: string[]  // hasta 3 ISO datetimes
   franja_horaria?: string
+  /** Formulario nuevo (rediseño). Si no vienen, la fila se crea exactamente como antes. */
+  tipo?: 'entrevista' | 'directa' | 'mandado'
+  que?: string
+  lugar_privado?: boolean
+  personas_en_lugar?: string[] | null
 }
 
 /**
@@ -150,6 +155,7 @@ export async function crearSolicitud(input: CrearSolicitudInput): Promise<Solici
       franja_horaria: input.franja_horaria ?? null,
       estado: 'pendiente',
       recordatorio_enviado: false,
+      ...(input.tipo ? { tipo: input.tipo, que: input.que ?? null, lugar_privado: input.lugar_privado ?? null, personas_en_lugar: input.personas_en_lugar ?? null } : {}),
     })
     .select(SELECT_FIELDS)
     .single()
@@ -161,6 +167,32 @@ export async function crearSolicitud(input: CrearSolicitudInput): Promise<Solici
 export type ResultadoRespuesta =
   | { ok: true; solicitud: Solicitud }
   | { ok: false; motivo: 'no_encontrada' | 'slot_invalido' | 'slot_pasado' | 'no_autorizada' }
+
+/**
+ * El compita acepta una contratación directa o un mandado: NO hay horario ni sala. Pasa de 'pendiente' a
+ * 'aceptada' de forma atómica (solo una vez, solo el compita dueño) y desde ahí el cliente puede pagar.
+ */
+export async function aceptarSolicitudDirecta(token: string, compitaId: string): Promise<ResultadoRespuesta> {
+  const supabase = createAdminSupabase()
+  const { data: row } = await supabase.from('solicitudes').select(SELECT_FIELDS).eq('token_respuesta', token).maybeSingle()
+  if (!row) return { ok: false, motivo: 'no_encontrada' }
+  const previa = row as Record<string, unknown>
+  if (previa.compita_id !== compitaId) return { ok: false, motivo: 'no_autorizada' }
+  if (previa.estado !== 'pendiente') return { ok: false, motivo: 'no_encontrada' } // ya respondida
+
+  const { data: updated } = await supabase
+    .from('solicitudes')
+    .update({ estado: 'aceptada', respondido_at: new Date().toISOString() })
+    .eq('token_respuesta', token).eq('compita_id', compitaId).eq('estado', 'pendiente')
+    .in('tipo', ['directa', 'mandado'])
+    .select(SELECT_FIELDS)
+    .maybeSingle()
+  if (!updated) return { ok: false, motivo: 'no_encontrada' } // no es directa, o ya la respondió otra pulsación
+  const sol = mapRow(updated as Record<string, unknown>)
+  await registrarAccion({ entidad: 'solicitud', entidadId: sol.id, paso: 5 })
+  await registrarEvento({ entidad: 'solicitud', entidadId: sol.id, tipo: 'solicitud_aceptada', actor: `compita:${sol.compita_id}`, datos: { slot: null, directa: true } })
+  return { ok: true, solicitud: sol }
+}
 
 /**
  * El compita confirma un slot específico (índice 0-2) o rechaza (-1).

@@ -1,10 +1,10 @@
 import { NextRequest } from 'next/server'
-import { getAdminUser } from '@/lib/auth'
+import { requierePermiso } from '@/lib/permisos'
 import { desactivarCompita, reactivarCompita } from '@/lib/compitas'
-import { ok, err, unauthorized, serverError } from '@/lib/api'
+import { ok, err, serverError } from '@/lib/api'
 
 export async function POST(req: NextRequest) {
-  if (!(await getAdminUser())) return unauthorized()
+  const g = await requierePermiso('cuentas'); if (!g.ok) return g.res
 
   const { compita_id, estado } = (await req.json().catch(() => ({})) as { compita_id: string; estado: string })
   if (!compita_id || !['activo', 'inactivo'].includes(estado)) return err('Parámetros inválidos')

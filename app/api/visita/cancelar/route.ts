@@ -4,6 +4,7 @@ import { createAdminSupabase } from '@/lib/supabase-server'
 import { sendTelegramMessage, avisarAdmin } from '@/lib/telegram'
 import { esc } from '@/lib/html'
 import { ok, err, unauthorized } from '@/lib/api'
+import { registrarCancelacion } from '@/lib/cancelaciones'
 
 export async function POST(req: Request) {
   const user = await getClienteActivo()
@@ -17,7 +18,7 @@ export async function POST(req: Request) {
   // Buscar la visita en pre_visita del cliente, con datos del compita
   const { data: visita } = await admin
     .from('visitas')
-    .select('id, usuario_id, compita_id, compitas(nombre, telegram_chat_id), usuarios(nombre)')
+    .select('id, usuario_id, compita_id, fecha_programada, hora_inicio_programada, compitas(nombre, telegram_chat_id), usuarios(nombre)')
     .eq('usuario_id', user.id)
     .eq('estado', 'pre_visita')
     .maybeSingle() as {
@@ -25,12 +26,20 @@ export async function POST(req: Request) {
         id: string
         usuario_id: string
         compita_id: string
+        fecha_programada: string | null
+        hora_inicio_programada: string | null
         compitas: { nombre: string; telegram_chat_id: string | null } | null
         usuarios: { nombre: string } | null
       } | null
     }
 
   if (!visita) return err('No hay visita en coordinación que puedas cancelar', 404)
+
+  // Registrar la cancelación ANTES de borrar la visita: el registro no depende de ella (ver lib/cancelaciones.ts).
+  await registrarCancelacion({
+    visitaId: visita.id, compitaId: visita.compita_id, usuarioId: visita.usuario_id, canceladoPor: 'cliente',
+    fechaProgramada: visita.fecha_programada, horaInicioProgramada: visita.hora_inicio_programada, motivo: mensaje || null,
+  })
 
   // Eliminar la visita
   const { error } = await admin.from('visitas').delete().eq('id', visita.id).eq('estado', 'pre_visita')

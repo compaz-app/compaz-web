@@ -1,10 +1,10 @@
 import { NextRequest } from 'next/server'
-import { getAdminUser } from '@/lib/auth'
-import { ok, err, unauthorized, serverError } from '@/lib/api'
+import { requierePermiso } from '@/lib/permisos'
+import { ok, err, serverError } from '@/lib/api'
 import { bloquearCompita, desbloquearCompita } from '@/lib/compitas'
 
 export async function POST(req: NextRequest) {
-  if (!(await getAdminUser())) return unauthorized()
+  const g = await requierePermiso('cuentas'); if (!g.ok) return g.res
 
   const { compita_id, bloquear } = (await req.json().catch(() => ({})))
   if (!compita_id) return err('compita_id requerido')

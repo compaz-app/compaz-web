@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getAdminUser } from '@/lib/auth'
-import { ok, err, unauthorized, serverError } from '@/lib/api'
+import { requierePermiso } from '@/lib/permisos'
+import { ok, err, serverError } from '@/lib/api'
 import { eliminarCompita } from '@/lib/compitas'
 
 export async function DELETE(req: NextRequest) {
-  if (!(await getAdminUser())) return unauthorized()
+  const g = await requierePermiso('raiz'); if (!g.ok) return g.res
 
   const { compita_id, force } = (await req.json().catch(() => ({})))
   if (!compita_id) return err('compita_id requerido')

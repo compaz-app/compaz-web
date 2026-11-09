@@ -1,12 +1,12 @@
 import { NextRequest } from 'next/server'
 import { createAdminSupabase } from '@/lib/supabase-server'
-import { getAdminUser } from '@/lib/auth'
-import { ok, err, unauthorized, serverError } from '@/lib/api'
+import { requierePermiso } from '@/lib/permisos'
+import { ok, err, serverError } from '@/lib/api'
 import { sendBienvenidaCompita } from '@/lib/resend'
 import { validarPerfil, emailValido } from '@/lib/validar'
 
 export async function POST(req: NextRequest) {
-  if (!(await getAdminUser())) return unauthorized()
+  const g = await requierePermiso('invitar'); if (!g.ok) return g.res
 
   const body = (await req.json().catch(() => ({}))) as Record<string, unknown>
   const faltantes: string[] = []

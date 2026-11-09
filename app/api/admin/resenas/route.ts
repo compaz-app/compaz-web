@@ -1,12 +1,12 @@
 import { NextRequest } from 'next/server'
-import { getAdminUser } from '@/lib/auth'
+import { requierePermiso } from '@/lib/permisos'
 import { createAdminSupabase } from '@/lib/supabase-server'
-import { ok, err, unauthorized, serverError } from '@/lib/api'
+import { ok, err, serverError } from '@/lib/api'
 
 // GET /api/admin/resenas — lista todas las reseñas (pendientes primero)
 export async function GET(_req: NextRequest) {
-  const user = await getAdminUser()
-  if (!user) return unauthorized()
+  const g = await requierePermiso('atender')
+  if (!g.ok) return g.res
 
   const admin = createAdminSupabase()
   const { data, error } = await admin
@@ -21,8 +21,8 @@ export async function GET(_req: NextRequest) {
 
 // PATCH /api/admin/resenas — publicar o ocultar una reseña { id, publicada }
 export async function PATCH(req: NextRequest) {
-  const user = await getAdminUser()
-  if (!user) return unauthorized()
+  const g = await requierePermiso('atender')
+  if (!g.ok) return g.res
 
   const body = await req.json().catch(() => null)
   const id = typeof body?.id === 'string' ? body.id.trim() : ''

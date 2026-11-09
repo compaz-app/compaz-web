@@ -1,10 +1,10 @@
 import { NextRequest } from 'next/server'
-import { getAdminUser } from '@/lib/auth'
+import { requierePermiso } from '@/lib/permisos'
 import { asignarCompita } from '@/lib/usuarios'
-import { ok, err, unauthorized, serverError } from '@/lib/api'
+import { ok, err, serverError } from '@/lib/api'
 
 export async function POST(req: NextRequest) {
-  if (!(await getAdminUser())) return unauthorized()
+  const g = await requierePermiso('atender'); if (!g.ok) return g.res
 
   const body = await req.json().catch(() => null) as { usuario_id?: string; compita_id?: string } | null
   if (!body?.usuario_id) return err('Falta usuario_id')

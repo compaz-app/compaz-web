@@ -1,14 +1,13 @@
 import { NextRequest } from 'next/server'
 import { createAdminSupabase } from '@/lib/supabase-server'
-import { getAdminUser } from '@/lib/auth'
-import { ok, err, unauthorized, serverError } from '@/lib/api'
-
-const requireAdmin = getAdminUser
+import { requierePermiso } from '@/lib/permisos'
+import { ok, err, serverError } from '@/lib/api'
 
 // GET /api/admin/flags — listar flags abiertos
 export async function GET(req: NextRequest) {
-  const user = await requireAdmin()
-  if (!user) return unauthorized()
+  const g = await requierePermiso('atender')
+  if (!g.ok) return g.res
+  const user = { email: g.actor.correo }
 
   const { searchParams } = req.nextUrl
   const resueltos = searchParams.get('resueltos') === 'true'
@@ -26,8 +25,9 @@ export async function GET(req: NextRequest) {
 
 // POST /api/admin/flags — crear flag
 export async function POST(req: NextRequest) {
-  const user = await requireAdmin()
-  if (!user) return unauthorized()
+  const g = await requierePermiso('atender')
+  if (!g.ok) return g.res
+  const user = { email: g.actor.correo }
 
   const body = await req.json().catch(() => null) as {
     entidad_tipo: 'visita' | 'compita' | 'cliente'
@@ -64,8 +64,9 @@ export async function POST(req: NextRequest) {
 
 // PATCH /api/admin/flags — resolver flag
 export async function PATCH(req: NextRequest) {
-  const user = await requireAdmin()
-  if (!user) return unauthorized()
+  const g = await requierePermiso('atender')
+  if (!g.ok) return g.res
+  const user = { email: g.actor.correo }
 
   const { flag_id } = (await req.json().catch(() => ({}))) as { flag_id: string }
   if (!flag_id) return err('flag_id requerido')

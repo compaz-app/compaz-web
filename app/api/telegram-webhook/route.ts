@@ -14,6 +14,7 @@ import {
   INLINE_INICIAR_O_REAGENDAR,
   QUITAR_TECLADO,
   TECLADO_SIN_VISITA,
+  TEXTO_NOTA_DE_VOZ,
   TECLADO_INICIO,
   TECLADO_DURANTE_VISITA,
   makeInlineKeyboard,
@@ -21,7 +22,8 @@ import {
 import { generarTokenPerfil } from '@/lib/compita-tokens'
 import { getOrCreateDailyRoom } from '@/lib/daily'
 import { sendVisitaInicio, sendVisitaResumen, sendResumenConReporte, sendCodigoTelegram } from '@/lib/resend'
-import { responderSolicitud, getSolicitudPorToken } from '@/lib/solicitudes'
+import { responderSolicitud, getSolicitudPorToken, aceptarSolicitudDirecta } from '@/lib/solicitudes'
+import { notificar } from '@/lib/avisos'
 import { registrarMotivo, MOTIVOS } from '@/lib/motivos'
 import { qRol } from '@/lib/links'
 import { sendEmail, SITE_URL as SITE_URL_PUBLICA } from '@/lib/email'
@@ -693,6 +695,13 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
     return NextResponse.json({ ok: true })
   }
 
+  // Notas de voz, audios y videomensajes: en Venezuela se usan mucho, pero el bot solo retransmite texto y fotos.
+  // Sin esta respuesta el compita creería que el cliente las recibió. Nada se guarda ni se reenvía.
+  if (!isCallback && (message.voice || message.audio || message.video_note)) {
+    await sendTelegramMessage(chatId, TEXTO_NOTA_DE_VOZ)
+    return NextResponse.json({ ok: true })
+  }
+
   // Cuenta inactiva o aún sin verificar: puede usar /perfil y /menu, pero no operar visitas ni solicitudes.
   if (compita.estado !== 'activo' || !compita.verificado) {
     await sendTelegramMessage(
@@ -988,6 +997,25 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
       }
     } catch (e) { console.error('Alerta reagendados admin (compita):', e) }
 
+    return NextResponse.json({ ok: true })
+  }
+
+  // ── Solicitud directa o mandado: aceptar (sin horario) ───────────────────────
+  if (isCallback && text.startsWith('directa:')) {
+    const token = text.slice('directa:'.length)
+    const r = await aceptarSolicitudDirecta(token, compita.id)
+    if (!r.ok) {
+      await sendTelegramMessage(chatId, r.motivo === 'no_autorizada' ? `Esta solicitud no es tuya.` : `Este enlace ya fue usado o no existe.`, TECLADO_SIN_VISITA)
+      return NextResponse.json({ ok: true })
+    }
+    const sol = r.solicitud
+    // El cliente recibe el correo con el paso que le falta (pagar). Registrado en `avisos`: si falla, la escalera reintenta.
+    await notificar({
+      plantilla: 'directa_aceptada', canal: 'correo', destinatario: { tipo: 'cliente', id: sol.cliente_id },
+      variables: { solicitudId: sol.id }, entidad: 'solicitud', entidadId: sol.id, paso: 6,
+    })
+    await sendTelegramMessage(chatId, `✅ <b>Aceptaste</b>\n\nEl cliente paga primero. Te avisamos apenas el pago esté confirmado.`, TECLADO_SIN_VISITA)
+    await avisarAdmin(`🤝 <b>${esc(compita.nombre)}</b> aceptó una contratación directa. Esperando el pago del cliente.`)
     return NextResponse.json({ ok: true })
   }
 

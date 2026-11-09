@@ -1,10 +1,10 @@
 import { createAdminSupabase } from '@/lib/supabase-server'
-import { getAdminUser } from '@/lib/auth'
-import { ok, unauthorized, serverError } from '@/lib/api'
+import { requierePermiso } from '@/lib/permisos'
+import { ok, serverError } from '@/lib/api'
 import { randomBytes } from 'crypto'
 
 export async function POST() {
-  if (!(await getAdminUser())) return unauthorized()
+  const g = await requierePermiso('invitar'); if (!g.ok) return g.res
 
   const admin = createAdminSupabase()
   const token = randomBytes(20).toString('hex')

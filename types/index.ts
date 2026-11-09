@@ -118,6 +118,10 @@ export interface TelegramMessage {
   text?: string
   photo?: TelegramPhotoSize[]
   caption?: string
+  /** Notas de voz, audios y videomensajes: el bot no los retransmite (solo texto y fotos). */
+  voice?: { file_id: string; duration?: number }
+  audio?: { file_id: string; duration?: number }
+  video_note?: { file_id: string; duration?: number }
   reply_to_message?: { message_id: number }
 }
 

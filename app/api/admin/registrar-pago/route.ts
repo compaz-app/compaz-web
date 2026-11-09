@@ -2,18 +2,18 @@
 // { usuario_id, tipo: 'plan'|'extra', plan?, horas?, monto_usd?, metodo, referencia? }
 // Cada pago crea un paquete de visitas que vence a los 60 días.
 import { NextRequest } from 'next/server'
-import { getAdminUser } from '@/lib/auth'
+import { requierePermiso } from '@/lib/permisos'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { registrarPago } from '@/lib/pagos'
 import { cupoDelPlan } from '@/lib/visitas'
 import { notificar } from '@/lib/avisos'
 import { emailAdminPago } from '@/lib/aviso-pago'
 import { ETIQUETA_METODO, type MetodoPago } from '@/lib/planes'
-import { ok, err, unauthorized } from '@/lib/api'
+import { ok, err } from '@/lib/api'
 
 export async function POST(req: NextRequest) {
-  const admin = await getAdminUser()
-  if (!admin) return unauthorized()
+  const g = await requierePermiso('pagos'); if (!g.ok) return g.res
+  const admin = { email: g.actor.correo }
 
   const b = await req.json().catch(() => null) as Record<string, unknown> | null
   if (!b || typeof b.usuario_id !== 'string') return err('Falta usuario_id')

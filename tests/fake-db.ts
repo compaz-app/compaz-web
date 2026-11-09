@@ -31,10 +31,16 @@ const DEFAULTS: Record<string, () => Row> = {
   admin_flags: () => ({ id: randomUUID(), resuelto: false, created_at: nowIso() }),
   resenas: () => ({ id: randomUUID(), publicada: false, created_at: nowIso() }),
   eventos: () => ({ id: randomUUID(), modulo: 'operacion', actor: 'sistema', datos: {}, creado_en: nowIso() }),
+  equipo: () => ({ id: randomUUID(), activo: true, permisos: {}, creado_en: nowIso(), actualizado_en: nowIso() }),
+  equipo_historial: () => ({ hecho_en: nowIso() }),
+  ajustes: () => ({ vigente_desde: nowIso(), actualizado_por: 'sistema', actualizado_en: nowIso() }),
+  ajustes_historial: () => ({ cambiado_en: nowIso(), vigente_desde: nowIso() }),
+  cancelaciones: () => ({ id: randomUUID(), horas_de_aviso: null, tardia: false, motivo: null, justificada: false, justificada_por: null, justificada_en: null, visita_id: null, solicitud_id: null, creado_en: nowIso() }),
+  fotos_privadas: () => ({ id: randomUUID(), visita_id: null, solicitud_id: null, usuario_id: null, borrada_en: null, creado_en: nowIso() }),
   avisos: () => ({ id: randomUUID(), estado: 'pendiente', intentos: 0, variables: {}, error: null, accion_en: null, plazo_accion_hasta: null, ultimo_intento_en: null, respaldo_de: null, entidad: null, entidad_id: null, paso: null, programado_para: nowIso(), creado_en: nowIso() }),
 }
 
-const PK: Record<string, string> = { telegram_estados: 'chat_id' }
+const PK: Record<string, string> = { telegram_estados: 'chat_id', ajustes: 'clave' }
 
 function dupError(msg: string) { return { code: '23505', message: `duplicate key value violates unique constraint "${msg}"` } }
 
@@ -48,6 +54,8 @@ export class FakeDB {
   rpcs: Record<string, (args: any) => { data: any; error: any } | Promise<{ data: any; error: any }>> = {}
   /** Llamadas recibidas por rpc(), en orden. */
   rpcLlamadas: { fn: string; args: any }[] = []
+  /** Almacenamiento simulado: clave `bucket/ruta`. */
+  objetos = new Map<string, { bytes: number; contentType?: string }>()
   constructor() { this.reset() }
   reset() {
     this.tables = {}
@@ -55,6 +63,13 @@ export class FakeDB {
     this.fail = {}
     // registrar_evento existe en la base real; aquí guarda el evento en memoria.
     this.rpcs = {
+      guardar_ajuste: (a: any) => {
+        const previo = this.tables.ajustes.find((x) => x.clave === a.p_clave)
+        this.tables.ajustes_historial.push({ ...DEFAULTS.ajustes_historial(), clave: a.p_clave, valor_anterior: previo ? previo.valor : a.p_anterior, valor_nuevo: a.p_valor, cambiado_por: a.p_actor })
+        const fila = { ...DEFAULTS.ajustes(), clave: a.p_clave, valor: a.p_valor, actualizado_por: a.p_actor }
+        if (previo) Object.assign(previo, fila); else this.tables.ajustes.push(fila)
+        return { data: null, error: null }
+      },
       registrar_evento: (a: any) => {
         const r = { ...DEFAULTS.eventos(), entidad: a.p_entidad, entidad_id: a.p_entidad_id, tipo: a.p_tipo, actor: a.p_actor, datos: a.p_datos }
         this.tables.eventos.push(r)
@@ -62,6 +77,7 @@ export class FakeDB {
       },
     }
     this.rpcLlamadas = []
+    this.objetos = new Map()
   }
   rows(t: string): Row[] { return this.tables[t] }
   seed(t: string, row: Row): Row {
@@ -348,7 +364,22 @@ export function makeClient(db: FakeDB, user: () => { id: string; email: string }
     },
     storage: {
       from: (bucket: string) => ({
-        upload: async (path: string) => ({ data: { path }, error: null }),
+        upload: async (path: string, cuerpo?: any, opts?: any) => {
+          if (db.shouldFail('storage', 'upload')) return { data: null, error: { message: 'fallo simulado al subir' } }
+          const k = `${bucket}/${path}`
+          if (db.objetos.has(k) && !opts?.upsert) return { data: null, error: { message: 'The resource already exists' } }
+          db.objetos.set(k, { bytes: cuerpo?.byteLength ?? 0, contentType: opts?.contentType })
+          return { data: { path }, error: null }
+        },
+        remove: async (rutas: string[]) => {
+          if (db.shouldFail('storage', 'remove')) return { data: null, error: { message: 'fallo simulado al borrar' } }
+          for (const r of rutas) db.objetos.delete(`${bucket}/${r}`)
+          return { data: rutas.map((name) => ({ name })), error: null }
+        },
+        createSignedUrl: async (path: string, seg: number) => {
+          if (!db.objetos.has(`${bucket}/${path}`)) return { data: null, error: { message: 'Object not found' } }
+          return { data: { signedUrl: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/sign/${bucket}/${path}?token=firma&exp=${seg}` }, error: null }
+        },
         getPublicUrl: (path: string) => ({ data: { publicUrl: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${bucket}/${path}` } }),
       }),
     },

@@ -1,11 +1,11 @@
 import { NextRequest } from 'next/server'
-import { getAdminUser } from '@/lib/auth'
+import { requierePermiso } from '@/lib/permisos'
 import { createAdminSupabase } from '@/lib/supabase-server'
-import { ok, unauthorized, serverError } from '@/lib/api'
+import { ok, serverError } from '@/lib/api'
 
 export async function POST(req: NextRequest) {
-  const admin = await getAdminUser()
-  if (!admin) return unauthorized()
+  const g = await requierePermiso('atender'); if (!g.ok) return g.res
+  const admin = { email: g.actor.correo }
 
   const { id } = await req.json() as { id: string }
   const supabase = createAdminSupabase()

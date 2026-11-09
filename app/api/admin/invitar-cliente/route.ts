@@ -5,14 +5,14 @@
 // No usa el correo de invitación de Supabase: así no hay dos correos ni dependemos de su plantilla.
 import { NextRequest } from 'next/server'
 import { createAdminSupabase } from '@/lib/supabase-server'
-import { getAdminUser } from '@/lib/auth'
-import { ok, err, unauthorized, serverError } from '@/lib/api'
+import { requierePermiso } from '@/lib/permisos'
+import { ok, err, serverError } from '@/lib/api'
 import { sendBienvenidaCliente } from '@/lib/resend'
 import { emailValido } from '@/lib/validar'
 import { SITE_URL } from '@/lib/email'
 
 export async function POST(req: NextRequest) {
-  if (!(await getAdminUser())) return unauthorized()
+  const g = await requierePermiso('invitar'); if (!g.ok) return g.res
 
   const { nombre, email: emailRaw } = (await req.json().catch(() => ({}))) as { nombre?: string; email?: string }
   const email = typeof emailRaw === 'string' ? emailRaw.trim().toLowerCase() : ''

@@ -2,12 +2,12 @@
 // Crea una visita demo directamente desde una solicitud completada, sin pago.
 // Asigna la compita al cliente y marca la solicitud como contratada.
 import { NextRequest } from 'next/server'
-import { getAdminUser } from '@/lib/auth'
+import { requierePermiso } from '@/lib/permisos'
 import { createAdminSupabase } from '@/lib/supabase-server'
-import { ok, err, unauthorized, notFound, serverError } from '@/lib/api'
+import { ok, err, notFound, serverError } from '@/lib/api'
 
 export async function POST(req: NextRequest) {
-  if (!(await getAdminUser())) return unauthorized()
+  const g = await requierePermiso('raiz'); if (!g.ok) return g.res
 
   const { solicitud_id } = (await req.json().catch(() => ({}))) as { solicitud_id?: string }
   if (!solicitud_id) return err('Falta solicitud_id')

@@ -1,10 +1,10 @@
 import { NextRequest } from 'next/server'
 import { createAdminSupabase } from '@/lib/supabase-server'
-import { getAdminUser } from '@/lib/auth'
-import { ok, err, unauthorized, serverError } from '@/lib/api'
+import { requierePermiso } from '@/lib/permisos'
+import { ok, err, serverError } from '@/lib/api'
 
 export async function DELETE(req: NextRequest) {
-  if (!(await getAdminUser())) return unauthorized()
+  const g = await requierePermiso('raiz'); if (!g.ok) return g.res
 
   const { usuario_id } = (await req.json().catch(() => ({})))
   if (!usuario_id) return err('usuario_id requerido')

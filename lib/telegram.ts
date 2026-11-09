@@ -71,6 +71,9 @@ export const INLINE_INICIAR_O_REAGENDAR = makeInlineKeyboard([
 
 // Teclados reutilizables
 // Sin visita: solo Menú
+/** Respuesta a una nota de voz, audio o videomensaje: el cliente no los recibe, y callar haría creer que sí llegaron. */
+export const TEXTO_NOTA_DE_VOZ = '🎤 Las notas de voz no están activas: el cliente no las recibe. Escribe tu mensaje en texto o manda una foto. Gracias por entender 🙏'
+
 export const TECLADO_SIN_VISITA = {
   keyboard: [[{ text: '📋 Menú' }]],
   resize_keyboard: true,

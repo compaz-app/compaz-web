@@ -11,6 +11,7 @@ import { avisarAdmin } from '@/lib/telegram'
 import { detectarContacto, reportarContactoEnTexto } from '@/lib/chat-moderacion'
 import { notificar } from '@/lib/avisos'
 import { registrarEvento } from '@/lib/eventos'
+import { validarSolicitudNueva, mensajeDeSolicitud, type SolicitudNueva } from '@/lib/validar-solicitud'
 
 const MENSAJES_NEGOCIO = ['Límite de', 'Ya tienes una solicitud']
 
@@ -24,29 +25,39 @@ export async function POST(req: NextRequest) {
     sobre_cliente?: string | null
     slots_propuestos?: unknown
     franja_horaria?: string
-  } | null
+  } & Record<string, unknown> | null
   if (!body) return err('Solicitud inválida')
 
   const compita_id = body.compita_id
-  const mensajeOriginal = typeof body.mensaje === 'string' ? body.mensaje.trim() : ''
+  // Contrato NUEVO (formulario del rediseño): el cuerpo trae `tipo`. Sin `tipo`, contrato anterior sin cambios.
+  let nueva: SolicitudNueva | null = null
+  if (body.tipo !== undefined) {
+    const v = validarSolicitudNueva(body)
+    if (!v.ok) return err(v.error)
+    nueva = v.valor
+  }
+  const mensajeOriginal = nueva ? (nueva.nota ?? '') : typeof body.mensaje === 'string' ? body.mensaje.trim() : ''
   const sobreOriginal = typeof body.sobre_cliente === 'string' ? body.sobre_cliente.trim() : null
   const franja_horaria = typeof body.franja_horaria === 'string' ? body.franja_horaria.trim().slice(0, 200) : undefined
   const slotsRaw = body.slots_propuestos
+  // Hasta que existan las horas libres del compita (Lote 3), la entrevista y el contrato anterior siguen proponiendo
+  // 1 a 3 horarios; la contratación directa y el mandado no llevan horarios.
+  const necesitaSlots = !nueva || nueva.tipo === 'entrevista'
 
-  if (!compita_id || !mensajeOriginal) return err('Faltan campos requeridos')
+  if (!compita_id || (!nueva && !mensajeOriginal)) return err('Faltan campos requeridos')
   if (mensajeOriginal.length > 1500) return err('El mensaje es demasiado largo (máximo 1500 caracteres)')
   if (sobreOriginal && sobreOriginal.length > 1000) return err('La descripción del cliente es demasiado larga (máximo 1000 caracteres)')
-  if (!Array.isArray(slotsRaw) || slotsRaw.length === 0 || slotsRaw.length > 3) {
+  if (necesitaSlots && (!Array.isArray(slotsRaw) || slotsRaw.length === 0 || slotsRaw.length > 3)) {
     return err('Debes proponer entre 1 y 3 horarios')
   }
-  if (!slotsRaw.every((s) => esSlotFuturo(s, 0))) return err('Todos los horarios deben ser válidos y estar en el futuro')
-  if ((slotsRaw as string[]).some((s) => new Date(s).getTime() > Date.now() + 60 * 86400_000)) return err('Los horarios deben estar dentro de los próximos 60 días')
-  const slots_propuestos = [...new Set((slotsRaw as string[]).map((s) => new Date(s).toISOString()))]
+  if (necesitaSlots && !(slotsRaw as unknown[]).every((s) => esSlotFuturo(s, 0))) return err('Todos los horarios deben ser válidos y estar en el futuro')
+  if (necesitaSlots && (slotsRaw as string[]).some((s) => new Date(s).getTime() > Date.now() + 60 * 86400_000)) return err('Los horarios deben estar dentro de los próximos 60 días')
+  const slots_propuestos = necesitaSlots ? [...new Set((slotsRaw as string[]).map((s) => new Date(s).toISOString()))] : []
 
   // El compita nunca debe recibir teléfonos ni correos del cliente: se censuran igual que en el chat.
   const mensajeCensurado = detectarContacto(mensajeOriginal)
   const sobreCensurado = sobreOriginal ? detectarContacto(sobreOriginal) : null
-  const mensaje = mensajeCensurado.textoCensurado
+  const mensaje = nueva ? mensajeDeSolicitud(nueva, nueva.nota ? mensajeCensurado.textoCensurado : null) : mensajeCensurado.textoCensurado
   const sobre_cliente = sobreCensurado ? sobreCensurado.textoCensurado : null
 
   // Traer datos del cliente y del compita
@@ -85,6 +96,7 @@ export async function POST(req: NextRequest) {
       sobre_cliente: sobre_cliente || null,
       slots_propuestos,
       franja_horaria,
+      ...(nueva ? { tipo: nueva.tipo, que: nueva.que, lugar_privado: nueva.lugar_privado, personas_en_lugar: nueva.personas_en_lugar } : {}),
     })
   } catch (e) {
     console.error('[solicitudes] error:', e)
@@ -105,7 +117,7 @@ export async function POST(req: NextRequest) {
   const clienteNombre = cliente?.nombre ?? 'Un cliente'
   await registrarEvento({
     entidad: 'solicitud', entidadId: solicitud.id, tipo: 'solicitud_creada', actor: `cliente:${user.id}`,
-    datos: { compita_id, horarios: slots_propuestos.length },
+    datos: { compita_id, horarios: slots_propuestos.length, ...(nueva ? { tipo: nueva.tipo, lugar_privado: nueva.lugar_privado } : {}) },
   })
 
   // Telegram primero, con registro. Si no se pudo entregar, el correo de respaldo sale en ese momento.

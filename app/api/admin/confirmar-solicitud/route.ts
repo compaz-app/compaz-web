@@ -1,18 +1,18 @@
 // POST /api/admin/confirmar-solicitud — el admin confirma que llegó el dinero de una solicitud de pago del cliente.
 // { solicitud_id, accion?: 'confirmar'|'cancelar' }
 import { NextRequest } from 'next/server'
-import { getAdminUser } from '@/lib/auth'
+import { requierePermiso } from '@/lib/permisos'
 import { confirmarSolicitudPago, cancelarSolicitudPago } from '@/lib/solicitudes-pago'
 import { cupoDelPlan } from '@/lib/visitas'
 import { notificar } from '@/lib/avisos'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { emailAdminPago } from '@/lib/aviso-pago'
 import { ETIQUETA_METODO, type MetodoPago } from '@/lib/planes'
-import { ok, err, unauthorized } from '@/lib/api'
+import { ok, err } from '@/lib/api'
 
 export async function POST(req: NextRequest) {
-  const admin = await getAdminUser()
-  if (!admin) return unauthorized()
+  const g = await requierePermiso('atender'); if (!g.ok) return g.res
+  const admin = { email: g.actor.correo }
   const b = await req.json().catch(() => null) as { solicitud_id?: string; accion?: string } | null
   if (!b?.solicitud_id) return err('Falta solicitud_id')
 

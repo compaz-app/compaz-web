@@ -6,7 +6,7 @@ Especificación final de lo decidido con el usuario el 2026-11-04. Reemplaza las
 
 Antes de pagar (el compita acepta ANTES del pago, decisión del punto 1):
 1. El cliente ve del compita: foto, video, calificación, reseñas, primer nombre y la INICIAL del apellido, y la zona general. Nada de contacto.
-2. El compita ve del cliente al decidir: primer nombre, foto (si la hay), qué se hará, cuándo, si el lugar es privado y datos generales del familiar (edad aproximada, condición general). Hoy ve el nombre COMPLETO y el texto libre sobre el familiar: debe cambiar.
+2. El compita ve del cliente al decidir: primer nombre, foto (si la hay), qué se hará, cuándo, si el lugar es privado, QUIÉN más estará en el lugar, solo el tipo de cada persona (familiar, amigo, vecino, persona que cuida o ayuda, otra), por la seguridad del compita; los nombres se piden en la ficha tras pagar y datos generales del familiar (edad aproximada, condición general). Hoy ve el nombre COMPLETO y el texto libre sobre el familiar: debe cambiar.
 
 Tras pagar y confirmar la cita:
 3. El cliente ve el nombre completo del compita.
@@ -34,7 +34,7 @@ Dos niveles (propuesta para el diseño de datos, pendiente de confirmar):
 2. Una vez, el familiar: nombre y edad aproximada; si el lugar es privado, descripción y movilidad.
 3. Cada servicio: qué, cuándo, dónde. Si el lugar es privado: quién estará presente, dirección, cómo entrar y contacto en el sitio (nombre y teléfono).
 4. No se piden medicinas, historial médico ni documentos. Casilla de consentimiento para los datos del familiar.
-5. La ficha se pide DESPUÉS de pagar y es obligatoria antes de agendar la primera cita. El admin puede llenarla por teléfono. Etapa nueva "ficha" en el ciclo.
+5. La ficha se pide DESPUÉS de pagar y es obligatoria antes de agendar la primera cita. El cliente la llena solo en el portal; el equipo no la llena por teléfono (decisión del usuario, 2026-11-09). Etapa nueva "ficha" en el ciclo.
 
 ## 5. Cadena de la visita presencial
 
@@ -59,7 +59,7 @@ El puente: ningún número se comparte. Primero el admin llama o escribe al cont
 
 ## 8. Videollamada posterior al pago
 
-Derecho del cliente, sin cupos ni cobro. Mensaje de video, llamada de solo voz (enlace de Daily, sin teléfonos) y videollamada. El compita acepta o propone otra hora. Tope por llamada con aviso previo y freno anti-abuso discreto (propuesta: 1 videollamada al día y 3 por semana, con aviso al admin). Sin grabar. Durante una visita, solo si el compita lo acepta en ese momento.
+Derecho del cliente, sin cupos ni cobro. Mensaje de video, llamada de solo voz (enlace de Daily, sin teléfonos) y videollamada. El compita acepta o propone otra hora. Tope solo de DURACIÓN por llamada: aviso de fin a los 20 minutos y corte automático a los 23. NO hay límite de cuántas veces se puede llamar (decisión del usuario, 2026-11-09): Compaz es el puente entre cliente y compita y, si se limita, se contactarán por su cuenta. Se vigila el costo con eventos, sin bloquear. Sin grabar. Durante una visita, solo si el compita lo acepta en ese momento.
 
 ## 9. Cabos sueltos revisados
 
@@ -96,3 +96,5 @@ Inventario de dónde cambian los precios (verificado en el código):
 2. `app/api/chat/route.ts` (el asistente de la página) cita los precios en su texto (líneas 58 a 63): hay que actualizarlo a mano.
 3. La página de inicio no muestra precios. `tests/10-planes-y-creditos.test.ts` fija los valores actuales y hay que actualizarlo.
 4. DECIDIDO Y APLICADO (2026-11-04): planes mensuales con la opción B, es decir, se mantiene el descuento (Compañía 75 y Compañía Plus 140). La hora extra pasó de 20 a 22 y su mínimo de 2 horas a 1; A la carta pasó de 45 (2 horas) a 22 (1 hora). El precio tachado de la página de pago se calcula ahora desde la hora (88 y 176; ahorro de 13 y 36) en vez de estar fijo. Se actualizaron los textos de la página de pago, `PlanesPago`, `AgendarOtraVisita` y el asistente de la página, y las pruebas de precios (`tests/10`). Pendiente futuro: fusionar "A la carta" con "visita extra" en un solo "elige cuántas horas". Texto de la discusión original: Con 22 la hora: 2 horas = 44 (hoy 45), 2 visitas de 2 horas = 88 (hoy 75), 4 visitas de 2 horas = 176 (hoy 140). Opción A: sin descuento, todo a 22 la hora (88 y 176). Opción B: los planes conservan su descuento (75 y 140) y solo cambian A la carta, la hora extra y los mandados. Propuesta de diseño: "A la carta" deja de ser un producto fijo y pasa a ser "elige cuántas horas" (mínimo 1) a 22 la hora.
+
+Cambio de personas tras aceptar: ver `docs/plan-construccion.md` (el compita recibe aviso y decide si sigue, sin penalización; el evento queda registrado).

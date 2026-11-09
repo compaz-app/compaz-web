@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminSupabase } from '@/lib/supabase-server'
-import { getAdminUser } from '@/lib/auth'
+import { requierePermiso } from '@/lib/permisos'
 
 export async function GET(req: NextRequest) {
-  if (!(await getAdminUser())) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  const g = await requierePermiso('monitorear'); if (!g.ok) return g.res
 
   const usuarioId = req.nextUrl.searchParams.get('usuario_id')
   if (!usuarioId) return NextResponse.json({ error: 'Falta usuario_id' }, { status: 400 })

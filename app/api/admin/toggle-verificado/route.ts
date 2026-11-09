@@ -1,14 +1,14 @@
 import { NextRequest } from 'next/server'
-import { getAdminUser } from '@/lib/auth'
+import { requierePermiso } from '@/lib/permisos'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { verificarCompita, desactivarCompita } from '@/lib/compitas'
 import { sendTelegramMessage, TECLADO_SIN_VISITA } from '@/lib/telegram'
 import { sendEmail } from '@/lib/email'
 import { esc } from '@/lib/html'
-import { ok, err, unauthorized, serverError } from '@/lib/api'
+import { ok, err, serverError } from '@/lib/api'
 
 export async function POST(req: NextRequest) {
-  if (!(await getAdminUser())) return unauthorized()
+  const g = await requierePermiso('cuentas'); if (!g.ok) return g.res
 
   const { compita_id, verificado } = (await req.json().catch(() => ({})) as { compita_id: string; verificado: boolean })
   if (!compita_id || typeof verificado !== 'boolean') return err('Parámetros inválidos')

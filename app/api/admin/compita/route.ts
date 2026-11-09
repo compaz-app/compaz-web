@@ -1,10 +1,10 @@
 import { NextRequest } from 'next/server'
-import { getAdminUser } from '@/lib/auth'
-import { ok, err, unauthorized, notFound, serverError } from '@/lib/api'
+import { requierePermiso } from '@/lib/permisos'
+import { ok, err, notFound, serverError } from '@/lib/api'
 import { actualizarCompita, getCompitaAdminById } from '@/lib/compitas'
 
 export async function PUT(req: NextRequest) {
-  if (!(await getAdminUser())) return unauthorized()
+  const g = await requierePermiso('cuentas'); if (!g.ok) return g.res
 
   const { id, ...campos } = (await req.json().catch(() => ({})))
   if (!id) return err('id requerido')

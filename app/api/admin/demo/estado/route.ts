@@ -1,12 +1,12 @@
 // GET /api/admin/demo/estado
 // Devuelve el estado actual de la demo: compitas demo, solicitud activa, visita activa y cliente.
 import { NextRequest } from 'next/server'
-import { getAdminUser } from '@/lib/auth'
+import { requierePermiso } from '@/lib/permisos'
 import { createAdminSupabase } from '@/lib/supabase-server'
-import { ok, unauthorized } from '@/lib/api'
+import { ok } from '@/lib/api'
 
 export async function GET(_req: NextRequest) {
-  if (!(await getAdminUser())) return unauthorized()
+  const g = await requierePermiso('raiz'); if (!g.ok) return g.res
 
   const admin = createAdminSupabase()
 

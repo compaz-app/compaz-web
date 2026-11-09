@@ -4,12 +4,12 @@
 // - Termina visitas abiertas de compitas demo
 // - Desvincula el compita del usuario demo (usuario.compita_id = null)
 import { NextRequest } from 'next/server'
-import { getAdminUser } from '@/lib/auth'
+import { requierePermiso } from '@/lib/permisos'
 import { createAdminSupabase } from '@/lib/supabase-server'
-import { ok, unauthorized, serverError } from '@/lib/api'
+import { ok, serverError } from '@/lib/api'
 
 export async function POST(_req: NextRequest) {
-  if (!(await getAdminUser())) return unauthorized()
+  const g = await requierePermiso('raiz'); if (!g.ok) return g.res
 
   const admin = createAdminSupabase()
 

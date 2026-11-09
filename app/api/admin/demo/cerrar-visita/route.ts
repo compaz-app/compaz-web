@@ -1,14 +1,14 @@
 // POST /api/admin/demo/cerrar-visita
 // Cierra la visita demo: crea reporte prefijado, termina la visita, envía resumen al cliente.
 import { NextRequest } from 'next/server'
-import { getAdminUser } from '@/lib/auth'
+import { requierePermiso } from '@/lib/permisos'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { sendResumenConReporte } from '@/lib/resend'
-import { ok, err, unauthorized, notFound, serverError } from '@/lib/api'
+import { ok, err, notFound, serverError } from '@/lib/api'
 import type { Visita, Compita, Usuario } from '@/types'
 
 export async function POST(req: NextRequest) {
-  if (!(await getAdminUser())) return unauthorized()
+  const g = await requierePermiso('raiz'); if (!g.ok) return g.res
 
   const { visita_id } = (await req.json().catch(() => ({}))) as { visita_id?: string }
   if (!visita_id) return err('Falta visita_id')

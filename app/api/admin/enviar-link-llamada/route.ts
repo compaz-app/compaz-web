@@ -4,7 +4,7 @@
 // (la página /sala calcula la apertura en base a ese campo, no en base a cuándo se envió el link).
 // Solo admins.
 import { NextRequest } from 'next/server'
-import { getAdminUser } from '@/lib/auth'
+import { requierePermiso } from '@/lib/permisos'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { guardarRoomUrl } from '@/lib/solicitudes'
 import { createEntrevistaRoom } from '@/lib/daily'
@@ -14,10 +14,10 @@ import { esc } from '@/lib/html'
 import { formatSlotVE } from '@/lib/format'
 import { qRol } from '@/lib/links'
 import { reclamarFlag } from '@/lib/solicitudes'
-import { ok, unauthorized, err, notFound, serverError } from '@/lib/api'
+import { ok, err, notFound, serverError } from '@/lib/api'
 
 export async function POST(req: NextRequest) {
-  if (!(await getAdminUser())) return unauthorized()
+  const g = await requierePermiso('atender'); if (!g.ok) return g.res
 
   const { solicitud_id } = (await req.json().catch(() => ({}))) as { solicitud_id?: string }
   if (!solicitud_id) return err('Falta solicitud_id')

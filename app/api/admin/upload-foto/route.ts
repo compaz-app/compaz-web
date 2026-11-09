@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminSupabase } from '@/lib/supabase-server'
-import { getAdminUser } from '@/lib/auth'
+import { requierePermiso } from '@/lib/permisos'
 import { tipoImagenReal, EXT } from '@/lib/imagen'
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp']
 const MAX_SIZE_BYTES = 5 * 1024 * 1024
 
 export async function POST(req: NextRequest) {
-  if (!(await getAdminUser())) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  const g = await requierePermiso('cuentas'); if (!g.ok) return g.res
 
   const formData = await req.formData()
   const foto = formData.get('foto') as File | null
