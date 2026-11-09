@@ -52,6 +52,6 @@ La pestaña 03 tiene 1.007 filas y todas están ocupadas. `crearCompita_` escrib
 - **Inmediata:** poner `CMC_FUENTE = airtable` o borrar la propiedad. Con eso el código se comporta exactamente como el original (hay una prueba que lo compara con el original).
 - **Completa:** restaurar la versión guardada del Apps Script. La ruta web puede quedarse; sin `CMC_LECTURA_TOKEN` responde 503 y no sirve nada.
 
-## Fuera de alcance (siguiente paso)
+## Dejar de copiar a Airtable
 
-Dejar de copiar a Airtable (`POSTULACIONES_DESTINO=solo_supabase`). Mientras Airtable esté bloqueado, la copia de cada postulación falla y acaba en la bandeja aunque ya esté en el CMC. Esos avisos son informativos: no hay que dar de alta a mano a quien la sincronización ya creó.
+Con `POSTULACIONES_DESTINO=solo_supabase` la web deja de copiar a Airtable y los crons de Airtable se quedan en reposo (ver `docs/flows.md`, sección 12). El CMC no cambia: sigue leyendo de Supabase.

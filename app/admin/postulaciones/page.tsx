@@ -2,7 +2,7 @@
 // Mientras el CMC lea solo de Airtable, una postulación que no llegó allí es invisible
 // para la selección. Aquí Luis o Juan las ven y las resuelven, con autor y nota.
 import { requireAdmin } from '@/lib/auth'
-import { postulacionesPorResolver, type PostulacionPorResolver } from '@/lib/captacion'
+import { postulacionesPorResolver, destinoPostulaciones, type PostulacionPorResolver } from '@/lib/captacion'
 import { colors, fonts, spacing, radius } from '@/lib/design'
 import BandejaPostulaciones from './BandejaPostulaciones'
 
@@ -38,6 +38,9 @@ export default async function PostulacionesPage() {
         </p>
         {!activa && (
           <Aviso texto="La captación en Supabase no está activada (CAPTACION_DESDE). No hay nada que revisar." />
+        )}
+        {activa && destinoPostulaciones() === 'solo_supabase' && (
+          <Aviso texto="La copia a Airtable está desactivada (solo_supabase): las postulaciones nuevas llegan al CMC directamente desde Supabase y no aparecen aquí. Lo que quede en esta lista es anterior: comprueba en el CMC su ID COM-/CLI- y ciérralo con «La registré directamente en el CMC»." />
         )}
         {error && <Aviso texto={error} />}
         {activa && !error && <BandejaPostulaciones pendientes={pendientes} />}

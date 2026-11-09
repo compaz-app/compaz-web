@@ -273,6 +273,22 @@ describe('Apps Script del CMC con fuente Supabase', () => {
     assert.equal(e.leads.ids().length, 3)
   })
 
+  test('SOLO_SUPABASE: postulaciones con copia diferida (pendiente, sin Airtable) llegan al CMC y quedan listas para la bienvenida', async () => {
+    const c = postulacion({ tipo: 'compita', nombre_declarado: 'Compita Diferida', telefono_declarado: '+584148820009', email_declarado: 'cd@ejemplo.org', airtable_estado: 'pendiente', recibida_en: '2026-11-10T15:00:00.000Z' })
+    const f = postulacion({ tipo: 'familia', nombre_declarado: 'Familia Diferida', telefono_declarado: '+34600000009', email_declarado: 'fd@ejemplo.org', airtable_estado: 'pendiente', recibida_en: '2026-11-10T15:05:00.000Z' })
+    const e = entorno(codigoParcheado())
+    e.props.set('CMC_FUENTE', 'supabase')
+    await precargar(e)
+    const r = sincronizar(e)
+    assert.equal(r.compitasNuevos, 1)
+    assert.equal(r.familiasNuevas, 1)
+    const fc = e.compitas.fila('COM-1063')!
+    // Condiciones del flujo de nuevos registros del CMC: ID nuevo, Estado «Registrado», correo válido y «Estado preentrevista» vacío
+    assert.deepEqual([fc[7], fc[4], fc[17], fc[21] ?? ''], ['Registrado', 'cd@ejemplo.org', `SB-${c.id}`, ''])
+    assert.equal(e.leads.fila('CLI-0021')![21], `SB-${f.id}`)
+    assert.equal(e.llamadas.filter((u) => u.includes('airtable')).length, 0)
+  })
+
   test('SIN DUPLICADOS: una fila creada como SB-… se reconoce aunque la postulación obtenga después un rec…', async () => {
     const { nc } = escenarioBase()
     const e = entorno(codigoParcheado())

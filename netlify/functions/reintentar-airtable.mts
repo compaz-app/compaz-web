@@ -1,6 +1,6 @@
 // Netlify Scheduled Function: cada 15 minutos
 // Reintenta la copia a Airtable de postulaciones ya guardadas en Supabase.
-// Si POSTULACIONES_DESTINO no es "supabase_y_airtable", el endpoint responde sin hacer nada.
+// Sin CAPTACION_DESDE, o con POSTULACIONES_DESTINO=solo_supabase, el endpoint no llama a Airtable (solo registra el latido en solo_supabase).
 import type { Config } from '@netlify/functions'
 import { llamarCron } from '../lib/cron'
 

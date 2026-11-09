@@ -1,6 +1,6 @@
 // Netlify Scheduled Function: cada hora, en el minuto 20
 // Importa a Supabase lo que solo quedó en Airtable (ruta de respaldo o confirmaciones perdidas).
-// Si POSTULACIONES_DESTINO no es "supabase_y_airtable", el endpoint responde sin hacer nada.
+// Sin CAPTACION_DESDE, o con POSTULACIONES_DESTINO=solo_supabase, el endpoint no llama a Airtable (solo registra el latido en solo_supabase).
 import type { Config } from '@netlify/functions'
 import { llamarCron } from '../lib/cron'
 
