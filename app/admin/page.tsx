@@ -1,4 +1,7 @@
-import { requireAdmin } from '@/lib/auth'
+import { redirect } from 'next/navigation'
+import { requireAuth } from '@/lib/auth'
+import { actorDePagina, puede } from '@/lib/permisos'
+import { recortarParaActor } from '@/lib/panel-datos'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import AdminDashboard from './AdminDashboard'
 import type { Visita, Compita, Usuario } from '@/types'
@@ -23,7 +26,10 @@ export default async function AdminPage({
 }: {
   searchParams: Promise<{ tab?: string }>
 }) {
-  await requireAdmin()
+  await requireAuth()
+  const actor = await actorDePagina()
+  // Administrador raíz, o colaborador activo con permiso de monitorear. Cualquier otro vuelve a su cuenta.
+  if (!actor || !puede(actor, 'monitorear')) redirect('/dashboard')
 
   const supabase = createAdminSupabase()
   const params = await searchParams
@@ -77,15 +83,20 @@ export default async function AdminPage({
     }
   }
 
+  const datos = recortarParaActor(actor, {
+    visitasActivas, visitasPreVisita, usuarios: todosUsuarios, compitas: todosCompitas,
+    visitasPasadas, todasSolicitudes,
+  })
+
   return (
     <Suspense>
       <AdminDashboard
-        visitasActivas={(visitasActivas ?? []) as (Visita & { compita: Compita; usuario: Usuario })[]}
-        visitasPreVisita={(visitasPreVisita ?? []) as (Visita & { compita: Compita; usuario: Usuario })[]}
-        usuarios={(todosUsuarios ?? []) as (Usuario & { compita: { nombre: string; zona: string; verificado: boolean } | null })[]}
-        compitas={(todosCompitas ?? []) as Compita[]}
-        visitasPasadas={(visitasPasadas ?? []) as Visita[]}
-        todasSolicitudes={(todasSolicitudes ?? []) as unknown as SolicitudAdmin[]}
+        visitasActivas={(datos.visitasActivas ?? []) as (Visita & { compita: Compita; usuario: Usuario })[]}
+        visitasPreVisita={(datos.visitasPreVisita ?? []) as (Visita & { compita: Compita; usuario: Usuario })[]}
+        usuarios={(datos.usuarios ?? []) as (Usuario & { compita: { nombre: string; zona: string; verificado: boolean } | null })[]}
+        compitas={(datos.compitas ?? []) as Compita[]}
+        visitasPasadas={(datos.visitasPasadas ?? []) as Visita[]}
+        todasSolicitudes={(datos.todasSolicitudes ?? []) as unknown as SolicitudAdmin[]}
         visitasMes={visitasMes ?? 0}
         defaultTab={defaultTab}
         clientesInactivos={[...clientesInactivosSet]}

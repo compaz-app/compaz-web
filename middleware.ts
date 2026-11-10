@@ -70,7 +70,8 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) return NextResponse.redirect(urlPublica(`/login?returnTo=${encodeURIComponent(pathname + request.nextUrl.search)}`, request))
-  if (!isAdminEmail(user.email ?? '')) return NextResponse.redirect(urlPublica('/dashboard', request))
+  // Un colaborador no es administrador raíz pero puede entrar con permisos: cada página de /admin decide
+  // con la guardia (actorDePagina / requireAdmin) y redirige si no corresponde. Aquí solo exigimos sesión.
 
   return response
 }

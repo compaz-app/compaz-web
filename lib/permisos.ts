@@ -59,3 +59,18 @@ export async function requierePermiso(permiso: PermisoRequerido): Promise<Guardi
     return { ok: false, res: err('No se pudo comprobar el acceso', 503) }
   }
 }
+
+/** Para páginas del servidor: quién es esta persona, o null si no puede entrar al panel. */
+export async function actorDePagina(): Promise<Actor | null> {
+  try {
+    const supabase = await createServerSupabase()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user?.email) return null
+    const correo = user.email.toLowerCase()
+    const fila = isAdminEmail(correo) ? null : await obtenerColaborador(correo)
+    return resolverActor(user.id, correo, fila)
+  } catch (e) {
+    console.error('[permisos] no se pudo resolver el actor de la página:', e)
+    return null
+  }
+}
