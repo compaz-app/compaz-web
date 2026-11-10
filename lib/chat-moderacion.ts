@@ -5,6 +5,7 @@ import { createAdminSupabase } from '@/lib/supabase-server'
 import { avisarAdmin } from '@/lib/telegram'
 import { alertaAdmin } from '@/lib/alertas-admin'
 import { detectarContacto } from '@/lib/detectar-contacto'
+import { registrarContactoBloqueado } from '@/lib/pausas'
 export { detectarContacto }
 
 
@@ -69,6 +70,9 @@ export async function moderarMensaje({
     `Mensaje: <i>${textoOriginal.slice(0, 300)}</i>`
 
   await alertaAdmin('actividad', msg, { categoria: 'contacto_externo' }).catch(() => {})
+
+  // 4. La segunda detección en 30 días pausa la cuenta de quien lo envió.
+  await registrarContactoBloqueado({ rol: origen, personaId: origen === 'cliente' ? clienteId : compitaId, nombre: quien, donde: 'el chat' })
 }
 
 // ── Contacto externo en textos que no son el chat (solicitud, horarios sugeridos) ──
@@ -103,6 +107,7 @@ export async function reportarContactoEnTexto(p: {
       `Quien: ${p.quien} (${p.origen})\n\n` +
       `Texto: <i>${p.textoOriginal.slice(0, 300)}</i>`,
     ).catch(() => {})
+    await registrarContactoBloqueado({ rol: p.origen, personaId: p.entidadId, nombre: p.quien, donde: p.donde })
   } catch (e) {
     console.error('[moderación] no se pudo reportar el contacto externo:', e)
   }

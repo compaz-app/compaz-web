@@ -34,7 +34,7 @@ export interface Plantilla {
 export type NombrePlantilla = 'solicitud_nueva' | 'directa_aceptada' | 'pago_confirmado' | 'llamada_terminada_cliente' | 'llamada_terminada_compita'
   | 'entrevista_aceptada' | 'reserva_pedida' | 'reserva_rechazada' | 'reserva_vencida' | 'lugar_respuesta' | 'direccion_visita' | 'direccion_faltante_cliente' | 'compita_en_camino'
   | 'compita_llego' | 'nadie_abre_cliente' | 'visita_sin_acceso_cliente' | 'nadie_abre_cerrar'
-  | 'salida_seguridad_cliente' | 'todo_bien' | 'recordatorio_cliente' | 'cancelacion_equipo_cliente'
+  | 'salida_seguridad_cliente' | 'todo_bien' | 'recordatorio_cliente' | 'cancelacion_equipo_cliente' | 'pausa_cuenta_cliente' | 'pausa_cuenta_decision'
 
 const etiquetaSlot = (iso: string) =>
   new Date(iso).toLocaleString('es-VE', {
@@ -566,6 +566,34 @@ const cancelacionEquipoCliente: Plantilla = {
   },
 }
 
+// Cuenta en pausa por compartir contactos por segunda vez: aviso claro, sin acusar y sin datos de nadie.
+const pausaCuentaCliente: Plantilla = {
+  canales: ['correo'],
+  async render() {
+    return { correo: { asunto: 'Tu cuenta de Compaz está en pausa', html: marco(`
+      <h2 style="color:#2D1464;font-size:22px">Tu cuenta está en pausa</h2>
+      <p style="color:#4A3B6B;font-size:16px;line-height:1.6">Detectamos por segunda vez un intento de compartir datos de contacto. Por la seguridad de todos, toda la comunicación debe ocurrir dentro de Compaz.</p>
+      <p style="color:#4A3B6B;font-size:15px;line-height:1.6">Mientras el equipo lo revisa no puedes escribir en el chat ni agendar visitas nuevas. Te escribimos por este correo para resolverlo.</p>`) } }
+  },
+}
+
+// El equipo decidió sobre una cuenta en pausa: reactivada, otra oportunidad (con advertencia por escrito) o bloqueada.
+const pausaCuentaDecision: Plantilla = {
+  canales: ['correo'],
+  async render(v) {
+    const d = String(v.decision ?? '')
+    if (d === 'reactivar') return { correo: { asunto: 'Tu cuenta de Compaz se reactivó', html: marco(`
+      <h2 style="color:#2D1464;font-size:22px">Tu cuenta se reactivó</h2>
+      <p style="color:#4A3B6B;font-size:16px;line-height:1.6">Ya puedes usar el chat y agendar visitas con normalidad. Gracias por tu paciencia.</p>
+      ${boton(`${SITE_URL}/dashboard`, 'Ir a mi portal →')}`) } }
+    if (d === 'otra_oportunidad') return { correo: { asunto: 'Tu cuenta de Compaz se reactivó, con una advertencia', html: marco(`
+      <h2 style="color:#2D1464;font-size:22px">Tu cuenta se reactivó, con una advertencia</h2>
+      <p style="color:#4A3B6B;font-size:16px;line-height:1.6">Te damos otra oportunidad. Compartir datos de contacto fuera de Compaz va contra las reglas de seguridad: si vuelve a ocurrir, tu cuenta se bloqueará.</p>
+      ${boton(`${SITE_URL}/dashboard`, 'Ir a mi portal →')}`) } }
+    return null
+  },
+}
+
 // El compita interrumpió la visita por seguridad: el cliente recibe un aviso NEUTRO (sin culpas ni detalles).
 const salidaSeguridadCliente: Plantilla = {
   canales: ['correo'],
@@ -656,6 +684,8 @@ export const PLANTILLAS: Record<NombrePlantilla, Plantilla> = {
   nadie_abre_cerrar: nadieAbreCerrar,
   salida_seguridad_cliente: salidaSeguridadCliente,
   cancelacion_equipo_cliente: cancelacionEquipoCliente,
+  pausa_cuenta_cliente: pausaCuentaCliente,
+  pausa_cuenta_decision: pausaCuentaDecision,
   todo_bien: todoBien,
   recordatorio_cliente: recordatorioCliente,
 }

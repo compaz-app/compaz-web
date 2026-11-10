@@ -1,5 +1,6 @@
 import { requireAuth, getUsuario, getClienteActivo } from '@/lib/auth'
 import { compitasBloqueadosPara } from '@/lib/bloqueos-compita'
+import { compitasPausadosPorContacto } from '@/lib/pausas'
 import { redirect } from 'next/navigation'
 import CompitasMarketplace from './CompitasMarketplace'
 import { createAdminSupabase } from '@/lib/supabase-server'
@@ -23,8 +24,9 @@ export default async function CompitasPage() {
 
   // Un compita en pausa por cancelaciones tardías no se ofrece: así el cliente no elige a alguien que no puede recibirlo.
   const enPausa = await compitasEnPausa((compitasRaw ?? []).map((c) => c.id))
+  const pausadosContacto = await compitasPausadosPorContacto((compitasRaw ?? []).map((c) => c.id))
   const noVuelven = usuario ? await compitasBloqueadosPara(usuario.id) : new Set<string>()
-  const visibles = (compitasRaw ?? []).filter((c) => !enPausa.has(c.id) && !noVuelven.has(c.id))
+  const visibles = (compitasRaw ?? []).filter((c) => !enPausa.has(c.id) && !noVuelven.has(c.id) && !pausadosContacto.has(c.id))
 
   // Calcular tasa de aceptación por compita
   const compitaIds = visibles.map((c) => c.id)

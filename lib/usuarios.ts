@@ -80,3 +80,15 @@ export async function asignarCompita(usuarioId: string, compitaId: string | null
     if (eV) throw new Error(eV.message)
   }
 }
+
+/**
+ * Bloquea o desbloquea a un cliente. El bloqueo real y inmediato lo aplica nuestro servidor en cada petición (getClienteActivo);
+ * la capa extra de Supabase Auth impide iniciar sesión y renovar la sesión.
+ */
+export async function bloquearCliente(usuarioId: string, bloquear: boolean): Promise<void> {
+  const admin = createAdminSupabase()
+  const { error } = await admin.from('usuarios').update({ plan: bloquear ? 'bloqueado' : null }).eq('id', usuarioId)
+  if (error) throw new Error(error.message)
+  const { error: eBan } = await admin.auth.admin.updateUserById(usuarioId, { ban_duration: bloquear ? '876000h' : 'none' })
+  if (eBan) console.error('[bloquearCliente] no se pudo (des)bloquear en Auth:', eBan.message)
+}

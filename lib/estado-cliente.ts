@@ -11,6 +11,7 @@
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { cupoDelPlan } from '@/lib/visitas'
 import { fichaCompleta } from '@/lib/ficha'
+import { personaPausada } from '@/lib/pausas'
 
 /** Los pasos de la barra de progreso del portal, en orden. */
 export const PASOS_PORTAL = ['Elegir', 'Entrevista', 'Decidir', 'Pagar', 'Ficha', 'Visitas'] as const
@@ -52,7 +53,7 @@ export interface VisitaFoto {
 export interface CancelacionFoto { visitaId: string | null; por: 'cliente' | 'compita' | 'admin' | 'sistema'; justificadaPor: string | null; creadaEn: string }
 export interface FotoCliente {
   ahora: Date
-  /** El cliente tiene la cuenta pausada por el equipo (hoy no existe una fuente real: ver docs). */
+  /** La cuenta está en pausa por compartir contactos (tabla pausas_contacto) hasta que el equipo decida. */
   pausada: boolean
   fichaCompleta: boolean
   /** Compita asignado al contratar (el que ya lo conoce). */
@@ -216,7 +217,7 @@ export async function cargarFoto(clienteId: string, ahora: Date = new Date()): P
 
   return {
     ahora,
-    pausada: false,
+    pausada: await personaPausada('cliente', clienteId),
     fichaCompleta: usuario ? fichaCompleta(usuario as never) : false,
     compitaAsignado: usuario?.compita ?? null,
     solicitudes: solRows.map((s) => ({

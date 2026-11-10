@@ -29,6 +29,7 @@ const DEFAULTS: Record<string, () => Row> = {
   action_tokens: () => ({ id: randomUUID(), usado: false, created_at: nowIso() }),
   bloqueos_compita_cliente: () => ({ id: randomUUID(), activo: true, levantado_por: null, levantado_en: null, creado_en: nowIso() }),
   reportes_compita: () => ({ id: randomUUID(), no_volver: false, llamar: false, llamada_en: null, llamada_por: null, resultado: null, escalado_en: null, creado_en: nowIso() }),
+  pausas_contacto: () => ({ id: randomUUID(), activa: true, reincidente: false, decision: null, decidida_por: null, decidida_en: null, creada_en: nowIso() }),
   actividad_admin: () => ({ id: randomUUID(), creado_en: nowIso(), categoria: null, entidad_tipo: null, entidad_id: null, entidad_nombre: null }),
   cambios_lugar: () => ({ id: randomUUID(), estado: 'pendiente', respondido_en: null, escalado_en: null, creado_en: nowIso() }),
   reservas_horario: () => ({ id: randomUUID(), estado: 'reservada', solicitud_id: null, resuelta_en: null, creada_en: nowIso() }),
@@ -108,6 +109,7 @@ export class FakeDB {
     if (t === 'visitas' && ['pre_visita', 'programada', 'confirmando_inicio', 'en_curso'].includes(row.estado) && others.some((r) => r.usuario_id === row.usuario_id && ['pre_visita', 'programada', 'confirmando_inicio', 'en_curso'].includes(r.estado))) return dupError('visitas_una_activa_por_cliente')
     if (t === 'solicitudes' && row.estado === 'pendiente' && others.some((r) => r.cliente_id === row.cliente_id && r.compita_id === row.compita_id && r.estado === 'pendiente')) return dupError('solicitudes_una_pendiente_por_par')
     if (t === 'bloqueos_compita_cliente' && row.activo && others.some((r) => r.activo && r.compita_id === row.compita_id && r.usuario_id === row.usuario_id)) return dupError('bloqueos_cc_par_activo')
+    if (t === 'pausas_contacto' && row.activa && others.some((r) => r.activa && r.rol === row.rol && r.persona_id === row.persona_id)) return dupError('pausas_contacto_una_activa')
     if (t === 'cambios_lugar' && row.estado === 'pendiente' && others.some((r) => r.estado === 'pendiente' && r.visita_id === row.visita_id)) return dupError('cambios_lugar_uno_pendiente')
     // Índices de la migración 20261109f (reservas de horario)
     const viva = (r: Row) => ['reservada', 'confirmada'].includes(r.estado)

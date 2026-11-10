@@ -16,6 +16,7 @@ import { fotoClienteVigente } from '@/lib/fotos-privadas'
 import { compitaEnPausa } from '@/lib/cancelaciones'
 import { explicarEspera } from '@/lib/esperas'
 import { parBloqueado } from '@/lib/bloqueos-compita'
+import { personaPausada } from '@/lib/pausas'
 import { validarSolicitudNueva, mensajeDeSolicitud, type SolicitudNueva } from '@/lib/validar-solicitud'
 
 const MENSAJES_NEGOCIO = ['Límite de', 'Ya tienes una solicitud']
@@ -98,6 +99,8 @@ export async function POST(req: NextRequest) {
   }
   // Pausado por cancelaciones tardías sin justificar: no recibe solicitudes nuevas hasta que el equipo lo resuelva.
   if (await compitaEnPausa(compita_id)) return err('Este compita no está disponible', 400)
+  if (await personaPausada('compita', compita_id)) return err('Este compita no está disponible', 400) // en pausa por contactos: sin dar detalles
+  if (await personaPausada('cliente', user.id)) return err('Tu cuenta está en pausa: por ahora no puedes enviar solicitudes. El equipo se comunica contigo por correo.', 403)
   // El compita pidió no volver con este cliente: el cliente solo ve que no está disponible, nunca el motivo.
   if (await parBloqueado(compita_id, user.id)) return err('Este compita no está disponible', 400)
 

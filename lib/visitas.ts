@@ -5,8 +5,9 @@ import { calcularCreditos, type PaqueteCredito } from '@/lib/creditos'
 import { fichaCompleta } from '@/lib/ficha'
 import { visitasConsumidasPorCancelacion } from '@/lib/cancelaciones'
 import { parBloqueado } from '@/lib/bloqueos-compita'
+import { personaPausada } from '@/lib/pausas'
 
-export type MotivoNuevaVisita = 'sin_compita' | 'compita_no_disponible' | 'cliente_bloqueado' | 'visita_activa' | 'sin_visitas_previas' | 'ficha_incompleta' | 'limite_plan' | 'error'
+export type MotivoNuevaVisita = 'sin_compita' | 'compita_no_disponible' | 'cliente_bloqueado' | 'cuenta_pausada' | 'visita_activa' | 'sin_visitas_previas' | 'ficha_incompleta' | 'limite_plan' | 'error'
 export type ResultadoNuevaVisita =
   | { ok: true; visitaId: string; compitaNombre: string; clienteNombre: string; numero: number; telegramChatId: string | null; cupo: CupoPlan | null }
   | { ok: false; motivo: 'limite_plan'; mensaje: string; clienteNombre: string; compitaNombre: string; cupo: CupoPlan }
@@ -16,6 +17,7 @@ const MENSAJES: Record<MotivoNuevaVisita, string> = {
   sin_compita: 'Todavía no tienes una compita asignada.',
   compita_no_disponible: 'Tu compita no está disponible en este momento. Escríbenos a hola@micompaz.com.',
   cliente_bloqueado: 'Tu cuenta está suspendida. Escríbenos a hola@micompaz.com.',
+  cuenta_pausada: 'Tu cuenta está en pausa: por ahora no puedes agendar visitas. El equipo se comunica contigo por correo.',
   visita_activa: 'Ya tienes una visita en coordinación o programada. Termínala o reagéndala antes de agendar otra.',
   limite_plan: 'Ya usaste todas las visitas de tu plan. Escríbenos a hola@micompaz.com para renovar o ampliar tu plan.',
   sin_visitas_previas: 'Tu primera visita se coordina al contratar. Escríbenos si no la ves en tu portal.',
@@ -101,6 +103,7 @@ export async function crearSiguienteVisita(usuarioId: string): Promise<Resultado
     .from('usuarios').select('nombre, plan, compita_id, familiar_nombre, telefono, terminos_aceptados_en').eq('id', usuarioId).maybeSingle()
   if (!usuario?.compita_id) return falla('sin_compita')
   if (usuario.plan === 'bloqueado') return falla('cliente_bloqueado')
+  if (await personaPausada('cliente', usuarioId)) return falla('cuenta_pausada')
   // Sin ficha completa y términos aceptados no se agenda (la validación vive aquí, no solo en la pantalla).
   if (!fichaCompleta(usuario)) return falla('ficha_incompleta')
 

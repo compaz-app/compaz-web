@@ -1,3 +1,4 @@
+import { personaPausada } from '@/lib/pausas'
 import { NextRequest } from 'next/server'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { getClienteActivo } from '@/lib/auth'
@@ -41,6 +42,7 @@ export async function PUT(req: NextRequest) {
 
   if (!visita) return notFound()
   if (visita.usuario_id !== user.id) return err('Sin acceso', 403)
+  if (await personaPausada('cliente', user.id)) return err('Tu cuenta está en pausa: por ahora no puedes agendar visitas. El equipo se comunica contigo por correo.', 403)
   if (!['pre_visita', 'programada'].includes(visita.estado)) return err('Estado de visita inválido')
 
   // Verificar solapamiento: buscar visitas del mismo compita en la misma fecha

@@ -33,6 +33,7 @@ import { salidaPorSeguridad, responderTodoBien } from '@/lib/seguridad'
 import { situacionDelCompita } from '@/lib/que-me-toca'
 import { registrarConsultaQueMeToca, menuDudas, responderDuda, dudaNoResuelta, dudaResuelta, dudaConTexto, recordarAlCliente, esTipoDuda, esTipoRecordatorio } from '@/lib/ayuda'
 import { esperaTelegram } from '@/lib/esperas'
+import { personaPausada } from '@/lib/pausas'
 import { clientesReportables, reportarCliente, esMotivoReporte, MOTIVOS_REPORTE, MOTIVOS_DE_RIESGO, CUANDO, type MotivoReporte, type Cuando } from '@/lib/bloqueos-compita'
 import { llegadaConFotoObligatoria, registrarLlegada, declararNadieAbre, cerrarSinAcceso, tecladoLlegada } from '@/lib/llegada'
 import { notificar } from '@/lib/avisos'
@@ -1747,6 +1748,13 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
         TECLADO_SIN_VISITA,
       )
       return NextResponse.json({ ok: true })
+    }
+
+    // Cuenta en pausa por compartir contactos (la suya o la del cliente): no se reenvía nada por el chat.
+    {
+      const { data: vp } = await supabase.from('visitas').select('usuario_id').eq('id', visitaActiva.id).maybeSingle() as { data: { usuario_id: string } | null }
+      if (await personaPausada('compita', compita.id)) { await sendTelegramMessage(chatId, `⏸️ Tu cuenta está en pausa, así que por ahora no puedes escribir en el chat. El equipo se comunica contigo por aquí.`); return NextResponse.json({ ok: true }) }
+      if (vp && await personaPausada('cliente', vp.usuario_id)) { await sendTelegramMessage(chatId, `El chat con el cliente no está disponible por ahora. El equipo te escribe si hace falta.`); return NextResponse.json({ ok: true }) }
     }
 
     // Foto: se guarda solo el file_id ("tg:<id>"). La imagen se sirve por /api/foto/[id];
