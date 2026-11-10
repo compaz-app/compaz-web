@@ -244,7 +244,10 @@ function MotivoDialog({ titulo, texto, onListo, onCancelar }: { titulo: string; 
         {otro && <label className="mt-3 block text-base font-bold">Explica el motivo<textarea value={detalle} onChange={(e) => setDetalle(e.target.value)} className="mt-1 min-h-20 w-full rounded-xl border border-[var(--border-muted)] p-3 text-base font-normal" /></label>}
         <div className="mt-4 grid grid-cols-2 gap-2">
           <button onClick={onCancelar} className="min-h-12 rounded-xl border border-[var(--border-muted)] font-bold">Cancelar</button>
-          <button disabled={!listo} onClick={() => onListo(otro ? `Otro: ${detalle.trim()}` : elegido)} className="min-h-12 rounded-xl bg-[var(--orange)] font-extrabold text-white disabled:opacity-40">Continuar</button>
+          <div className="flex items-center gap-1">
+            <button disabled={!listo} onClick={() => onListo(otro ? `Otro: ${detalle.trim()}` : elegido)} className="min-h-12 flex-1 rounded-xl bg-[var(--orange)] font-extrabold text-white disabled:opacity-40">Continuar</button>
+            <InfoBoton que="Continuar" texto="Guarda tu motivo junto con tu nombre en el Registro de actividad y te muestra el dato. Si no lo necesitas, cancela." alineado="izquierda" />
+          </div>
         </div>
       </div>
     </div>
@@ -287,7 +290,10 @@ function ChatAdmin({ clienteId, compitaId, onClose }: { clienteId: string; compi
           {otro && <label className="mt-3 block text-base font-bold">Explica el motivo<textarea value={detalle} onChange={(e) => setDetalle(e.target.value)} className="mt-1 min-h-20 w-full rounded-xl border border-[var(--border-muted)] p-3 text-base font-normal" /></label>}
           <div className="mt-4 grid grid-cols-2 gap-2">
             <button onClick={onClose} className="min-h-12 rounded-xl border border-[var(--border-muted)] font-bold">Cancelar</button>
-            <button disabled={!motivoListo} onClick={() => setMotivo(otro ? `Otro: ${detalle.trim()}` : elegido)} className="min-h-12 rounded-xl bg-[var(--orange)] font-extrabold text-white disabled:opacity-40">Ver el chat</button>
+            <div className="flex items-center gap-1">
+              <button disabled={!motivoListo} onClick={() => setMotivo(otro ? `Otro: ${detalle.trim()}` : elegido)} className="min-h-12 flex-1 rounded-xl bg-[var(--orange)] font-extrabold text-white disabled:opacity-40">Ver el chat</button>
+              <InfoBoton que="Ver el chat" texto="Abre la conversación privada entre el cliente y el compita. Tu motivo y tu nombre quedan en el Registro de actividad." alineado="izquierda" />
+            </div>
           </div>
         </div>
       </div>
@@ -387,14 +393,14 @@ function Ficha({ p, onClose }: { p: Persona; onClose: () => void }) {
             <h2 className="text-2xl font-extrabold">{p.nombre}</h2>
             <div className="text-[var(--text-mid)]">{p.zona}</div>
             {puede('telefonos') && (
-              <div className="mt-1 text-sm">Teléfono: {telVisible ? <b>{telefono}</b> : <><b>+•• ••• ••• ••••</b> <button onClick={() => (rolFicha === 'admin' ? revelarTel('Sin motivo requerido (administrador)') : setPidiendoTel(true))} className="ml-1 font-bold text-[var(--orange-dark)] underline">Ver teléfono</button></>}</div>
+              <div className="mt-1 text-sm">Teléfono: {telVisible ? <b>{telefono}</b> : <><b>+•• ••• ••• ••••</b> <button onClick={() => (rolFicha === 'admin' ? revelarTel('Sin motivo requerido (administrador)') : setPidiendoTel(true))} className="ml-1 font-bold text-[var(--orange-dark)] underline">Ver teléfono</button><InfoBoton que="Ver teléfono" texto="Muestra el teléfono completo. Si eres colaborador, te pide un motivo. Cada vez que se abre queda anotado quién, cuándo y por qué." alineado="izquierda" /></>}</div>
             )}
           </div>
           <button onClick={onClose} className="min-h-10 rounded-xl border border-[var(--border-muted)] px-3 font-bold" aria-label="Cerrar ficha">Cerrar</button>
         </div>
         {p.tipo === 'Compita' && <div className="mt-3"><ContactoCompita p={p} etiqueta /></div>}
         {p.etapa && <div className="mt-3 inline-block rounded-full bg-[var(--yellow)] px-3 py-1 text-sm font-bold">Etapa: {p.etapa}{p.compita ? ` · con ${p.compita}` : ''}</div>}
-        {compitaDe && puede('chats') && <button onClick={() => { onClose(); verChat(p.id, compitaDe.id) }} className="mt-4 min-h-12 w-full rounded-xl border-2 border-[var(--purple)] font-extrabold text-[var(--purple)]">💬 Ver el chat con {compitaDe.nombre}</button>}
+        {compitaDe && puede('chats') && <div className="mt-4 flex items-center gap-1"><button onClick={() => { onClose(); verChat(p.id, compitaDe.id) }} className="min-h-12 flex-1 rounded-xl border-2 border-[var(--purple)] font-extrabold text-[var(--purple)]">💬 Ver el chat con {compitaDe.nombre}</button><InfoBoton que="Ver el chat" texto="Abre la conversación privada entre este cliente y su compita. Es solo lectura y queda anotado en el Registro de actividad que la abriste." /></div>}
         {pidiendoTel && <MotivoDialog titulo="¿Por qué necesitas ver el teléfono?" texto={`Es un dato sensible de ${p.nombre}. Debes indicar un motivo. Queda anotado junto con tu nombre.`} onListo={revelarTel} onCancelar={() => setPidiendoTel(false)} />}
         <h3 className="mt-6 text-sm font-extrabold uppercase tracking-wider text-[var(--text-light)]">Línea de tiempo</h3>
         <ol className="mt-3 border-l-2 border-[var(--border-muted)] pl-4">
@@ -525,7 +531,8 @@ function Bandeja({ abrir }: { abrir: (id: string) => void }) {
         </div>
       )}
 
-      <div className="mt-2 flex flex-wrap gap-x-1 gap-y-0.5" role="group" aria-label="Filtrar por tipo de tarea">
+      <div className="mt-2 flex flex-wrap items-center gap-x-1 gap-y-0.5" role="group" aria-label="Filtrar por tipo de tarea">
+        <InfoBoton que="Filtrar por tipo de tarea" texto="Muestra solo un tipo de tarea. El número es cuántas hay de cada tipo. No resuelve ni cambia nada." alineado="izquierda" />
         {TIPOS.filter((t) => t === 'Todas' || t === tipo || activas.some((x) => x.tipo === t)).map((t) => {
           const n = t === 'Todas' ? activas.length : activas.filter((x) => x.tipo === t).length
           return (
@@ -600,6 +607,7 @@ function Seguimiento({ abrir }: { abrir: (id: string) => void }) {
       <p className="text-[var(--text-mid)]">Dónde está cada cliente. Elige una etapa para ver su lista.</p>
 
       <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-7">
+        <div className="col-span-full flex items-center gap-1 text-xs font-bold text-[var(--text-light)]">Etapa del cliente <InfoBoton que="Filtrar por etapa" texto="Cada cuadro es una etapa del proceso del cliente y cuántos hay en ella. Tócalo para ver solo esos clientes. No cambia nada." alineado="izquierda" /></div>
         {['Todos', ...ETAPAS].map((et) => {
           const n = et === 'Todos' ? clientes.length : clientes.filter((p) => p.etapa === et).length
           const activa = etapa === et
@@ -872,6 +880,7 @@ function Visitas({ abrir }: { abrir: (id: string) => void }) {
       <h1 className="text-2xl font-extrabold">Visitas</h1>
       <p className="text-[var(--text-mid)]">Hoy es martes 3 de noviembre. Lo cerrado se consulta en Terminadas. &quot;Con problema&quot; muestra el motivo de cada fila.</p>
       <div className="mt-3 flex flex-wrap gap-2">
+        <InfoBoton que="Filtrar visitas" texto="Elige qué visitas ver: lo de hoy, lo que tiene problema o lo ya terminado. El número es cuántas hay. No cambia nada." alineado="izquierda" />
         {VISTAS_VISITA.map((v) => (
           <button key={v.id} onClick={() => { setVista(v.id); setPag('1') }} aria-pressed={vista === v.id} className={`min-h-10 rounded-full px-3 text-sm font-bold ${vista === v.id ? 'bg-[var(--purple)] text-white' : 'border border-[var(--border-muted)] bg-white'}`}>
             {v.t} <span className="opacity-70">{VISITAS.filter(v.f).length}</span>
@@ -966,7 +975,9 @@ function VistaResenas() {
             {dec[r.id] ? <div className="mt-2 font-bold text-green-700">{dec[r.id]}</div> : (
               <div className="mt-2 flex gap-2">
                 <button onClick={() => setDec((d) => ({ ...d, [r.id]: 'Aprobada ✓ Ya se ve en el perfil' }))} className="min-h-10 rounded-xl bg-[var(--orange)] px-4 font-extrabold text-white">Aprobar</button>
+                <InfoBoton que="Aprobar" texto="Publica la reseña en el perfil del compita y cuenta en su calificación." alineado="izquierda" />
                 <button onClick={() => setDec((d) => ({ ...d, [r.id]: 'Oculta ✓' }))} className="min-h-10 rounded-xl border border-[var(--border-muted)] bg-white px-4 font-bold">Ocultar</button>
+                <InfoBoton que="Ocultar" texto="La reseña no se publica ni cuenta en la calificación. El cliente no recibe ningún aviso." alineado="izquierda" />
               </div>
             )}
           </li>
@@ -1026,7 +1037,7 @@ function VistaPagos() {
               <div className="text-xs text-[var(--text-light)]">{g.f} · {g.ref}</div>
             </div>
             {anulados[g.id] ? <span className="font-bold text-[#D93A3A]">Anulado ✓</span> : (
-              <button onClick={() => setAnulados((a) => ({ ...a, [g.id]: true }))} className="min-h-10 rounded-xl border border-[var(--border-muted)] bg-white px-3 text-sm font-bold">Anular pago</button>
+              <span className="flex shrink-0 items-center"><button onClick={() => setAnulados((a) => ({ ...a, [g.id]: true }))} className="min-h-10 rounded-xl border border-[var(--border-muted)] bg-white px-3 text-sm font-bold">Anular pago</button><InfoBoton que="Anular pago" texto="Deja el pago sin efecto: las visitas que había activado se descuentan. Úsalo solo si hubo un error. Queda anotado quién lo anuló." alineado="izquierda" /></span>
             )}
           </li>
         ))}
@@ -1050,7 +1061,8 @@ function VistaAvisos() {
   return (
     <>
       <p className="text-[var(--text-mid)]">Cada aviso queda guardado con su resultado. Si falla, se reintenta cuando el fallo es pasajero y se avisa por otro canal cuando no tiene arreglo, por ejemplo si el compita bloqueó el bot.</p>
-      <div className="mt-3 flex gap-2">
+      <div className="mt-3 flex items-center gap-2">
+        <InfoBoton que="Filtrar avisos" texto="Todos muestra cada aviso enviado. Fallidos muestra solo los que no llegaron, para reintentarlos." alineado="izquierda" />
         {[['todos', 'Todos', datos.length], ['fallidos', 'Fallidos', datos.filter((d) => !d.ok).length]].map(([id, t, n]) => (
           <button key={id as string} onClick={() => setVista(id as string)} aria-pressed={vista === id} className={`min-h-10 rounded-full px-3 text-sm font-bold ${vista === id ? 'bg-[var(--purple)] text-white' : 'border border-[var(--border-muted)] bg-white'}`}>{t} <span className="opacity-70">{n}</span></button>
         ))}
@@ -1065,7 +1077,7 @@ function VistaAvisos() {
               {!d.ok && <div className="text-xs font-bold text-[#D93A3A]">⚠ {d.motivo}</div>}
             </div>
             {d.ok ? <span className="shrink-0 text-sm font-bold text-green-700">Entregado</span> : rein[d.id] ? <span className="shrink-0 text-sm font-bold text-green-700">{d.hecho}</span> : (
-              <button onClick={() => setRein((r) => ({ ...r, [d.id]: true }))} className="min-h-10 shrink-0 rounded-xl bg-[var(--orange)] px-3 text-sm font-extrabold text-white">{d.accion}</button>
+              <span className="flex shrink-0 items-center"><button onClick={() => setRein((r) => ({ ...r, [d.id]: true }))} className="min-h-10 rounded-xl bg-[var(--orange)] px-3 text-sm font-extrabold text-white">{d.accion}</button><InfoBoton que={d.accion ?? "Reintentar"} texto={`Hace "${d.accion}" para este aviso por el canal que sí funcione. Si vuelve a fallar, la tarea sigue abierta con el motivo.`} alineado="izquierda" /></span>
             )}
           </li>
         ))}
@@ -1116,7 +1128,7 @@ function VistaUmbrales() {
           </li>
         ))}
       </Lista>
-      <button onClick={() => setOk(true)} className="mt-3 min-h-12 rounded-xl bg-[var(--orange)] px-5 font-extrabold text-white">Guardar ajustes</button>
+      <div className="mt-3 flex items-center gap-1"><button onClick={() => setOk(true)} className="min-h-12 rounded-xl bg-[var(--orange)] px-5 font-extrabold text-white">Guardar ajustes</button><InfoBoton que="Guardar ajustes" texto="Guarda cuántas horas son normales en cada etapa. Desde ahora el semáforo usa estos valores; no cambia nada ya registrado." alineado="izquierda" /></div>
       {ok && <span className="ml-3 font-bold text-green-700">Guardado ✓</span>}
     </>
   )
@@ -1232,7 +1244,9 @@ function VistaAjustes() {
           )}
           <div className="mt-3 flex gap-2">
             <button disabled={malos.length > 0 || (incoherente && !acepta)} onClick={() => setGuardado({ ...v })} className="min-h-12 flex-1 rounded-xl bg-[var(--orange)] font-extrabold text-white disabled:opacity-40">Guardar y aplicar</button>
+            <InfoBoton que="Guardar y aplicar" texto="El cambio rige desde ahora en todo el sistema (precios, plazos y textos) y queda anotado quién lo hizo y cuándo. Lo ya pagado no cambia." alineado="izquierda" />
             <button onClick={() => setV(guardado ?? inicial())} className="min-h-12 rounded-xl border border-[var(--border-muted)] px-4 font-bold">Deshacer</button>
+            <InfoBoton que="Deshacer" texto="Descarta lo que cambiaste y vuelve a los valores guardados. No guarda nada." alineado="izquierda" />
           </div>
         </div>
       )}
@@ -1281,7 +1295,7 @@ function VistaEquipo() {
             ))}
             <li className="flex items-center justify-between gap-3 py-3 opacity-70"><div><div className="text-base font-bold">Gestionar el equipo y sus permisos</div><div className="text-sm text-[var(--text-mid)]">Solo los administradores pueden hacerlo.</div></div><span className="text-sm font-bold">🔒 No</span></li>
           </ul>
-          <button onClick={() => { restablecer(c.id); setGuardado(`✓ Los permisos de ${c.nombre} volvieron a lo recomendado`) }} className="mt-3 min-h-12 w-full rounded-xl border border-[var(--border-muted)] font-bold text-[var(--text-mid)]">Volver a lo recomendado</button>
+          <div className="mt-3 flex items-center gap-1"><button onClick={() => { restablecer(c.id); setGuardado(`✓ Los permisos de ${c.nombre} volvieron a lo recomendado`) }} className="min-h-12 flex-1 rounded-xl border border-[var(--border-muted)] font-bold text-[var(--text-mid)]">Volver a lo recomendado</button><InfoBoton que="Volver a lo recomendado" texto="Deja los permisos de este colaborador como vienen por defecto. Queda anotado en el historial del equipo." /></div>
         </section>
       ))}
 
@@ -1289,6 +1303,7 @@ function VistaEquipo() {
       <div className="mt-2 flex flex-wrap gap-2">
         <input value={correo} onChange={(e) => { setCorreo(e.target.value); setEnviado(null) }} inputMode="email" placeholder="correo@ejemplo.com" aria-label="Correo del colaborador" className="min-h-12 min-w-0 flex-1 rounded-xl border border-[var(--border-muted)] bg-white px-3 text-base" />
         <button disabled={!valido} onClick={() => { invitar(correo.trim().toLowerCase()); setEnviado(correo.trim()); setCorreo('') }} className="min-h-12 rounded-xl bg-[var(--orange)] px-5 font-extrabold text-white disabled:opacity-40">Invitar</button>
+        <InfoBoton que="Invitar" texto="Le manda un correo de acceso a esa persona como colaborador, con los permisos recomendados. Tú ajustas qué puede hacer arriba." alineado="izquierda" />
       </div>
       {enviado && <p role="status" className="mt-2 rounded-xl bg-[#1f9d6b]/10 p-3 font-bold text-[#146c49]">✓ Invitación enviada a {enviado}. Entrará como colaborador con los permisos recomendados; ajústalos arriba.</p>}
     </>

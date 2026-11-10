@@ -1,4 +1,5 @@
 'use client'
+import ConInfo from '../../ConInfo'
 import Link from 'next/link'
 import { Suspense, useEffect, useMemo, useState } from 'react'
 import { useUrlState } from '../../useUrlState'
@@ -100,7 +101,7 @@ function Inner() {
               <>
                 <p className="mt-4 text-lg leading-relaxed text-[var(--text-mid)]">{p.descripcion}</p>
                 <div className="mt-3 flex flex-wrap gap-2">{p.servicios.map((s) => <span key={s} className="rounded-full bg-[var(--warm-gray)] px-3 py-1 text-sm font-bold">{s}</span>)}</div>
-                {p.video && <button className="mt-3 min-h-12 w-full rounded-xl border-2 border-[var(--purple)] font-extrabold text-[var(--purple)]">🎥 Ver video de presentación</button>}
+                {p.video && <ConInfo que="Ver video de presentación" texto="Reproduce el video corto con el que se presenta este compita. No envía nada ni cuesta nada."><button className="mt-3 min-h-12 w-full rounded-xl border-2 border-[var(--purple)] font-extrabold text-[var(--purple)]">🎥 Ver video de presentación</button></ConInfo>}
                 <div className="mt-4 rounded-2xl bg-[var(--warm-gray)] p-3 text-base"><b>Reseñas de familias</b><p className="mt-1 text-[var(--text-mid)]">“Mi mamá la adora, siempre puntual.” · “Muy cariñosa y atenta.”</p></div>
                 {yaPedida ? (
                   <p className="mt-4 rounded-2xl bg-[var(--yellow)] p-3 text-center text-lg font-extrabold">Ya le escribiste a {p.nombre}</p>
@@ -108,9 +109,9 @@ function Inner() {
                   <p className="mt-4 rounded-2xl bg-[var(--warm-gray)] p-3 text-center text-base font-bold">Ya enviaste las {MAX} solicitudes. Espera una respuesta para pedir otra.</p>
                 ) : (
                   <div className="mt-4 grid gap-3">
-                    <Link href={`/prototipo/cliente/solicitar?modo=entrevista&compita=${p.id}`} className="flex min-h-14 items-center justify-center rounded-2xl border-2 border-[var(--purple)] bg-white text-lg font-extrabold text-[var(--purple)]">Hablar primero (20 min)</Link>
-                    <Link href={`/prototipo/cliente/solicitar?modo=directa&compita=${p.id}`} className="flex min-h-14 items-center justify-center rounded-2xl bg-[var(--orange)] text-lg font-extrabold text-white">Contratarlo directo</Link>
-                    <Link href={`/prototipo/cliente/solicitar?modo=mandado&compita=${p.id}`} className="flex min-h-12 items-center justify-center rounded-2xl border border-[var(--border-muted)] bg-white font-bold text-[var(--text-mid)]">¿Solo una diligencia? Pedirle un mandado ($22)</Link>
+                    <ConInfo que="Hablar primero" texto="Envía una solicitud para conocerlo en una videollamada de 20 minutos. No pagas nada: decides después si lo contratas."><Link href={`/prototipo/cliente/solicitar?modo=entrevista&compita=${p.id}`} className="flex min-h-14 items-center justify-center rounded-2xl border-2 border-[var(--purple)] bg-white text-lg font-extrabold text-[var(--purple)]">Hablar primero (20 min)</Link></ConInfo>
+                    <ConInfo que="Contratarlo directo" texto="Le pide empezar sin entrevista. No pagas nada hasta que acepte; si no puede, eliges a otro sin haber pagado."><Link href={`/prototipo/cliente/solicitar?modo=directa&compita=${p.id}`} className="flex min-h-14 items-center justify-center rounded-2xl bg-[var(--orange)] text-lg font-extrabold text-white">Contratarlo directo</Link></ConInfo>
+                    <ConInfo que="Pedir un mandado" texto="Le pide una diligencia puntual a tarifa plana, de hasta 1 hora. No pagas hasta que acepte."><Link href={`/prototipo/cliente/solicitar?modo=mandado&compita=${p.id}`} className="flex min-h-12 items-center justify-center rounded-2xl border border-[var(--border-muted)] bg-white font-bold text-[var(--text-mid)]">¿Solo una diligencia? Pedirle un mandado ($22)</Link></ConInfo>
                     <p className="text-center text-sm text-[var(--text-mid)]">Ves su foto, su video y sus reseñas ahora. Su apellido completo lo ves cuando la contratación esté confirmada.</p>
                   </div>
                 )}

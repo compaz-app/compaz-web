@@ -5,6 +5,7 @@ import { useEmbedded, useParam, useUrlState } from '../useUrlState'
 import AvisoSeguridad from '../AvisoSeguridad'
 import CuentaEliminar from './CuentaEliminar'
 import InfoBoton from '../InfoBoton'
+import ConInfo from '../ConInfo'
 
 const PASOS = ['Elegir', 'Entrevista', 'Decidir', 'Pagar', 'Ficha', 'Visitas']
 
@@ -170,7 +171,7 @@ function Ayuda() {
       {r && <p role="status" className="mt-3 flex items-center gap-1 rounded-xl bg-[var(--warm-gray)] p-3 font-bold"><span className="min-w-0 flex-1">✓ {r}</span>{avisos > 1 && <InfoBoton que="Por qué no se avisa otra vez" texto="Tu pago ya está marcado como urgente. Avisar más seguido no acelera la confirmación: el equipo recibe una sola alerta urgente por ventana para que no se pierda entre mensajes. Te escribimos por correo apenas lo confirmemos." />}</p>}
       {(
         <div className="mt-3 grid gap-2">
-          <button onClick={() => setR('Te reenviamos la confirmación. Revisa también la carpeta de spam.')} className="min-h-12 rounded-xl border-2 border-[var(--purple)] font-extrabold text-[var(--purple)]">Reenviar la confirmación</button>
+          <ConInfo que="Reenviar la confirmación" texto="Te volvemos a mandar el correo de confirmación. Si no lo ves, revisa la carpeta de spam."><button onClick={() => setR('Te reenviamos la confirmación. Revisa también la carpeta de spam.')} className="min-h-12 rounded-xl border-2 border-[var(--purple)] font-extrabold text-[var(--purple)]">Reenviar la confirmación</button></ConInfo>
           <div className="flex items-center gap-1">
             <button onClick={() => { setAvisos(avisos + 1); setR(avisos === 0 ? 'Avisamos al equipo de Compaz con urgencia. Te escribimos por correo apenas confirmemos tu pago.' : 'Ya avisamos al equipo hace un momento. Podrás avisar de nuevo en 30 minutos.') }} className="min-h-12 flex-1 rounded-xl bg-[var(--orange)] font-extrabold text-white">Contactar a Compaz</button>
             <InfoBoton que="Contactar a Compaz" texto="Avisa al equipo, con urgencia, que ya pagaste. Si lo vuelves a tocar poco después, te explicamos por qué no se envía otro aviso y cuándo podrás hacerlo." alineado="izquierda" />
@@ -320,7 +321,7 @@ function Horarios({ otra }: { otra: boolean }) {
           </div>
         </div>
       ))}
-      <button disabled={!sel} onClick={() => setEnviado(true)} className="mt-5 min-h-14 w-full rounded-2xl bg-[var(--orange)] text-lg font-extrabold text-white disabled:opacity-40">{sel ? 'Pedir este horario' : 'Elige una hora'}</button>
+      <ConInfo que="Pedir este horario" texto="Envía tu elección al compita para que la confirme. La hora queda reservada para ti mientras responde."><button disabled={!sel} onClick={() => setEnviado(true)} className="mt-5 min-h-14 w-full rounded-2xl bg-[var(--orange)] text-lg font-extrabold text-white disabled:opacity-40">{sel ? 'Pedir este horario' : 'Elige una hora'}</button></ConInfo>
     </section>
   )
 }
@@ -375,7 +376,7 @@ function QuienEstara() {
             <>
               <textarea value={msg} onChange={(e) => setMsg(e.target.value)} aria-label="Mensaje para María" className="mt-2 min-h-20 w-full rounded-xl border border-[var(--border-muted)] bg-white p-2 text-base" />
               {hayContacto && <p role="alert" className="mt-1 text-sm font-bold text-[#991B1B]">Por seguridad no se pueden compartir teléfonos ni correos. Compaz conecta todo dentro de la plataforma.</p>}
-              <button disabled={!msg.trim() || hayContacto} onClick={() => setEnviado(true)} className="mt-2 min-h-12 w-full rounded-xl bg-[var(--orange)] font-extrabold text-white disabled:opacity-40">Enviar a María</button>
+              <ConInfo que="Enviar a María" texto="Le manda tu mensaje a María por el chat de Compaz. No se pueden compartir teléfonos ni correos: si los incluyes, se eliminan."><button disabled={!msg.trim() || hayContacto} onClick={() => setEnviado(true)} className="mt-2 min-h-12 w-full rounded-xl bg-[var(--orange)] font-extrabold text-white disabled:opacity-40">Enviar a María</button></ConInfo>
             </>
           )}
         </div>
@@ -434,6 +435,27 @@ function CoordinarVisita() {
 }
 
 // En qué momento está el cliente: decide qué muestran "Mis visitas" y "Mi plan" (un cliente nuevo no tiene historial).
+// Qué hace cada botón principal de la tarjeta de estado (el ⓘ que lo acompaña).
+const INFO_BOTON: Record<string, string> = {
+  'Avisar a Compaz que recibí el aviso': 'Le confirma al equipo que leíste el aviso. No cambia nada más: el equipo se comunica contigo.',
+  'Cambiar de horario': 'Te muestra las demás horas libres del compita para elegir otra. Tu hora actual se libera cuando elijas.',
+  'Cambiar horario': 'Te muestra las demás horas libres del compita para elegir otra. Tu hora actual se libera cuando elijas.',
+  'Completar la ficha ahora': 'Abre la ficha de tu familiar. Es lo único que falta para agendar y solo la ve tu compita.',
+  'Confirmar y empezar': 'Confirma que el compita ya está contigo y puede empezar la visita. Si no respondes, se confirma sola en 5 minutos.',
+  'Elegir otro compita': 'Te lleva a ver otros compitas. No pagas nada por cambiar, y no se descuenta de tu plan.',
+  'Entrar a la entrevista': 'Abre la videollamada de la entrevista. Si se corta, vuelve a tocarlo y sigues donde estabas.',
+  'Pedir esta cita': 'Envía tu elección al compita para que la confirme. La hora queda reservada mientras responde.',
+  'Sí, quiero contratarla': 'Te lleva al pago para empezar. Todavía no se cobra nada: primero ves los datos para pagar.',
+  'Ver mis visitas': 'Abre la lista de tus visitas, próximas y anteriores.',
+  'Ver otros compitas': 'Te muestra otros compitas disponibles. No cancela tu solicitud actual ni cuesta nada.',
+  'Ya abrieron': 'Le avisa al compita que ya le abrieron para que empiece. Detiene la cuenta atrás de 30 minutos.',
+  'Ya hice el pago': 'Avisa al equipo que enviaste el pago para que lo confirme. No se activa nada hasta que llegue el dinero.',
+  'Avisar a Compaz': 'Le avisa al equipo con urgencia. Te escriben por correo; nunca te piden dinero ni datos por teléfono.',
+  'No, ver otras': 'Te muestra otros compitas sin costo. Tu compita actual no recibe ningún reproche.',
+  'Ya terminó la entrevista': 'Indica que la llamada ya terminó para que decidas si contratas.',
+}
+const infoDe = (t: string) => INFO_BOTON[t] ?? 'Hace lo que dice el botón. Si algo no queda claro, nada se cobra ni se cancela sin que lo confirmes.'
+
 const SIN_PAGO = ['enviada', 'enviada_recibida', 'directa_enviada', 'aceptada', 'horario_enviado', 'horario_rechazado', 'programada', 'ahora', 'decidir', 'motivo_no', 'directa_aceptada', 'pagar']
 const PAGO_EN_REVISION = ['pago_revision', 'ficha_espera', 'pago_ficha_lista']
 const RECURRENTE = ['fin', 'recurrente']
@@ -503,18 +525,18 @@ function Visitas() {
         ) : cambio === 'cancelar' ? (
           <div className="mt-3 grid gap-2">
             <p className="rounded-2xl bg-[#FEF3C7] p-3 text-sm font-bold text-[#92400E]">Faltan más de 24 horas: cancelar es gratis y no se cuenta como usada. Con menos tiempo, la visita se contaría como usada.</p>
-            <button onClick={() => setCambio('cancelada')} className="min-h-12 rounded-2xl bg-[#991B1B] font-extrabold text-white">Sí, cancelar la visita</button>
+            <ConInfo que="Sí, cancelar la visita" texto="Cancela la visita. Con más de 24 horas de aviso es gratis y no cuenta como usada; con menos, cuenta como usada. Le avisamos a tu compita."><button onClick={() => setCambio('cancelada')} className="min-h-12 rounded-2xl bg-[#991B1B] font-extrabold text-white">Sí, cancelar la visita</button></ConInfo>
             <button onClick={() => setCambio(null)} className="min-h-12 rounded-2xl border border-[var(--border-muted)] font-bold">No, mantenerla</button>
           </div>
         ) : cambio === 'menu' ? (
           <div className="mt-3 grid gap-2">
             <Link href="/prototipo/cliente?estado=agendar" className="flex min-h-12 items-center justify-center rounded-2xl border-2 border-[var(--purple)] font-extrabold text-[var(--purple)]">Cambiar la fecha</Link>
-            <button onClick={() => setCambio('cancelar')} className="min-h-12 rounded-2xl border-2 border-[#991B1B] font-extrabold text-[#991B1B]">Cancelar la visita</button>
+            <ConInfo que="Cancelar la visita" texto="Te explica qué pasa si cancelas (según cuánto falte) y te pide confirmar. Todavía no se cancela nada."><button onClick={() => setCambio('cancelar')} className="min-h-12 rounded-2xl border-2 border-[#991B1B] font-extrabold text-[#991B1B]">Cancelar la visita</button></ConInfo>
             <button onClick={() => setCambio(null)} className="min-h-12 font-bold text-[var(--text-mid)]">Volver</button>
           </div>
         ) : (
           <>
-            <button onClick={() => setCambio('menu')} className="mt-3 min-h-12 w-full rounded-2xl border-2 border-[var(--purple)] bg-white text-base font-extrabold text-[var(--purple)]">Cambiar o cancelar</button>
+            <ConInfo que="Cambiar o cancelar" texto="Muestra las opciones para cambiar la fecha o cancelar esta visita. Gratis hasta 24 horas antes."><button onClick={() => setCambio('menu')} className="mt-3 min-h-12 w-full rounded-2xl border-2 border-[var(--purple)] bg-white text-base font-extrabold text-[var(--purple)]">Cambiar o cancelar</button></ConInfo>
             <p className="mt-2 text-sm text-[var(--text-mid)]">Gratis hasta 24 horas antes. Con menos tiempo, la visita se cuenta como usada. Si es María quien cancela, la reprogramamos sin costo para ti.</p>
           </>
         )}
@@ -523,7 +545,7 @@ function Visitas() {
       {pausada ? (
         <p role="note" className="mt-3 rounded-2xl bg-[#FEF2F2] p-4 font-bold text-[#991B1B]">Tu cuenta está en pausa: por ahora no puedes agendar otra visita ni escribir en el chat. Compaz se comunicará contigo por correo.</p>
       ) : coordinando ? <CoordinarVisita /> : (
-        <button onClick={() => setCoordinando(true)} className="mt-3 min-h-14 w-full rounded-2xl bg-[var(--orange)] text-lg font-extrabold text-white">Agendar otra visita</button>
+        <ConInfo que="Agendar otra visita" texto="Abre el chat con tu compita para ponerse de acuerdo en el día y la hora. Tú eliges la fecha y ella la confirma."><button onClick={() => setCoordinando(true)} className="mt-3 min-h-14 w-full rounded-2xl bg-[var(--orange)] text-lg font-extrabold text-white">Agendar otra visita</button></ConInfo>
       )}
       {momento === 'recurrente' && (
         <>
@@ -555,7 +577,7 @@ function Familiar() {
         <label className="text-base font-bold">Edad<input defaultValue="82" inputMode="numeric" onChange={() => setOk(false)} className={campo} /></label>
         <label className="text-base font-bold">Condición de salud<input defaultValue="Hipertensión, usa bastón" onChange={() => setOk(false)} className={campo} /></label>
         <label className="text-base font-bold">Qué le gusta o qué debemos saber<textarea defaultValue="Le encanta el jardín y las novelas. Se pone ansiosa si no desayuna temprano." onChange={() => setOk(false)} className={`${campo} min-h-28 py-3`} /></label>
-        <button onClick={() => setOk(true)} className="min-h-14 rounded-2xl bg-[var(--orange)] text-lg font-extrabold text-white">Guardar</button>
+        <ConInfo que="Guardar" texto="Guarda los datos de tu familiar. Solo los ve tu compita, y la dirección exacta solo se le entrega 3 horas antes de la visita."><button onClick={() => setOk(true)} className="min-h-14 rounded-2xl bg-[var(--orange)] text-lg font-extrabold text-white">Guardar</button></ConInfo>
         {ok && <div className="font-bold text-green-700">✓ Guardado</div>}
       </div>
     </>
@@ -583,7 +605,7 @@ function Plan() {
             <div className="mt-1 text-2xl font-extrabold">Compañía</div>
             <div className="mt-2 text-lg text-[var(--text-mid)]">Te quedan <b>{visitasQuedan} visitas</b> este ciclo.</div>
             <div className="text-base text-[var(--text-light)]">Se renueva el 18 de noviembre.</div>
-            <Link href="/prototipo/cliente?estado=pagar" className="mt-4 flex min-h-14 w-full items-center justify-center rounded-2xl border-2 border-[var(--purple)] bg-white text-lg font-extrabold text-[var(--purple)]">Cambiar o renovar plan</Link>
+            <div className="mt-4"><ConInfo que="Cambiar o renovar plan" texto="Te lleva a elegir un plan y a ver los datos para pagar. No se cobra nada hasta que envíes el pago."><Link href="/prototipo/cliente?estado=pagar" className="flex min-h-14 w-full items-center justify-center rounded-2xl border-2 border-[var(--purple)] bg-white text-lg font-extrabold text-[var(--purple)]">Cambiar o renovar plan</Link></ConInfo></div>
           </section>
           <h2 className="mt-6 text-lg font-extrabold">Mis pagos</h2>
           <p className="mt-1 text-sm text-[var(--text-mid)]">Compaz nunca te pedirá un pago por teléfono o mensaje. Si ves un cobro que no reconoces, avísanos.</p>
@@ -593,7 +615,7 @@ function Plan() {
         </>
       )}
       <CuentaEliminar momento={momento} visitasQuedan={visitasQuedan} />
-      <Link href="/prototipo/cliente/entrar" className="mt-6 flex min-h-12 w-full items-center justify-center rounded-2xl border border-[var(--border-muted)] bg-white text-base font-bold text-[var(--text-mid)]">Cerrar sesión</Link>
+      <div className="mt-6"><ConInfo que="Cerrar sesión" texto="Sale de tu cuenta en este dispositivo. Para volver a entrar te enviamos un enlace al correo."><Link href="/prototipo/cliente/entrar" className="flex min-h-12 w-full items-center justify-center rounded-2xl border border-[var(--border-muted)] bg-white text-base font-bold text-[var(--text-mid)]">Cerrar sesión</Link></ConInfo></div>
     </>
   )
 }
@@ -615,7 +637,14 @@ function Inner() {
   }
 
   return (
-    <main className={`mx-auto max-w-xl px-4 pt-4 ${embebido ? 'flex min-h-full flex-col pb-0' : 'pb-28'}`}>
+    <main className={`mx-auto max-w-xl px-4 pt-4 lg:max-w-2xl ${embebido ? 'flex min-h-full flex-col pb-0' : 'pb-28 lg:pb-12'}`}>
+      {!embebido && (
+        <nav className="mb-2 hidden gap-1 rounded-2xl border border-[var(--border-muted)] bg-white p-1 lg:flex" aria-label="Secciones del portal">
+          {[['inicio', '🏠', 'Inicio'], ['visitas', '📅', 'Visitas'], ['familiar', '👵', 'Mi familiar'], ['plan', '💳', 'Mi plan']].map(([id, i, t]) => (
+            <button key={id} onClick={() => setSec(id)} aria-current={sec === id ? 'page' : undefined} className={`flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl text-base font-bold ${sec === id ? 'bg-[var(--purple)] text-white' : 'text-[var(--text-mid)] hover:bg-[var(--warm-gray)]'}`}><span aria-hidden>{i}</span>{t}</button>
+          ))}
+        </nav>
+      )}
       {sec !== 'inicio' ? <Otras sec={sec} /> : (<>
       {!embebido && <div className="rounded-xl border border-dashed border-[var(--border-muted)] bg-white p-3">
         <label className="text-xs font-bold uppercase tracking-wider text-[var(--text-light)]">Simular estado del cliente</label>
@@ -668,24 +697,30 @@ function Inner() {
         {e.sinBoton ? null : respuesta ? (
           <div className="mt-5 grid gap-3">
             <div className="rounded-2xl bg-[var(--warm-gray)] p-4 text-lg font-bold">✓ {respuesta}</div>
-            {e.secundario && e.secHref && <Link href={e.secHref} className="flex min-h-14 items-center justify-center rounded-2xl border-2 border-[var(--purple)] bg-white px-5 text-lg font-extrabold text-[var(--purple)]">{e.secundario}</Link>}
+            {e.secundario && e.secHref && <ConInfo que={e.secundario} texto={infoDe(e.secundario)}><Link href={e.secHref} className="flex min-h-14 items-center justify-center rounded-2xl border-2 border-[var(--purple)] bg-white px-5 text-lg font-extrabold text-[var(--purple)]">{e.secundario}</Link></ConInfo>}
           </div>
         ) : (
           <div className="mt-5 grid gap-3">
-            {e.href ? (
-              <Link href={e.href} className="flex min-h-14 items-center justify-center rounded-2xl border-2 border-[var(--purple)] bg-white px-5 text-lg font-extrabold text-[var(--purple)]">{e.boton}</Link>
-            ) : (
-              <button onClick={() => setRespuesta(e.respuesta ?? 'Listo, lo registramos.')} className={`min-h-14 rounded-2xl px-5 text-lg font-extrabold ${e.tono === 'espera' ? 'border-2 border-[var(--purple)] bg-white text-[var(--purple)]' : 'bg-[var(--orange)] text-white active:bg-[var(--orange-dark)]'}`}>
-                {e.boton}
-              </button>
-            )}
+            <ConInfo que={e.boton} texto={infoDe(e.boton)}>
+              {e.href ? (
+                <Link href={e.href} className="flex min-h-14 items-center justify-center rounded-2xl border-2 border-[var(--purple)] bg-white px-5 text-lg font-extrabold text-[var(--purple)]">{e.boton}</Link>
+              ) : (
+                <button onClick={() => setRespuesta(e.respuesta ?? 'Listo, lo registramos.')} className={`min-h-14 rounded-2xl px-5 text-lg font-extrabold ${e.tono === 'espera' ? 'border-2 border-[var(--purple)] bg-white text-[var(--purple)]' : 'bg-[var(--orange)] text-white active:bg-[var(--orange-dark)]'}`}>
+                  {e.boton}
+                </button>
+              )}
+            </ConInfo>
             {e.secundario && e.secHref && (
-              <Link href={e.secHref} className="flex min-h-14 items-center justify-center rounded-2xl border-2 border-[var(--border-muted)] bg-white px-5 text-lg font-bold text-[var(--text-mid)]">{e.secundario}</Link>
+              <ConInfo que={e.secundario} texto={infoDe(e.secundario)}>
+                <Link href={e.secHref} className="flex min-h-14 items-center justify-center rounded-2xl border-2 border-[var(--border-muted)] bg-white px-5 text-lg font-bold text-[var(--text-mid)]">{e.secundario}</Link>
+              </ConInfo>
             )}
             {e.secundario && !e.secHref && (
-              <button onClick={() => setRespuesta(e.secRespuesta ?? 'Entendido, te mostramos otros compitas sin costo.')} className="min-h-14 rounded-2xl border-2 border-[var(--border-muted)] bg-white px-5 text-lg font-bold text-[var(--text-mid)]">
-                {e.secundario}
-              </button>
+              <ConInfo que={e.secundario} texto={infoDe(e.secundario)}>
+                <button onClick={() => setRespuesta(e.secRespuesta ?? 'Entendido, te mostramos otros compitas sin costo.')} className="min-h-14 rounded-2xl border-2 border-[var(--border-muted)] bg-white px-5 text-lg font-bold text-[var(--text-mid)]">
+                  {e.secundario}
+                </button>
+              </ConInfo>
             )}
           </div>
         )}
@@ -707,7 +742,7 @@ function Inner() {
       <AvisoSeguridad />
 
       {embebido && <div className="min-h-6 flex-1" />}
-      <nav className={`${embebido ? 'sticky -mx-4' : 'fixed inset-x-0'} bottom-0 z-30 grid grid-cols-4 border-t border-[var(--border-muted)] bg-white`} aria-label="Secciones del portal">
+      <nav className={`${embebido ? 'sticky -mx-4' : 'fixed inset-x-0 lg:hidden'} bottom-0 z-30 grid grid-cols-4 border-t border-[var(--border-muted)] bg-white`} aria-label="Secciones del portal">
         {[['inicio', '🏠', 'Inicio'], ['visitas', '📅', 'Visitas'], ['familiar', '👵', 'Mi familiar'], ['plan', '💳', 'Mi plan']].map(([id, i, t]) => (
           <button key={id} onClick={() => setSec(id)} aria-current={sec === id ? 'page' : undefined} className={`flex min-h-16 flex-col items-center justify-center text-xs font-bold ${sec === id ? 'text-[var(--orange-dark)]' : 'text-[var(--text-mid)]'}`}>
             <span className="text-2xl">{i}</span>{t}

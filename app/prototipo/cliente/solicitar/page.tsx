@@ -1,4 +1,5 @@
 'use client'
+import ConInfo from '../../ConInfo'
 import Link from 'next/link'
 import { Suspense, useState } from 'react'
 import { useUrlState } from '../../useUrlState'
@@ -136,7 +137,7 @@ function Inner() {
         <div>
           <div className="text-base font-bold">Tu foto <span className="font-normal text-[var(--text-light)]">(opcional)</span></div>
           <p className="mt-1 text-sm text-[var(--text-mid)]">Tu foto es opcional, pero ayuda mucho: los compitas aceptan con más confianza a quien pueden ver. Solo la ve el compita al decidir.</p>
-          <button onClick={() => setFoto((f) => !f)} className={`mt-2 min-h-12 w-full rounded-2xl border-2 text-base font-extrabold ${foto ? 'border-[#1f9d6b] bg-[#1f9d6b]/10 text-[#146c49]' : 'border-dashed border-[var(--border-muted)] text-[var(--text-mid)]'}`}>{foto ? '✓ Foto agregada (tocar para quitar)' : '📷 Agregar mi foto'}</button>
+          <ConInfo que="Foto de tu familiar" texto="Agrega o quita una foto para que el compita te reconozca. Es opcional, solo la ve él mientras tu solicitud esté pendiente, y se borra a los 90 días."><button onClick={() => setFoto((f) => !f)} className={`mt-2 min-h-12 w-full rounded-2xl border-2 text-base font-extrabold ${foto ? 'border-[#1f9d6b] bg-[#1f9d6b]/10 text-[#146c49]' : 'border-dashed border-[var(--border-muted)] text-[var(--text-mid)]'}`}>{foto ? '✓ Foto agregada (tocar para quitar)' : '📷 Agregar mi foto'}</button></ConInfo>
         </div>
 
         <div className="rounded-2xl bg-[var(--warm-gray)] p-4 text-base">
@@ -145,9 +146,9 @@ function Inner() {
           <Link href="/prototipo/cliente?sec=familiar" className="mt-1 inline-block font-bold text-[var(--orange-dark)] underline">Editar</Link>
         </div>
 
-        <button disabled={!listo} onClick={enviar} className="min-h-14 rounded-2xl bg-[var(--orange)] text-lg font-extrabold text-white disabled:opacity-40">
+        <ConInfo que="Enviar la solicitud" texto="Manda tu solicitud al compita. Todavía no se cobra nada; te avisamos en cuanto responda."><button disabled={!listo} onClick={enviar} className="min-h-14 rounded-2xl bg-[var(--orange)] text-lg font-extrabold text-white disabled:opacity-40">
           {m.id === 'entrevista' ? 'Pedir la videollamada' : m.id === 'directa' ? 'Enviar mi solicitud' : 'Pedir el mandado'}
-        </button>
+        </button></ConInfo>
         <AvisoSeguridad />
         {!listo && <p className={`-mt-3 text-center text-sm ${faltaPersonas ? 'font-bold text-[#92400E]' : 'text-[var(--text-light)]'}`}>{faltaPersonas ? 'Falta indicar quién más estará en el lugar, o elegir "Nadie más". Es obligatorio por seguridad.' : esMandado ? 'Cuéntanos qué necesitas, cuánto tomaría y si es un lugar privado (y quién más estará).' : 'Elige qué necesita tu familiar, si es un lugar privado y, si lo es, quién más estará.'}</p>}
       </div>
