@@ -1,7 +1,7 @@
 /* eslint-disable */
 // Cambio de quién estará en el lugar DESPUÉS de que el compita aceptó: el compita se entera de inmediato y decide
 // (sigue / prefiere no ir sin penalización); si no responde a tiempo se abre la tarea "Cambio en el lugar".
-import { db, limpiar, req, session, mkCliente, mkCompita, mkVisita, tgBtn, tgPara, emailsA, cron, ahoraMas } from './harness'
+import { db, limpiar, req, session, mkCliente, mkCompita, mkVisita, tgBtn, tgPara, emailsA, cron, ahoraMas, avisosAdmin } from './harness'
 import { beforeEach, test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import { GET as lugarGet, PUT as lugarPut } from '@/app/api/visita/lugar/route'
@@ -131,7 +131,7 @@ describe('el compita responde', () => {
     assert.equal((await resumenCancelacionesCompita(compita.id)).cuentanContra, 0)
     const correo = emailsA('caro@mail.test').find((e) => /prefirió no ir/.test(e.subject))!
     assert.ok(correo); assert.match(correo.html, /sin costo/)
-    assert.ok(tgPara('999').some((m) => /prefirió no ir/.test(m.text)))
+    assert.ok(avisosAdmin().some((m) => /prefirió no ir/.test(m.text)))
   })
 
   test('muchos "prefiero no ir" nunca la llevan a pausa (no es una cancelación tardía suya)', async () => {
@@ -182,7 +182,7 @@ describe('si el compita no responde: la tarea "Cambio en el lugar"', () => {
     assert.equal(await escalarCambiosLugar(), 1)
     const t = db.rows('admin_flags').filter((f) => f.tipo === 'cambio_lugar')
     assert.equal(t.length, 1); assert.match(t[0].nota, /todavía no le ha escrito/); assert.match(t[0].nota, /Antes:/); assert.equal(t[0].prioridad, 2)
-    assert.ok(tgPara('999').some((m) => /sin respuesta/.test(m.text)))
+    assert.ok(avisosAdmin().some((m) => /sin respuesta/.test(m.text)))
     assert.equal(await escalarCambiosLugar(), 0, 'no se repite')
     assert.equal(db.rows('admin_flags').filter((f) => f.tipo === 'cambio_lugar').length, 1)
   })

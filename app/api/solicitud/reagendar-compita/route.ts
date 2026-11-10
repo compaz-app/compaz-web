@@ -5,6 +5,7 @@ import { iniciarReagendadoPorCompita, getSolicitudPorToken } from '@/lib/solicit
 import { esEntrevistaConHoras, reagendarEntrevista } from '@/lib/reagendar'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { sendTelegramMessage, avisarAdmin } from '@/lib/telegram'
+import { alertaAdmin } from '@/lib/alertas-admin'
 import { sendEmail } from '@/lib/email'
 import { esc } from '@/lib/html'
 import { rolValido } from '@/lib/links'
@@ -73,7 +74,7 @@ export async function POST(req: NextRequest) {
     } catch (e) { console.error('Email cliente reagendar:', e) }
   }
 
-  await avisarAdmin(`🔄 <b>Reagendado por compita</b>\n\n<b>Compita:</b> ${esc(solicitud.compita_nombre)}\n<b>Cliente:</b> ${esc(cliente?.nombre ?? '')}\n\nLa compita inició un reagendado desde Telegram.`)
+  await alertaAdmin('actividad', `🔄 <b>Reagendado por compita</b>\n\n<b>Compita:</b> ${esc(solicitud.compita_nombre)}\n<b>Cliente:</b> ${esc(cliente?.nombre ?? '')}\n\nLa compita inició un reagendado desde Telegram.`)
 
   return pagina('Reagendado iniciado', 'Recibimos tu solicitud. Escríbenos en Telegram los nuevos horarios que te funcionen y se los haremos llegar al cliente.')
 }

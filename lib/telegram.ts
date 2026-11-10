@@ -5,7 +5,7 @@ const TELEGRAM_API = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOK
 type ReplyKeyboard = { keyboard: { text: string }[][]; resize_keyboard: boolean; one_time_keyboard?: boolean }
 type RemoveKeyboard = { remove_keyboard: true }
 type InlineButton = { text: string; url?: string; callback_data?: string }
-type InlineKeyboard = { inline_keyboard: InlineButton[][] }
+export type InlineKeyboard = { inline_keyboard: InlineButton[][] }
 
 export async function sendTelegramMessage(
   chatId: string,
@@ -75,7 +75,7 @@ export const INLINE_INICIAR_O_REAGENDAR = makeInlineKeyboard([
 export const TEXTO_NOTA_DE_VOZ = '🎤 Las notas de voz no están activas: el cliente no las recibe. Escribe tu mensaje en texto o manda una foto. Gracias por entender 🙏'
 
 export const TECLADO_SIN_VISITA = {
-  keyboard: [[{ text: '🚨 Emergencia' }, { text: '📋 Menú' }]],
+  keyboard: [[{ text: '❓ ¿Qué me toca?' }, { text: '🙋 Tengo una duda' }], [{ text: '🚨 Emergencia' }, { text: '📋 Menú' }]],
   resize_keyboard: true,
 } satisfies ReplyKeyboard
 
@@ -83,6 +83,7 @@ export const TECLADO_SIN_VISITA = {
 export const TECLADO_INICIO = {
   keyboard: [
     [{ text: '▶️ Iniciar visita' }, { text: '🔴 Terminar visita' }],
+    [{ text: '❓ ¿Qué me toca?' }, { text: '🙋 Tengo una duda' }],
     [{ text: '🛡️ No me siento seguro' }],
     [{ text: '🚨 Emergencia' }, { text: '📋 Menú' }],
   ],
@@ -93,6 +94,7 @@ export const TECLADO_INICIO = {
 export const TECLADO_DURANTE_VISITA = {
   keyboard: [
     [{ text: '🔴 Terminar visita' }, { text: '📹 Llamar al cliente' }],
+    [{ text: '❓ ¿Qué me toca?' }, { text: '🙋 Tengo una duda' }],
     [{ text: '🛡️ No me siento seguro' }],
     [{ text: '🚨 Emergencia' }, { text: '📋 Menú' }],
   ],

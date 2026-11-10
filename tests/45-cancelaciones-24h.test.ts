@@ -1,7 +1,7 @@
 /* eslint-disable */
 // Regla de cancelación de 24 horas. Cliente: con menos aviso la visita cuenta como usada (y debe aceptarlo); con más, es
 // gratis. Compita: se registra siempre, 2 tardías abren revisión, 3 pausan sus solicitudes nuevas; justificar levanta la pausa.
-import { db, limpiar, req, session, mkCliente, mkCompita, mkVisita, tgBtn, tgPara } from './harness'
+import { db, limpiar, req, session, mkCliente, mkCompita, mkVisita, tgBtn, tgPara, avisosAdmin } from './harness'
 import { beforeEach, test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import { GET as previa, POST as cancelar } from '@/app/api/visita/cancelar/route'
@@ -67,7 +67,7 @@ describe('el cliente cancela: la regla de las 24 horas', () => {
     const c = db.rows('cancelaciones')[0]
     assert.equal(c.tardia, true); assert.equal(c.cuenta_como_usada, true); assert.ok(c.visita_creada_en)
     assert.equal(await quedan(cliente), 1, 'sigue descontada')
-    assert.ok(tgPara('999').some((m) => /cuenta como usada/.test(m.text)), 'el equipo lo ve')
+    assert.ok(avisosAdmin().some((m) => /cuenta como usada/.test(m.text)), 'el equipo lo ve')
     assert.match(tgPara('9601').at(-1)!.text, /con poco aviso/)
   })
 

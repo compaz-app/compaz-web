@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { requierePermiso } from '@/lib/permisos'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { avisarAdmin, sendTelegramMessage, TECLADO_SIN_VISITA } from '@/lib/telegram'
+import { alertaAdmin } from '@/lib/alertas-admin'
 import { esc } from '@/lib/html'
 import { ok, err, notFound, serverError } from '@/lib/api'
 import type { Visita, Compita, Usuario } from '@/types'
@@ -35,7 +36,7 @@ export async function POST(req: NextRequest) {
     ).catch(e => console.error('[forzar-cierre] telegram compita:', e))
   }
 
-  await avisarAdmin(
+  await alertaAdmin('actividad', 
     `🔴 <b>Visita cerrada manualmente (admin)</b>\n\n<b>Compita:</b> ${esc(visita.compita?.nombre ?? '—')}\n<b>Cliente:</b> ${esc(visita.usuario?.nombre ?? '—')}`,
   )
 

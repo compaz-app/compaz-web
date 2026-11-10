@@ -7,6 +7,7 @@ import { getAjustes } from '@/lib/ajustes'
 import { registrarEvento } from '@/lib/eventos'
 import { notificar } from '@/lib/avisos'
 import { sendTelegramMessage, avisarAdmin, makeInlineKeyboard } from '@/lib/telegram'
+import { alertaAdmin } from '@/lib/alertas-admin'
 import { copiarFotoDeTelegram, programarBorradoVisita } from '@/lib/fotos-privadas'
 import { registrarCancelacion } from '@/lib/cancelaciones'
 import { esc } from '@/lib/html'
@@ -111,7 +112,7 @@ export async function cerrarSinAcceso(visitaId: string, compitaId: string, ahora
   const [{ data: cmp }, { data: cli }] = await Promise.all([
     admin.from('compitas').select('nombre').eq('id', compitaId).maybeSingle(), admin.from('usuarios').select('nombre').eq('id', v.usuario_id).maybeSingle(),
   ])
-  await avisarAdmin(`🚪 <b>Visita sin acceso</b>\n\n<b>${esc(String((cmp as { nombre: string } | null)?.nombre ?? ''))}</b> esperó ${espera} minutos y nadie abrió a <b>${esc(String((cli as { nombre: string } | null)?.nombre ?? ''))}</b>. La visita cuenta como usada. Si hubo una causa justificada, puedes devolverla desde Personas.`)
+  await alertaAdmin('actividad', `🚪 <b>Visita sin acceso</b>\n\n<b>${esc(String((cmp as { nombre: string } | null)?.nombre ?? ''))}</b> esperó ${espera} minutos y nadie abrió a <b>${esc(String((cli as { nombre: string } | null)?.nombre ?? ''))}</b>. La visita cuenta como usada. Si hubo una causa justificada, puedes devolverla desde Personas.`)
   return { ok: true }
 }
 
@@ -137,7 +138,7 @@ export async function procesarNadieAbre(ahora: Date = new Date()): Promise<{ tar
       const { data: previa } = await admin.from('admin_flags').select('id').eq('tipo', 'nadie_abre').eq('entidad_id', v.id).like('nota', `%[${clave}]%`).maybeSingle()
       if (previa) return
       await admin.from('admin_flags').insert({ entidad_tipo: 'visita', entidad_id: v.id, entidad_nombre: `🚪 ${titulo}: ${nombreCmp} / ${nombreCli}`, nota: `${cuerpo}\n[${clave}]`, reportado_por: 'nadie abre', resuelto: false, tipo: 'nadie_abre', prioridad: 1 })
-      await avisarAdmin(telegram)
+      await alertaAdmin('urgente', telegram, { critica: true, sinTarea: true, categoria: 'nadie_abre', entidad: { tipo: 'visita', id: v.id, nombre: `${nombreCmp} / ${nombreCli}` } })
       r.tareas++
     }
     if (min >= m1) await paso(1, 'Nadie abre (contactar al contacto en el sitio)', `${nombreCmp} lleva ${Math.floor(min)} minutos en la puerta de ${nombreCli} y nadie abre. Contacta a la persona de contacto en el sitio.`,

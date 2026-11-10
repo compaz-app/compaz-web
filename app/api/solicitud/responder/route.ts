@@ -4,6 +4,7 @@ import { NextRequest } from 'next/server'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { responderSolicitud } from '@/lib/solicitudes'
 import { sendTelegramMessage, avisarAdmin } from '@/lib/telegram'
+import { alertaAdmin } from '@/lib/alertas-admin'
 import { sendEmail, SITE_URL } from '@/lib/email'
 import { esc } from '@/lib/html'
 import { formatSlotVE } from '@/lib/format'
@@ -45,7 +46,7 @@ export async function POST(req: NextRequest) {
   ])
 
   if (solicitud.estado === 'rechazada') {
-    await avisarAdmin(`❌ <b>${esc(solicitud.compita_nombre)}</b> rechazó la solicitud de entrevista.\nEsperando que sugiera horarios alternativos.`)
+    await alertaAdmin('actividad', `❌ <b>${esc(solicitud.compita_nombre)}</b> rechazó la solicitud de entrevista.\nEsperando que sugiera horarios alternativos.`)
     if (compita?.telegram_chat_id) {
       await admin.from('telegram_estados').upsert(
         { chat_id: compita.telegram_chat_id, registro_pendiente: false, pendiente_accion: `sugerir_horarios:${solicitud.id}:${cliente?.email ?? ''}:${cliente?.nombre ?? 'el cliente'}`, pendiente_expira: new Date(Date.now() + 24 * 3600_000).toISOString() },
@@ -96,7 +97,7 @@ export async function POST(req: NextRequest) {
     } catch (e) { console.error('Telegram compita confirmación:', e) }
   }
 
-  await avisarAdmin([
+  await alertaAdmin('actividad', [
     `📞 <b>Entrevista confirmada</b>`, ``,
     `<b>Cliente:</b> ${esc(cliente?.nombre ?? 'Cliente')} (${esc(cliente?.email ?? '')})`,
     `<b>Compita:</b> ${esc(solicitud.compita_nombre)}`,

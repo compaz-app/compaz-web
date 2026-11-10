@@ -7,6 +7,7 @@ import { createAdminSupabase } from '@/lib/supabase-server'
 import { getAjustes } from '@/lib/ajustes'
 import { registrarEvento } from '@/lib/eventos'
 import { avisarAdmin } from '@/lib/telegram'
+import { alertaAdmin } from '@/lib/alertas-admin'
 import { esc } from '@/lib/html'
 
 export type CanceladoPor = 'cliente' | 'compita' | 'admin' | 'sistema'
@@ -188,7 +189,7 @@ export async function alertarCancelacionesCompita(compitaId: string, nombre: str
         : `REVISIÓN: ${nombre} suma ${r.cuentanContra} cancelaciones tardías sin justificar. Conviene hablar con esta persona antes de que se pausen sus solicitudes nuevas.`,
       reportado_por: 'cancelaciones automáticas', resuelto: false, tipo: 'cancelacion_tardia', prioridad: pausa ? 1 : 2,
     })
-    await avisarAdmin(`${pausa ? '⛔' : '⚠️'} <b>Cancelaciones tardías de ${esc(nombre)}</b>\n\n${r.cuentanContra} sin justificar. ${pausa ? 'Sus solicitudes nuevas quedaron en pausa.' : 'Abrimos una tarea de revisión en la Bandeja.'}`)
+    await alertaAdmin('actividad', `${pausa ? '⛔' : '⚠️'} <b>Cancelaciones tardías de ${esc(nombre)}</b>\n\n${r.cuentanContra} sin justificar. ${pausa ? 'Sus solicitudes nuevas quedaron en pausa.' : 'Abrimos una tarea de revisión en la Bandeja.'}`)
   } catch (e) {
     console.error('[cancelaciones] no se pudo alertar:', e)
   }

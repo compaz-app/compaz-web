@@ -2,7 +2,7 @@
 // Lote 4 (tramo 2): llegada con foto obligatoria y "nadie abre". La foto solo vale si llega después de que el bot la pidió; el
 // cliente la ve desde Compaz; si nadie abre empieza la cuenta atrás (tareas a los 5 y 15 min, cierre a los 30) y la visita
 // sin acceso cuenta como usada.
-import { db, net, limpiar, req, session, mkCliente, mkCompita, mkVisita, tgText, tgBtn, tgFoto, tgPara, emailsA, cron, hoyVEstr, confirmarLlegada } from './harness'
+import { db, net, limpiar, req, session, mkCliente, mkCompita, mkVisita, tgText, tgBtn, tgFoto, tgPara, emailsA, cron, hoyVEstr, confirmarLlegada, avisosAdmin } from './harness'
 import { beforeEach, test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import { POST as webhook } from '@/app/api/telegram-webhook/route'
@@ -136,7 +136,7 @@ describe('"Llegué y nadie abre"', () => {
     await procesarNadieAbre(en(6)); await procesarNadieAbre(en(7))
     assert.equal(tareas().length, 1, 'una sola vez aunque el cron corra varias veces'); assert.equal(tareas()[0].prioridad, 1)
     assert.ok(!tareas()[0].nota.includes('555'), 'el teléfono no queda en la tarea')
-    const aviso = tgPara('999').find((m) => /Nadie abre/.test(m.text))!
+    const aviso = avisosAdmin().find((m) => /Nadie abre/.test(m.text))!
     assert.match(aviso.text, /Rosa Linares/); assert.match(aviso.text, /\+58 414 555 0101/)
   })
 
@@ -202,7 +202,7 @@ describe('cerrar la visita sin acceso', () => {
     assert.equal((await cupoDelPlan(cliente.id))!.restantes, 1, 'SIGUE contando como usada: el crédito no vuelve')
     assert.ok(db.rows('eventos').some((e) => e.tipo === 'visita_sin_acceso'))
     assert.ok(emailsA('caro@mail.test').some((e) => /nadie abrió/.test(e.subject) && /se cuenta como usada/.test(e.html)))
-    assert.ok(tgPara('999').some((m) => /Visita sin acceso/.test(m.text)))
+    assert.ok(avisosAdmin().some((m) => /Visita sin acceso/.test(m.text)))
     assert.match(tgPara(CHAT).at(-1)!.text, /Visita cerrada sin acceso/)
     assert.ok(tareas().every((t) => t.resuelto), 'las tareas se resuelven')
     const foto = db.rows('fotos_privadas')[0]; assert.ok(new Date(foto.borrar_en).getTime() > Date.now() + 80 * 86400_000, 'la foto se borra 90 días después del cierre')

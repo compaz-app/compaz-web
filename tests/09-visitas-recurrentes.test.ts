@@ -1,6 +1,6 @@
 /* eslint-disable */
 // Visitas 2, 3, 4...: el cliente agenda otra con su compita y se repite el mismo flujo completo.
-import { db, net, session, limpiar, req, tgText, tgBtn, tgFoto, ultimoTg, tgPara, emailsA, cron, ahoraMas, hoyVEstr, mkCompita, mkCliente, mkSolicitud, confirmarLlegada } from './harness'
+import { db, net, session, limpiar, req, tgText, tgBtn, tgFoto, ultimoTg, tgPara, emailsA, cron, ahoraMas, hoyVEstr, mkCompita, mkCliente, mkSolicitud, confirmarLlegada, avisosAdmin } from './harness'
 import { beforeEach, test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import { tokenRating } from '@/lib/links'
@@ -69,7 +69,7 @@ describe('Agendar otra visita (2ª, 3ª, 4ª...)', () => {
       assert.equal(r.status, 200, `visita ${n}: se puede agendar`)
       assert.equal((await r.json()).data.numero, n)
       assert.match(ultimoTg(3000)!.text, new RegExp(`visita número ${n}`), 'la compita es avisada')
-      assert.ok(tgPara(999).some((m) => m.text.includes('Nueva visita agendada')), 'el admin es avisado')
+      assert.ok(avisosAdmin().some((m) => m.text.includes('Nueva visita agendada')), 'el admin es avisado')
       await visitaCompleta(carlos, lucia, n)
     }
     assert.equal(lucia.visitas_realizadas, 4)
@@ -126,7 +126,7 @@ describe('Agendar otra visita (2ª, 3ª, 4ª...)', () => {
       assert.equal((await reagendarCliente(req('/api/visita/reagendar', { json: { visita_id: v2.id } }))).status, 200)
       assert.equal(v2.estado, 'pre_visita')
     }
-    assert.ok(tgPara(999).some((m) => m.text.includes('3 reagendados') || m.text.includes('reagendados')), 'el admin ve el patrón de reagendados')
+    assert.ok(avisosAdmin().some((m) => m.text.includes('3 reagendados') || m.text.includes('reagendados')), 'el admin ve el patrón de reagendados')
   })
 
   test('no-show de la 2ª visita se alerta igual; churn no salta mientras haya visita reciente o activa', async () => {
@@ -136,13 +136,13 @@ describe('Agendar otra visita (2ª, 3ª, 4ª...)', () => {
     const v2 = db.rows('visitas').find((v) => v.estado === 'pre_visita')!
     admin(); net.tg = []
     await churn(cron('c'))
-    assert.ok(!tgPara(999).some((m) => m.text.includes('necesitan seguimiento')), 'con visita reciente/activa no es churn')
+    assert.ok(!avisosAdmin().some((m) => m.text.includes('necesitan seguimiento')), 'con visita reciente/activa no es churn')
     v1.fin = new Date(Date.now() - 40 * 86400_000).toISOString()
     await churn(cron('c'))
-    assert.ok(!tgPara(999).some((m) => m.text.includes('necesitan seguimiento')), 'con una visita activa en coordinación tampoco')
+    assert.ok(!avisosAdmin().some((m) => m.text.includes('necesitan seguimiento')), 'con una visita activa en coordinación tampoco')
     v2.estado = 'terminada'; v2.fin = new Date(Date.now() - 40 * 86400_000).toISOString()
     await churn(cron('c'))
-    assert.ok(tgPara(999).some((m) => m.text.includes('necesitan seguimiento')), 'sin visitas activas y 40 días sin visita sí es churn')
+    assert.ok(avisosAdmin().some((m) => m.text.includes('necesitan seguimiento')), 'sin visitas activas y 40 días sin visita sí es churn')
   })
 
   test('contratar OTRA vez a la misma compita (nueva solicitud) no duplica la visita activa', async () => {

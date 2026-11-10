@@ -19,6 +19,9 @@ export async function POST(req: NextRequest) {
   const hace90d = new Date(Date.now() - Number(await getAjuste('avisos_retencion_dias')) * 86400_000).toISOString()
 
   const tareas: Array<[string, PromiseLike<{ error: { message: string } | null }>]> = [
+    // El registro de actividad del equipo se conserva el mismo tiempo que el de avisos (90 días por defecto); las tareas viven en admin_flags.
+    ['actividad_admin', admin.from('actividad_admin').delete().lt('creado_en', hace90d)],
+    ['timbre colapsado', admin.from('telegram_estados').delete().like('chat_id', 'timbre_colapsado:%').lt('updated_at', hace1d)],
     ['onboarding_tokens', admin.from('onboarding_tokens').delete().or(`usado.eq.true,expires_at.lt.${ahora}`)],
     ['compita_edit_tokens', admin.from('compita_edit_tokens').delete().lt('expires_at', ahora)],
     ['action_tokens', admin.from('action_tokens').delete().lt('expires_at', ahora)],

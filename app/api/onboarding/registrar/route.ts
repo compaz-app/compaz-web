@@ -5,6 +5,7 @@ import { ok, err, serverError } from '@/lib/api'
 import { sendBienvenidaCompita } from '@/lib/resend'
 import { validarPerfil, emailValido } from '@/lib/validar'
 import { avisarAdmin } from '@/lib/telegram'
+import { alertaAdmin } from '@/lib/alertas-admin'
 
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null)
@@ -26,7 +27,7 @@ export async function POST(req: NextRequest) {
   if (email && !emailValido(email)) return err('Correo inválido')
   const v = validarPerfil(body, { permitirNombre: true })
   if (!v.ok) {
-    await avisarAdmin(`⚠️ <b>Validación fallida en onboarding</b>\n\n<b>Nombre:</b> ${body.nombre ?? '—'}\n<b>Email:</b> ${email ?? '—'}\n<b>Error:</b> ${v.error}`)
+    await alertaAdmin('actividad', `⚠️ <b>Validación fallida en onboarding</b>\n\n<b>Nombre:</b> ${body.nombre ?? '—'}\n<b>Email:</b> ${email ?? '—'}\n<b>Error:</b> ${v.error}`)
     return err(v.error)
   }
   const { nombre, zona, descripcion, servicios, foto_url, youtube_url, horarios_disponibles } = v.datos
@@ -74,7 +75,7 @@ export async function POST(req: NextRequest) {
   if (error) {
     // Liberar el token: la compita no debe quedarse sin invitación por un fallo nuestro
     if (!esAdmin && token) await admin.from('onboarding_tokens').update({ usado: false }).eq('token', token)
-    await avisarAdmin(`🚨 <b>Error en registro de onboarding</b>\n\n<b>Nombre:</b> ${nombre ?? '—'}\n<b>Email:</b> ${email ?? '—'}\n<b>Error DB:</b> ${error.message ?? JSON.stringify(error)}`)
+    await alertaAdmin('tarea', `🚨 <b>Error en registro de onboarding</b>\n\n<b>Nombre:</b> ${nombre ?? '—'}\n<b>Email:</b> ${email ?? '—'}\n<b>Error DB:</b> ${error.message ?? JSON.stringify(error)}`)
     return serverError(error)
   }
 

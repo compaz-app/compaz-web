@@ -3,6 +3,7 @@
 
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { avisarAdmin } from '@/lib/telegram'
+import { alertaAdmin } from '@/lib/alertas-admin'
 import { detectarContacto } from '@/lib/detectar-contacto'
 export { detectarContacto }
 
@@ -67,7 +68,7 @@ export async function moderarMensaje({
     `Compita: ${compitaNombre} · Cliente: ${clienteNombre}\n\n` +
     `Mensaje: <i>${textoOriginal.slice(0, 300)}</i>`
 
-  await avisarAdmin(msg).catch(() => {})
+  await alertaAdmin('actividad', msg, { categoria: 'contacto_externo' }).catch(() => {})
 }
 
 // ── Contacto externo en textos que no son el chat (solicitud, horarios sugeridos) ──
@@ -96,7 +97,7 @@ export async function reportarContactoEnTexto(p: {
       reportado_por: 'moderación automática',
       resuelto: false,
     })
-    await avisarAdmin(
+    await alertaAdmin('actividad', 
       `⚠️ <b>Contacto externo detectado</b>\n\n` +
       `Dónde: ${p.donde}\n` +
       `Quien: ${p.quien} (${p.origen})\n\n` +

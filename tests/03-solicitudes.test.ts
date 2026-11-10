@@ -1,5 +1,5 @@
 /* eslint-disable */
-import { db, net, session, limpiar, req, tgText, tgBtn, ultimoTg, tgPara, emailsA, ahoraMas, mkCompita, mkCliente, mkSolicitud, mkVisita } from './harness'
+import { db, net, session, limpiar, req, tgText, tgBtn, ultimoTg, tgPara, emailsA, ahoraMas, mkCompita, mkCliente, mkSolicitud, mkVisita, avisosAdmin } from './harness'
 import { beforeEach, test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import { POST as crear } from '@/app/api/solicitudes/route'
@@ -57,13 +57,13 @@ describe('POST /api/solicitudes (cliente pide entrevista)', () => {
     const r = await pedir(cli, { compita_id: compita.id, mensaje: 'hola', slots_propuestos: ok3() })
     assert.equal(r.status, 200)
     assert.equal(db.rows('solicitudes').length, 1)
-    assert.ok(tgPara(999).some((m) => m.text.includes('No se pudo notificar')))
+    assert.ok(avisosAdmin().some((m) => m.text.includes('No se pudo notificar')))
   })
 
   test('compita sin Telegram vinculado: se avisa al admin', async () => {
     const compita = mkCompita({ telegram_chat_id: null }); const cli = mkCliente()
     await pedir(cli, { compita_id: compita.id, mensaje: 'hola', slots_propuestos: ok3() })
-    assert.ok(tgPara(999).some((m) => m.text.includes('Solicitud sin Telegram')))
+    assert.ok(avisosAdmin().some((m) => m.text.includes('Solicitud sin Telegram')))
   })
 
   test('doble envío simultáneo crea una sola solicitud pendiente', async () => {
@@ -96,7 +96,7 @@ describe('La compita responde por Telegram', () => {
     assert.equal(s.estado, 'aceptada')
     assert.equal(s.slot_confirmado, sol.slots_propuestos[1])
     assert.equal(emailsA('cli@mail.test').length, 1)
-    assert.ok(tgPara(999).some((m) => m.text.includes('Entrevista confirmada')))
+    assert.ok(avisosAdmin().some((m) => m.text.includes('Entrevista confirmada')))
   })
 
   test('doble toque: la segunda pulsación no reprocesa ni reenvía el email', async () => {

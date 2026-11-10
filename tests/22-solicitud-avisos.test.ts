@@ -1,7 +1,7 @@
 /* eslint-disable */
 // Paso 1.4 (flujo A): la solicitud de entrevista avisa al compita con notificar().
 // Telegram primero y con registro; si no se entrega, el correo de respaldo sale en ese momento.
-import { db, net, limpiar, req, session, mkCompita, mkCliente, ahoraMas, tgPara, tgBtn, emailsA } from './harness'
+import { db, net, limpiar, req, session, mkCompita, mkCliente, ahoraMas, tgPara, tgBtn, emailsA, avisosAdmin } from './harness'
 import { beforeEach, test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import { POST as crear } from '@/app/api/solicitudes/route'
@@ -46,7 +46,7 @@ describe('solicitud nueva: Telegram primero, correo solo de respaldo', () => {
     assert.equal(enviado.length, 1)
     assert.match(enviado[0].html, /\/api\/solicitud\/responder\?token=[^"]+(&amp;|&)slot=0(&amp;|&)quien=compita(&amp;|&)s=/, 'enlace firmado por horario')
     assert.match(enviado[0].html, /slot=-1/, 'enlace para rechazar')
-    assert.ok(tgPara(999).some((m) => /No se pudo notificar/.test(m.text) && /Se le notificó por correo/.test(m.text)), 'el admin sabe')
+    assert.ok(avisosAdmin().some((m) => /No se pudo notificar/.test(m.text) && /Se le notificó por correo/.test(m.text)), 'el admin sabe')
   })
 
   test('sin Telegram vinculado pero con correo: sale el correo y se avisa al admin', async () => {
@@ -55,7 +55,7 @@ describe('solicitud nueva: Telegram primero, correo solo de respaldo', () => {
     assert.equal(avisosDe('telegram')[0].estado, 'fallido')
     assert.equal(avisosDe('telegram')[0].error, 'sin Telegram vinculado')
     assert.equal(emailsA('lucia@mail.test').length, 1)
-    assert.ok(tgPara(999).some((m) => /Solicitud sin Telegram/.test(m.text) && /Se le notificó por correo/.test(m.text)))
+    assert.ok(avisosAdmin().some((m) => /Solicitud sin Telegram/.test(m.text) && /Se le notificó por correo/.test(m.text)))
   })
 
   test('sin Telegram ni correo: no hay a dónde avisar y el admin lo sabe', async () => {
@@ -63,7 +63,7 @@ describe('solicitud nueva: Telegram primero, correo solo de respaldo', () => {
     const r = await pedir(mkCliente(), datos(compita))
     assert.equal(r.status, 200)
     assert.equal(avisosDe('correo').length, 0)
-    assert.ok(tgPara(999).some((m) => /No tiene correo registrado/.test(m.text)))
+    assert.ok(avisosAdmin().some((m) => /No tiene correo registrado/.test(m.text)))
   })
 
   test('si el correo de respaldo también falla, el admin lo sabe y la solicitud existe', async () => {
@@ -73,7 +73,7 @@ describe('solicitud nueva: Telegram primero, correo solo de respaldo', () => {
     assert.equal(r.status, 200)
     assert.equal(db.rows('solicitudes').length, 1)
     assert.equal(avisosDe('correo')[0].estado, 'fallido')
-    assert.ok(tgPara(999).some((m) => /Tampoco se pudo por correo/.test(m.text)))
+    assert.ok(avisosAdmin().some((m) => /Tampoco se pudo por correo/.test(m.text)))
   })
 })
 

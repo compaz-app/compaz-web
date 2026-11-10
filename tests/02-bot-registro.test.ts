@@ -1,5 +1,5 @@
 /* eslint-disable */
-import { db, net, limpiar, tgReq, tgText, tgBtn, tgFoto, ultimoTg, tgPara, emailsA, mkCompita, mkCliente, mkVisita, hoyVEstr } from './harness'
+import { db, net, limpiar, tgReq, tgText, tgBtn, tgFoto, ultimoTg, tgPara, emailsA, mkCompita, mkCliente, mkVisita, hoyVEstr, avisosAdmin } from './harness'
 import { beforeEach, test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import { POST as webhook } from '@/app/api/telegram-webhook/route'
@@ -18,7 +18,7 @@ describe('Registro y vinculación de compita por Telegram', () => {
     assert.match(ultimoTg(500)!.text, /an\*+@mail\.test/)
     await webhook(tgText(500, codigoDe('ana@mail.test')))
     assert.equal(db.rows('compitas').find((r) => r.id === c.id)!.telegram_chat_id, '500')
-    assert.ok(tgPara(999).some((m) => m.text.includes('Nueva Compita vinculada')))
+    assert.ok(avisosAdmin().some((m) => m.text.includes('Nueva Compita vinculada')))
   })
 
   test('código incorrecto 5 veces invalida el código', async () => {

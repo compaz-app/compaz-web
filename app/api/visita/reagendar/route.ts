@@ -7,6 +7,7 @@ import { sendEmail, SITE_URL } from '@/lib/email'
 import { esc } from '@/lib/html'
 import { formatFechaVE } from '@/lib/format'
 import { avisarAdmin } from '@/lib/telegram'
+import { alertaAdmin } from '@/lib/alertas-admin'
 
 // POST /api/visita/reagendar
 // Cancela la fecha acordada y vuelve al estado pre_visita para recoordinar
@@ -101,7 +102,7 @@ export async function POST(req: NextRequest) {
     const nuevo = (totalReagendados ?? 0) + 1
     await admin.from('mensajes').insert({ visit_id: visita_id, origen: 'admin', tipo: 'texto', contenido: `reagendado:cliente` })
     if (nuevo >= 3) {
-      await avisarAdmin(
+      await alertaAdmin('tarea', 
         [
           `⚠️ <b>Visita con ${nuevo} reagendados</b>`,
           ``,

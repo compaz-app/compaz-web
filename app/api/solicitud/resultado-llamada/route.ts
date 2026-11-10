@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSolicitudPorToken, iniciarReagendadoPorCompita } from '@/lib/solicitudes'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { sendTelegramMessage, avisarAdmin } from '@/lib/telegram'
+import { alertaAdmin } from '@/lib/alertas-admin'
 import { sendEmail, SITE_URL } from '@/lib/email'
 import { esc } from '@/lib/html'
 import { rolValido, qRol } from '@/lib/links'
@@ -179,7 +180,7 @@ async function ejecutar(req: NextRequest, p: NonNullable<ReturnType<typeof leer>
       )
     } catch (e) { console.error('Telegram no_contratar compita:', e) }
   }
-  await avisarAdmin(`ℹ️ <b>${esc(cliente?.nombre ?? 'Un cliente')}</b> decidió no contratar a <b>${esc(solicitud.compita_nombre)}</b> después de la llamada.`)
+  await alertaAdmin('actividad', `ℹ️ <b>${esc(cliente?.nombre ?? 'Un cliente')}</b> decidió no contratar a <b>${esc(solicitud.compita_nombre)}</b> después de la llamada.`)
 
   // Antes llevaba directo a /compitas; ahora primero se le pregunta (opcional) por qué, y desde ahí puede seguir.
   return irAMotivo()

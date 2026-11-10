@@ -1,6 +1,8 @@
 import { NextRequest } from 'next/server'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { requierePermiso } from '@/lib/permisos'
+import { recortarTexto } from '@/lib/panel-datos'
+import { alertaAdmin } from '@/lib/alertas-admin'
 import { ok, err, serverError } from '@/lib/api'
 
 // GET /api/admin/flags — listar flags abiertos
@@ -20,7 +22,8 @@ export async function GET(req: NextRequest) {
     .order('created_at', { ascending: false })
 
   if (error) return serverError(error)
-  return ok(data)
+  // Sin el permiso de teléfonos, las notas llegan sin teléfonos ni correos (se recorta en el servidor).
+  return ok((data ?? []).map((f) => ({ ...f, nota: recortarTexto(g.actor, String(f.nota ?? '')), entidad_nombre: recortarTexto(g.actor, String(f.entidad_nombre ?? '')) })))
 }
 
 // POST /api/admin/flags — crear flag
@@ -72,11 +75,14 @@ export async function PATCH(req: NextRequest) {
   if (!flag_id) return err('flag_id requerido')
 
   const admin = createAdminSupabase()
+  const { data: previa } = await admin.from('admin_flags').select('entidad_nombre, resuelto').eq('id', flag_id).maybeSingle()
   const { error } = await admin
     .from('admin_flags')
     .update({ resuelto: true, resuelto_at: new Date().toISOString() })
     .eq('id', flag_id)
 
   if (error) return serverError(error)
+  // Queda anotado QUIÉN resolvió qué (el equipo se reparte la bandeja y esto evita duplicar trabajo).
+  if (previa && !(previa as { resuelto: boolean }).resuelto) await alertaAdmin('actividad', `Tarea resuelta por ${user.email}: ${String((previa as { entidad_nombre: string }).entidad_nombre ?? '')}`, { categoria: 'tarea_resuelta' })
   return ok(null)
 }

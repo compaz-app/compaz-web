@@ -3,6 +3,7 @@ import { NextRequest } from 'next/server'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { secretoValido } from '@/lib/links'
 import { avisarAdmin } from '@/lib/telegram'
+import { alertaAdmin } from '@/lib/alertas-admin'
 
 export function cronAutorizado(req: NextRequest): boolean {
   return secretoValido(req.headers.get('x-cron-secret'), process.env.CRON_SECRET)
@@ -37,7 +38,7 @@ export async function vigilarLatidos(): Promise<string[]> {
     const { data: prev } = await admin.from('telegram_estados').select('updated_at').eq('chat_id', claveAlerta).maybeSingle()
     if (prev && Date.now() - new Date(prev.updated_at).getTime() < 3600_000) continue
     await admin.from('telegram_estados').upsert({ chat_id: claveAlerta, registro_pendiente: false, updated_at: new Date().toISOString() }, { onConflict: 'chat_id' })
-    await avisarAdmin(`⏱️ <b>Cron detenido</b>\n\n<code>${nombre}</code> no corre hace más de ${min * 3} minutos. Revisa los logs de Netlify.`)
+    await alertaAdmin('urgente', `⏱️ <b>Cron detenido</b>\n\n<code>${nombre}</code> no corre hace más de ${min * 3} minutos. Revisa los logs de Netlify.`)
     caidos.push(nombre)
   }
   return caidos

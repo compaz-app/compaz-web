@@ -1,7 +1,7 @@
 /* eslint-disable */
 // Lote 4 (tramo 3): seguridad del compita. "No me siento seguro" interrumpe la visita SIN penalización (aviso neutro al cliente,
 // alerta urgente al equipo, sin descontar la visita). "¿Todo bien?" pasada la hora de fin; sin respuesta, alerta urgente.
-import { db, limpiar, session, mkCliente, mkCompita, mkVisita, tgText, tgBtn, tgPara, emailsA, cron, hoyVEstr } from './harness'
+import { db, limpiar, session, mkCliente, mkCompita, mkVisita, tgText, tgBtn, tgPara, emailsA, cron, hoyVEstr, avisosAdmin } from './harness'
 import { beforeEach, test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import { POST as webhook } from '@/app/api/telegram-webhook/route'
@@ -63,7 +63,7 @@ describe('"No me siento seguro"', () => {
 
   test('el equipo recibe una alerta URGENTE por Telegram y correo, con la tarea en la Bandeja (el teléfono solo por Telegram)', async () => {
     mundo(); await seguro()
-    const a = tgPara('999').find((m) => /NO ME SIENTO SEGURO/.test(m.text))!
+    const a = avisosAdmin().find((m) => /NO ME SIENTO SEGURO/.test(m.text))!
     assert.ok(a); assert.match(a.text, /María Pérez/); assert.match(a.text, /Carolina Pérez/); assert.match(a.text, /Contacto en el sitio/); assert.match(a.text, /sin penalización/i)
     assert.ok(emailsA('admin@compaz.test').some((e) => /no se siente seguro/.test(e.subject)))
     const t = flags('salida_seguridad'); assert.equal(t.length, 1); assert.equal(t[0].prioridad, 1)
@@ -79,7 +79,7 @@ describe('"No me siento seguro"', () => {
 
   test('sin visita registrada IGUAL se alerta al equipo (la seguridad no depende de la base)', async () => {
     mkCompita({ telegram_chat_id: CHAT, nombre: 'María Pérez' }); await seguro()
-    assert.ok(tgPara('999').some((m) => /NO ME SIENTO SEGURO/.test(m.text) && /No hay una visita registrada/.test(m.text)))
+    assert.ok(avisosAdmin().some((m) => /NO ME SIENTO SEGURO/.test(m.text) && /No hay una visita registrada/.test(m.text)))
     assert.match(tgPara(CHAT).at(-1)!.text, /911/)
   })
 
@@ -91,7 +91,7 @@ describe('"No me siento seguro"', () => {
 
   test('la emergencia ya funciona también con la visita confirmando inicio', async () => {
     mundo('confirmando_inicio', 60); await webhook(tgText(CHAT, '🚨 Emergencia'))
-    assert.ok(tgPara('999').some((m) => /EMERGENCIA/.test(m.text) && /Carolina Pérez/.test(m.text)))
+    assert.ok(avisosAdmin().some((m) => /EMERGENCIA/.test(m.text) && /Carolina Pérez/.test(m.text)))
   })
 })
 
@@ -128,7 +128,7 @@ describe('"¿Todo bien?" después de la hora de fin', () => {
   test('"Necesito ayuda": alerta urgente al equipo AL INSTANTE', async () => {
     const { visita } = mundo('en_curso', -20); await preguntarTodoBien()
     await webhook(tgBtn(CHAT, `tb:ayuda:${visita.id}`))
-    assert.ok(tgPara('999').some((m) => /VISITA ALARGADA/.test(m.text) && /pidió ayuda/.test(m.text)))
+    assert.ok(avisosAdmin().some((m) => /VISITA ALARGADA/.test(m.text) && /pidió ayuda/.test(m.text)))
     const t = flags('visita_alargada'); assert.equal(t.length, 1); assert.equal(t[0].prioridad, 1)
     assert.match(tgPara(CHAT).at(-1)!.text, /911/)
   })
@@ -139,7 +139,7 @@ describe('"¿Todo bien?" después de la hora de fin', () => {
     aviso.creado_en = new Date(Date.now() - 9 * 60_000).toISOString(); assert.equal(await escalarTodoBien(), 0)
     aviso.creado_en = new Date(Date.now() - 11 * 60_000).toISOString()
     assert.equal(await escalarTodoBien(), 1); assert.equal(await escalarTodoBien(), 0, 'no se repite')
-    const a = tgPara('999').find((m) => /VISITA ALARGADA/.test(m.text))!
+    const a = avisosAdmin().find((m) => /VISITA ALARGADA/.test(m.text))!
     assert.match(a.text, /no respondió/); assert.match(a.text, /Rosa Linares/)
     assert.equal(flags('visita_alargada').length, 1)
     assert.ok(emailsA('admin@compaz.test').some((e) => /visita alargada/.test(e.subject)))

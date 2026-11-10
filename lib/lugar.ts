@@ -8,6 +8,7 @@ import { getAjustes } from '@/lib/ajustes'
 import { registrarEvento } from '@/lib/eventos'
 import { notificar } from '@/lib/avisos'
 import { sendTelegramMessage, avisarAdmin, makeInlineKeyboard } from '@/lib/telegram'
+import { alertaAdmin } from '@/lib/alertas-admin'
 import { esc } from '@/lib/html'
 import { horasDeAviso, registrarCancelacion } from '@/lib/cancelaciones'
 import { textoPersonas } from '@/lib/plantillas-aviso'
@@ -187,7 +188,7 @@ export async function escalarCambiosLugar(ahora: Date = new Date()): Promise<num
       nota: `${nombreCli} cambió quién estará en el lugar y ${nombreCmp} no ha respondido.\nAntes: ${describir(c.antes)}\nAhora: ${describir(c.despues)}\n${escribio ? 'El cliente YA le escribió por el chat.' : 'El cliente todavía no le ha escrito por el chat.'}${restantes !== null ? `\nFaltan ${Math.max(0, Math.round(restantes))} h para la visita.` : ''}\nContacta al compita antes de la visita: nunca debe ir sin saber quién estará.`,
       reportado_por: 'cambio en el lugar', resuelto: false, tipo: 'cambio_lugar', prioridad: urgente ? 1 : 2,
     })
-    await avisarAdmin(`⚠️ <b>Cambio en el lugar sin respuesta</b>\n\n<b>${esc(nombreCmp)}</b> no ha respondido al cambio de personas de <b>${esc(nombreCli)}</b>.${escribio ? ' El cliente ya le escribió por el chat.' : ''}\n\nAbrimos una tarea en la Bandeja.`)
+    await alertaAdmin('actividad', `⚠️ <b>Cambio en el lugar sin respuesta</b>\n\n<b>${esc(nombreCmp)}</b> no ha respondido al cambio de personas de <b>${esc(nombreCli)}</b>.${escribio ? ' El cliente ya le escribió por el chat.' : ''}\n\nAbrimos una tarea en la Bandeja.`)
     n++
   }
   return n

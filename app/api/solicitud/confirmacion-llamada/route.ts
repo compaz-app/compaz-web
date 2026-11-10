@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { getSolicitudPorToken, registrarConfirmacion } from '@/lib/solicitudes'
 import { avisarAdmin } from '@/lib/telegram'
+import { alertaAdmin } from '@/lib/alertas-admin'
 import { sendEmail, SITE_URL } from '@/lib/email'
 import { esc } from '@/lib/html'
 import { rolValido } from '@/lib/links'
@@ -63,7 +64,7 @@ export async function POST(req: NextRequest) {
   const cc = sol.confirmacion_cliente
   const cp = sol.confirmacion_compita
   if (cc !== null && cp !== null && cc !== cp) {
-    await avisarAdmin([
+    await alertaAdmin('tarea', [
       `⚠️ <b>Conflicto en confirmación de llamada</b>`, ``,
       `<b>Compita:</b> ${esc(solicitud.compita_nombre)} dice <b>${cp ? 'SÍ ocurrió' : 'NO ocurrió'}</b>`,
       `<b>Cliente:</b> ${esc(cliente?.nombre ?? '')} dice <b>${cc ? 'SÍ ocurrió' : 'NO ocurrió'}</b>`, ``,
@@ -76,7 +77,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (!ocurrio) {
-    await avisarAdmin([
+    await alertaAdmin('actividad', [
       `⚠️ <b>Llamada no ocurrió</b>`, ``,
       `<b>${quien === 'cliente' ? 'El cliente' : 'La compita'}</b> reportó que la llamada con <b>${esc(solicitud.compita_nombre)}</b>${quien === 'compita' ? ` y <b>${esc(cliente?.nombre ?? 'el cliente')}</b>` : ''} no se realizó.`, ``,
       `El cliente recibirá un link para proponer nuevos horarios.`,
@@ -101,7 +102,7 @@ export async function POST(req: NextRequest) {
         })
       } catch (e) {
         console.error('Email reagendar al cliente:', e)
-        await avisarAdmin(`⚠️ No se pudo enviar al cliente <b>${esc(cliente?.nombre ?? '')}</b> el enlace para reagendar. Avísale manualmente.`)
+        await alertaAdmin('tarea', `⚠️ No se pudo enviar al cliente <b>${esc(cliente?.nombre ?? '')}</b> el enlace para reagendar. Avísale manualmente.`)
       }
     }
 

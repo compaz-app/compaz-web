@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { sendEmail, SITE_URL } from '@/lib/email'
 import { avisarAdmin } from '@/lib/telegram'
+import { alertaAdmin } from '@/lib/alertas-admin'
 import { esc } from '@/lib/html'
 import { PLANES, CICLO_PAGO_DIAS, TEXTO_REEMBOLSO, type PlanId } from '@/lib/planes'
 import { cupoDelPlan } from '@/lib/visitas'
@@ -60,7 +61,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (avisados.length > 0) {
-    await avisarAdmin(`💳 <b>Renovaciones pendientes (${avisados.length})</b>\n\nSe avisó a: ${avisados.map(esc).join(', ')}.\n\nCuando paguen por Zelle o transferencia, regístralo en el panel: Clientes, Pagos y plan.`)
+    await alertaAdmin('actividad', `💳 <b>Renovaciones pendientes (${avisados.length})</b>\n\nSe avisó a: ${avisados.map(esc).join(', ')}.\n\nCuando paguen por Zelle o transferencia, regístralo en el panel: Clientes, Pagos y plan.`)
   }
 
   await latido('recordatorio-pago')

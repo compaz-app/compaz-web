@@ -5,7 +5,7 @@ import { createAdminSupabase } from '@/lib/supabase-server'
 import { getAjustes } from '@/lib/ajustes'
 import { registrarEvento } from '@/lib/eventos'
 import { notificar, registrarAccion } from '@/lib/avisos'
-import { avisarAdmin } from '@/lib/telegram'
+import { alertaAdmin } from '@/lib/alertas-admin'
 import { registrarCancelacion } from '@/lib/cancelaciones'
 import { programarBorradoVisita } from '@/lib/fotos-privadas'
 import { emailAdminPago } from '@/lib/aviso-pago'
@@ -69,7 +69,7 @@ export async function salidaPorSeguridad(compita: { id: string; nombre: string }
     ...(v?.contacto_nombre ? [`<b>Contacto en el sitio:</b> ${esc(v.contacto_nombre)} ${esc(v.contacto_tel ?? '')}`] : []),
     ``, `Contáctala ahora. Sin penalización para ella; si cobra la visita se decide caso por caso.`,
   ].join('\n')
-  await avisarAdmin(detalle)
+  await alertaAdmin('urgente', detalle, { critica: true, sinTarea: true, categoria: 'salida_seguridad', entidad: { tipo: 'compita', id: compita.id, nombre: compita.nombre } })
   await emailAdminPago('URGENTE: un compita no se siente seguro', detalle.replace(/<[^>]+>/g, ''))
   return { ok: true, hayVisita: !!v }
 }
@@ -129,7 +129,7 @@ async function alertarVisitaAlargada(v: VisitaSeg, nombreCompita: string, motivo
     ...(v.contacto_nombre ? [`<b>Contacto en el sitio:</b> ${esc(v.contacto_nombre)} ${esc(v.contacto_tel ?? '')}`] : []),
     ``, `Contáctalos de inmediato.`,
   ].join('\n')
-  await avisarAdmin(texto)
+  await alertaAdmin('urgente', texto, { critica: true, sinTarea: true, categoria: 'visita_alargada', entidad: { tipo: 'visita', id: v.id, nombre: nombreCompita } })
   await emailAdminPago('URGENTE: visita alargada sin respuesta', texto.replace(/<[^>]+>/g, ''))
   void ahora
 }

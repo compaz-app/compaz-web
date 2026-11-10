@@ -1,6 +1,6 @@
 // Formulario nuevo de solicitud (Lote 2): el SERVIDOR exige los requisitos de seguridad, la contratación directa y el
 // mandado no llevan horarios, el compita acepta ANTES del pago y el cliente recibe el paso siguiente (pagar).
-import { db, net, session, limpiar, req, tgBtn, tgPara, emailsA, ahoraMas, mkCompita, mkCliente, mkSolicitud } from './harness'
+import { db, net, session, limpiar, req, tgBtn, tgPara, emailsA, ahoraMas, mkCompita, mkCliente, mkSolicitud, avisosAdmin } from './harness'
 import { beforeEach, test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import { validarSolicitudNueva, mensajeDeSolicitud, MAX_NOTA } from '@/lib/validar-solicitud'
@@ -200,7 +200,7 @@ describe('el compita acepta una contratación directa', () => {
     assert.ok(correo[0].html.includes(`/pago?solicitud=${sol.id}`))
     assert.match(correo[0].html, /nunca te pedirá/i, 'lleva la advertencia antifraude')
     assert.match(tgPara(9400).at(-1)!.text, /Aceptaste/)
-    assert.ok(tgPara(999).some((m) => m.text.includes('aceptó una contratación directa')))
+    assert.ok(avisosAdmin().some((m) => m.text.includes('aceptó una contratación directa')))
     const e = db.rows('eventos').find((x) => x.tipo === 'solicitud_aceptada')!
     assert.deepEqual([e.entidad_id, e.datos.directa], [sol.id, true])
   })

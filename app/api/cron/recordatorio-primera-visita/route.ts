@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { sendTelegramMessage, avisarAdmin, INLINE_REAGENDAR_VISITA } from '@/lib/telegram'
+import { alertaAdmin } from '@/lib/alertas-admin'
 import { sendEmail, SITE_URL } from '@/lib/email'
 import { esc } from '@/lib/html'
 import { hoyVE, formatFechaVE } from '@/lib/format'
@@ -82,7 +83,7 @@ export async function POST(req: NextRequest) {
       await admin.from('mensajes').insert({ visit_id: visita.id, origen: 'admin', tipo: 'texto', contenido: marcador })
       enviados++
     } else {
-      await avisarAdmin(`⚠️ No se pudo enviar el recordatorio de la visita de mañana (<b>${esc(compita?.nombre ?? '—')}</b> con <b>${esc(cliente?.nombre ?? '—')}</b>).`)
+      await alertaAdmin('tarea', `⚠️ No se pudo enviar el recordatorio de la visita de mañana (<b>${esc(compita?.nombre ?? '—')}</b> con <b>${esc(cliente?.nombre ?? '—')}</b>).`)
     }
   }
   return NextResponse.json({ ok: true, recordatorios: enviados })

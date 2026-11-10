@@ -6,6 +6,7 @@ import { createHmac, timingSafeEqual } from 'crypto'
 import { getSolicitudPorRoomUrl, reclamarFlag } from '@/lib/solicitudes'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { avisarAdmin } from '@/lib/telegram'
+import { alertaAdmin } from '@/lib/alertas-admin'
 import { notificar } from '@/lib/avisos'
 import { registrarEvento } from '@/lib/eventos'
 import { esc } from '@/lib/html'
@@ -74,7 +75,7 @@ export async function POST(req: NextRequest) {
     const slotLabel = solicitud.slot_confirmado ? formatSlotVE(solicitud.slot_confirmado) : ''
 
     if (nadieLlego) {
-      await avisarAdmin([
+      await alertaAdmin('tarea', [
         `⚠️ <b>Sala de entrevista expiró sin participantes</b>`, ``,
         `<b>Cliente:</b> ${esc(cliente?.nombre ?? '—')} (${esc(cliente?.email ?? '—')})`,
         `<b>Compita:</b> ${esc(solicitud.compita_nombre)}`,
@@ -103,7 +104,7 @@ export async function POST(req: NextRequest) {
       plazoAccionMin: 120, // si en 2 h no decide, la escalera (paso 1.5) le recuerda y luego abre tarea en la Bandeja
     })
     if (!alCliente.ok) {
-      await avisarAdmin(`⚠️ No se pudo enviar el correo post-llamada a <b>${esc(cliente?.nombre ?? 'el cliente')}</b> (${esc(cliente?.email ?? 'sin correo')}). Reenvíalo manualmente.`)
+      await alertaAdmin('tarea', `⚠️ No se pudo enviar el correo post-llamada a <b>${esc(cliente?.nombre ?? 'el cliente')}</b> (${esc(cliente?.email ?? 'sin correo')}). Reenvíalo manualmente.`)
     }
     await notificar({
       plantilla: 'llamada_terminada_compita', canal: 'telegram', destinatario: { tipo: 'compita', id: solicitud.compita_id },
@@ -113,7 +114,7 @@ export async function POST(req: NextRequest) {
   } catch (e) {
     // El flag ya está reclamado: un reintento de Daily no reenviaría nada. Se avisa al admin y se responde 200.
     console.error('[webhook daily] error:', e)
-    await avisarAdmin(`⚠️ Falló el procesamiento de fin de llamada (sala <code>${esc(roomName)}</code>). Revisa los logs y avisa a las partes manualmente.`)
+    await alertaAdmin('urgente', `⚠️ Falló el procesamiento de fin de llamada (sala <code>${esc(roomName)}</code>). Revisa los logs y avisa a las partes manualmente.`)
   }
 
   return NextResponse.json({ ok: true })

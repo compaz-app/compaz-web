@@ -1,5 +1,5 @@
 /* eslint-disable */
-import { db, net, session, limpiar, req, tgText, tgPara, emailsA, ahoraMas, hoyVEstr, mkCompita, mkCliente, mkSolicitud, confirmarLlegada } from './harness'
+import { db, net, session, limpiar, req, tgText, tgPara, emailsA, ahoraMas, hoyVEstr, mkCompita, mkCliente, mkSolicitud, confirmarLlegada, avisosAdmin } from './harness'
 import { beforeEach, test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import { calcularCreditos } from '@/lib/creditos'
@@ -74,7 +74,7 @@ describe('Agendar otra visita con créditos', () => {
     const { carlos } = mundoCon([{ inicioDias: -2, venceDias: 58, visitas: 1, plan: 'carta' }], [1])
     como(carlos); const r = await nueva()
     assert.equal(r.status, 409)
-    assert.ok(tgPara(999).some((m) => m.text.includes('Plan agotado')))
+    assert.ok(avisosAdmin().some((m) => m.text.includes('Plan agotado')))
   })
 
   test('Compañía: el saldo del mes anterior se suma y todo se puede usar', async () => {

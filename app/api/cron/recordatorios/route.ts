@@ -4,6 +4,7 @@ import { NextRequest } from 'next/server'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { getSolicitudesParaRecordatorio, reclamarFlag, liberarFlag, guardarRoomUrl } from '@/lib/solicitudes'
 import { sendTelegramMessage, avisarAdmin } from '@/lib/telegram'
+import { alertaAdmin } from '@/lib/alertas-admin'
 import { createEntrevistaRoom } from '@/lib/daily'
 import { sendEmail, SITE_URL } from '@/lib/email'
 import { esc } from '@/lib/html'
@@ -35,7 +36,7 @@ export async function POST(req: NextRequest) {
         } catch (e) {
           console.error('Error creando sala Daily en recordatorio:', e)
           if (await reclamarUnaVez(`sala_fail:${solicitud.id}`)) {
-            await avisarAdmin(`🚨 <b>No se pudo crear la sala de la llamada</b>\n\n<b>Compita:</b> ${esc(solicitud.compita_nombre)}\n<b>Hora:</b> ${esc(slotLabel)}\n\nSe reintenta cada 5 min. Si persiste, usa "Enviar link" en el panel admin.`)
+            await alertaAdmin('urgente', `🚨 <b>No se pudo crear la sala de la llamada</b>\n\n<b>Compita:</b> ${esc(solicitud.compita_nombre)}\n<b>Hora:</b> ${esc(slotLabel)}\n\nSe reintenta cada 5 min. Si persiste, usa "Enviar link" en el panel admin.`)
           }
         }
       }
@@ -91,7 +92,7 @@ export async function POST(req: NextRequest) {
         } catch (e) { console.error('Telegram recordatorio compita:', e) }
       }
 
-      await avisarAdmin([
+      await alertaAdmin('actividad', [
         `⏰ <b>Llamada ${esc(horaLabel)}</b>`, ``,
         `<b>Cliente:</b> ${esc(cliente?.nombre ?? '')} (${esc(cliente?.email ?? '')})`,
         `<b>Compita:</b> ${esc(solicitud.compita_nombre)}${compitaAvisada ? '' : ' ⚠️ NO se pudo avisar por Telegram'}`,
@@ -120,7 +121,7 @@ export async function POST(req: NextRequest) {
 
   for (const sol of sinConfirmacion ?? []) {
     if (!(await reclamarUnaVez(`alerta_sala_vacia:${sol.id}`))) continue
-    await avisarAdmin([
+    await alertaAdmin('tarea', [
       `⚠️ <b>Llamada sin confirmar — posible sala vacía</b>`, ``,
       `La entrevista estaba pautada para <b>${esc(formatSlotVE(sol.slot_confirmado))}</b> y no hay registro de que ocurriera.`, ``,
       `<b>Compita:</b> ${esc(sol.compitas?.nombre ?? '—')}`,

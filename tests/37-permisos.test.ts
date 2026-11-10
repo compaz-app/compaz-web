@@ -33,7 +33,7 @@ const ESPERADO: Record<string, string> = {
   'demo/iniciar-visita': 'raiz', 'demo/reset': 'raiz',
   'flags': 'atender', 'resenas': 'atender', 'asignar-compita': 'atender', 'confirmar-solicitud': 'atender',
   'completar-solicitud': 'atender', 'forzar-cierre-visita': 'atender', 'enviar-link-llamada': 'atender',
-  'cliente-preview': 'monitorear',
+  'cliente-preview': 'monitorear', 'dudas': 'monitorear', 'actividad': 'monitorear',
   'generar-invite': 'invitar', 'invitar-cliente': 'invitar', 'registrar-compita': 'invitar',
 }
 // Rutas que NO usan sesión de panel sino un enlace de un solo uso (token) enviado al administrador.

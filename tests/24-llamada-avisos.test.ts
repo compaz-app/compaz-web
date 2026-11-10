@@ -2,7 +2,7 @@
 // Paso 1.4 (flujo C): al terminar la entrevista, la pregunta de contratar sale con notificar().
 // Queda registrada, un fallo se puede reintentar, una sala nueva (tras reconectar) tiene su propio aviso
 // y la decisión del cliente anota la acción y el evento.
-import { db, net, limpiar, req, mkCompita, mkCliente, mkSolicitud, tgPara, emailsA, firmaDaily, ahoraMas } from './harness'
+import { db, net, limpiar, req, mkCompita, mkCliente, mkSolicitud, tgPara, emailsA, firmaDaily, ahoraMas, avisosAdmin } from './harness'
 import { beforeEach, test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import { POST as dailyWebhook } from '@/app/api/webhooks/daily/route'
@@ -61,7 +61,7 @@ describe('webhook de Daily: avisos post-llamada con registro', () => {
     const { sol } = escenario()
     net.resendFail = true
     await terminar(sol, 900)
-    assert.ok(tgPara(999).some((m) => m.text.includes('No se pudo enviar el correo post-llamada')))
+    assert.ok(avisosAdmin().some((m) => m.text.includes('No se pudo enviar el correo post-llamada')))
     const a = avisos('correo')[0]
     assert.equal(a.estado, 'fallido')
     net.resendFail = false

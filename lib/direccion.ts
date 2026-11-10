@@ -5,6 +5,7 @@ import { createAdminSupabase } from '@/lib/supabase-server'
 import { getAjustes } from '@/lib/ajustes'
 import { notificar } from '@/lib/avisos'
 import { avisarAdmin, sendTelegramMessage } from '@/lib/telegram'
+import { alertaAdmin } from '@/lib/alertas-admin'
 import { registrarEvento } from '@/lib/eventos'
 import { detectarContacto } from '@/lib/detectar-contacto'
 import { esc } from '@/lib/html'
@@ -103,7 +104,7 @@ export async function entregarDireccionDeVisita(visitaId: string, ahora: Date = 
   if (r.ok && r.estado === 'duplicado') return 'ya_entregada'
   if (!r.ok) {
     // No se pudo entregar: el equipo debe saberlo ya (la escalera de avisos reintenta; esto es el respaldo humano).
-    await avisarAdmin(`🚨 <b>No se pudo entregar la dirección</b>\n\nLa visita empieza pronto y el aviso con la dirección al compita falló. Contáctalo.`)
+    await alertaAdmin('urgente', `🚨 <b>No se pudo entregar la dirección</b>\n\nLa visita empieza pronto y el aviso con la dirección al compita falló. Contáctalo.`)
     return 'ya_entregada'
   }
   await registrarEvento({ entidad: 'visita', entidadId: v.id, tipo: 'direccion_entregada', actor: 'sistema', datos: { horas_antes: Math.round((falta / 3600_000) * 10) / 10 } })
@@ -132,7 +133,7 @@ async function alertarDireccionFaltante(v: VisitaDir, ahora: Date): Promise<void
   if (chat) {
     try { await sendTelegramMessage(chat, `📍 <b>Aún falta la dirección</b>\n\nEl cliente todavía no registró dónde será la visita. Apenas lo haga te la enviamos por aquí. Ya le avisamos.`) } catch (e) { console.error('[direccion] Telegram al compita:', e) }
   }
-  await avisarAdmin(`📍 <b>Falta la dirección de una visita</b>\n\n<b>${esc((cmp as { nombre: string } | null)?.nombre ?? '')}</b> visita a <b>${esc((cli as { nombre: string } | null)?.nombre ?? '')}</b> en menos de ${Number((await getAjustes()).direccion_horas_antes)} h y no hay dirección. Abrimos una tarea.`)
+  await alertaAdmin('actividad', `📍 <b>Falta la dirección de una visita</b>\n\n<b>${esc((cmp as { nombre: string } | null)?.nombre ?? '')}</b> visita a <b>${esc((cli as { nombre: string } | null)?.nombre ?? '')}</b> en menos de ${Number((await getAjustes()).direccion_horas_antes)} h y no hay dirección. Abrimos una tarea.`)
   void ahora
 }
 

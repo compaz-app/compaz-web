@@ -8,6 +8,7 @@
 
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { avisarAdmin } from '@/lib/telegram'
+import { alertaAdmin } from '@/lib/alertas-admin'
 import { esc } from '@/lib/html'
 import { notificar, reintentarAviso } from '@/lib/avisos'
 import { PLANTILLAS, type Canal, type NombrePlantilla, type VariablesAviso } from '@/lib/plantillas-aviso'
@@ -118,7 +119,7 @@ async function crearTarea(admin: Admin, raizId: string, v: Fila): Promise<boolea
     reportado_por: 'escalera automática',
     resuelto: false,
   })
-  await avisarAdmin(`⏳ <b>${esc(titulo)}</b>\n\n${esc(nota)}`).catch(() => false)
+  await alertaAdmin('actividad', `⏳ <b>${esc(titulo)}</b>\n\n${esc(nota)}`).catch(() => false)
   return true
 }
 

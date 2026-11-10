@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminSupabase } from '@/lib/supabase-server'
+import { alertaAdmin } from '@/lib/alertas-admin'
 import {
   validateTelegramWebhook,
   sendTelegramMessage,
@@ -29,6 +30,8 @@ import { getAjustes } from '@/lib/ajustes'
 import { responderCambioLugar } from '@/lib/lugar'
 import { registrarEvento } from '@/lib/eventos'
 import { salidaPorSeguridad, responderTodoBien } from '@/lib/seguridad'
+import { situacionDelCompita } from '@/lib/que-me-toca'
+import { registrarConsultaQueMeToca, menuDudas, responderDuda, dudaNoResuelta, dudaResuelta, dudaConTexto, recordarAlCliente, esTipoDuda, esTipoRecordatorio } from '@/lib/ayuda'
 import { llegadaConFotoObligatoria, registrarLlegada, declararNadieAbre, cerrarSinAcceso, tecladoLlegada } from '@/lib/llegada'
 import { notificar } from '@/lib/avisos'
 import { confirmarPagoYAvisar } from '@/lib/confirmar-pago'
@@ -263,7 +266,7 @@ async function guardarReporteYEnviarEmail(
     }
   } catch (e) {
     console.error('Error correo resumen con reporte:', e)
-    await avisarAdmin(`⚠️ El cuestionario de <b>${esc(compita.nombre)}</b> se guardó pero no se pudo enviar el correo a <b>${esc(visita.usuario.nombre)}</b> (${esc(visita.usuario.email)}).`)
+    await alertaAdmin('tarea', `⚠️ El cuestionario de <b>${esc(compita.nombre)}</b> se guardó pero no se pudo enviar el correo a <b>${esc(visita.usuario.nombre)}</b> (${esc(visita.usuario.email)}).`)
   }
 
   await sendTelegramMessage(
@@ -335,7 +338,7 @@ async function registrarFalloVinculo(supabase: ReturnType<typeof createAdminSupa
     updated_at: new Date().toISOString(),
   }, { onConflict: 'chat_id' })
   if (n === MAX_FALLOS_VINCULO) {
-    await avisarAdmin(`🚨 Posible intento de suplantar a <b>${esc(nombre)}</b>: ${MAX_FALLOS_VINCULO} códigos de vinculación incorrectos en 24 h. La vinculación de Telegram de esa compita queda bloqueada hasta que pase la ventana o la liberes.`)
+    await alertaAdmin('urgente', `🚨 Posible intento de suplantar a <b>${esc(nombre)}</b>: ${MAX_FALLOS_VINCULO} códigos de vinculación incorrectos en 24 h. La vinculación de Telegram de esa compita queda bloqueada hasta que pase la ventana o la liberes.`)
   }
 }
 
@@ -349,7 +352,7 @@ async function iniciarVerificacion(
   const { data: yaVinc } = await supabase.from('compitas').select('telegram_chat_id').eq('id', c.id).maybeSingle()
   if (yaVinc?.telegram_chat_id) {
     await sendTelegramMessage(chatId, `Esa cuenta ya está vinculada a un Telegram. Si cambiaste de teléfono o es un error, escríbenos a hola@micompaz.com.`, QUITAR_TECLADO)
-    await avisarAdmin(`⚠️ Alguien intentó vincular a <b>${esc(c.nombre)}</b>, que ya tiene Telegram vinculado.`)
+    await alertaAdmin('tarea', `⚠️ Alguien intentó vincular a <b>${esc(c.nombre)}</b>, que ya tiene Telegram vinculado.`)
     return
   }
   if ((await fallosDeVinculo(supabase, c.id)) >= MAX_FALLOS_VINCULO) {
@@ -896,6 +899,58 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
     return NextResponse.json({ ok: true })
   }
 
+  // ── "Tengo una duda": menú de un toque con respuestas automáticas; una persona entra solo si no se resuelve ──────────
+  if ((isCallback && text === 'duda') || text === '🙋 Tengo una duda') {
+    if (!compita) return NextResponse.json({ ok: true })
+    await sendTelegramMessage(chatId, `🙋 <b>¿En qué te ayudamos?</b>\n\nElige lo que te pasa y te respondemos al instante:`, menuDudas())
+    return NextResponse.json({ ok: true })
+  }
+  if (isCallback && text.startsWith('d:')) {
+    const tipo = text.slice(2)
+    if (!compita || !esTipoDuda(tipo)) return NextResponse.json({ ok: true })
+    const r = await responderDuda(tipo, { id: compita.id, nombre: compita.nombre })
+    if (tipo === 'otra') await supabase.from('telegram_estados').upsert({ chat_id: `duda:${chatId}`, pendiente_accion: 'duda_texto:', pendiente_expira: new Date(Date.now() + 30 * 60_000).toISOString(), registro_pendiente: false }, { onConflict: 'chat_id' })
+    await sendTelegramMessage(chatId, r.texto, r.teclado ?? await tecladoSegunEstado())
+    return NextResponse.json({ ok: true })
+  }
+  if (isCallback && text.startsWith('dr:')) {
+    const [, res, tipo] = text.split(':')
+    if (!compita || !esTipoDuda(tipo) || (res !== 'ok' && res !== 'no')) return NextResponse.json({ ok: true })
+    if (res === 'ok') { await dudaResuelta(tipo, { id: compita.id, nombre: compita.nombre }); await sendTelegramMessage(chatId, `✅ Me alegra. Si te surge otra cosa, toca 🙋 Tengo una duda.`, await tecladoSegunEstado()) }
+    else { const r = await dudaNoResuelta(tipo, { id: compita.id, nombre: compita.nombre }); await sendTelegramMessage(chatId, r.texto, r.teclado ?? await tecladoSegunEstado()) }
+    return NextResponse.json({ ok: true })
+  }
+  // ── "Recordarle al cliente": un toque que manda un correo de Compaz (con límite) ─────────────────────────────────
+  if (isCallback && text.startsWith('rc:')) {
+    const [, tipo, id] = text.split(':')
+    if (!compita || !esTipoRecordatorio(tipo) || !id) return NextResponse.json({ ok: true })
+    const r = await recordarAlCliente({ tipo, id, compita: { id: compita.id, nombre: compita.nombre } })
+    await sendTelegramMessage(chatId, r.ok ? `🔔 Listo. Le recordamos al cliente por correo desde Compaz. Te avisamos si responde.`
+      : r.motivo === 'reciente' ? `Ya se lo recordamos hace poco. Dale un tiempo para responder.`
+      : r.motivo === 'limite' ? `Ya le recordamos varias veces. Avisamos al equipo para que lo atienda.`
+      : `Ese paso ya no está pendiente.`, await tecladoSegunEstado())
+    return NextResponse.json({ ok: true })
+  }
+  // Texto de "Otra duda": pasa directo a una persona del equipo (no hay respuesta automática posible)
+  if (!isCallback && text && !text.startsWith('/') && !message.photo) {
+    const { data: esperandoDuda } = await supabase.from('telegram_estados').delete().eq('chat_id', `duda:${chatId}`).select('pendiente_expira').maybeSingle()
+    if (esperandoDuda?.pendiente_expira && new Date(esperandoDuda.pendiente_expira).getTime() > Date.now() && compita) {
+      await dudaConTexto({ id: compita.id, nombre: compita.nombre }, text)
+      await sendTelegramMessage(chatId, `✅ Recibimos tu duda. Un miembro del equipo te responderá por aquí, por Telegram, lo antes posible.`, await tecladoSegunEstado())
+      return NextResponse.json({ ok: true })
+    }
+  }
+
+  // ── "¿Qué me toca?": la situación REAL del compita ahora mismo (se calcula al preguntar; no se guarda nada) ─────────
+  if ((isCallback && text === 'qmt') || text === '❓ ¿Qué me toca?') {
+    if (!compita) return NextResponse.json({ ok: true })
+    const sit = await situacionDelCompita(compita.id, new Date(), chatId)
+    // Cada consulta es un dato para el equipo: qué situación se explicó, y si el compita parece atascado se abre "Duda sin resolver".
+    const { atascado } = await registrarConsultaQueMeToca({ id: compita.id, nombre: compita.nombre }, sit).catch((e) => { console.error('[qmt] no se pudo registrar:', e); return { atascado: false } })
+    await sendTelegramMessage(chatId, atascado ? `${sit.texto}\n\n🙋 <i>Parece que sigues con esto. Ya avisamos al equipo y te escribirán por aquí, por Telegram.</i>` : sit.texto, sit.teclado ?? await tecladoSegunEstado())
+    return NextResponse.json({ ok: true })
+  }
+
   // ── "No me siento seguro": interrumpe la visita sin penalización. Nunca pide confirmar: la prioridad es poder salir ──
   if ((isCallback && text === 'seguro') || text === '🛡️ No me siento seguro') {
     if (!compita) return NextResponse.json({ ok: true })
@@ -946,7 +1001,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
     // Telegram + email siempre (en paralelo); insertar flag visible en el dashboard admin
     const admins = (process.env.ADMIN_EMAILS ?? '').split(',').map((e) => e.trim()).filter(Boolean)
     const [telegramOk, emailOk] = await Promise.allSettled([
-      avisarAdmin(aviso),
+      alertaAdmin('urgente', aviso, { critica: true, sinTarea: true, categoria: 'emergencia', entidad: { tipo: 'compita', id: compita.id, nombre: compita.nombre } }),
       admins.length
         ? sendEmail({
             to: admins,
@@ -1063,7 +1118,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
       const nuevo = (totalReagendados ?? 0) + 1
       await supabase.from('mensajes').insert({ visit_id: objetivo.id, origen: 'admin', tipo: 'texto', contenido: `reagendado:compita` })
       if (nuevo >= 3) {
-        await avisarAdmin([`⚠️ <b>Visita con ${nuevo} reagendados</b>`, ``, `<b>Cliente:</b> ${clienteNombre}`, `<b>Compita:</b> ${esc(compita.nombre)}`, `<b>Iniciador:</b> compita`, ``, `Puede indicar un problema de coordinación. Considera intervenir.`].join('\n'))
+        await alertaAdmin('tarea', [`⚠️ <b>Visita con ${nuevo} reagendados</b>`, ``, `<b>Cliente:</b> ${clienteNombre}`, `<b>Compita:</b> ${esc(compita.nombre)}`, `<b>Iniciador:</b> compita`, ``, `Puede indicar un problema de coordinación. Considera intervenir.`].join('\n'))
       }
     } catch (e) { console.error('Alerta reagendados admin (compita):', e) }
 
@@ -1094,7 +1149,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
       variables: { solicitudId: sol.id }, entidad: 'solicitud', entidadId: sol.id, paso: 6,
     })
     await sendTelegramMessage(chatId, `✅ <b>Aceptaste</b>\n\nEl cliente paga primero. Te avisamos apenas el pago esté confirmado.`, TECLADO_SIN_VISITA)
-    await avisarAdmin(`🤝 <b>${esc(compita.nombre)}</b> aceptó una contratación directa. Esperando el pago del cliente.`)
+    await alertaAdmin('actividad', `🤝 <b>${esc(compita.nombre)}</b> aceptó una contratación directa. Esperando el pago del cliente.`)
     return NextResponse.json({ ok: true })
   }
 
@@ -1159,7 +1214,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
     await sendTelegramMessage(chatId, accion === 'ok'
       ? `✅ Perfecto. Seguimos con la visita y le avisamos al cliente.`
       : `Entendido. Tu seguridad primero: no habrá ninguna penalización. Le avisamos al cliente y la visita vuelve a coordinación.`, TECLADO_SIN_VISITA)
-    if (accion === 'no') await avisarAdmin(`🚫 <b>${esc(compita.nombre)}</b> prefirió no ir a una visita por un cambio de personas en el lugar. Sin penalización; el cliente elegirá otro horario o compita sin costo.`)
+    if (accion === 'no') await alertaAdmin('actividad', `🚫 <b>${esc(compita.nombre)}</b> prefirió no ir a una visita por un cambio de personas en el lugar. Sin penalización; el cliente elegirá otro horario o compita sin costo.`)
     return NextResponse.json({ ok: true })
   }
 
@@ -1230,7 +1285,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
     }
     const solicitud = r.solicitud
 
-    await avisarAdmin(`❌ <b>${esc(compita.nombre)}</b> rechazó una solicitud de entrevista.`)
+    await alertaAdmin('actividad', `❌ <b>${esc(compita.nombre)}</b> rechazó una solicitud de entrevista.`)
 
     const adminSupa = createAdminSupabase()
     const { data: clienteRechazado } = await adminSupa
@@ -1359,7 +1414,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
       try {
         const duracionMin = Math.round((new Date(fin).getTime() - new Date(visita.inicio ?? fin).getTime()) / 60000)
         const duracion = duracionMin >= 60 ? `${Math.floor(duracionMin / 60)}h ${duracionMin % 60}min` : `${duracionMin} min`
-        await avisarAdmin(`✅ <b>Visita terminada</b>\n\n<b>Compita:</b> ${esc(compita.nombre)}\n<b>Cliente:</b> ${esc(visita.usuario?.nombre ?? '—')}\n<b>Duración:</b> ${duracion}`)
+        await alertaAdmin('actividad', `✅ <b>Visita terminada</b>\n\n<b>Compita:</b> ${esc(compita.nombre)}\n<b>Cliente:</b> ${esc(visita.usuario?.nombre ?? '—')}\n<b>Duración:</b> ${duracion}`)
       } catch (e) {
         console.error('Error notificando admin al terminar visita:', e)
       }
@@ -1375,7 +1430,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
           await sendVisitaResumen(visita.usuario, compita, { ...visita, fin }, mensajes ?? [], (visitasAnteriores ?? 0) > 0)
         } catch (e) {
           console.error('Error correo básico al terminar:', e)
-          await avisarAdmin(`⚠️ No se pudo enviar el resumen de visita a <b>${esc(visita.usuario.nombre)}</b> (${esc(visita.usuario.email)}). Reenvíalo manualmente.`)
+          await alertaAdmin('actividad', `⚠️ No se pudo enviar el resumen de visita a <b>${esc(visita.usuario.nombre)}</b> (${esc(visita.usuario.email)}). Reenvíalo manualmente.`)
         }
       }
 

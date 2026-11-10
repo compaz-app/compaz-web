@@ -1,7 +1,7 @@
 /* eslint-disable */
 // Recorridos de punta a punta de lo AUTOMÁTICO, simulando el paso del tiempo: avisos, escalera, eventos,
 // decisiones y motivos encadenados sobre la misma base. Comprueba que las piezas hablan bien entre sí.
-import { db, net, session, limpiar, req, mkCompita, mkCliente, mkSolicitud, ahoraMas, emailsA, tgPara, tgBtn, firmaDaily } from './harness'
+import { db, net, session, limpiar, req, mkCompita, mkCliente, mkSolicitud, ahoraMas, emailsA, tgPara, tgBtn, firmaDaily, avisosAdmin } from './harness'
 import { beforeEach, test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import { POST as crear } from '@/app/api/solicitudes/route'
@@ -54,7 +54,7 @@ describe('recorrido 1: el compita tarda en responder una solicitud', () => {
     assert.equal(e.tareas, 1)
     await procesarEscalera(); await procesarEscalera()
     assert.equal(db.rows('admin_flags').filter((f) => f.reportado_por === 'escalera automática').length, 1, 'una sola tarea aunque la escalera corra muchas veces')
-    assert.ok(tgPara(999).some((m) => /no respondió una solicitud/.test(m.text)))
+    assert.ok(avisosAdmin().some((m) => /no respondió una solicitud/.test(m.text)))
 
     // 5. El compita responde tarde: la solicitud avanza y los avisos quedan con su acción anotada
     await webhook(tgBtn(980, `slot:0:${sol.token_respuesta}`))

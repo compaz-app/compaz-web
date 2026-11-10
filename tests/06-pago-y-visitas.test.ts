@@ -1,5 +1,5 @@
 /* eslint-disable */
-import { db, net, session, limpiar, req, tgText, tgBtn, tgFoto, ultimoTg, tgPara, emailsA, ahoraMas, hoyVEstr, mkCompita, mkCliente, mkSolicitud, mkVisita, confirmarLlegada } from './harness'
+import { db, net, session, limpiar, req, tgText, tgBtn, tgFoto, ultimoTg, tgPara, emailsA, ahoraMas, hoyVEstr, mkCompita, mkCliente, mkSolicitud, mkVisita, confirmarLlegada, avisosAdmin } from './harness'
 import { beforeEach, test, describe, afterEach } from 'node:test'
 import assert from 'node:assert/strict'
 import { POST as pagoConfirmar } from '@/app/api/pago/confirmar/route'
@@ -42,7 +42,7 @@ describe('Pago / contratación (Stripe aún no contratado)', () => {
     assert.equal((await r.json()).data.pendiente, true)
     assert.equal(db.rows('solicitudes')[0].estado, 'aceptada')
     assert.equal(db.rows('visitas').length, 0)
-    assert.ok(tgPara(999).some((m) => m.text.includes('pago pendiente')))
+    assert.ok(avisosAdmin().some((m) => m.text.includes('pago pendiente')))
   })
 
   test('modo simulado/dev: contrata, crea visita, ASIGNA la compita al cliente y avisa a la compita', async () => {
@@ -100,7 +100,7 @@ describe('Ciclo de la visita (cliente ↔ compita)', () => {
     assert.match(tgPara(910).at(-1)!.text, /confirmó tu llegada/)
     assert.match(tgPara(910).at(-1)!.text, /&lt;8am/, 'el "<" del familiar llega escapado')
     assert.equal(emailsA('cli@mail.test').filter((e) => e.subject.includes('llegó con tu familiar')).length, 1)
-    assert.ok(tgPara(999).some((m) => m.text.includes('Visita iniciada')))
+    assert.ok(avisosAdmin().some((m) => m.text.includes('Visita iniciada')))
   })
 
   test('doble toque en "Sí, iniciar": una sola visita en curso y un solo correo', async () => {
@@ -229,7 +229,7 @@ describe('Ciclo de la visita (cliente ↔ compita)', () => {
   test('EMERGENCIA con datos del familiar con HTML: el aviso al admin llega', async () => {
     mundo(); await iniciar(); net.tg = []
     await webhook(tgBtn(910, 'emergencia'))
-    const aviso = tgPara(999).find((m) => m.text.includes('EMERGENCIA'))!
+    const aviso = avisosAdmin().find((m) => m.text.includes('EMERGENCIA'))!
     assert.ok(aviso, 'el admin recibió la emergencia aunque la condición tenga "&"')
     assert.match(aviso.text, /Parkinson &amp; demencia/)
   })

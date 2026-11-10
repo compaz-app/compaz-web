@@ -3,6 +3,7 @@
 import { getClienteActivo } from '@/lib/auth'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { sendTelegramMessage, avisarAdmin, TECLADO_DURANTE_VISITA } from '@/lib/telegram'
+import { alertaAdmin } from '@/lib/alertas-admin'
 import { sendVisitaInicio } from '@/lib/resend'
 import { esc } from '@/lib/html'
 import { ok, err, unauthorized } from '@/lib/api'
@@ -53,11 +54,11 @@ export async function POST(req: Request) {
   try { await sendVisitaInicio(usuario, compita as Parameters<typeof sendVisitaInicio>[1], visita) }
   catch (e) {
     console.error('[confirmar-inicio] email inicio:', e)
-    await avisarAdmin(`⚠️ No se pudo enviar el correo de inicio de visita a <b>${esc(usuario.nombre)}</b> (${esc(usuario.email)}).`)
+    await alertaAdmin('tarea', `⚠️ No se pudo enviar el correo de inicio de visita a <b>${esc(usuario.nombre)}</b> (${esc(usuario.email)}).`)
   }
 
   const horaInicio = new Date(ahora).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Caracas', hour12: true })
-  await avisarAdmin(`▶️ <b>Visita iniciada</b>\n\n<b>Compita:</b> ${esc(compita.nombre)}\n<b>Cliente:</b> ${esc(usuario.nombre)}\n<b>Hora:</b> ${horaInicio}`)
+  await alertaAdmin('actividad', `▶️ <b>Visita iniciada</b>\n\n<b>Compita:</b> ${esc(compita.nombre)}\n<b>Cliente:</b> ${esc(usuario.nombre)}\n<b>Hora:</b> ${horaInicio}`)
 
   return ok({ iniciada: true })
 }

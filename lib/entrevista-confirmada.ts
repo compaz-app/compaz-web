@@ -4,6 +4,7 @@
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { sendEmail, SITE_URL as SITE_URL_PUBLICA } from '@/lib/email'
 import { sendTelegramMessage, avisarAdmin } from '@/lib/telegram'
+import { alertaAdmin } from '@/lib/alertas-admin'
 import { esc } from '@/lib/html'
 import { formatSlotVE } from '@/lib/format'
 import { qRol } from '@/lib/links'
@@ -44,7 +45,7 @@ export async function anunciarEntrevistaConfirmada(i: { solicitud: Solicitud; co
     } catch (e) { console.error('Email cliente confirmación:', e) }
   }
 
-  await avisarAdmin([
+  await alertaAdmin('actividad', [
     `📞 <b>Entrevista confirmada</b>`, ``,
     `<b>Cliente:</b> ${esc(cliente?.nombre ?? '')} (${esc(cliente?.email ?? '')})`,
     `<b>Compita:</b> ${esc(compita.nombre)}`,

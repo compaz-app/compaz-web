@@ -8,6 +8,7 @@ import { ok, err, unauthorized, serverError } from '@/lib/api'
 import { esc } from '@/lib/html'
 import { esSlotFuturo } from '@/lib/format'
 import { avisarAdmin } from '@/lib/telegram'
+import { alertaAdmin } from '@/lib/alertas-admin'
 import { detectarContacto, reportarContactoEnTexto } from '@/lib/chat-moderacion'
 import { notificar } from '@/lib/avisos'
 import { registrarEvento } from '@/lib/eventos'
@@ -142,7 +143,7 @@ export async function POST(req: NextRequest) {
   if (!porTelegram.ok) {
     const porCorreo = compita.email ? await notificar({ ...pedido, canal: 'correo', respaldoDe: porTelegram.avisoId }) : null
     const sinTelegram = porTelegram.error === 'sin Telegram vinculado'
-    await avisarAdmin([
+    await alertaAdmin('tarea', [
       sinTelegram ? `⚠️ <b>Solicitud sin Telegram</b>` : `🚨 <b>No se pudo notificar por Telegram</b>`, ``,
       `<b>${esc(clienteNombre)}</b> solicitó a <b>${esc(compita.nombre)}</b>${sinTelegram ? ' pero no tiene Telegram vinculado.' : ', y el aviso por Telegram falló.'}`,
       porCorreo?.ok ? `Se le notificó por correo.` : compita.email ? `Tampoco se pudo por correo. Contáctala directamente.` : `No tiene correo registrado. Contáctala directamente.`,

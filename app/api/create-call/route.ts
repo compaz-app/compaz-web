@@ -3,6 +3,7 @@ import { createAdminSupabase } from '@/lib/supabase-server'
 import { getClienteActivo } from '@/lib/auth'
 import { getOrCreateDailyRoom } from '@/lib/daily'
 import { sendTelegramMessage, avisarAdmin } from '@/lib/telegram'
+import { alertaAdmin } from '@/lib/alertas-admin'
 import { esc } from '@/lib/html'
 import { ok, err, unauthorized, serverError } from '@/lib/api'
 import type { Visita, Compita, Usuario } from '@/types'
@@ -43,7 +44,7 @@ export async function POST(req: NextRequest) {
   }
 
   const tipoAdmin = soloAudio ? 'llamada de voz' : 'videollamada'
-  await avisarAdmin(`${soloAudio ? '📞' : '📹'} <b>${esc(visita.usuario?.nombre ?? 'Un cliente')}</b> inició una ${tipoAdmin} con <b>${esc(visita.compita.nombre)}</b>.\n\n<a href="${room.url}">Unirse →</a>`)
+  await alertaAdmin('actividad', `${soloAudio ? '📞' : '📹'} <b>${esc(visita.usuario?.nombre ?? 'Un cliente')}</b> inició una ${tipoAdmin} con <b>${esc(visita.compita.nombre)}</b>.\n\n<a href="${room.url}">Unirse →</a>`)
 
   return ok({ url: room.url, room_name: room.name })
 }

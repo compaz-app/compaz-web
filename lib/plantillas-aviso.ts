@@ -34,7 +34,7 @@ export interface Plantilla {
 export type NombrePlantilla = 'solicitud_nueva' | 'directa_aceptada' | 'pago_confirmado' | 'llamada_terminada_cliente' | 'llamada_terminada_compita'
   | 'entrevista_aceptada' | 'reserva_pedida' | 'reserva_rechazada' | 'reserva_vencida' | 'lugar_respuesta' | 'direccion_visita' | 'direccion_faltante_cliente' | 'compita_en_camino'
   | 'compita_llego' | 'nadie_abre_cliente' | 'visita_sin_acceso_cliente' | 'nadie_abre_cerrar'
-  | 'salida_seguridad_cliente' | 'todo_bien'
+  | 'salida_seguridad_cliente' | 'todo_bien' | 'recordatorio_cliente'
 
 const etiquetaSlot = (iso: string) =>
   new Date(iso).toLocaleString('es-VE', {
@@ -430,7 +430,7 @@ const direccionVisita: Plantilla = {
         ``, `🔒 Esta dirección es solo para ti: no la compartas. Se entrega por aquí y nunca por el chat.`,
         ``, `⚠️ ${antifraude}`,
       ].join('\n'),
-      teclado: makeInlineKeyboard([[{ text: '🚗 Voy en camino', callback_data: `camino:${vis.id}` }]]),
+      teclado: makeInlineKeyboard([[{ text: '🚗 Voy en camino', callback_data: `camino:${vis.id}` }], [{ text: '🙋 Tengo una duda', callback_data: 'duda' }]]),
     } }
   },
 }
@@ -581,6 +581,46 @@ const todoBien: Plantilla = {
   },
 }
 
+// El compita le recuerda al cliente un paso que está esperando. Sale de Compaz: el cliente nunca ve datos del compita.
+// Solo se envía si el paso sigue pendiente; si ya lo hizo, no se manda.
+const recordatorioCliente: Plantilla = {
+  canales: ['correo'],
+  async render(v) {
+    const tipo = String(v.tipo ?? ''); const id = String(v.id ?? ''); const compitaId = String(v.compitaId ?? '')
+    const admin = createAdminSupabase()
+    const { data: cmp } = await admin.from('compitas').select('nombre').eq('id', compitaId).maybeSingle()
+    const corto = esc(nombreCorto(String(cmp?.nombre ?? '')) || 'Tu compita'); const cortoTxt = nombreCorto(String(cmp?.nombre ?? '')) || 'Tu compita'
+    let clienteId = ''; let asunto = ''; let cuerpo = ''; let enlace = `${SITE_URL}/dashboard`; let boton_ = 'Ir a mi portal →'; let extra = ''
+    if (tipo === 'hora' || tipo === 'pago') {
+      const { data: s } = await admin.from('solicitudes').select('cliente_id, estado, tipo, slot_confirmado').eq('id', id).maybeSingle()
+      if (!s || s.estado !== 'aceptada') return null
+      clienteId = String(s.cliente_id)
+      if (tipo === 'hora') {
+        if (s.slot_confirmado) return null
+        asunto = `${cortoTxt} está esperando que elijas la hora`; cuerpo = `${corto} aceptó hablar contigo y está esperando que elijas una de sus horas libres para la videollamada.`; enlace = `${SITE_URL}/solicitar/hora?solicitud=${encodeURIComponent(id)}`; boton_ = 'Elegir la hora →'
+      } else {
+        const { data: vis } = await admin.from('visitas').select('id').eq('compita_id', compitaId).eq('usuario_id', clienteId).limit(1).maybeSingle()
+        if (vis) return null // ya pagó y hay visita
+        asunto = `${cortoTxt} aceptó. Falta tu pago`; cuerpo = `${corto} aceptó tu solicitud y está esperando que completes el pago para empezar.`; enlace = `${SITE_URL}/pago?solicitud=${encodeURIComponent(id)}`; boton_ = 'Ir al pago →'
+        extra = `<p style="color:#92400E;background:#FFFBEB;border:1px solid #F5B800;border-radius:12px;padding:12px;font-size:13px;line-height:1.5;margin-top:24px"><strong>Cuidado con los fraudes.</strong> ${esc(String(await getAjuste('antifraude_cliente')))}</p>`
+      }
+    } else {
+      const { data: vis } = await admin.from('visitas').select('usuario_id, estado, fecha_programada, direccion').eq('id', id).maybeSingle()
+      if (!vis) return null
+      clienteId = String(vis.usuario_id)
+      if (tipo === 'dir') { if (vis.estado !== 'programada' || vis.direccion) return null; asunto = 'Falta la dirección de tu visita'; cuerpo = `${corto} necesita la dirección de la visita para poder llegar. Regístrala en tu portal.`; boton_ = 'Registrar la dirección →' }
+      else if (tipo === 'fecha') { if (vis.estado !== 'pre_visita' || vis.fecha_programada) return null; asunto = 'Falta registrar la fecha de tu visita'; cuerpo = `${corto} está esperando que registres la fecha y la hora de la visita en tu portal.`; boton_ = 'Registrar la fecha →' }
+      else return null
+    }
+    const { data: cli } = await admin.from('usuarios').select('nombre').eq('id', clienteId).maybeSingle()
+    const primero = esc(String(cli?.nombre ?? '').split(' ')[0])
+    return { correo: { asunto, html: marco(`
+      <h2 style="color:#2D1464;font-size:22px">${esc(asunto)}</h2>
+      <p style="color:#4A3B6B;font-size:16px;line-height:1.6">Hola, ${primero}. ${cuerpo}</p>
+      ${boton(enlace, boton_)}${extra}`) } }
+  },
+}
+
 export const PLANTILLAS: Record<NombrePlantilla, Plantilla> = {
   solicitud_nueva: solicitudNueva,
   directa_aceptada: directaAceptada,
@@ -601,4 +641,5 @@ export const PLANTILLAS: Record<NombrePlantilla, Plantilla> = {
   nadie_abre_cerrar: nadieAbreCerrar,
   salida_seguridad_cliente: salidaSeguridadCliente,
   todo_bien: todoBien,
+  recordatorio_cliente: recordatorioCliente,
 }

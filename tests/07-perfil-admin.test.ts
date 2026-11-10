@@ -1,5 +1,5 @@
 /* eslint-disable */
-import { db, net, session, limpiar, req, tgText, ultimoTg, tgPara, emailsA, ahoraMas, mkCompita, mkCliente, mkSolicitud, mkVisita } from './harness'
+import { db, net, session, limpiar, req, tgText, ultimoTg, tgPara, emailsA, ahoraMas, mkCompita, mkCliente, mkSolicitud, mkVisita, avisosAdmin } from './harness'
 import { beforeEach, test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import { GET as perfilGet, PUT as perfilPut } from '@/app/api/compita/perfil/route'
@@ -183,7 +183,7 @@ describe('Panel admin', () => {
     session.user = { id: cli.id, email: cli.email }
     const r = await meInteresa(req('/api/me-interesa', { json: { compita_id: c.id, compita_nombre: '<script>alert(1)</script>' } }))
     assert.equal(r.status, 200)
-    const tg = tgPara(999)[0].text
+    const tg = avisosAdmin()[0].text
     assert.ok(tg.includes('María') && !tg.includes('<script>'))
     assert.ok(!net.emails[0].html.includes('<script>'))
   })

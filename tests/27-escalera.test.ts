@@ -1,7 +1,7 @@
 /* eslint-disable */
 // Paso 1.5: escalera de respaldo (lib/escalera.ts y cron escalera-avisos).
 // Se mide la acción, no la entrega: un aviso entregado que nadie atiende pasa al correo y luego al equipo.
-import { db, net, limpiar, cron, mkCompita, mkCliente, mkSolicitud, tgPara, emailsA, ahoraMas } from './harness'
+import { db, net, limpiar, cron, mkCompita, mkCliente, mkSolicitud, tgPara, emailsA, ahoraMas, avisosAdmin } from './harness'
 import { beforeEach, test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import { procesarEscalera } from '@/lib/escalera'
@@ -100,7 +100,7 @@ describe('avisos sin acción: respaldo y luego tarea para el equipo', () => {
     assert.equal(flag.entidad_tipo, 'compita')
     assert.match(flag.entidad_nombre, /Lucía Pérez no respondió una solicitud/)
     assert.equal(flag.reportado_por, 'escalera automática')
-    assert.ok(tgPara(999).some((m) => /no respondió una solicitud/.test(m.text)), 'el admin lo sabe')
+    assert.ok(avisosAdmin().some((m) => /no respondió una solicitud/.test(m.text)), 'el admin lo sabe')
     assert.ok(avisos().some((a) => a.clave_unica === `escalera_tarea:${original.id}`), 'queda la marca de idempotencia')
 
     const r2 = await procesarEscalera()

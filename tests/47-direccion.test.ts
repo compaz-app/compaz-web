@@ -1,7 +1,7 @@
 /* eslint-disable */
 // Lote 4 (tramo 1): dirección por cita. El cliente la registra; el compita la recibe 3 horas antes por Telegram, nunca el
 // teléfono del contacto; si falta, se avisa y se abre una tarea; "Voy en camino" avisa al cliente.
-import { db, net, limpiar, req, session, mkCliente, mkCompita, mkVisita, tgBtn, tgPara, emailsA, cron } from './harness'
+import { db, net, limpiar, req, session, mkCliente, mkCompita, mkVisita, tgBtn, tgPara, emailsA, cron, avisosAdmin } from './harness'
 import { beforeEach, test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import { GET as dirGet, PUT as dirPut } from '@/app/api/visita/direccion/route'
@@ -85,7 +85,7 @@ describe('el compita recibe la dirección 3 horas antes', () => {
     assert.ok(!m.text.includes('555') && !m.text.includes('+58'), 'el teléfono del contacto NUNCA llega al compita')
     assert.match(m.text, /nunca por el chat/); assert.match(m.text, /Compaz nunca te pedirá/, 'lleva la advertencia antifraude')
     assert.match(m.text, /Quién más estará/)
-    assert.deepEqual((m.markup?.inline_keyboard ?? []).flat().map((b: any) => b.callback_data), [`camino:${db.rows('visitas')[0].id}`])
+    assert.deepEqual((m.markup?.inline_keyboard ?? []).flat().map((b: any) => b.callback_data), [`camino:${db.rows('visitas')[0].id}`, 'duda'])
     assert.ok(db.rows('eventos').some((e) => e.tipo === 'direccion_entregada'))
   })
 
@@ -131,7 +131,7 @@ describe('si el cliente no registró la dirección', () => {
     assert.equal(emailsA('caro@mail.test').filter((e) => /Falta la dirección/.test(e.subject)).length, 1)
     const t = db.rows('admin_flags').filter((f) => f.tipo === 'direccion_faltante')
     assert.equal(t.length, 1); assert.equal(t[0].prioridad, 1)
-    assert.ok(tgPara('999').some((m) => /Falta la dirección/.test(m.text)))
+    assert.ok(avisosAdmin().some((m) => /Falta la dirección/.test(m.text)))
     assert.equal(mensajesDireccion().length, 0)
   })
   test('cuando por fin la registra: se entrega ya y la tarea se resuelve sola', async () => {

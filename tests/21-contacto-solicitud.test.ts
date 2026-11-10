@@ -1,7 +1,7 @@
 /* eslint-disable */
 // Fuga de contactos en los textos libres: la solicitud de entrevista y los horarios sugeridos por el compita.
 // El teléfono y el correo se censuran antes de llegar a la otra parte y el equipo recibe una alerta (como en el chat).
-import { db, net, limpiar, req, session, mkCompita, mkCliente, mkSolicitud, ahoraMas, tgPara, tgText, emailsA } from './harness'
+import { db, net, limpiar, req, session, mkCompita, mkCliente, mkSolicitud, ahoraMas, tgPara, tgText, emailsA, avisosAdmin } from './harness'
 import { beforeEach, test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import { POST as crear } from '@/app/api/solicitudes/route'
@@ -49,7 +49,7 @@ describe('POST /api/solicitudes: contactos en el texto libre', () => {
     assert.equal(flag.entidad_id, cliente.id)
     assert.equal(flag.reportado_por, 'moderación automática')
     assert.equal(flag.resuelto, false)
-    assert.ok(net.tg.some((m) => m.chat === '999' && /Contacto externo/.test(m.text)), 'el admin recibe la alerta por Telegram')
+    assert.ok(avisosAdmin().some((m) => /Contacto externo/.test(m.text)), 'el admin recibe la alerta por Telegram')
   })
 
   test('un texto normal no se toca y no genera alerta', async () => {
@@ -69,7 +69,7 @@ describe('reportarContactoEnTexto', () => {
     const flag = db.rows('admin_flags')[0]
     assert.equal(flag.entidad_tipo, 'compita')
     assert.match(flag.nota, /los horarios sugeridos al cliente/)
-    assert.ok(net.tg.some((m) => m.chat === '999'))
+    assert.ok(avisosAdmin().length > 0)
     net.tgFailAll = true
     db.fail['admin_flags:insert'] = 1
     await assert.doesNotReject(reportarContactoEnTexto({ origen: 'cliente', donde: 'x', quien: 'y', entidadTipo: 'cliente', entidadId: 'z', textoOriginal: 't' }))
@@ -93,7 +93,7 @@ describe('Horarios sugeridos por el compita (Telegram): contactos en el texto', 
     assert.ok(!/1234567/.test(correos[0].html), 'el correo al cliente no lleva el teléfono')
     const flag = db.rows('admin_flags')[0]
     assert.equal(flag.entidad_tipo, 'compita')
-    assert.ok(tgPara(999).some((m) => /Contacto externo/.test(m.text)), 'el admin recibe la alerta')
+    assert.ok(avisosAdmin().some((m) => /Contacto externo/.test(m.text)), 'el admin recibe la alerta')
   })
 })
 

@@ -100,6 +100,7 @@ export default async function AdminPage({
         visitasMes={visitasMes ?? 0}
         defaultTab={defaultTab}
         clientesInactivos={[...clientesInactivosSet]}
+        permisos={{ atender: puede(actor, 'atender'), monitorear: puede(actor, 'monitorear'), telefonos: puede(actor, 'telefonos') }}
       />
     </Suspense>
   )

@@ -1,6 +1,6 @@
 /* eslint-disable */
 // Recorridos completos y encadenados: admin + compita + cliente + crons + Daily sobre la MISMA base de datos.
-import { db, net, session, limpiar, req, tgText, tgBtn, tgFoto, ultimoTg, tgPara, emailsA, cron, ahoraMas, hoyVEstr, firmaDaily, mkCompita, mkCliente, confirmarLlegada } from './harness'
+import { db, net, session, limpiar, req, tgText, tgBtn, tgFoto, ultimoTg, tgPara, emailsA, cron, ahoraMas, hoyVEstr, firmaDaily, mkCompita, mkCliente, confirmarLlegada, avisosAdmin } from './harness'
 import { beforeEach, test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import { tokenRating } from '@/lib/links'
@@ -155,7 +155,7 @@ describe('RECORRIDO 1: de la invitación de la compita hasta la valoración, tod
     // ── 13. Pasan 40 días sin otra visita → alerta de churn al admin
     visita.fin = hace(40 * 24 * 60)
     await churn(cron('c'))
-    assert.ok(tgPara(999).some((m) => m.text.includes('necesitan seguimiento')))
+    assert.ok(avisosAdmin().some((m) => m.text.includes('necesitan seguimiento')))
   })
 })
 
@@ -348,7 +348,7 @@ describe('RECORRIDO 4: varios usuarios a la vez sobre la misma plataforma', () =
   test('me-interesa → admin asigna → el cliente aparece en el bot de esa compita', async () => {
     const lucia = mkCompita({ telegram_chat_id: '2310' }); const carlos = mkCliente({ email: 'carlos@mail.test' }); como(carlos)
     await meInteresa(req('/api/me-interesa', { json: { compita_id: lucia.id } }))
-    const link = tgPara(999)[0].text.match(/token=([0-9a-f]+)/)![1]
+    const link = avisosAdmin()[0].text.match(/token=([0-9a-f]+)/)![1]
     const { POST: rapido } = await import('@/app/api/admin/asignar-rapido/route')
     await rapido(req(`/api/admin/asignar-rapido?token=${link}`, { method: 'POST' }))
     assert.equal(carlos.compita_id, lucia.id)

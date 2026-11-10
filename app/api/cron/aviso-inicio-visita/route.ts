@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { sendTelegramMessage, avisarAdmin, TECLADO_INICIO, TECLADO_DURANTE_VISITA } from '@/lib/telegram'
+import { alertaAdmin } from '@/lib/alertas-admin'
 import { sendVisitaInicio } from '@/lib/resend'
 import { esc } from '@/lib/html'
 import { hoyVE, horaVE } from '@/lib/format'
@@ -47,10 +48,10 @@ export async function POST(req: NextRequest) {
         enviados++
       } catch (e) {
         console.error('[aviso-inicio-visita] Telegram falló:', e)
-        await avisarAdmin(`⚠️ No se pudo enviar el aviso de inicio a <b>${esc(compita.nombre)}</b> para la visita con <b>${esc(cliente?.nombre ?? '—')}</b> a las <b>${esc(visita.hora_inicio_programada!)}</b>. Contáctala manualmente.`)
+        await alertaAdmin('tarea', `⚠️ No se pudo enviar el aviso de inicio a <b>${esc(compita.nombre)}</b> para la visita con <b>${esc(cliente?.nombre ?? '—')}</b> a las <b>${esc(visita.hora_inicio_programada!)}</b>. Contáctala manualmente.`)
       }
     } else {
-      await avisarAdmin(`⚠️ <b>${esc(compita?.nombre ?? '—')}</b> no tiene Telegram registrado. Su visita con <b>${esc(cliente?.nombre ?? '—')}</b> empieza a las <b>${esc(visita.hora_inicio_programada!)}</b>. Avísale tú.`)
+      await alertaAdmin('tarea', `⚠️ <b>${esc(compita?.nombre ?? '—')}</b> no tiene Telegram registrado. Su visita con <b>${esc(cliente?.nombre ?? '—')}</b> empieza a las <b>${esc(visita.hora_inicio_programada!)}</b>. Avísale tú.`)
     }
   }
 
@@ -100,7 +101,7 @@ export async function POST(req: NextRequest) {
     catch (e) { console.error('[aviso-inicio-visita] email auto-confirma:', e) }
 
     const horaInicio = new Date(ahora).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Caracas', hour12: true })
-    await avisarAdmin(`▶️ <b>Visita auto-iniciada</b> (cliente no confirmó)\n\n<b>Compita:</b> ${esc(compita.nombre)}\n<b>Cliente:</b> ${esc(usuario.nombre)}\n<b>Hora:</b> ${horaInicio}`)
+    await alertaAdmin('actividad', `▶️ <b>Visita auto-iniciada</b> (cliente no confirmó)\n\n<b>Compita:</b> ${esc(compita.nombre)}\n<b>Cliente:</b> ${esc(usuario.nombre)}\n<b>Hora:</b> ${horaInicio}`)
     autoConfirmados++
   }
 

@@ -5,6 +5,7 @@
 import { getClienteActivo } from '@/lib/auth'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { sendTelegramMessage, avisarAdmin } from '@/lib/telegram'
+import { alertaAdmin } from '@/lib/alertas-admin'
 import { esc } from '@/lib/html'
 import { ok, err, unauthorized } from '@/lib/api'
 import { registrarCancelacion, evaluarCancelacionCliente } from '@/lib/cancelaciones'
@@ -85,7 +86,7 @@ export async function POST(req: Request) {
     } catch (err2) { console.error('[visita/cancelar] Telegram compita:', err2) }
   }
 
-  await avisarAdmin(`ℹ️ <b>${esc(clienteNombre)}</b> canceló la visita con <b>${esc(compitaNombre)}</b>${e.cuentaComoUsada ? ` <b>con poco aviso (${e.horasDeAviso} h): cuenta como usada</b>` : ''}.${mensaje ? `\n<b>Motivo:</b> ${esc(mensaje)}` : ''}`)
+  await alertaAdmin('actividad', `ℹ️ <b>${esc(clienteNombre)}</b> canceló la visita con <b>${esc(compitaNombre)}</b>${e.cuentaComoUsada ? ` <b>con poco aviso (${e.horasDeAviso} h): cuenta como usada</b>` : ''}.${mensaje ? `\n<b>Motivo:</b> ${esc(mensaje)}` : ''}`)
 
   return ok({ cuenta_como_usada: e.cuentaComoUsada })
 }

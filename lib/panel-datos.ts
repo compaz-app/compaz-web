@@ -5,6 +5,7 @@
 
 import type { Actor } from '@/lib/permisos'
 import { puede } from '@/lib/permisos'
+import { detectarContacto } from '@/lib/detectar-contacto'
 
 const OCULTO = 'oculto'
 
@@ -33,4 +34,9 @@ export function recortarParaActor<T>(actor: Actor, datos: T): T {
     return v
   }
   return recorrer(datos) as T
+}
+
+/** Un texto libre del sistema (nota de una tarea, resumen de actividad): sin 'telefonos' se le tapan teléfonos y correos. */
+export function recortarTexto(actor: Actor, texto: string): string {
+  return puede(actor, 'telefonos') ? texto : detectarContacto(texto).textoCensurado
 }

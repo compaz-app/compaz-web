@@ -161,3 +161,13 @@ export async function confirmarLlegada() {
   }
   session.user = previo
 }
+
+/**
+ * Todo lo que se le avisó al equipo, por el canal que sea y SIN duplicar: las urgencias salen por Telegram al dueño; las tareas y lo
+ * informativo quedan en el registro de actividad del panel (no suenan). Las pruebas que solo quieren saber "¿se le avisó al admin?"
+ * usan esto; las de la política (qué suena y qué no) miran cada canal por separado.
+ */
+export const avisosAdmin = () => [
+  ...net.tg.filter((m) => m.chat === '999'),
+  ...db.rows('actividad_admin').filter((r) => r.nivel !== 'urgente').map((r) => ({ chat: '999', text: String(r.resumen), markup: undefined as any })),
+]

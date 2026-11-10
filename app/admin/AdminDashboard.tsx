@@ -3,6 +3,8 @@
 import { fotoSrc } from '@/lib/fotos'
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import AtencionPanel from './AtencionPanel'
+import ActividadPanel from './ActividadPanel'
 import { createBrowserSupabase } from '@/lib/supabase'
 import type { Visita, Compita, Usuario, Mensaje } from '@/types'
 import type { SolicitudAdmin } from './page'
@@ -24,9 +26,11 @@ interface Props {
   visitasMes: number
   defaultTab: string
   clientesInactivos?: string[]
+  /** Qué puede hacer quien mira el panel (el servidor lo vuelve a comprobar en cada acción). Por defecto: todo (administrador). */
+  permisos?: { atender: boolean; monitorear: boolean; telefonos: boolean }
 }
 
-type Tab = 'visitas' | 'clientes' | 'compitas' | 'desactivadas' | 'historial' | 'solicitudes' | 'cliente' | 'accesos' | 'perfil' | 'atencion' | 'resenas' | 'demo'
+type Tab = 'visitas' | 'clientes' | 'compitas' | 'desactivadas' | 'historial' | 'solicitudes' | 'cliente' | 'accesos' | 'perfil' | 'atencion' | 'actividad' | 'resenas' | 'demo'
 
 type Resena = {
   id: string
@@ -49,6 +53,8 @@ type AdminFlag = {
   reportado_por: string
   resuelto: boolean
   created_at: string
+  tipo?: string | null
+  prioridad?: number | null
 }
 
 type FlagModal = {
@@ -57,7 +63,7 @@ type FlagModal = {
   entidad_nombre: string
 } | null
 
-export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisita: inicialPreVisita, usuarios, compitas: todasCompitas, visitasPasadas, todasSolicitudes, visitasMes, defaultTab, clientesInactivos }: Props) {
+export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisita: inicialPreVisita, usuarios, compitas: todasCompitas, visitasPasadas, todasSolicitudes, visitasMes, defaultTab, clientesInactivos, permisos = { atender: true, monitorear: true, telefonos: true } }: Props) {
   const router = useRouter()
   const [tab, setTabState] = useState<Tab>((defaultTab as Tab) ?? 'visitas')
 
@@ -105,7 +111,8 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
         })
     }
     cargarFlags()
-    const t = setInterval(cargarFlags, 120_000)
+    // Cada 20 segundos mientras la pestaña esté visible: así el equipo (que no recibe tiempo real) ve lo nuevo casi al instante.
+    const t = setInterval(() => { if (document.visibilityState === 'visible') cargarFlags() }, 20_000)
     return () => clearInterval(t)
   }, [])
 
@@ -549,9 +556,12 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
         <button style={tabStyle('resenas')} onClick={() => { setTab('resenas'); if (!resenasCargadas) { fetch('/api/admin/resenas').then(r => r.json()).then(d => { if (Array.isArray(d.data)) { setResenas(d.data); setResenasCargadas(true) } }) } }}>
           Reseñas {resenas.filter(r => !r.publicada).length > 0 && <span style={{ background: '#7C4DFF', color: 'white', borderRadius: '9999px', padding: '1px 7px', fontSize: '11px', fontWeight: 800, marginLeft: '4px' }}>{resenas.filter(r => !r.publicada).length}</span>}
         </button>
-        <button style={tabStyle('atencion')} onClick={() => setTab('atencion')}>
-          ⚑ Atención {flagsAbiertos.length > 0 && <span style={{ background: '#dc2626', color: 'white', borderRadius: '9999px', padding: '1px 7px', fontSize: '11px', fontWeight: 800, marginLeft: '4px' }}>{flagsAbiertos.length}</span>}
-        </button>
+        {permisos.atender && (
+          <button style={tabStyle('atencion')} onClick={() => setTab('atencion')}>
+            ⚑ Atención {flagsAbiertos.length > 0 && <span style={{ background: '#dc2626', color: 'white', borderRadius: '9999px', padding: '1px 7px', fontSize: '11px', fontWeight: 800, marginLeft: '4px' }}>{flagsAbiertos.length}</span>}
+          </button>
+        )}
+        {permisos.monitorear && <button style={tabStyle('actividad')} onClick={() => setTab('actividad')}>Actividad</button>}
         <button style={{ ...tabStyle('demo'), borderBottom: tab === 'demo' ? '3px solid #FF6B2B' : '3px solid transparent', color: tab === 'demo' ? '#FF6B2B' : '#6B5C90' }} onClick={() => setTab('demo')}>
           🎬 Demo
         </button>
@@ -1040,66 +1050,24 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
           </div>
         )}
 
-        {/* ── Atención ──────────────────────────────────────────────────────── */}
-        {tab === 'atencion' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {flagsAbiertos.length === 0 ? (
-              <div style={{ background: 'white', border: '2px solid #E8E0D4', borderRadius: '16px', padding: '48px', textAlign: 'center' }}>
-                <p style={{ color: '#6B5C90', fontSize: '15px' }}>No hay marcas pendientes. Todo en orden.</p>
-              </div>
-            ) : (
-              <>
-                {(['visita', 'compita', 'cliente'] as const).map((tipo) => {
-                  const grupo = flagsAbiertos.filter((f) => f.entidad_tipo === tipo)
-                  if (grupo.length === 0) return null
-                  const label = tipo === 'visita' ? 'Visitas' : tipo === 'compita' ? 'Compitas' : 'Clientes'
-                  return (
-                    <div key={tipo}>
-                      <div style={{ fontSize: '12px', fontWeight: 800, color: '#9B8AB8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>{label}</div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        {grupo.map((f) => (
-                          <div key={f.id} style={{ background: 'white', border: '2px solid #fca5a5', borderRadius: '12px', padding: '16px 20px', display: 'flex', alignItems: 'flex-start', gap: '12px', flexWrap: 'wrap' }}>
-                            <div style={{ flex: 1, minWidth: '180px' }}>
-                              <div style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, color: '#1A0A3C', fontSize: '14px', marginBottom: '4px' }}>{f.entidad_nombre}</div>
-                              <div style={{ fontSize: '14px', color: '#4A3B6B' }}>{f.nota}</div>
-                              <div style={{ fontSize: '12px', color: '#9B8AB8', marginTop: '6px' }}>
-                                {f.reportado_por} · {new Date(f.created_at).toLocaleDateString('es-VE', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Caracas' })}
-                              </div>
-                            </div>
-                            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                              <button
-                                onClick={() => {
-                                  if (f.entidad_tipo === 'compita') {
-                                    setCompitaPerfilId(f.entidad_id)
-                                    setTab('perfil')
-                                  } else if (f.entidad_tipo === 'cliente') {
-                                    setTab('clientes')
-                                  } else {
-                                    setVisitaSeleccionada(f.entidad_id)
-                                    setTab('visitas')
-                                  }
-                                }}
-                                style={{ background: '#F5F0FF', border: '1.5px solid #D4C9E8', color: '#4A3B6B', borderRadius: '9999px', padding: '5px 14px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Bricolage Grotesque, sans-serif', whiteSpace: 'nowrap' }}
-                              >
-                                Ver →
-                              </button>
-                              <button
-                                onClick={() => resolverFlag(f.id)}
-                                style={{ background: '#F0FDF4', border: '1.5px solid #22c55e', color: '#15803d', borderRadius: '9999px', padding: '5px 14px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Bricolage Grotesque, sans-serif', whiteSpace: 'nowrap' }}
-                              >
-                                ✓ Resolver
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )
-                })}
-              </>
-            )}
-          </div>
+        {/* ── Atención: la bandeja del equipo ───────────────────────────────── */}
+        {tab === 'atencion' && !permisos.atender && <SinPermiso que="la bandeja de Atención" />}
+        {tab === 'atencion' && permisos.atender && (
+          <AtencionPanel
+            tareas={flagsAbiertos as never}
+            puedeAtender={permisos.atender}
+            onResolver={resolverFlag}
+            onVer={(f) => {
+              if (f.entidad_tipo === 'compita') { setCompitaPerfilId(f.entidad_id); setTab('perfil') }
+              else if (f.entidad_tipo === 'cliente') setTab('clientes')
+              else { setVisitaSeleccionada(f.entidad_id); setTab('visitas') }
+            }}
+          />
         )}
+
+        {/* ── Actividad: lo que pasó (no suena) ─────────────────────────────── */}
+        {tab === 'actividad' && !permisos.monitorear && <SinPermiso que="la actividad" />}
+        {tab === 'actividad' && permisos.monitorear && <ActividadPanel />}
 
         {/* ── Demo ─────────────────────────────────────────────────────────── */}
         {tab === 'demo' && <DemoTab />}
@@ -2828,6 +2796,16 @@ function InstruccionesInvite() {
           ))}
         </div>
       )}
+    </div>
+  )
+}
+
+
+function SinPermiso({ que }: { que: string }) {
+  return (
+    <div role="alert" style={{ background: 'white', border: '2px solid #E8E0D4', borderRadius: '16px', padding: '40px 24px', textAlign: 'center' }}>
+      <p style={{ color: '#1A0A3C', fontWeight: 800, fontSize: '16px', margin: '0 0 6px' }}>No tienes permiso para ver {que}</p>
+      <p style={{ color: '#6B5C90', fontSize: '14px', margin: 0 }}>Pídeselo a un administrador desde Equipo y permisos.</p>
     </div>
   )
 }

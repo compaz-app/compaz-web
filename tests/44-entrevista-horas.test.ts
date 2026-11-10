@@ -1,7 +1,7 @@
 /* eslint-disable */
 // Lote 3 (tramo 2): "Hablar primero" con horas libres. Pedir → el compita acepta → el cliente elige una hora libre →
 // queda reservada → el compita confirma o dice "No puedo a esa hora" → si no responde, se libera y se avisa.
-import { db, net, limpiar, req, session, mkCliente, mkCompita, tgBtn, tgPara, emailsA, cron } from './harness'
+import { db, net, limpiar, req, session, mkCliente, mkCompita, tgBtn, tgPara, emailsA, cron, avisosAdmin } from './harness'
 import { beforeEach, test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import { POST as solicitar } from '@/app/api/solicitudes/route'
@@ -147,7 +147,7 @@ describe('el compita responde a la hora reservada', () => {
     const m = tgPara(CHAT).at(-1)!
     assert.match(m.text, /Llamada confirmada/)
     assert.ok(JSON.stringify(m.markup).includes('reagendar-compita'), 'con su botón de reagendar')
-    assert.ok(tgPara('999').some((x) => /Entrevista confirmada/.test(x.text)), 'aviso al administrador')
+    assert.ok(avisosAdmin().some((x) => /Entrevista confirmada/.test(x.text)), 'aviso al administrador')
   })
 
   test('"No puedo a esa hora": se libera y el cliente recibe el correo para elegir otra', async () => {
@@ -233,7 +233,7 @@ describe('reagendar una entrevista agendada con horas libres', () => {
     assert.ok(emailsA('caro@mail.test').some((e) => /no puede a esa hora/.test(e.subject) && /solicitar\/hora/.test(e.html)))
     assert.ok((await libres(cliente, sol)).horas.some((h: any) => h.inicio === hora), 'la hora soltada volvió a estar libre')
     assert.ok(db.rows('eventos').some((e) => e.tipo === 'entrevista_reagendada'))
-    assert.ok(tgPara('999').some((m) => /Entrevista reagendada/.test(m.text)))
+    assert.ok(avisosAdmin().some((m) => /Entrevista reagendada/.test(m.text)))
   })
 
   test('el cliente reagenda desde su correo: la página sabe que es el flujo nuevo, suelta la hora y avisa al compita', async () => {

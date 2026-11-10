@@ -56,6 +56,9 @@ export const CATALOGO = [
   { clave: 'canc_ventana_dias', grupo: 'Cancelaciones de compitas', etiqueta: 'Ventana para contar las cancelaciones', tipo: 'numero', defecto: 30, unidad: 'días', min: 7, max: 365, usa: ['Columna y filtro de Personas', 'Ficha del compita'] },
   // ── Ayuda automática
   { clave: 'ayuda_intentos', grupo: 'Ayuda automática', etiqueta: 'Intentos del bot antes de pasar la duda a una persona', tipo: 'numero', defecto: 2, min: 1, max: 5, usa: ['Menú "Tengo una duda" del compita', 'Tarea "Duda sin resolver" en la Bandeja', 'Ayuda del cliente'] },
+  { clave: 'timbre_max_hora', grupo: 'Ayuda automática', etiqueta: 'Máximo de urgencias por hora que suenan por Telegram (el resto se resume en un solo mensaje)', tipo: 'numero', defecto: 8, min: 1, max: 60, usa: ['Telegram del administrador', 'Bandeja del panel'] },
+  { clave: 'recordatorio_cliente_horas', grupo: 'Ayuda automática', etiqueta: 'Horas mínimas entre un recordatorio y otro que el compita le manda al cliente', tipo: 'numero', defecto: 12, unidad: 'h', min: 1, max: 72, usa: ['Botón "Recordarle al cliente" del compita'] },
+  { clave: 'recordatorio_cliente_max', grupo: 'Ayuda automática', etiqueta: 'Máximo de recordatorios al cliente por el mismo pendiente', tipo: 'numero', defecto: 3, min: 1, max: 10, usa: ['Botón "Recordarle al cliente" del compita'] },
   // ── Llamadas (sin límite de cantidad: solo de duración)
   { clave: 'llamada_aviso_min', grupo: 'Llamadas', etiqueta: 'Aviso de fin de una llamada fuera de visita', tipo: 'numero', defecto: 20, unidad: 'min', min: 5, max: 60, usa: ['Videollamadas', 'Llamadas de voz', 'Aviso de fin dentro de la sala'] },
   { clave: 'llamada_corte_min', grupo: 'Llamadas', etiqueta: 'Corte automático de la llamada', tipo: 'numero', defecto: 23, unidad: 'min', min: 6, max: 70, usa: ['Salas de videollamada', 'Costo de la videollamada'] },

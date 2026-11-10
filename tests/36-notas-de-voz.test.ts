@@ -1,6 +1,6 @@
 // Notas de voz: el bot solo retransmite texto y fotos. Antes ignoraba un audio en silencio y el compita creía que el
 // cliente lo había recibido. Ahora responde que no están activas y no guarda ni reenvía nada.
-import { db, net, limpiar, tgReq, tgText, tgFoto, tgPara, emailsA, mkCompita, mkCliente, mkVisita } from './harness'
+import { db, net, limpiar, tgReq, tgText, tgFoto, tgPara, emailsA, mkCompita, mkCliente, mkVisita, avisosAdmin } from './harness'
 import { beforeEach, test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import { POST as webhook } from '@/app/api/telegram-webhook/route'
@@ -34,7 +34,7 @@ describe('notas de voz del compita', () => {
       assert.match(respuestas[0].text, /el cliente no las recibe/)
       assert.equal(db.rows('mensajes').length, 0, 'no se guarda nada en el chat')
       assert.equal(emailsA(cliente.email).length, 0, 'el cliente no recibe nada')
-      assert.equal(tgPara(999).length, 0, 'tampoco se avisa al admin')
+      assert.equal(avisosAdmin().length, 0, 'tampoco se avisa al admin')
     })
   }
 

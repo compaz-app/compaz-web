@@ -5,6 +5,7 @@ import { createAdminSupabase } from '@/lib/supabase-server'
 import { registrarEvento } from '@/lib/eventos'
 import { notificar } from '@/lib/avisos'
 import { sendTelegramMessage, avisarAdmin } from '@/lib/telegram'
+import { alertaAdmin } from '@/lib/alertas-admin'
 import { esc } from '@/lib/html'
 
 /** ¿Esta solicitud es una entrevista agendada con horas libres? (tipo entrevista y sin horarios propuestos). */
@@ -56,6 +57,6 @@ export async function reagendarEntrevista(solicitudId: string, quien: 'cliente' 
       await sendTelegramMessage(String(cmp.telegram_chat_id), `🔄 <b>${esc(String(cli?.nombre ?? 'El cliente').split(' ')[0])} pidió cambiar la hora de la videollamada</b>\n\nElegirá otra de tus horas libres y te avisamos para que la confirmes.`)
     } catch (e) { console.error('[reagendar] Telegram al compita:', e) }
   }
-  await avisarAdmin(`🔄 <b>Entrevista reagendada</b>\n\n${quien === 'compita' ? 'El compita' : 'El cliente'} pidió cambiar la hora.\n<b>Cliente:</b> ${esc(String(cli?.nombre ?? ''))}\n<b>Compita:</b> ${esc(String(cmp?.nombre ?? ''))}\n\nEl cliente elegirá otra hora libre.`)
+  await alertaAdmin('actividad', `🔄 <b>Entrevista reagendada</b>\n\n${quien === 'compita' ? 'El compita' : 'El cliente'} pidió cambiar la hora.\n<b>Cliente:</b> ${esc(String(cli?.nombre ?? ''))}\n<b>Compita:</b> ${esc(String(cmp?.nombre ?? ''))}\n\nEl cliente elegirá otra hora libre.`)
   return { ok: true, yaEstabaSinHora }
 }
