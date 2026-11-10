@@ -8,7 +8,8 @@ import {
 } from '@/lib/ajustes'
 import { PLANES, PRECIO_HORA_EXTRA_USD, PRECIO_MANDADO_USD } from '@/lib/planes'
 
-beforeEach(() => { limpiar(); limpiarCacheAjustes() })
+// Estas pruebas miran la tabla de ajustes tal cual: empiezan sin la fila que el arnés pone para las pruebas del flujo anterior.
+beforeEach(() => { limpiar(); db.rows('ajustes').length = 0; limpiarCacheAjustes() })
 
 const guardar = (clave: string, valor: unknown, extra: Record<string, unknown> = {}) =>
   db.seed('ajustes', { clave, valor, ...extra })

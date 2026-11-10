@@ -28,6 +28,7 @@ import { registrarCancelacion, alertarCancelacionesCompita, horasDeAviso } from 
 import { getAjustes } from '@/lib/ajustes'
 import { responderCambioLugar } from '@/lib/lugar'
 import { registrarEvento } from '@/lib/eventos'
+import { llegadaConFotoObligatoria, registrarLlegada, declararNadieAbre, cerrarSinAcceso, tecladoLlegada } from '@/lib/llegada'
 import { notificar } from '@/lib/avisos'
 import { confirmarPagoYAvisar } from '@/lib/confirmar-pago'
 import { anunciarEntrevistaConfirmada } from '@/lib/entrevista-confirmada'
@@ -126,6 +127,19 @@ async function takeConfirmacion(supabase: ReturnType<typeof createAdminSupabase>
 }
 async function clearConfirmacion(supabase: ReturnType<typeof createAdminSupabase>, chatId: string) {
   await supabase.from('telegram_estados').delete().eq('chat_id', `conf:${chatId}`)
+}
+
+// ── Llegada con foto: el compita debe mandar la foto de la fachada o la puerta antes de iniciar ─────────────────
+async function pedirFotoLlegada(supabase: ReturnType<typeof createAdminSupabase>, chatId: string, visitaId: string) {
+  await supabase.from('telegram_estados').upsert(
+    { chat_id: `lleg:${chatId}`, pendiente_accion: `llegada:${visitaId}`, pendiente_expira: new Date(Date.now() + 20 * 60_000).toISOString(), registro_pendiente: false },
+    { onConflict: 'chat_id' },
+  )
+  await sendTelegramMessage(
+    chatId,
+    `📸 <b>Para avisar que llegaste, envía una foto</b>\n\nTómale una foto a la fachada o a la puerta del lugar y mándala aquí. Es obligatoria: sirve para que la familia sepa que ya estás ahí.\n\nLa foto solo la ve la familia y se borra a los 90 días.`,
+    INLINE_REAGENDAR_VISITA,
+  )
 }
 
 async function guardarReporteYEnviarEmail(
@@ -376,7 +390,7 @@ async function iniciarVerificacion(
 }
 
 type VisitaObj = {
-  id: string; usuario_id: string; estado: string
+  id: string; usuario_id: string; estado: string; llegada_en?: string | null
   fecha_programada: string | null; hora_inicio_programada: string | null; hora_fin_programada: string | null
   usuario: { nombre: string; email: string } | null
 }
@@ -385,7 +399,7 @@ type VisitaObj = {
 async function visitaObjetivo(supabase: ReturnType<typeof createAdminSupabase>, compitaId: string): Promise<VisitaObj | null> {
   const { data } = await supabase
     .from('visitas')
-    .select('id, usuario_id, estado, fecha_programada, hora_inicio_programada, hora_fin_programada, usuario:usuarios(nombre, email)')
+    .select('id, usuario_id, estado, llegada_en, fecha_programada, hora_inicio_programada, hora_fin_programada, usuario:usuarios(nombre, email)')
     .eq('compita_id', compitaId)
     .in('estado', ['programada', 'pre_visita'])
     .order('fecha_programada', { ascending: true, nullsFirst: false })
@@ -779,6 +793,10 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
       ? `${esc(objetivo.hora_inicio_programada)} – ${esc(objetivo.hora_fin_programada)}`
       : null
 
+    // Foto de llegada obligatoria: sin ella no se avanza (y se pide aquí mismo).
+    const exigeFoto = await llegadaConFotoObligatoria()
+    if (exigeFoto && !objetivo.llegada_en) { await pedirFotoLlegada(supabase, chatId, objetivo.id); return NextResponse.json({ ok: true }) }
+
     await setConfirmacion(supabase, chatId, 'iniciar', objetivo.id)
     await sendTelegramMessage(
       chatId,
@@ -792,7 +810,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
         ``,
         `Si surgió algún imprevisto, puedes reagendar tocando el botón de abajo.`,
       ].filter(Boolean).join('\n'),
-      INLINE_INICIAR_O_REAGENDAR,
+      exigeFoto ? tecladoLlegada(objetivo.id) : INLINE_INICIAR_O_REAGENDAR,
     )
     return NextResponse.json({ ok: true })
   }
@@ -1055,6 +1073,37 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
     return NextResponse.json({ ok: true })
   }
 
+  // ── "Llegué y nadie abre": empieza la cuenta atrás ────────────────────────────────────────────────────────────
+  if (isCallback && text.startsWith('nadie:')) {
+    const visitaId = text.slice('nadie:'.length)
+    if (!compita || !visitaId) return NextResponse.json({ ok: true })
+    const r = await declararNadieAbre(visitaId, compita.id)
+    if (!r.ok) {
+      await sendTelegramMessage(chatId, r.motivo === 'sin_llegada' ? `Primero envía la foto de llegada (toca ▶️ Iniciar visita).` : `Esa visita ya no está programada.`, TECLADO_SIN_VISITA)
+      return NextResponse.json({ ok: true })
+    }
+    await sendTelegramMessage(chatId, [
+      `🚪 <b>Anotado: nadie abre</b>`, ``,
+      `Espera cerca. Ya le avisamos al cliente y, a los 5 y 15 minutos, el equipo de Compaz intenta comunicarse con el contacto en el sitio y con el cliente.`,
+      `Tu tiempo se paga: si pasan ${r.espera} minutos sin que nadie abra, podrás cerrar la visita desde aquí (se cuenta como usada y cobras el viaje).`,
+      `Si el cliente aparece antes, toca ▶️ Iniciar visita.`,
+    ].join('\n'), TECLADO_INICIO)
+    return NextResponse.json({ ok: true })
+  }
+
+  // ── Cerrar la visita sin acceso (pasaron los 30 minutos) ──────────────────────────────────────────────────────
+  if (isCallback && text.startsWith('sinacceso:')) {
+    const visitaId = text.slice('sinacceso:'.length)
+    if (!compita || !visitaId) return NextResponse.json({ ok: true })
+    const r = await cerrarSinAcceso(visitaId, compita.id)
+    if (!r.ok) {
+      await sendTelegramMessage(chatId, r.motivo === 'aun_no' ? `Todavía faltan ${r.faltan} minutos para poder cerrarla. Espera cerca.` : r.motivo === 'sin_cuenta' ? `Primero reporta que nadie abre.` : `Esa visita ya no está programada.`, TECLADO_INICIO)
+      return NextResponse.json({ ok: true })
+    }
+    await sendTelegramMessage(chatId, `✅ <b>Visita cerrada sin acceso.</b>\n\nTu tiempo quedó registrado y se cuenta como usada para el cliente. Gracias por esperar.`, TECLADO_SIN_VISITA)
+    return NextResponse.json({ ok: true })
+  }
+
   // ── "Voy en camino": el compita avisa que salió hacia la visita ───────────────────────────────────────────────
   if (isCallback && text.startsWith('camino:')) {
     const visitaId = text.slice('camino:'.length)
@@ -1206,6 +1255,11 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
 
     // ── Confirmar inicio ───────────────────────────────────────────────────────
     if (conf.accion === 'iniciar') {
+      // Aunque llegue por otro camino (un teclado viejo), sin la foto de llegada no se inicia.
+      if (await llegadaConFotoObligatoria()) {
+        const { data: sinLlegada } = await supabase.from('visitas').select('llegada_en').eq('id', conf.visitaId).eq('compita_id', compita.id).maybeSingle()
+        if (sinLlegada && !sinLlegada.llegada_en) { await pedirFotoLlegada(supabase, chatId, conf.visitaId); return NextResponse.json({ ok: true }) }
+      }
       // Pasa a confirmando_inicio: el cliente debe confirmar en el dashboard (max 5 min).
       const { data: visita, error: errInicio } = await supabase
         .from('visitas')
@@ -1508,6 +1562,23 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
         return NextResponse.json({ ok: true })
       }
       await guardarReporteYEnviarEmail(supabase, chatId, compita, estadoNov.pendiente_accion, text)
+      return NextResponse.json({ ok: true })
+    }
+  }
+
+  // ── Foto de llegada: solo vale la que llega DESPUÉS de que el bot la pidió (el compita tocó "Iniciar visita") ─────
+  if (!isCallback && message.photo && message.photo.length > 0) {
+    const { data: esperando } = await supabase.from('telegram_estados').delete().eq('chat_id', `lleg:${chatId}`).like('pendiente_accion', 'llegada:%').select('pendiente_accion, pendiente_expira').maybeSingle()
+    if (esperando?.pendiente_accion && esperando.pendiente_expira && new Date(esperando.pendiente_expira).getTime() > Date.now()) {
+      const visitaId = esperando.pendiente_accion.split(':')[1]
+      const r = await registrarLlegada({ visitaId, compitaId: compita.id, fileId: message.photo[message.photo.length - 1].file_id })
+      if (!r.ok) {
+        if (r.motivo === 'foto') await supabase.from('telegram_estados').upsert({ chat_id: `lleg:${chatId}`, pendiente_accion: `llegada:${visitaId}`, pendiente_expira: new Date(Date.now() + 20 * 60_000).toISOString(), registro_pendiente: false }, { onConflict: 'chat_id' })
+        await sendTelegramMessage(chatId, r.motivo === 'foto' ? `No pudimos guardar la foto. Envíala de nuevo, por favor.` : `Esa visita ya no está programada.`, TECLADO_SIN_VISITA)
+        return NextResponse.json({ ok: true })
+      }
+      await setConfirmacion(supabase, chatId, 'iniciar', visitaId)
+      await sendTelegramMessage(chatId, `✅ <b>Llegada registrada.</b> La familia ya sabe que estás ahí.\n\n¿Qué pasó?`, tecladoLlegada(visitaId))
       return NextResponse.json({ ok: true })
     }
   }

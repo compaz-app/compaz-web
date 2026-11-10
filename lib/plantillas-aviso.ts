@@ -10,7 +10,7 @@ import { esc } from '@/lib/html'
 import { SITE_URL } from '@/lib/email'
 import { qRol } from '@/lib/links'
 import { armarSolicitudCompita } from '@/lib/resend'
-import { getAjuste } from '@/lib/ajustes'
+import { getAjuste, getAjustes } from '@/lib/ajustes'
 import { PLANES, ETIQUETA_METODO, TEXTO_REEMBOLSO, type PlanId, type MetodoPago } from '@/lib/planes'
 
 export type Canal = 'telegram' | 'correo'
@@ -33,6 +33,7 @@ export interface Plantilla {
 /** Cada plantilla nueva se agrega aquí y en el tipo NombrePlantilla. */
 export type NombrePlantilla = 'solicitud_nueva' | 'directa_aceptada' | 'pago_confirmado' | 'llamada_terminada_cliente' | 'llamada_terminada_compita'
   | 'entrevista_aceptada' | 'reserva_pedida' | 'reserva_rechazada' | 'reserva_vencida' | 'lugar_respuesta' | 'direccion_visita' | 'direccion_faltante_cliente' | 'compita_en_camino'
+  | 'compita_llego' | 'nadie_abre_cliente' | 'visita_sin_acceso_cliente' | 'nadie_abre_cerrar'
 
 const etiquetaSlot = (iso: string) =>
   new Date(iso).toLocaleString('es-VE', {
@@ -477,6 +478,78 @@ const compitaEnCamino: Plantilla = {
   },
 }
 
+const datosVisitaCliente = async (visitaId: string) => {
+  const admin = createAdminSupabase()
+  const { data: vis } = await admin.from('visitas').select('usuario_id, compita_id, estado, sin_acceso_en').eq('id', visitaId).maybeSingle()
+  if (!vis) return null
+  const [{ data: cli }, { data: cmp }] = await Promise.all([
+    admin.from('usuarios').select('nombre').eq('id', vis.usuario_id).maybeSingle(), admin.from('compitas').select('nombre').eq('id', vis.compita_id).maybeSingle(),
+  ])
+  return { vis, primero: esc(String(cli?.nombre ?? '').split(' ')[0]), corto: esc(nombreCorto(String(cmp?.nombre ?? '')) || 'Tu compita'), cortoTxt: nombreCorto(String(cmp?.nombre ?? '')) || 'Tu compita' }
+}
+
+// El compita mandó la foto de llegada: el cliente la ve en su portal (no se manda adjunta: se sirve desde Compaz y se borra).
+const compitaLlego: Plantilla = {
+  canales: ['correo'],
+  async render(v) {
+    const d = await datosVisitaCliente(String(v.visitaId ?? ''))
+    if (!d || d.vis.estado !== 'programada') return null
+    return { correo: { asunto: `${d.cortoTxt} llegó`, html: marco(`
+      <h2 style="color:#2D1464;font-size:22px">${d.corto} llegó</h2>
+      <p style="color:#4A3B6B;font-size:16px;line-height:1.6">Hola, ${d.primero}. ${d.corto} ya está en el lugar y mandó una foto de la llegada, que puedes ver en tu portal. Avisa a quien debe abrir la puerta.</p>
+      ${boton(`${SITE_URL}/dashboard`, 'Ver la foto y abrir →')}`) } }
+  },
+}
+
+const nadieAbreCliente: Plantilla = {
+  canales: ['correo'],
+  async render(v) {
+    const d = await datosVisitaCliente(String(v.visitaId ?? ''))
+    if (!d || d.vis.estado !== 'programada' || !d.vis.sin_acceso_en) return null // ya abrieron, o se cerró
+    const espera = Number((await getAjustes()).nadie_abre_espera_min)
+    return { correo: { asunto: `URGENTE: ${d.cortoTxt} está en la puerta y nadie abre`, html: marco(`
+      <h2 style="color:#991B1B;font-size:22px">${d.corto} está en la puerta y nadie abre</h2>
+      <p style="color:#4A3B6B;font-size:16px;line-height:1.6">Hola, ${d.primero}. ${d.corto} llegó y nadie le abre. Tienes <strong>${espera} minutos</strong>: abre la puerta o avisa a quien deba hacerlo. Pasado ese tiempo la visita se cuenta como usada.</p>
+      ${boton(`${SITE_URL}/dashboard`, 'Ya abrí / Ver mi portal →')}
+      <p style="color:#92400E;background:#FFFBEB;border:1px solid #F5B800;border-radius:12px;padding:12px;font-size:13px;line-height:1.5;margin-top:24px">El equipo de Compaz intentará comunicarse con la persona de contacto que registraste.</p>`) } }
+  },
+}
+
+const visitaSinAccesoCliente: Plantilla = {
+  canales: ['correo'],
+  async render(v) {
+    const id = String(v.cancelacionId ?? '')
+    if (!id) return null
+    const admin = createAdminSupabase()
+    const { data: c } = await admin.from('cancelaciones').select('usuario_id, compita_id, justificada').eq('id', id).maybeSingle()
+    if (!c || c.justificada) return null // si el equipo la justificó antes de enviarse, ya no aplica
+    const [{ data: cli }, { data: cmp }] = await Promise.all([
+      admin.from('usuarios').select('nombre').eq('id', c.usuario_id).maybeSingle(), admin.from('compitas').select('nombre').eq('id', c.compita_id).maybeSingle(),
+    ])
+    const primero = esc(String(cli?.nombre ?? '').split(' ')[0]); const corto = esc(nombreCorto(String(cmp?.nombre ?? '')) || 'Tu compita')
+    return { correo: { asunto: 'Tu visita se cerró: nadie abrió', html: marco(`
+      <h2 style="color:#2D1464;font-size:22px">Tu visita se cerró por falta de acceso</h2>
+      <p style="color:#4A3B6B;font-size:16px;line-height:1.6">Hola, ${primero}. ${corto} esperó en la puerta y nadie abrió, así que la visita se cerró y <strong>se cuenta como usada</strong>. Si hubo una causa justificada (una emergencia, por ejemplo), escríbenos a hola@micompaz.com y el equipo la revisa.</p>
+      ${boton(`${SITE_URL}/dashboard`, 'Ir a mi portal →')}`) } }
+  },
+}
+
+// A los 30 minutos sin acceso, el compita recibe el botón para cerrar.
+const nadieAbreCerrar: Plantilla = {
+  canales: ['telegram'],
+  async render(v) {
+    const visitaId = String(v.visitaId ?? '')
+    const admin = createAdminSupabase()
+    const { data: vis } = await admin.from('visitas').select('estado, sin_acceso_en').eq('id', visitaId).maybeSingle()
+    if (!vis || vis.estado !== 'programada' || !vis.sin_acceso_en) return null
+    const espera = Number((await getAjustes()).nadie_abre_espera_min)
+    return { telegram: {
+      texto: [`⏱️ <b>Ya pasaron ${espera} minutos</b>`, ``, `Nadie abrió. Si ya no puedes esperar, cierra la visita: se cuenta como usada y tu tiempo queda registrado. Si el cliente aparece antes, toca ▶️ Iniciar visita.`].join('\n'),
+      teclado: makeInlineKeyboard([[{ text: '🚪 Cerrar visita sin acceso', callback_data: `sinacceso:${visitaId}` }]]),
+    } }
+  },
+}
+
 export const PLANTILLAS: Record<NombrePlantilla, Plantilla> = {
   solicitud_nueva: solicitudNueva,
   directa_aceptada: directaAceptada,
@@ -491,4 +564,8 @@ export const PLANTILLAS: Record<NombrePlantilla, Plantilla> = {
   direccion_visita: direccionVisita,
   direccion_faltante_cliente: direccionFaltanteCliente,
   compita_en_camino: compitaEnCamino,
+  compita_llego: compitaLlego,
+  nadie_abre_cliente: nadieAbreCliente,
+  visita_sin_acceso_cliente: visitaSinAccesoCliente,
+  nadie_abre_cerrar: nadieAbreCerrar,
 }

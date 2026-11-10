@@ -24,6 +24,8 @@ export interface NuevaCancelacion {
   motivo?: string | null
   /** Cuándo se creó la visita: hace falta para descontarla del saldo si cuenta como usada (la visita se borra). */
   visitaCreadaEn?: string | null
+  /** Fuerza que cuente como usada (por ejemplo "sin acceso": nadie abrió). Si no se indica, solo cuenta la cancelación tardía del cliente. */
+  cuentaComoUsada?: boolean
   ahora?: Date
 }
 
@@ -75,7 +77,7 @@ export async function registrarCancelacion(c: NuevaCancelacion): Promise<string 
     const admin = createAdminSupabase()
     // Solo cancela el cliente con poco aviso la visita que cuenta como usada.
     let { data, error } = await admin.from('cancelaciones').insert({
-      ...fila, cuenta_como_usada: c.canceladoPor === 'cliente' && tardia, visita_creada_en: c.visitaCreadaEn ?? null,
+      ...fila, cuenta_como_usada: c.cuentaComoUsada ?? (c.canceladoPor === 'cliente' && tardia), visita_creada_en: c.visitaCreadaEn ?? null,
     }).select('id').single()
     // Si la migración de las columnas nuevas aún no está aplicada, igual se registra la cancelación (sin ese dato).
     if (error && /cuenta_como_usada|visita_creada_en/.test(error.message)) {
@@ -151,7 +153,7 @@ export async function resumenCancelacionesCompita(compitaId: string, ahora: Date
 export async function visitasConsumidasPorCancelacion(usuarioId: string): Promise<string[]> {
   try {
     const { data, error } = await createAdminSupabase().from('cancelaciones')
-      .select('visita_creada_en').eq('usuario_id', usuarioId).eq('cancelado_por', 'cliente').eq('cuenta_como_usada', true).eq('justificada', false)
+      .select('visita_creada_en').eq('usuario_id', usuarioId).eq('cuenta_como_usada', true).eq('justificada', false)
     if (error) { console.error('[cancelaciones] consumidas:', error.message); return [] }
     return ((data ?? []) as { visita_creada_en: string | null }[]).map((f) => f.visita_creada_en).filter((x): x is string => !!x)
   } catch (e) {

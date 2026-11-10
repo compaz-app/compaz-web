@@ -12,6 +12,7 @@ import FechaProgramada from '@/components/ui/FechaProgramada'
 import PreVisitaActions from '@/components/ui/PreVisitaActions'
 import LugarPersonas from '@/components/ui/LugarPersonas'
 import DireccionVisita from '@/components/ui/DireccionVisita'
+import LlegadaVisita from '@/components/ui/LlegadaVisita'
 import ChatColapsable from '@/components/ui/ChatColapsable'
 import ReagendarButton from '@/components/ui/ReagendarButton'
 import AgendarOtraVisita from '@/components/ui/AgendarOtraVisita'
@@ -685,6 +686,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                 compitaNombre={visitaProgramada.compita.nombre}
               />
               <ReagendarButton visitaId={visitaProgramada.id} compitaNombre={visitaProgramada.compita.nombre} />
+              {!previewUid && <LlegadaVisita />}
               {!previewUid && <DireccionVisita />}
               {!previewUid && <LugarPersonas />}
             </section>

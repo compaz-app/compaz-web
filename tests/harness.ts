@@ -12,6 +12,7 @@ Object.assign(process.env, {
 delete process.env.ANTHROPIC_API_KEY
 delete process.env.PAGO_SIMULADO
 
+import { limpiarCacheAjustes } from '@/lib/ajustes'
 import { NextRequest } from 'next/server'
 import { db, session } from './fake-supabase-server'
 import { randomUUID, createHmac } from 'crypto'
@@ -120,7 +121,12 @@ export const tgPara = (chat: string | number) => net.tg.filter((m) => m.chat ===
 export const emailsA = (to: string) => net.emails.filter((e) => (Array.isArray(e.to) ? e.to.includes(to) : e.to === to))
 
 // ── Mundo de prueba ────────────────────────────────────────────────────────────
-export function limpiar() { db.reset(); net.reset(); session.user = null }
+export function limpiar() {
+  db.reset(); net.reset(); session.user = null
+  // Las pruebas del flujo anterior (iniciar visita sin foto de llegada) corren con ese ajuste apagado; las del flujo nuevo lo encienden.
+  limpiarCacheAjustes()
+  db.seed('ajustes', { clave: 'llegada_foto_obligatoria', valor: 0, actualizado_por: 'pruebas' })
+}
 export const ahoraMas = (min: number) => new Date(Date.now() + min * 60_000).toISOString()
 
 export function mkCompita(o: Record<string, any> = {}) {
