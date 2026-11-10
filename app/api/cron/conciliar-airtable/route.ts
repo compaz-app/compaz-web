@@ -4,7 +4,7 @@
 // Airtable porque Supabase falló, y las copias cuya confirmación se perdió. No toca
 // el histórico anterior a CAPTACION_DESDE ni modifica Airtable (solo lee).
 import { NextRequest } from 'next/server'
-import { conciliarAirtable } from '@/lib/captacion'
+import { conciliarAirtable, destinoPostulaciones } from '@/lib/captacion'
 import { airtableConfigurado } from '@/lib/airtable'
 import { avisarAdmin } from '@/lib/telegram'
 import { cronAutorizado, latido, reclamarUnaVez } from '@/lib/cron'
@@ -16,6 +16,11 @@ export async function POST(req: NextRequest) {
   // importando lo que la web guarde solo en Airtable, para que Supabase no pierda nada.
   const desde = process.env.CAPTACION_DESDE
   if (!desde) return ok({ desactivado: true })
+  // solo_supabase: la web ya no escribe en Airtable (ni por la ruta de respaldo): no hay nada que conciliar.
+  if (destinoPostulaciones() === 'solo_supabase') {
+    await latido('conciliar-airtable')
+    return ok({ desactivado: 'solo_supabase' })
+  }
   if (!airtableConfigurado() || Number.isNaN(Date.parse(desde))) return err('Falta AIRTABLE_* o CAPTACION_DESDE (fecha ISO)', 500)
 
   try {
