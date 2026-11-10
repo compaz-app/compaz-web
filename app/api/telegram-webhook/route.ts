@@ -22,9 +22,11 @@ import {
 import { generarTokenPerfil } from '@/lib/compita-tokens'
 import { getOrCreateDailyRoom } from '@/lib/daily'
 import { sendVisitaInicio, sendVisitaResumen, sendResumenConReporte, sendCodigoTelegram } from '@/lib/resend'
-import { responderSolicitud, getSolicitudPorToken, aceptarSolicitudDirecta } from '@/lib/solicitudes'
+import { responderSolicitud, getSolicitudPorToken, getSolicitudPorId, aceptarSolicitudDirecta } from '@/lib/solicitudes'
+import { confirmarReserva, rechazarReserva } from '@/lib/agenda'
 import { notificar } from '@/lib/avisos'
 import { confirmarPagoYAvisar } from '@/lib/confirmar-pago'
+import { anunciarEntrevistaConfirmada } from '@/lib/entrevista-confirmada'
 import { registrarMotivo, MOTIVOS } from '@/lib/motivos'
 import { qRol } from '@/lib/links'
 import { sendEmail, SITE_URL as SITE_URL_PUBLICA } from '@/lib/email'
@@ -1019,6 +1021,15 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
       return NextResponse.json({ ok: true })
     }
     const sol = r.solicitud
+    // Entrevista del formulario nuevo: el cliente elige una hora libre del compita (no paga todavía).
+    if (r.tipo === 'entrevista') {
+      await notificar({
+        plantilla: 'entrevista_aceptada', canal: 'correo', destinatario: { tipo: 'cliente', id: sol.cliente_id },
+        variables: { solicitudId: sol.id }, entidad: 'solicitud', entidadId: sol.id, paso: 6,
+      })
+      await sendTelegramMessage(chatId, `✅ <b>Aceptaste hablar con este cliente</b>\n\nAhora elige una de tus horas libres y te pedirá que la confirmes. Te avisamos apenas elija.`, TECLADO_SIN_VISITA)
+      return NextResponse.json({ ok: true })
+    }
     // El cliente recibe el correo con el paso que le falta (pagar). Registrado en `avisos`: si falla, la escalera reintenta.
     await notificar({
       plantilla: 'directa_aceptada', canal: 'correo', destinatario: { tipo: 'cliente', id: sol.cliente_id },
@@ -1026,6 +1037,38 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
     })
     await sendTelegramMessage(chatId, `✅ <b>Aceptaste</b>\n\nEl cliente paga primero. Te avisamos apenas el pago esté confirmado.`, TECLADO_SIN_VISITA)
     await avisarAdmin(`🤝 <b>${esc(compita.nombre)}</b> aceptó una contratación directa. Esperando el pago del cliente.`)
+    return NextResponse.json({ ok: true })
+  }
+
+  // ── Reserva de horario: el compita confirma la hora o dice que no puede ──────────────────────────────
+  if (isCallback && text.startsWith('reserva:')) {
+    const [, accion, reservaId] = text.split(':')
+    if (!compita || !reservaId || (accion !== 'ok' && accion !== 'no')) return NextResponse.json({ ok: true })
+    const r = accion === 'ok' ? await confirmarReserva(reservaId, compita.id) : await rechazarReserva(reservaId, compita.id)
+    if (!r.ok) {
+      await sendTelegramMessage(chatId, r.motivo === 'vencida' ? `Esa hora ya se liberó porque no se confirmó a tiempo. El cliente elegirá otra.` : r.motivo === 'no_encontrada' ? `Esta reserva no es tuya o no existe.` : `Esta reserva ya fue respondida.`, TECLADO_SIN_VISITA)
+      return NextResponse.json({ ok: true })
+    }
+    const reserva = r.reserva
+    if (accion === 'no') {
+      await notificar({
+        plantilla: 'reserva_rechazada', canal: 'correo', destinatario: { tipo: 'cliente', id: reserva.cliente_id },
+        variables: { solicitudId: reserva.solicitud_id ?? '' }, entidad: 'solicitud', entidadId: reserva.solicitud_id ?? reserva.id, paso: 7,
+        claveUnica: `reserva_rechazada:${reserva.id}`, // una por reserva: puede rechazar varias horas de la misma solicitud
+      })
+      await sendTelegramMessage(chatId, `Listo. Esa hora quedó libre y le avisamos al cliente para que elija otra.`, TECLADO_SIN_VISITA)
+      return NextResponse.json({ ok: true })
+    }
+    // Confirmada: la solicitud queda con su hora y todo lo demás (correo, aviso, recordatorios) sigue igual que antes.
+    const { data: act } = await supabase.from('solicitudes')
+      .update({ slot_confirmado: reserva.inicio }).eq('id', reserva.solicitud_id ?? '').eq('estado', 'aceptada').is('slot_confirmado', null)
+      .select('id').maybeSingle()
+    if (!act || !reserva.solicitud_id) {
+      await sendTelegramMessage(chatId, `Confirmaste la hora, pero esa solicitud ya no está activa. Avísanos si hace falta.`, TECLADO_SIN_VISITA)
+      return NextResponse.json({ ok: true })
+    }
+    const sol = await getSolicitudPorId(reserva.solicitud_id)
+    if (sol) await anunciarEntrevistaConfirmada({ solicitud: sol, compita, chatId })
     return NextResponse.json({ ok: true })
   }
 
@@ -1050,50 +1093,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
     }
     const solicitud = r.solicitud
 
-    const slotLabel = formatSlotVE(solicitud.slot_confirmado!)
-    const adminSupa = createAdminSupabase()
-    const { data: cliente } = await adminSupa
-      .from('usuarios').select('nombre, email').eq('id', solicitud.cliente_id).single()
-
-    let emailOk = !cliente?.email
-    if (cliente?.email) {
-      try {
-        await sendEmail({
-          to: cliente.email,
-          subject: `Tu llamada con ${compita.nombre} está confirmada`,
-          html: `
-            <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px">
-              <h2 style="color:#2D1464;font-size:22px">¡Llamada confirmada!</h2>
-              <p style="color:#4A3B6B;font-size:16px;line-height:1.6">
-                <strong>${esc(compita.nombre)}</strong> confirmó la llamada para el:<br>
-                <strong>${esc(slotLabel)}</strong>
-              </p>
-              <p style="color:#4A3B6B;background:#F5F0E8;border:2px solid #D4C9E8;border-radius:12px;padding:14px;font-size:14px">
-                📩 Te enviaremos el link de acceso a la llamada <strong>1 hora antes</strong>.
-              </p>
-              <p style="color:#6B5C90;font-size:14px;line-height:1.6;margin-top:24px">¿Surgió algo y necesitas cambiar la fecha? Puedes proponer nuevos horarios desde aquí:</p>
-              <a href="${SITE_URL_PUBLICA}/reagendar/${encodeURIComponent(solicitud.token_respuesta)}" style="display:inline-block;background:#6B5C90;color:white;padding:12px 24px;border-radius:9999px;text-decoration:none;font-weight:700;font-size:14px;margin-top:4px">🔄 Reagendar llamada</a>
-              <p style="color:#6B5C90;font-size:13px;margin-top:24px">Compaz — <em>Cerca aunque estés lejos</em></p>
-            </div>
-          `,
-        })
-        emailOk = true
-      } catch (e) { console.error('Email cliente confirmación:', e) }
-    }
-
-    await avisarAdmin([
-      `📞 <b>Entrevista confirmada</b>`, ``,
-      `<b>Cliente:</b> ${esc(cliente?.nombre ?? '')} (${esc(cliente?.email ?? '')})`,
-      `<b>Compita:</b> ${esc(compita.nombre)}`,
-      `<b>Fecha:</b> ${esc(slotLabel)}`, ``,
-      emailOk ? `🔗 El link de sala se generará y enviará 1 hora antes.` : `⚠️ No se pudo enviar el correo de confirmación al cliente. Avísale manualmente.`,
-    ].join('\n'))
-
-    await sendTelegramMessage(
-      chatId,
-      `✅ <b>Llamada confirmada</b>\n\n<b>Cliente:</b> ${esc(cliente?.nombre ?? 'Cliente')}\n<b>Fecha y hora:</b> ${esc(slotLabel)}\n\n📩 Te enviaremos el link de acceso <b>1 hora antes</b> de la llamada.\n\nSi necesitas cambiar la fecha, toca el botón de abajo.`,
-      { inline_keyboard: [[{ text: '🔄 Reagendar llamada', url: `${SITE_URL}/api/solicitud/reagendar-compita?token=${solicitud.token_respuesta}&${qRol(solicitud.token_respuesta, 'compita')}` }]] },
-    )
+    await anunciarEntrevistaConfirmada({ solicitud, compita, chatId })
     return NextResponse.json({ ok: true })
   }
 

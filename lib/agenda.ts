@@ -7,6 +7,7 @@
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { getAjuste } from '@/lib/ajustes'
 import { registrarEvento } from '@/lib/eventos'
+import { notificar } from '@/lib/avisos'
 import type { HorarioDisponible } from '@/types'
 
 export const BLOQUE_MIN = 20
@@ -47,7 +48,17 @@ export async function liberarVencidas(ahora: Date = new Date(), compitaId?: stri
   const { data, error } = await q.select('id, compita_id, cliente_id, solicitud_id, inicio')
   if (error) { console.error('[agenda] no se pudieron vencer reservas:', error.message); return [] }
   const filas = (data ?? []) as { id: string; compita_id: string; cliente_id: string; solicitud_id: string | null; inicio: string }[]
-  for (const f of filas) await registrarEvento({ entidad: 'solicitud', entidadId: f.solicitud_id ?? f.id, tipo: 'reserva_vencida', datos: { compita_id: f.compita_id, inicio: f.inicio } })
+  for (const f of filas) {
+    await registrarEvento({ entidad: 'solicitud', entidadId: f.solicitud_id ?? f.id, tipo: 'reserva_vencida', datos: { compita_id: f.compita_id, inicio: f.inicio } })
+    // El cliente se entera apenas se libera su hora (venga de la limpieza o de otra persona que pidió esa hora).
+    if (f.solicitud_id) {
+      await notificar({
+        plantilla: 'reserva_vencida', canal: 'correo', destinatario: { tipo: 'cliente', id: f.cliente_id },
+        variables: { solicitudId: f.solicitud_id }, entidad: 'solicitud', entidadId: f.solicitud_id, paso: 8,
+        claveUnica: `reserva_vencida:${f.id}`,
+      }).catch((e) => console.error('[agenda] no se pudo avisar la reserva vencida:', e))
+    }
+  }
   return filas
 }
 

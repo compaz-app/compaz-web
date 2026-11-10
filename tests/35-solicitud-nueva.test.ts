@@ -153,12 +153,13 @@ describe('POST /api/solicitudes con el contrato nuevo', () => {
     assert.match(tgPara(9300)[0].text, /Mandado[\s\S]*Mandado de 30 minutos\. Llevar unos papeles/)
   })
 
-  test('"Hablar primero" (entrevista) sigue pidiendo 1 a 3 horarios hasta que existan las horas libres del compita', async () => {
+  test('"Hablar primero" (entrevista) con el contrato nuevo no lleva horarios: la hora se elige después entre las libres del compita', async () => {
     const { compita } = mundo()
-    assert.equal((await pedir(compita, { ...base, tipo: 'entrevista' })).status, 400)
-    assert.equal((await pedir(compita, { ...base, tipo: 'entrevista', slots_propuestos: [ahoraMas(120)] })).status, 200)
-    assert.equal(db.rows('solicitudes')[0].tipo, 'entrevista')
-    assert.match(tgPara(9300)[0].text, /Nueva solicitud de entrevista/, 'la entrevista conserva su aviso de siempre')
+    assert.equal((await pedir(compita, { ...base, tipo: 'entrevista' })).status, 200)
+    const s = db.rows('solicitudes')[0]
+    assert.equal(s.tipo, 'entrevista'); assert.deepEqual(s.slots_propuestos, [])
+    assert.match(tgPara(9300)[0].text, /Quieren conocerte/)
+    assert.ok(JSON.stringify(tgPara(9300)[0].markup).includes('directa:'), 'el compita acepta con el mismo botón que una contratación directa')
   })
 
   test('el contrato anterior (sin "tipo") funciona exactamente igual y no guarda campos nuevos', async () => {

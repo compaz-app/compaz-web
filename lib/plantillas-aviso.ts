@@ -32,6 +32,7 @@ export interface Plantilla {
 
 /** Cada plantilla nueva se agrega aquí y en el tipo NombrePlantilla. */
 export type NombrePlantilla = 'solicitud_nueva' | 'directa_aceptada' | 'pago_confirmado' | 'llamada_terminada_cliente' | 'llamada_terminada_compita'
+  | 'entrevista_aceptada' | 'reserva_pedida' | 'reserva_rechazada' | 'reserva_vencida'
 
 const etiquetaSlot = (iso: string) =>
   new Date(iso).toLocaleString('es-VE', {
@@ -47,6 +48,9 @@ export function nombreCorto(nombre: string): string {
   return partes.length === 1 ? partes[0] : `${partes[0]} ${partes[1][0].toUpperCase()}.`
 }
 
+/** Entrevista del formulario nuevo: sin horarios propuestos; la hora se elige después entre las libres del compita. */
+export const esEntrevistaConHoras = (s: Record<string, unknown>) => s.tipo === 'entrevista' && Array.isArray(s.slots_propuestos) && s.slots_propuestos.length === 0
+
 /** Qué ve el compita sobre quién más estará: solo el TIPO de cada persona, nunca nombres. */
 function textoPersonas(personas: unknown): string | null {
   if (!Array.isArray(personas)) return null // el lugar no es privado
@@ -60,17 +64,20 @@ function textoPersonas(personas: unknown): string | null {
 function avisoSinHorario(s: Record<string, unknown>, clienteNombre: string): Contenido {
   const primero = esc(clienteNombre.split(' ')[0])
   const esMandado = s.tipo === 'mandado'
+  const esEntrevista = s.tipo === 'entrevista'
   const personas = textoPersonas(s.personas_en_lugar)
   const lineas = [
-    esMandado ? `🧾 <b>Mandado</b>` : `🤝 <b>Contratación directa</b>`,
+    esMandado ? `🧾 <b>Mandado</b>` : esEntrevista ? `🔔 <b>Quieren conocerte</b>` : `🤝 <b>Contratación directa</b>`,
     ``,
-    esMandado ? `<b>${primero}</b> te pide un mandado (tarifa plana).` : `<b>${primero}</b> quiere contratarte directamente, sin entrevista.`,
+    esMandado ? `<b>${primero}</b> te pide un mandado (tarifa plana).` : esEntrevista ? `<b>${primero}</b> quiere hablar contigo primero, en una videollamada de 20 minutos.` : `<b>${primero}</b> quiere contratarte directamente, sin entrevista.`,
     ``,
     `<b>Qué se hará:</b> ${esc(String(s.mensaje ?? ''))}`,
     `<b>¿Lugar privado?</b> ${s.lugar_privado ? 'Sí' : 'No'}`,
     ...(personas ? [`<b>Personas en el lugar:</b> ${esc(personas)}`] : []),
     ``,
-    `Si aceptas, el cliente paga primero y te avisamos cuando el pago esté confirmado. Si no puedes, no pasa nada: el cliente elige a otro compita sin haber pagado.`,
+    esEntrevista
+      ? `Si aceptas, el cliente elige una de tus horas libres y te pide que la confirmes. Si no puedes, no pasa nada.`
+      : `Si aceptas, el cliente paga primero y te avisamos cuando el pago esté confirmado. Si no puedes, no pasa nada: el cliente elige a otro compita sin haber pagado.`,
   ]
   const token = String(s.token_respuesta)
   const bot = process.env.TELEGRAM_BOT_USERNAME ? `https://t.me/${process.env.TELEGRAM_BOT_USERNAME}` : SITE_URL
@@ -85,9 +92,9 @@ function avisoSinHorario(s: Record<string, unknown>, clienteNombre: string): Con
       ]),
     },
     correo: {
-      asunto: esMandado ? 'Un cliente te pide un mandado' : 'Un cliente quiere contratarte directamente',
+      asunto: esMandado ? 'Un cliente te pide un mandado' : esEntrevista ? 'Un cliente quiere conocerte' : 'Un cliente quiere contratarte directamente',
       html: `<div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px">
-        <h2 style="color:#2D1464;font-size:22px">${esMandado ? 'Tienes un mandado nuevo' : 'Tienes una contratación directa'}</h2>
+        <h2 style="color:#2D1464;font-size:22px">${esMandado ? 'Tienes un mandado nuevo' : esEntrevista ? 'Alguien quiere conocerte' : 'Tienes una contratación directa'}</h2>
         <p style="color:#4A3B6B;font-size:16px;line-height:1.6"><strong>${primero}</strong> quiere contratarte. Para aceptar o rechazar, abre el bot de Compaz en Telegram y toca el botón del aviso.</p>
         <a href="${bot}" style="display:inline-block;background:#FF6B2B;color:white;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:15px;margin-top:8px">Abrir Telegram</a>
       </div>`,
@@ -108,7 +115,7 @@ const solicitudNueva: Plantilla = {
 
     const { data: cliente } = await admin.from('usuarios').select('nombre').eq('id', s.cliente_id).maybeSingle()
     const clienteNombre = cliente?.nombre ?? 'Un cliente'
-    if (s.tipo === 'directa' || s.tipo === 'mandado') return avisoSinHorario(s, clienteNombre)
+    if (s.tipo === 'directa' || s.tipo === 'mandado' || esEntrevistaConHoras(s)) return avisoSinHorario(s, clienteNombre)
     const slots: string[] = Array.isArray(s.slots_propuestos) ? s.slots_propuestos.slice(0, 3) : []
     const conEtiqueta = slots.map((iso, i) => ({ i, label: etiquetaSlot(iso) }))
 
@@ -299,10 +306,81 @@ const llamadaTerminadaCompita: Plantilla = {
   },
 }
 
+const marco = (cuerpo: string) => `<div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px">${cuerpo}</div>`
+const boton = (href: string, texto: string) => `<a href="${href}" style="display:inline-block;background:#FF6B2B;color:white;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:15px;margin-top:8px">${texto}</a>`
+
+// El compita aceptó hablar primero: el cliente elige una de sus horas libres.
+const entrevistaAceptada: Plantilla = {
+  canales: ['correo'],
+  async render(v) {
+    const solicitudId = String(v.solicitudId ?? '')
+    if (!solicitudId) return null
+    const admin = createAdminSupabase()
+    const { data: s } = await admin.from('solicitudes').select('id, cliente_id, compita_id, estado, slot_confirmado').eq('id', solicitudId).maybeSingle()
+    if (!s || s.estado !== 'aceptada' || s.slot_confirmado) return null // ya eligió hora, o se canceló
+    const [{ data: cli }, { data: cmp }] = await Promise.all([
+      admin.from('usuarios').select('nombre').eq('id', s.cliente_id).maybeSingle(),
+      admin.from('compitas').select('nombre').eq('id', s.compita_id).maybeSingle(),
+    ])
+    const primero = esc(String(cli?.nombre ?? '').split(' ')[0])
+    const corto = esc(nombreCorto(String(cmp?.nombre ?? '')) || 'Tu compita')
+    return { correo: { asunto: `${nombreCorto(String(cmp?.nombre ?? '')) || 'Tu compita'} aceptó hablar contigo. Elige la hora`, html: marco(`
+      <h2 style="color:#2D1464;font-size:22px">${corto} aceptó hablar contigo</h2>
+      <p style="color:#4A3B6B;font-size:16px;line-height:1.6">Hola, ${primero}. Elige una de sus horas libres para la videollamada de 20 minutos. La hora que elijas queda reservada hasta que ${corto} la confirme.</p>
+      ${boton(`${SITE_URL}/solicitar/hora?solicitud=${encodeURIComponent(String(s.id))}`, 'Elegir la hora →')}`) } }
+  },
+}
+
+// El cliente reservó una hora: el compita la confirma o dice "No puedo a esa hora".
+const reservaPedida: Plantilla = {
+  canales: ['telegram'],
+  async render(v) {
+    const reservaId = String(v.reservaId ?? '')
+    if (!reservaId) return null
+    const admin = createAdminSupabase()
+    const { data: r } = await admin.from('reservas_horario').select('id, cliente_id, inicio, estado, vence_en').eq('id', reservaId).maybeSingle()
+    if (!r || r.estado !== 'reservada' || new Date(r.vence_en).getTime() <= Date.now()) return null // ya respondió o venció
+    const { data: cli } = await admin.from('usuarios').select('nombre').eq('id', r.cliente_id).maybeSingle()
+    const primero = esc(String(cli?.nombre ?? 'El cliente').split(' ')[0])
+    const hasta = new Date(r.vence_en).toLocaleTimeString('es-VE', { timeZone: 'America/Caracas', hour: 'numeric', minute: '2-digit', hour12: true })
+    return { telegram: {
+      texto: [`📅 <b>${primero} eligió una hora para la videollamada</b>`, ``, `<b>${esc(etiquetaSlot(String(r.inicio)))}</b> (hora de Caracas)`, ``, `Confírmala o dinos que no puedes a esa hora. Si no respondes, la hora se libera sola a las ${esc(hasta)}.`].join('\n'),
+      teclado: makeInlineKeyboard([[{ text: '✅ Confirmar', callback_data: `reserva:ok:${r.id}` }], [{ text: '❌ No puedo a esa hora', callback_data: `reserva:no:${r.id}` }]]),
+    } }
+  },
+}
+
+const reservaLiberada = (motivo: 'rechazada' | 'vencida'): Plantilla => ({
+  canales: ['correo'],
+  async render(v) {
+    const solicitudId = String(v.solicitudId ?? '')
+    if (!solicitudId) return null
+    const admin = createAdminSupabase()
+    const { data: s } = await admin.from('solicitudes').select('id, cliente_id, compita_id, estado, slot_confirmado').eq('id', solicitudId).maybeSingle()
+    if (!s || s.estado !== 'aceptada' || s.slot_confirmado) return null // ya tiene hora confirmada, o se canceló
+    const [{ data: cli }, { data: cmp }] = await Promise.all([
+      admin.from('usuarios').select('nombre').eq('id', s.cliente_id).maybeSingle(),
+      admin.from('compitas').select('nombre').eq('id', s.compita_id).maybeSingle(),
+    ])
+    const primero = esc(String(cli?.nombre ?? '').split(' ')[0])
+    const corto = esc(nombreCorto(String(cmp?.nombre ?? '')) || 'Tu compita')
+    const titulo = motivo === 'rechazada' ? `${corto} no puede a esa hora` : `La hora que reservaste ya se liberó`
+    const detalle = motivo === 'rechazada' ? `No te preocupes: elige otra de sus horas libres.` : `${corto} no alcanzó a confirmarla. Elige otra de sus horas libres.`
+    return { correo: { asunto: motivo === 'rechazada' ? `${nombreCorto(String(cmp?.nombre ?? '')) || 'Tu compita'} no puede a esa hora. Elige otra` : 'Tu hora reservada se liberó. Elige otra', html: marco(`
+      <h2 style="color:#2D1464;font-size:22px">${titulo}</h2>
+      <p style="color:#4A3B6B;font-size:16px;line-height:1.6">Hola, ${primero}. ${detalle}</p>
+      ${boton(`${SITE_URL}/solicitar/hora?solicitud=${encodeURIComponent(String(s.id))}`, 'Elegir otra hora →')}`) } }
+  },
+})
+
 export const PLANTILLAS: Record<NombrePlantilla, Plantilla> = {
   solicitud_nueva: solicitudNueva,
   directa_aceptada: directaAceptada,
   pago_confirmado: pagoConfirmado,
   llamada_terminada_cliente: llamadaTerminadaCliente,
   llamada_terminada_compita: llamadaTerminadaCompita,
+  entrevista_aceptada: entrevistaAceptada,
+  reserva_pedida: reservaPedida,
+  reserva_rechazada: reservaLiberada('rechazada'),
+  reserva_vencida: reservaLiberada('vencida'),
 }

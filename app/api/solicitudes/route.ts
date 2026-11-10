@@ -43,7 +43,8 @@ export async function POST(req: NextRequest) {
   const slotsRaw = body.slots_propuestos
   // Hasta que existan las horas libres del compita (Lote 3), la entrevista y el contrato anterior siguen proponiendo
   // 1 a 3 horarios; la contratación directa y el mandado no llevan horarios.
-  const necesitaSlots = !nueva || nueva.tipo === 'entrevista'
+  // Contrato nuevo: ninguna entrevista lleva horarios; la hora se elige después entre las libres del compita (Lote 3).
+  const necesitaSlots = !nueva
 
   if (!compita_id || (!nueva && !mensajeOriginal)) return err('Faltan campos requeridos')
   if (mensajeOriginal.length > 1500) return err('El mensaje es demasiado largo (máximo 1500 caracteres)')

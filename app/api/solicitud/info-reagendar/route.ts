@@ -2,6 +2,7 @@
 // Devuelve info básica de la solicitud para la página de reagendado (sin login)
 import { NextRequest } from 'next/server'
 import { getSolicitudPorToken } from '@/lib/solicitudes'
+import { esEntrevistaConHoras } from '@/lib/reagendar'
 import { ok, err, notFound } from '@/lib/api'
 
 export async function GET(req: NextRequest) {
@@ -19,5 +20,8 @@ export async function GET(req: NextRequest) {
     compita_nombre: solicitud.compita_nombre ?? '',
     compita_foto: solicitud.compita_foto ?? null,
     estado: solicitud.estado,
+    // Entrevista agendada con horas libres: se reagenda eligiendo otra hora libre, no proponiendo horarios.
+    nuevo_flujo: await esEntrevistaConHoras(solicitud.id),
+    solicitud_id: solicitud.id,
   })
 }

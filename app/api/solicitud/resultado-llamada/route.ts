@@ -10,6 +10,7 @@ import { esc } from '@/lib/html'
 import { rolValido, qRol } from '@/lib/links'
 import { registrarAccion } from '@/lib/avisos'
 import { registrarEvento } from '@/lib/eventos'
+import { esEntrevistaConHoras, reagendarEntrevista } from '@/lib/reagendar'
 import { pagina, puertaConfirmacion } from '@/lib/confirm'
 
 type Resultado = 'contratar' | 'reagendar' | 'no_contratar' | 'bien'
@@ -100,6 +101,14 @@ async function ejecutar(req: NextRequest, p: NonNullable<ReturnType<typeof leer>
 
   // ── Reagendar ─────────────────────────────────────────────────────────────
   if (resultado === 'reagendar') {
+    // Entrevista agendada con horas libres: se reagenda eligiendo otra hora libre.
+    if (await esEntrevistaConHoras(solicitud.id)) {
+      if (quien === 'compita') {
+        const r = await reagendarEntrevista(solicitud.id, 'compita')
+        return r.ok ? pagina('Reagendado', 'Listo. Le avisamos al cliente para que elija otra de tus horas libres.') : pagina('Error', 'No pudimos procesar el reagendado (la solicitud ya cambió de estado).', 409)
+      }
+      return NextResponse.redirect(`${origin}/reagendar/${encodeURIComponent(token)}`, 303)
+    }
     if (quien === 'compita') {
       const reagendado = await iniciarReagendadoPorCompita(token)
       if (!reagendado) return pagina('Error', 'No pudimos procesar el reagendado (la solicitud ya cambió de estado).', 409)

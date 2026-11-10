@@ -4,13 +4,15 @@
 import { NextRequest } from 'next/server'
 import { procesarEscalera } from '@/lib/escalera'
 import { escalarPagosInsistidos } from '@/lib/confirmar-pago'
+import { liberarVencidas } from '@/lib/agenda'
 import { cronAutorizado, latido } from '@/lib/cron'
 import { ok, err } from '@/lib/api'
 
 export async function POST(req: NextRequest) {
   if (!cronAutorizado(req)) return err('No autorizado', 401)
   const resultado = await procesarEscalera()
+  const reservasVencidas = (await liberarVencidas().catch((e) => { console.error('[escalera] reservas vencidas:', e); return [] })).length
   const pagosEscalados = await escalarPagosInsistidos().catch((e) => { console.error('[escalera] pagos insistidos:', e); return 0 })
   await latido('escalera-avisos')
-  return ok({ ...resultado, pagosEscalados })
+  return ok({ ...resultado, pagosEscalados, reservasVencidas })
 }

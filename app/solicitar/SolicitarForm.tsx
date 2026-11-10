@@ -7,8 +7,9 @@ import { colors, fonts, spacing, radius } from '@/lib/design'
 import { detectarContacto } from '@/lib/detectar-contacto'
 import { QUE_OPCIONES, TIPOS_PERSONA, DURACIONES_MANDADO_MIN, MAX_NOTA } from '@/lib/validar-solicitud'
 
-type Modo = 'directa' | 'mandado'
+type Modo = 'entrevista' | 'directa' | 'mandado'
 const MODOS: { id: Modo; titulo: string; detalle: (c: string, precio: number) => string }[] = [
+  { id: 'entrevista', titulo: 'Hablar primero', detalle: (c) => `Una videollamada de 20 minutos antes de decidir. ${c} acepta y tú eliges una de sus horas libres.` },
   { id: 'directa', titulo: 'Contratarlo directo', detalle: (c) => `Sin entrevista. ${c} acepta y tú pagas.` },
   { id: 'mandado', titulo: 'Mandado', detalle: (_c, p) => `Una diligencia puntual, tarifa plana de $${p}.` },
 ]
@@ -20,7 +21,7 @@ const chip = (on: boolean) => ({ minHeight: '44px', padding: `0 ${spacing.md}`, 
 export default function SolicitarForm({ compitaId, compitaNombre, precioMandado, antifraude, familiar, tieneFotoInicial }: { compitaId: string; compitaNombre: string; precioMandado: number; antifraude: string; familiar: string | null; tieneFotoInicial: boolean }) {
   const router = useRouter()
   const sp = useSearchParams()
-  const modo: Modo = sp.get('modo') === 'mandado' ? 'mandado' : 'directa'
+  const modo: Modo = sp.get('modo') === 'mandado' ? 'mandado' : sp.get('modo') === 'entrevista' ? 'entrevista' : 'directa'
   const m = MODOS.find((x) => x.id === modo)!
   const esMandado = modo === 'mandado'
 
@@ -111,7 +112,9 @@ export default function SolicitarForm({ compitaId, compitaNombre, precioMandado,
           <p style={{ color: colors.textoMedio, fontSize: '17px', lineHeight: 1.6, margin: 0 }}>
             {esMandado
               ? `${compitaNombre} recibe tu mandado por Telegram. Te avisamos apenas lo acepte.`
-              : `${compitaNombre} recibe tu solicitud por Telegram y acepta primero. Si acepta, te avisamos y pasas al pago. Si no puede, eliges a otro compita sin haber pagado nada.`}
+              : modo === 'entrevista'
+                ? `${compitaNombre} recibe tu solicitud por Telegram. Cuando acepte, te escribimos por correo para que elijas una de sus horas libres para la videollamada.`
+                : `${compitaNombre} recibe tu solicitud por Telegram y acepta primero. Si acepta, te avisamos y pasas al pago. Si no puede, eliges a otro compita sin haber pagado nada.`}
           </p>
           <p style={{ color: colors.textoSutil, fontSize: '15px', lineHeight: 1.5, margin: `${spacing.sm} 0 ${spacing.md}` }}>No necesitas hacer nada más. Si tarda, te avisamos y el equipo de Compaz insiste por ti.</p>
           <Link href="/dashboard" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '52px', borderRadius: radius.md, background: colors.naranja, color: colors.blanco, fontWeight: 800, fontSize: '17px', textDecoration: 'none' }}>Ir a mi portal</Link>
@@ -129,7 +132,6 @@ export default function SolicitarForm({ compitaId, compitaNombre, precioMandado,
         </h1>
 
         <div role="tablist" aria-label="Qué quieres hacer" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: spacing.xs }}>
-          <Link href={`/compitas?compita=${compitaId}`} role="tab" aria-selected={false} style={{ ...chip(false), display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', textDecoration: 'none', borderRadius: radius.md, fontSize: '14px' }}>Hablar primero</Link>
           {MODOS.map((x) => (
             <button key={x.id} role="tab" aria-selected={modo === x.id} onClick={() => cambiarModo(x.id)} style={{ ...chip(modo === x.id), borderRadius: radius.md, fontSize: '14px', lineHeight: 1.2 }}>{x.titulo}</button>
           ))}

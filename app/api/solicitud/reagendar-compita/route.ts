@@ -1,7 +1,8 @@
 // /api/solicitud/reagendar-compita?token=&quien=compita&s=<firma>
 // La compita inicia un reagendado desde Telegram. GET confirma; POST ejecuta.
 import { NextRequest } from 'next/server'
-import { iniciarReagendadoPorCompita } from '@/lib/solicitudes'
+import { iniciarReagendadoPorCompita, getSolicitudPorToken } from '@/lib/solicitudes'
+import { esEntrevistaConHoras, reagendarEntrevista } from '@/lib/reagendar'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { sendTelegramMessage, avisarAdmin } from '@/lib/telegram'
 import { sendEmail } from '@/lib/email'
@@ -24,6 +25,13 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const p = leer(req)
   if (!p) return pagina('Enlace inválido', 'Este enlace no es válido.', 400)
+
+  // Entrevista agendada con horas libres: el cliente elige otra hora libre (sin proponer horarios a mano).
+  const actual = await getSolicitudPorToken(p.token)
+  if (actual && await esEntrevistaConHoras(actual.id)) {
+    const r = await reagendarEntrevista(actual.id, 'compita')
+    return r.ok ? pagina('Reagendado', 'Listo. Le avisamos al cliente para que elija otra de tus horas libres. Te avisamos cuando la elija.') : pagina('Enlace inválido', 'Este enlace ya no es válido o la solicitud está cerrada.', 410)
+  }
 
   const solicitud = await iniciarReagendadoPorCompita(p.token)
   if (!solicitud) return pagina('Enlace inválido', 'Este enlace ya no es válido o la solicitud está cerrada.', 410)

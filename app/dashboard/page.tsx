@@ -106,7 +106,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     Promise.resolve(
       adminDb
         .from('solicitudes')
-        .select('id, compita_id, estado, slot_confirmado, room_url, created_at, slots_propuestos, token_respuesta, seguimiento_enviado, compitas(nombre, foto_url, zona)')
+        .select('id, compita_id, estado, tipo, slot_confirmado, room_url, created_at, slots_propuestos, token_respuesta, seguimiento_enviado, compitas(nombre, foto_url, zona)')
         .eq('cliente_id', targetUid)
         .gte('created_at', hace30dias)
         .order('created_at', { ascending: false }),
@@ -167,6 +167,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     id: string
     compita_id: string
     estado: string
+    tipo?: string | null
     slot_confirmado: string | null
     room_url: string | null
     created_at: string
@@ -197,6 +198,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     }
     return false
   })
+  // Entrevistas aceptadas por el compita a las que el cliente aún no les eligió hora (formulario nuevo, sin horarios propuestos).
+  const entrevistasSinHora = solicitudes.filter((s) => s.estado === 'aceptada' && s.tipo === 'entrevista' && !s.slot_confirmado && (s.slots_propuestos ?? []).length === 0)
   const solicitudesHistorial = solicitudes.filter((s) => s.estado === 'rechazada' || s.estado === 'completada')
   const todasRechazadas = solicitudes.length > 0
     && solicitudesPendientes.length === 0
@@ -409,6 +412,17 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             Alta visibilidad — si hay una llamada completada sin decisión,
             esta sección aparece primero para no perder la venta.
         ───────────────────────────────────────────── */}
+        {entrevistasSinHora.map((sol) => {
+          const nombre = (sol.compitas as { nombre: string } | null)?.nombre?.split(' ')[0] ?? 'Tu compita'
+          return (
+            <section key={sol.id} style={{ marginBottom: '24px', background: '#FFF7ED', border: '3px solid #FF6B2B', borderRadius: '20px', padding: '20px 24px' }}>
+              <p style={{ margin: '0 0 6px', fontWeight: 800, fontSize: '18px', color: '#2D1464' }}>{nombre} aceptó hablar contigo</p>
+              <p style={{ margin: '0 0 14px', color: '#4A3B6B', fontSize: '15px', lineHeight: 1.5 }}>Elige una de sus horas libres para la videollamada de 20 minutos.</p>
+              <a href={`/solicitar/hora?solicitud=${sol.id}`} style={{ display: 'inline-flex', alignItems: 'center', minHeight: '48px', background: '#FF6B2B', color: 'white', padding: '0 24px', borderRadius: '9999px', fontWeight: 800, textDecoration: 'none' }}>Elegir la hora →</a>
+            </section>
+          )
+        })}
+
         {pendientesDecision.length > 0 && pendientesDecision.map((sol) => {
           const t = sol.token_respuesta!
           const compitaNombre = (sol.compitas as { nombre: string } | null)?.nombre ?? 'tu compita'

@@ -168,7 +168,7 @@ export async function crearSolicitud(input: CrearSolicitudInput): Promise<Solici
 }
 
 export type ResultadoRespuesta =
-  | { ok: true; solicitud: Solicitud }
+  | { ok: true; solicitud: Solicitud; tipo?: string }
   | { ok: false; motivo: 'no_encontrada' | 'slot_invalido' | 'slot_pasado' | 'no_autorizada' }
 
 /**
@@ -177,24 +177,26 @@ export type ResultadoRespuesta =
  */
 export async function aceptarSolicitudDirecta(token: string, compitaId: string): Promise<ResultadoRespuesta> {
   const supabase = createAdminSupabase()
-  const { data: row } = await supabase.from('solicitudes').select(SELECT_FIELDS).eq('token_respuesta', token).maybeSingle()
+  const { data: row } = await supabase.from('solicitudes').select(`${SELECT_FIELDS}, tipo`).eq('token_respuesta', token).maybeSingle()
   if (!row) return { ok: false, motivo: 'no_encontrada' }
   const previa = row as Record<string, unknown>
   if (previa.compita_id !== compitaId) return { ok: false, motivo: 'no_autorizada' }
   if (previa.estado !== 'pendiente') return { ok: false, motivo: 'no_encontrada' } // ya respondida
+  // Una entrevista con horarios propuestos (contrato anterior) se acepta eligiendo un horario, no con este camino.
+  if (previa.tipo === 'entrevista' && Array.isArray(previa.slots_propuestos) && previa.slots_propuestos.length > 0) return { ok: false, motivo: 'no_encontrada' }
 
   const { data: updated } = await supabase
     .from('solicitudes')
     .update({ estado: 'aceptada', respondido_at: new Date().toISOString() })
     .eq('token_respuesta', token).eq('compita_id', compitaId).eq('estado', 'pendiente')
-    .in('tipo', ['directa', 'mandado'])
+    .in('tipo', ['directa', 'mandado', 'entrevista'])
     .select(SELECT_FIELDS)
     .maybeSingle()
   if (!updated) return { ok: false, motivo: 'no_encontrada' } // no es directa, o ya la respondió otra pulsación
   const sol = mapRow(updated as Record<string, unknown>)
   await registrarAccion({ entidad: 'solicitud', entidadId: sol.id, paso: 5 })
-  await registrarEvento({ entidad: 'solicitud', entidadId: sol.id, tipo: 'solicitud_aceptada', actor: `compita:${sol.compita_id}`, datos: { slot: null, directa: true } })
-  return { ok: true, solicitud: sol }
+  await registrarEvento({ entidad: 'solicitud', entidadId: sol.id, tipo: 'solicitud_aceptada', actor: `compita:${sol.compita_id}`, datos: { slot: null, directa: previa.tipo !== 'entrevista' } })
+  return { ok: true, solicitud: sol, tipo: String(previa.tipo ?? 'directa') }
 }
 
 /**
@@ -596,4 +598,10 @@ export async function guardarSlotsReagendado(
     .maybeSingle()
   if (error) throw new Error(error.message)
   if (!data) throw new Error('La solicitud ya no admite reagendado')
+}
+
+/** La solicitud por su id (para flujos que parten de otra entidad, como una reserva de horario). */
+export async function getSolicitudPorId(id: string): Promise<Solicitud | null> {
+  const { data } = await createAdminSupabase().from('solicitudes').select(SELECT_FIELDS).eq('id', id).maybeSingle()
+  return data ? mapRow(data as Record<string, unknown>) : null
 }
