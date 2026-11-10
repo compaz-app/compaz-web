@@ -17,7 +17,7 @@ const etiquetaDuracion = (m: number) => (m === 60 ? '1 hora' : `${m} minutos`)
 const campo = { width: '100%', boxSizing: 'border-box' as const, minHeight: '48px', border: `1px solid ${colors.gris200}`, borderRadius: radius.md, padding: `${spacing.sm} ${spacing.md}`, fontSize: '16px', fontFamily: fonts.body, color: colors.textoOscuro, background: colors.blanco }
 const chip = (on: boolean) => ({ minHeight: '44px', padding: `0 ${spacing.md}`, borderRadius: radius.pill, fontSize: '15px', fontWeight: 700, cursor: 'pointer', fontFamily: fonts.body, border: on ? 'none' : `1px solid ${colors.gris200}`, background: on ? colors.moradoProfundo : colors.blanco, color: on ? colors.blanco : colors.textoOscuro })
 
-export default function SolicitarForm({ compitaId, compitaNombre, precioMandado, antifraude, familiar }: { compitaId: string; compitaNombre: string; precioMandado: number; antifraude: string; familiar: string | null }) {
+export default function SolicitarForm({ compitaId, compitaNombre, precioMandado, antifraude, familiar, tieneFotoInicial }: { compitaId: string; compitaNombre: string; precioMandado: number; antifraude: string; familiar: string | null; tieneFotoInicial: boolean }) {
   const router = useRouter()
   const sp = useSearchParams()
   const modo: Modo = sp.get('modo') === 'mandado' ? 'mandado' : 'directa'
@@ -34,6 +34,38 @@ export default function SolicitarForm({ compitaId, compitaNombre, precioMandado,
   const [enviando, setEnviando] = useState(false)
   const [error, setError] = useState('')
   const [enviada, setEnviada] = useState(false)
+  const [tieneFoto, setTieneFoto] = useState(tieneFotoInicial)
+  const [subiendoFoto, setSubiendoFoto] = useState(false)
+  const [errorFoto, setErrorFoto] = useState('')
+
+  // La foto se reduce en el teléfono antes de subirla: pesa poco y sube bien aun con mala conexión.
+  async function elegirFoto(archivo: File | undefined) {
+    if (!archivo) return
+    setSubiendoFoto(true); setErrorFoto('')
+    try {
+      const img = await createImageBitmap(archivo)
+      const escala = Math.min(1, 1000 / Math.max(img.width, img.height))
+      const lienzo = document.createElement('canvas')
+      lienzo.width = Math.round(img.width * escala); lienzo.height = Math.round(img.height * escala)
+      lienzo.getContext('2d')!.drawImage(img, 0, 0, lienzo.width, lienzo.height)
+      const blob: Blob | null = await new Promise((r) => lienzo.toBlob(r, 'image/jpeg', 0.82))
+      if (!blob) throw new Error('sin imagen')
+      const datos = new FormData(); datos.append('foto', blob, 'foto.jpg')
+      const r = await fetch('/api/usuario/foto', { method: 'POST', body: datos })
+      const d = await r.json().catch(() => ({}))
+      if (!r.ok || !d.ok) { setErrorFoto(d.error ?? 'No pudimos guardar tu foto. Intenta de nuevo.'); return }
+      setTieneFoto(true)
+    } catch { setErrorFoto('No pudimos leer esa foto. Prueba con otra.') } finally { setSubiendoFoto(false) }
+  }
+  async function quitarFoto() {
+    setSubiendoFoto(true); setErrorFoto('')
+    try {
+      const r = await fetch('/api/usuario/foto', { method: 'DELETE' })
+      const d = await r.json().catch(() => ({}))
+      if (!r.ok || !d.ok) { setErrorFoto(d.error ?? 'No pudimos quitar tu foto. Intenta de nuevo.'); return }
+      setTieneFoto(false)
+    } catch { setErrorFoto('Sin conexión. Intenta de nuevo.') } finally { setSubiendoFoto(false) }
+  }
 
   const principalListo = esMandado ? nota.trim().length > 0 && duracion !== null : !!que
   const personasListas = privado === false || (privado === true && (nadie || personas.length > 0))
@@ -58,7 +90,7 @@ export default function SolicitarForm({ compitaId, compitaNombre, precioMandado,
         body: JSON.stringify({
           compita_id: compitaId, tipo: modo, que: esMandado ? 'Mandado' : que, nota: nota.trim() || null,
           lugar_privado: privado, personas_en_lugar: privado ? (nadie ? [] : personas) : null, nadie_mas: privado ? nadie : undefined,
-          duracion_min: esMandado ? duracion : undefined,
+          duracion_min: esMandado ? duracion : undefined, con_foto: tieneFoto,
         }),
       })
       const d = await r.json().catch(() => ({}))
@@ -169,6 +201,26 @@ export default function SolicitarForm({ compitaId, compitaNombre, precioMandado,
             <p style={{ color: colors.textoMedio, fontSize: '14px', lineHeight: 1.5, margin: `${spacing.xs} 0 0` }}>
               {privado === true ? 'Te pediremos la dirección y cómo entrar cuando agendes la cita. El compita la recibe solo unas horas antes.' : 'Si el servicio es en la calle, en una iglesia o en un local, no te pedimos más.'}
             </p>
+          </div>
+
+          <div>
+            <div style={{ fontWeight: 700, fontSize: '16px', color: colors.textoOscuro }}>Tu foto <span style={{ fontWeight: 400, color: colors.textoSutil }}>(opcional)</span></div>
+            <p style={{ color: colors.textoMedio, fontSize: '14px', lineHeight: 1.5, margin: `${spacing.xs} 0` }}>Ayuda mucho: los compitas aceptan con más confianza a quien pueden ver. Solo la ve el compita mientras decide, desde una página de Compaz (no por Telegram), y se borra a los 90 días.</p>
+            {tieneFoto ? (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: spacing.xs, alignItems: 'center' }}>
+                <span style={{ color: colors.verde, fontWeight: 700, fontSize: '15px' }}>✓ Foto guardada</span>
+                <label style={{ ...chip(false), display: 'inline-flex', alignItems: 'center', cursor: subiendoFoto ? 'not-allowed' : 'pointer' }}>Cambiarla
+                  <input type="file" accept="image/*" disabled={subiendoFoto} onChange={(e) => { void elegirFoto(e.target.files?.[0]); e.target.value = '' }} style={{ display: 'none' }} />
+                </label>
+                <button type="button" onClick={quitarFoto} disabled={subiendoFoto} style={chip(false)}>Quitarla</button>
+              </div>
+            ) : (
+              <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '48px', borderRadius: radius.md, border: `2px dashed ${colors.gris200}`, color: colors.textoMedio, fontWeight: 700, fontSize: '16px', cursor: subiendoFoto ? 'not-allowed' : 'pointer' }}>
+                {subiendoFoto ? 'Subiendo…' : '📷 Agregar mi foto'}
+                <input type="file" accept="image/*" disabled={subiendoFoto} onChange={(e) => { void elegirFoto(e.target.files?.[0]); e.target.value = '' }} style={{ display: 'none' }} />
+              </label>
+            )}
+            {errorFoto && <p role="alert" style={{ color: colors.rojo, fontSize: '14px', fontWeight: 700, margin: `${spacing.xs} 0 0` }}>{errorFoto}</p>}
           </div>
 
           <div style={{ background: colors.fondoCrudo, borderRadius: radius.md, padding: spacing.md, fontSize: '15px' }}>

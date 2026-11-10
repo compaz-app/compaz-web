@@ -378,6 +378,11 @@ export function makeClient(db: FakeDB, user: () => { id: string; email: string }
           for (const r of rutas) db.objetos.delete(`${bucket}/${r}`)
           return { data: rutas.map((name) => ({ name })), error: null }
         },
+        download: async (path: string) => {
+          const o = db.objetos.get(`${bucket}/${path}`)
+          if (!o) return { data: null, error: { message: 'Object not found' } }
+          return { data: new Blob([new Uint8Array(o.bytes)]), error: null }
+        },
         createSignedUrl: async (path: string, seg: number) => {
           if (!db.objetos.has(`${bucket}/${path}`)) return { data: null, error: { message: 'Object not found' } }
           return { data: { signedUrl: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/sign/${bucket}/${path}?token=firma&exp=${seg}` }, error: null }

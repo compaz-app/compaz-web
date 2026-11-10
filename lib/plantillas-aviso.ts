@@ -78,6 +78,8 @@ function avisoSinHorario(s: Record<string, unknown>, clienteNombre: string): Con
     telegram: {
       texto: lineas.join('\n'),
       teclado: makeInlineKeyboard([
+        // La foto del cliente se abre desde nuestro servidor mientras decides; no se manda por Telegram para poder borrarla.
+        ...(s.foto_cliente_id ? [[{ text: `📷 Ver la foto de ${clienteNombre.split(' ')[0]}`, url: `${SITE_URL}/api/solicitud-foto/${token}` }]] : []),
         [{ text: '✅ Aceptar', callback_data: `directa:${token}` }],
         [{ text: '❌ No puedo', callback_data: `rechazar:${token}` }],
       ]),

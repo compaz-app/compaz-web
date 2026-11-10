@@ -11,6 +11,7 @@ import { avisarAdmin } from '@/lib/telegram'
 import { detectarContacto, reportarContactoEnTexto } from '@/lib/chat-moderacion'
 import { notificar } from '@/lib/avisos'
 import { registrarEvento } from '@/lib/eventos'
+import { fotoClienteVigente } from '@/lib/fotos-privadas'
 import { validarSolicitudNueva, mensajeDeSolicitud, type SolicitudNueva } from '@/lib/validar-solicitud'
 
 const MENSAJES_NEGOCIO = ['Límite de', 'Ya tienes una solicitud']
@@ -87,9 +88,13 @@ export async function POST(req: NextRequest) {
     return err('Este compita no está disponible', 400)
   }
 
+  // Foto opcional: solo si el cliente la eligió mostrar y de verdad tiene una guardada.
+  const fotoId = nueva && body.con_foto === true ? (await fotoClienteVigente(user.id))?.id ?? null : null
+
   let solicitud
   try {
     solicitud = await crearSolicitud({
+      foto_cliente_id: fotoId,
       cliente_id: user.id,
       compita_id,
       mensaje,

@@ -125,6 +125,8 @@ export interface CrearSolicitudInput {
   que?: string
   lugar_privado?: boolean
   personas_en_lugar?: string[] | null
+  /** El cliente eligió mostrar su foto al compita mientras decide (id de la foto vigente al crear). */
+  foto_cliente_id?: string | null
 }
 
 /**
@@ -156,6 +158,7 @@ export async function crearSolicitud(input: CrearSolicitudInput): Promise<Solici
       estado: 'pendiente',
       recordatorio_enviado: false,
       ...(input.tipo ? { tipo: input.tipo, que: input.que ?? null, lugar_privado: input.lugar_privado ?? null, personas_en_lugar: input.personas_en_lugar ?? null } : {}),
+      ...(input.foto_cliente_id ? { foto_cliente_id: input.foto_cliente_id } : {}),
     })
     .select(SELECT_FIELDS)
     .single()

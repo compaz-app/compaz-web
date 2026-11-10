@@ -5,6 +5,7 @@ import { Suspense } from 'react'
 import { requireAuth, getClienteActivo, getUsuario } from '@/lib/auth'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { getAjuste } from '@/lib/ajustes'
+import { fotoClienteVigente } from '@/lib/fotos-privadas'
 import { nombreCorto } from '@/lib/plantillas-aviso'
 import SolicitarForm from './SolicitarForm'
 
@@ -24,6 +25,7 @@ export default async function SolicitarPage({ searchParams }: { searchParams: Pr
   const [usuario, precioMandado, antifraude] = await Promise.all([
     getUsuario(), getAjuste('precio_mandado'), getAjuste('antifraude_cliente'),
   ])
+  const foto = usuario ? await fotoClienteVigente(usuario.id) : null
   const familiar = usuario?.familiar_nombre
     ? [usuario.familiar_nombre, usuario.familiar_edad ? `${usuario.familiar_edad} años` : null, usuario.familiar_condicion].filter(Boolean).join(', ')
     : null
@@ -36,6 +38,7 @@ export default async function SolicitarPage({ searchParams }: { searchParams: Pr
         precioMandado={Number(precioMandado)}
         antifraude={String(antifraude)}
         familiar={familiar}
+        tieneFotoInicial={!!foto}
       />
     </Suspense>
   )

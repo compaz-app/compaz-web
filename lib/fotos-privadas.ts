@@ -129,3 +129,61 @@ export async function borrarFotosVencidas(ahora: Date = new Date()): Promise<{ b
   }
   return resultado
 }
+
+/** La foto del cliente vigente (la más reciente sin borrar), o null. Una persona tiene como máximo una. */
+export async function fotoClienteVigente(usuarioId: string): Promise<{ id: string; ruta: string } | null> {
+  try {
+    const { data } = await createAdminSupabase().from('fotos_privadas').select('id, ruta, creado_en')
+      .eq('tipo', 'cliente').eq('usuario_id', usuarioId).is('borrada_en', null).order('creado_en', { ascending: false }).limit(1)
+    const f = (data ?? [])[0] as { id: string; ruta: string } | undefined
+    return f ?? null
+  } catch (e) {
+    console.error('[fotos] no se pudo leer la foto del cliente:', e)
+    return null
+  }
+}
+
+/** Borra de verdad (archivo y marca) una foto concreta. true si quedó borrada. */
+export async function borrarFotoPrivada(id: string): Promise<boolean> {
+  try {
+    const admin = createAdminSupabase()
+    const { data } = await admin.from('fotos_privadas').select('id, tipo, ruta, visita_id, solicitud_id, usuario_id, borrada_en').eq('id', id).maybeSingle()
+    const f = data as { id: string; tipo: TipoFoto; ruta: string; usuario_id: string | null; borrada_en: string | null } | null
+    if (!f || f.borrada_en) return true
+    const { error: eBorra } = await admin.storage.from(BUCKET_FOTOS).remove([f.ruta])
+    if (eBorra) { console.error('[fotos] no se pudo borrar el archivo:', id, eBorra.message); return false }
+    const { error: eMarca } = await admin.from('fotos_privadas').update({ borrada_en: new Date().toISOString() }).eq('id', id)
+    if (eMarca) { console.error('[fotos] archivo borrado pero sin marcar:', id, eMarca.message); return false }
+    if (f.usuario_id) await registrarEvento({ entidad: 'cliente', entidadId: f.usuario_id, tipo: 'foto_borrada', datos: { tipo: f.tipo } })
+    return true
+  } catch (e) {
+    console.error('[fotos] error borrando:', e)
+    return false
+  }
+}
+
+/** Borra todas las fotos de una persona (al eliminar su cuenta). Devuelve cuántas no se pudieron borrar. */
+export async function borrarFotosDeUsuario(usuarioId: string): Promise<number> {
+  const { data } = await createAdminSupabase().from('fotos_privadas').select('id').eq('usuario_id', usuarioId).is('borrada_en', null)
+  let fallos = 0
+  for (const f of (data ?? []) as { id: string }[]) if (!(await borrarFotoPrivada(f.id))) fallos++
+  return fallos
+}
+
+/** Descarga los bytes de una foto privada (para servirla desde nuestro servidor, sin enlaces que se puedan guardar). */
+export async function descargarFotoPrivada(id: string): Promise<{ bytes: ArrayBuffer; contentType: string } | null> {
+  try {
+    const admin = createAdminSupabase()
+    const { data } = await admin.from('fotos_privadas').select('ruta, borrada_en').eq('id', id).maybeSingle()
+    const f = data as { ruta: string; borrada_en: string | null } | null
+    if (!f || f.borrada_en) return null
+    const { data: blob, error } = await admin.storage.from(BUCKET_FOTOS).download(f.ruta)
+    if (error || !blob) return null
+    const ext = f.ruta.split('.').pop() ?? ''
+    const contentType = Object.entries(EXTENSION).find(([, e]) => e === ext)?.[0] ?? 'application/octet-stream'
+    return { bytes: await blob.arrayBuffer(), contentType }
+  } catch (e) {
+    console.error('[fotos] error descargando:', e)
+    return null
+  }
+}
