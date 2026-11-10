@@ -10,14 +10,16 @@ import { isAdminEmail } from '@/lib/auth'
 import { emailValido } from '@/lib/validar'
 import { sendAccesoEmail } from '@/lib/resend'
 import { baseUrl } from '@/lib/site'
-import { ok, err } from '@/lib/api'
+import { ok, err, errEspera } from '@/lib/api'
+import { explicarEspera } from '@/lib/esperas'
 
 // La respuesta es siempre la misma (exista o no el correo). `espera` son los segundos hasta poder pedir otro
 // enlace: la pantalla los muestra (antes el límite de 1 por minuto era silencioso y la gente creía que no pasaba nada).
 const ESPERA_SEG = 60
 const generico = (espera = ESPERA_SEG) => ok({ enviado: true as const, espera })
 
-async function ipExcedida(ip: string): Promise<boolean> {
+/** Devuelve cuándo termina la ventana si la conexión ya pidió demasiados enlaces, o null si todavía puede pedir. */
+async function ipExcedida(ip: string): Promise<Date | null> {
   const admin = createAdminSupabase()
   const clave = `acc_ip:${ip}`
   const { data: fila } = await admin.from('telegram_estados').select('pendiente_accion, pendiente_expira').eq('chat_id', clave).maybeSingle()
@@ -27,11 +29,11 @@ async function ipExcedida(ip: string): Promise<boolean> {
       { chat_id: clave, registro_pendiente: false, pendiente_accion: '1', pendiente_expira: new Date(ahora + 3600_000).toISOString(), updated_at: new Date().toISOString() },
       { onConflict: 'chat_id' },
     )
-    return false
+    return null
   }
   const n = parseInt(fila.pendiente_accion ?? '0', 10) + 1
   await admin.from('telegram_estados').update({ pendiente_accion: String(n) }).eq('chat_id', clave)
-  return n > 10
+  return n > 10 ? new Date(fila.pendiente_expira) : null
 }
 
 export async function POST(req: NextRequest) {
@@ -41,7 +43,8 @@ export async function POST(req: NextRequest) {
   if (!emailValido(email)) return err('Escribe un correo válido', 400)
 
   const ip = req.headers.get('x-nf-client-connection-ip') ?? req.headers.get('x-forwarded-for')?.split(',')[0].trim() ?? 'desconocida'
-  if (await ipExcedida(ip)) return err('Hiciste demasiadas solicitudes. Espera un rato y vuelve a intentar.', 429)
+  const bloqueadaHasta = await ipExcedida(ip)
+  if (bloqueadaHasta) return errEspera(explicarEspera('acceso_conexion', { desde: new Date(), duracionMs: bloqueadaHasta.getTime() - Date.now() }))
 
   const admin = createAdminSupabase()
 

@@ -8,8 +8,9 @@ import { createRouteSupabase, createAdminSupabase, type CookieASetear } from '@/
 import { destinoTrasLogin, BLOQUEADO } from '@/lib/login-destino'
 import { emailValido } from '@/lib/validar'
 import { rutaInterna } from '@/lib/html'
-import { intentosActuales, sumarIntento, reiniciarIntentos } from '@/lib/limite'
-import { ok, err } from '@/lib/api'
+import { intentosActuales, sumarIntento, reiniciarIntentos, vencimientoIntentos } from '@/lib/limite'
+import { ok, err, errEspera } from '@/lib/api'
+import { explicarEspera } from '@/lib/esperas'
 
 const MAX_FALLOS_CORREO = 5
 const MAX_INTENTOS_IP = 30
@@ -23,10 +24,10 @@ export async function POST(req: NextRequest) {
   if (!emailValido(email) || !/^\d{6,10}$/.test(codigo)) return err(MENSAJE_INVALIDO, 400)
 
   const ip = req.headers.get('x-nf-client-connection-ip') ?? req.headers.get('x-forwarded-for')?.split(',')[0].trim() ?? 'desconocida'
-  if ((await sumarIntento(`cod_ip:${ip}`, VENTANA_MIN)) > MAX_INTENTOS_IP) return err('Demasiados intentos. Espera unos minutos.', 429)
+  if ((await sumarIntento(`cod_ip:${ip}`, VENTANA_MIN)) > MAX_INTENTOS_IP) return errEspera(explicarEspera('codigo_conexion', { desde: new Date(), duracionMs: ((await vencimientoIntentos(`cod_ip:${ip}`))?.getTime() ?? Date.now() + VENTANA_MIN * 60_000) - Date.now() }))
   const claveCorreo = `cod_fallos:${email}`
   if ((await intentosActuales(claveCorreo)) >= MAX_FALLOS_CORREO) {
-    return err('Demasiados intentos con este código. Pide uno nuevo por correo.', 429)
+    return errEspera(explicarEspera('codigo_fallos', { desde: new Date(), duracionMs: ((await vencimientoIntentos(claveCorreo))?.getTime() ?? Date.now() + VENTANA_MIN * 60_000) - Date.now(), usados: MAX_FALLOS_CORREO }))
   }
 
   const cookies: CookieASetear[] = []

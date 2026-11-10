@@ -1,4 +1,5 @@
 'use client'
+import InfoBoton from '../../InfoBoton'
 import Link from 'next/link'
 import { Suspense, useEffect, useState } from 'react'
 import { useParam } from '../../useUrlState'
@@ -52,6 +53,7 @@ function EntrarInner() {
           <button disabled={espera > 0} onClick={() => setEspera(60)} className="mt-3 min-h-12 w-full rounded-2xl border border-[var(--border-muted)] bg-white text-base font-bold text-[var(--text-mid)] disabled:opacity-60">
             {espera > 0 ? `Puedes pedir otro en ${espera} segundos` : 'Enviarme otro enlace'}
           </button>
+          {espera > 0 && <div className="mt-1 flex items-center justify-center gap-1 text-sm text-[var(--text-mid)]"><span>Ya te enviamos uno hace un momento.</span><InfoBoton que="Por qué hay que esperar" texto="Esperamos un minuto entre correos para que no se mezclen y siempre uses el más reciente. Si no te llegó, revisa la carpeta de spam." /></div>}
         </section>
       )}
 

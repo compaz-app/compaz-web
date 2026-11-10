@@ -7,10 +7,47 @@ import { TEXTO_COMPITA } from '../AvisoSeguridad'
 const TEXTO_NOTA_DE_VOZ = '🎤 Las notas de voz no están activas: el cliente no las recibe. Escribe tu mensaje en texto o manda una foto. Gracias por entender 🙏'
 
 // queToca: lo que responde "¿Qué me toca?" después de tocar este botón (la situación en que queda el compita).
-type Boton = { id: string; texto: string; resultado: string; queToca?: string; luego?: Omit<Msg, 'id' | 'hora'> }
-type Msg = { id: number; texto: string; botones?: Boton[]; resuelto?: string; hora: string; rama?: string; propio?: boolean }
+type Boton = { id: string; texto: string; resultado: string; /** La razón, que Telegram muestra en un bloque desplegable (blockquote expandable). */ detalle?: string; queToca?: string; luego?: Omit<Msg, 'id' | 'hora'> }
+type Msg = { id: number; texto: string; botones?: Boton[]; resuelto?: string; detalle?: string; hora: string; rama?: string; propio?: boolean }
 
 const CHAT_CLIENTE: Omit<Msg, 'id' | 'hora'> = { texto: '¿Quieres preguntarle algo a Ana directamente? Es por el chat de Compaz, sin teléfonos ni correos.', botones: [{ id: 'c', texto: '💬 Escribirle a Ana', resultado: 'Listo: lo que escribas aquí le llega a Ana. Recuerda que no se pueden compartir teléfonos ni correos.' }] }
+// Reportar un problema con un cliente: preguntas de un toque, sin escribir. Los motivos de riesgo (lugar no seguro, pagos fuera de Compaz) y
+// "necesito ayuda" SIEMPRE llevan llamada del equipo; en los demás se le pregunta. El plazo es de 24 horas como mínimo (editable en Ajustes).
+type Paso = Omit<Msg, 'id' | 'hora'>
+const finReporte = (llamar: boolean, noVolver: boolean): Paso => ({
+  texto: `✅ Gracias, ya avisamos al equipo.${noVolver ? ' No se te volverá a asignar este cliente.' : ''}${llamar ? '\n📞 Te llamaremos en las próximas 24 horas.' : ''}`,
+  botones: [{ id: 'ok', texto: 'Entendido', resultado: llamar ? 'Listo. Si en 24 horas no te llamamos, el sistema le avisa al equipo.' : 'Listo. Quedó anotado.', queToca: llamar ? 'Reportaste un problema: el equipo te llama en las próximas 24 horas. No tienes nada más que hacer.' : 'Reportaste un problema: quedó anotado y no necesitas hacer nada más.' }],
+})
+const preguntaLlamar = (noVolver: boolean): Paso => ({ texto: '¿Quieres que el equipo te llame para hablar de lo que pasó?', botones: [
+  { id: 'l1', texto: '📞 Sí, llámenme', resultado: 'Anotado ✓', luego: finReporte(true, noVolver) },
+  { id: 'l2', texto: 'No hace falta', resultado: 'Anotado ✓', luego: finReporte(false, noVolver) },
+] })
+const preguntaNoVolver = (riesgo: boolean): Paso => ({ texto: '¿Quieres no volver a trabajar con este cliente? Si dices que sí, Compaz no te lo asignará más.', botones: [
+  { id: 'n1', texto: '🚫 Sí, no volver con él', resultado: 'Anotado ✓', luego: riesgo ? finReporte(true, true) : preguntaLlamar(true) },
+  { id: 'n2', texto: 'No, solo avisar al equipo', resultado: 'Anotado ✓', luego: riesgo ? finReporte(true, false) : preguntaLlamar(false) },
+] })
+const preguntaAntes = (riesgo: boolean): Paso => ({ texto: '¿Ya te había pasado esto con este cliente?', botones: [
+  { id: 'a1', texto: 'Sí, ya había pasado', resultado: 'Anotado ✓', luego: preguntaNoVolver(riesgo) },
+  { id: 'a2', texto: 'No, es la primera vez', resultado: 'Anotado ✓', luego: preguntaNoVolver(riesgo) },
+] })
+const preguntaBien = (riesgo: boolean): Paso => ({ texto: '¿Estás bien ahora?', botones: [
+  { id: 'b1', texto: '✅ Sí, estoy bien', resultado: 'Anotado ✓', luego: preguntaAntes(riesgo) },
+  { id: 'b2', texto: '🆘 Necesito ayuda', resultado: 'Si estás en peligro ahora mismo, toca 🚨 Emergencia o 🛑 No me siento seguro. Seguimos con el reporte y el equipo te llamará.', luego: preguntaAntes(true) },
+] })
+const preguntaCuando = (riesgo: boolean): Paso => ({ texto: '¿Cuándo pasó?', botones: [
+  { id: 'c1', texto: 'Durante la visita', resultado: 'Anotado ✓', luego: preguntaBien(riesgo) },
+  { id: 'c2', texto: 'Al llegar', resultado: 'Anotado ✓', luego: preguntaBien(riesgo) },
+  { id: 'c3', texto: 'Después, por mensaje', resultado: 'Anotado ✓', luego: preguntaBien(riesgo) },
+] })
+const REPORTAR_MOTIVO: Paso = { texto: '¿Qué pasó?', botones: [
+  { id: 'p1', texto: 'Me pidió algo fuera del servicio', resultado: 'Anotado ✓', luego: preguntaCuando(false) },
+  { id: 'p2', texto: 'Trato irrespetuoso', resultado: 'Anotado ✓', luego: preguntaCuando(false) },
+  { id: 'p3', texto: 'El lugar no era seguro', resultado: 'Anotado ✓', luego: preguntaCuando(true) },
+  { id: 'p4', texto: 'Quiso arreglar pagos fuera de Compaz', resultado: 'Anotado ✓', luego: preguntaCuando(true) },
+  { id: 'p5', texto: 'Otro motivo', resultado: 'Anotado ✓', luego: preguntaCuando(false) },
+] }
+const REPORTAR: Paso = { texto: '🚩 ¿Con qué cliente tuviste el problema?', botones: [{ id: 'r', texto: 'Ana Rojas', resultado: 'Anotado ✓', luego: REPORTAR_MOTIVO }] }
+
 // Menú de dudas del compita: el bot responde solo; una persona entra únicamente si no alcanza (tarea en la Bandeja, nunca una llamada).
 const DUDAS: Omit<Msg, 'id' | 'hora'> = {
   texto: '❓ ¿Qué pasa?',
@@ -20,6 +57,7 @@ const DUDAS: Omit<Msg, 'id' | 'hora'> = {
     { id: 'd3', texto: '🕒 Necesito cambiar la hora', resultado: 'Le avisamos a Ana y le ofrecemos otras horas. Queda anotado: cumplir las citas cuenta en tu historial.', queToca: 'Pediste cambiar la hora. Le ofrecemos otras horas a Ana y esperas su elección. Cumplir las citas cuenta en tu historial.' },
     { id: 'd4', texto: '⚠️ Algo no está bien', resultado: 'Si te sientes en riesgo, toca 🛑 No me siento seguro (abajo). Si es otra cosa, usa "Otra duda".' },
     { id: 'd5', texto: '💭 Otra duda', resultado: 'Escríbela en un mensaje. Te respondemos con lo que más se pregunta. Si no alcanza, el equipo la ve y te responde por aquí. No hacemos llamadas.' },
+    { id: 'd6', texto: '🚩 Reportar un problema con un cliente', resultado: 'Te hago unas preguntas cortas:', luego: REPORTAR },
   ],
 }
 
@@ -69,6 +107,7 @@ const GUION: Omit<Msg, 'id' | 'resuelto'>[] = [
   { hora: '5:30', rama: 'Alternativa: el cliente quiere otra visita', texto: '📅 Ana quiere agendar otra visita contigo\nSe abrió un chat para que se pongan de acuerdo en el día y la hora. Escribe aquí y le llega a Ana.\n🛡️ No compartas teléfonos ni correos: es por seguridad y quien lo haga puede ser penalizado.\n🎤 Las notas de voz no están activas: escribe en texto o manda una foto.', botones: [{ id: 'e', texto: '💬 Escribirle a Ana', resultado: 'Listo: lo que escribas aquí le llega a Ana, y lo que ella escriba te llega a ti.', queToca: 'Estás coordinando la próxima visita con Ana por el chat. Cuando acuerden día y hora, ella elige la fecha y tú la confirmas. No compartas contactos.' }] },
   { hora: '5:45', rama: 'Alternativa: visita en espera', texto: '⏸️ Tu visita del jueves 5 nov quedó en espera\nEl equipo de Compaz está revisando algo con la cuenta del cliente. No tienes que hacer nada: te avisamos apenas se resuelva. No vayas a esa visita hasta recibir el aviso.', botones: [{ id: 'ok', texto: '👍 Entendido', resultado: 'Anotado. Te avisamos cuando haya novedades.', queToca: 'Tu visita del jueves está en espera mientras el equipo revisa. No vayas hasta recibir el aviso de Compaz. No tienes que hacer nada.' }] },
   { hora: '6:00', rama: 'Alternativa: videollamada', texto: '🎥 Ana pide una videollamada con su mamá\nHoy a las 6:00 pm. Dura hasta 20 minutos. No se graba.', botones: [{ id: 'a', texto: '✅ Acepto', resultado: 'Aceptada ✓ Te mandamos el botón 5 minutos antes.', queToca: 'La videollamada está aceptada. Te mandamos el botón 5 minutos antes. No tienes que hacer nada ahora.' }, { id: 'o', texto: '🕒 Propongo otra hora', resultado: 'Le preguntamos a Ana si le sirve otra hora.', queToca: 'Esperas a que Ana responda a tu nueva hora. Te avisamos.' }] },
+  { hora: '11:30', rama: 'Alternativa: esperas algo del cliente (recordarle)', texto: '⏳ Esperando a Ana\nAceptaste su solicitud y falta que ella elija la hora de la entrevista. Si pasó tiempo y no responde, puedes recordárselo con un toque: le mandamos un correo desde Compaz, sin tu nombre completo ni tus datos.', botones: [{ id: 'rc', texto: '🔔 Recordarle a Ana', resultado: 'Le mandamos el recordatorio por correo ✓ Puedes volver a pedirlo en 12 horas (máximo 3 veces).', queToca: 'Esperas a que Ana elija la hora. Ya le mandaste un recordatorio; puedes enviar otro en 12 horas.', luego: { texto: 'Si pasa el tiempo y Ana sigue sin responder, puedes volver a recordárselo.', botones: [{ id: 'rc2', texto: '🔔 Recordarle otra vez', resultado: '⏳ Ya se lo recordaste hace un momento. Podrás volver a hacerlo hoy a las 11:30 pm.', detalle: 'Esperamos 12 horas entre recordatorios para no llenarle el correo: así los toma en serio.' }] } }] },
 ]
 
 const hora = () => '·'
@@ -122,7 +161,7 @@ function TelegramMock() {
   const tocar = (m: Msg, b: Boton) => {
     if (b.queToca) setContexto(b.queToca)
     setMsgs((arr) => {
-      const hecho = arr.map((x) => (x.id === m.id ? { ...x, resuelto: b.resultado, botones: undefined } : x))
+      const hecho = arr.map((x) => (x.id === m.id ? { ...x, resuelto: b.resultado, detalle: b.detalle, botones: undefined } : x))
       return b.luego ? [...hecho, { id: 400 + arr.length, hora: hora(), ...b.luego }] : hecho
     })
   }
@@ -172,6 +211,7 @@ function TelegramMock() {
               <div className={`rounded-2xl p-3 text-[15px] shadow-sm ${m.propio ? 'rounded-tr-sm bg-[#EFFDDE]' : 'rounded-tl-sm bg-white'}`}>
                 <p className="whitespace-pre-line">{m.texto}</p>
                 {m.resuelto && <p className="mt-2 border-t border-[var(--border-muted)] pt-2 font-bold text-green-700">{m.resuelto}</p>}
+                {m.detalle && <details className="mt-1 border-l-4 border-[#517da2] pl-2 text-sm text-[var(--text-mid)]"><summary className="cursor-pointer font-bold text-[#517da2]">🔎 ¿Por qué?</summary>{m.detalle}</details>}
                 <div className="mt-1 text-right text-[11px] text-gray-400">{m.hora}</div>
               </div>
               {m.botones && (
@@ -189,7 +229,8 @@ function TelegramMock() {
         </div>
 
         <div className="grid grid-cols-2 gap-2 border-t border-gray-300 bg-white p-2">
-          <button onClick={queToca} className="col-span-2 rounded-xl bg-[var(--warm-gray)] py-3 text-[15px] font-bold text-[var(--purple)]">¿Qué me toca?</button>
+          <button onClick={queToca} className="rounded-xl bg-[var(--warm-gray)] py-3 text-[15px] font-bold text-[var(--purple)]">❓ ¿Qué me toca?</button>
+          <button onClick={() => setMsgs((arr) => [...arr, { id: 700 + arr.length, hora: hora(), ...DUDAS }])} className="rounded-xl bg-[var(--warm-gray)] py-3 text-[15px] font-bold text-[var(--purple)]">🙋 Tengo una duda</button>
           <button onClick={() => decir('🚨 Emergencia', 'Avisamos al equipo ahora mismo. Si es una emergencia médica, llama también al 911 o a emergencias de tu zona. Este botón está siempre disponible, aunque no tengas visita.')} className="rounded-xl bg-[#FEE2E2] py-3 text-[15px] font-bold text-[#991B1B]">🚨 Emergencia</button>
           <button onClick={noSeguro} className="rounded-xl bg-[#FEF3C7] py-3 text-[15px] font-bold text-[#92400E]">🛑 No me siento seguro</button>
         </div>

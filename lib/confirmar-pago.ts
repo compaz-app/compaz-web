@@ -1,5 +1,6 @@
 // Confirmación de un pago por el equipo (desde el panel o desde el botón de Telegram) y la insistencia del cliente.
 // Una sola implementación para que los dos caminos hagan exactamente lo mismo.
+import { explicarEspera, type Espera } from '@/lib/esperas'
 import { confirmarSolicitudPago, type SolicitudPago } from '@/lib/solicitudes-pago'
 import { cupoDelPlan } from '@/lib/visitas'
 import { notificar } from '@/lib/avisos'
@@ -33,7 +34,7 @@ export async function confirmarPagoYAvisar(solicitudId: string, quien: string): 
  * El cliente insiste en que ya pagó. Registra el evento `pago_insistido`; si pasaron al menos
  * `pago_insistencia_min` (Ajustes) minutos desde la última alerta, reenvía el aviso al equipo marcado URGENTE con el botón de confirmar.
  */
-export async function registrarInsistenciaPago(s: SolicitudPago, nombreCliente: string): Promise<{ alertado: boolean; veces: number }> {
+export async function registrarInsistenciaPago(s: SolicitudPago, nombreCliente: string): Promise<{ alertado: boolean; veces: number; espera: Espera | null }> {
   const supabase = createAdminSupabase()
   const { data: previos } = await supabase.from('eventos').select('creado_en, datos').eq('entidad', 'pago').eq('entidad_id', s.id).eq('tipo', 'pago_insistido')
   const filas = (previos ?? []) as { creado_en: string; datos: { alertado?: boolean } | null }[]
@@ -47,7 +48,9 @@ export async function registrarInsistenciaPago(s: SolicitudPago, nombreCliente: 
       { categoria: 'pago_insistido', entidad: { tipo: 'cliente', id: s.usuario_id, nombre: nombreCliente }, teclado: { inline_keyboard: [[{ text: 'Confirmar pago recibido', callback_data: `pagoconf:${s.id}` }]] } },
     ).catch(() => false)
   }
-  return { alertado: alertar, veces: filas.length + 1 }
+  // Si no se alertó, se le explica al cliente por qué no hace falta insistir y cuándo podrá volver a avisar.
+  const espera = alertar ? null : explicarEspera('pago_insistencia', { desde: new Date(ultimaAlerta), duracionMs: ventanaMin * 60_000 })
+  return { alertado: alertar, veces: filas.length + 1, espera }
 }
 
 /** Resumen de insistencias de una solicitud de pago, para mostrar URGENTE en el panel. */

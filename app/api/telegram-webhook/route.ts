@@ -32,6 +32,7 @@ import { registrarEvento } from '@/lib/eventos'
 import { salidaPorSeguridad, responderTodoBien } from '@/lib/seguridad'
 import { situacionDelCompita } from '@/lib/que-me-toca'
 import { registrarConsultaQueMeToca, menuDudas, responderDuda, dudaNoResuelta, dudaResuelta, dudaConTexto, recordarAlCliente, esTipoDuda, esTipoRecordatorio } from '@/lib/ayuda'
+import { esperaTelegram } from '@/lib/esperas'
 import { clientesReportables, reportarCliente, esMotivoReporte, MOTIVOS_REPORTE, MOTIVOS_DE_RIESGO, CUANDO, type MotivoReporte, type Cuando } from '@/lib/bloqueos-compita'
 import { llegadaConFotoObligatoria, registrarLlegada, declararNadieAbre, cerrarSinAcceso, tecladoLlegada } from '@/lib/llegada'
 import { notificar } from '@/lib/avisos'
@@ -991,9 +992,8 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
     if (!compita || !esTipoRecordatorio(tipo) || !id) return NextResponse.json({ ok: true })
     const r = await recordarAlCliente({ tipo, id, compita: { id: compita.id, nombre: compita.nombre } })
     await sendTelegramMessage(chatId, r.ok ? `🔔 Listo. Le recordamos al cliente por correo desde Compaz. Te avisamos si responde.`
-      : r.motivo === 'reciente' ? `Ya se lo recordamos hace poco. Dale un tiempo para responder.`
-      : r.motivo === 'limite' ? `Ya le recordamos varias veces. Avisamos al equipo para que lo atienda.`
-      : `Ese paso ya no está pendiente.`, await tecladoSegunEstado())
+      : r.motivo === 'no_aplica' ? `Ese paso ya no está pendiente.`
+      : esperaTelegram(r.espera), await tecladoSegunEstado())
     return NextResponse.json({ ok: true })
   }
   // Texto de "Otra duda": pasa directo a una persona del equipo (no hay respuesta automática posible)

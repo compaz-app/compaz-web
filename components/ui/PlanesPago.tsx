@@ -1,5 +1,6 @@
 'use client'
 
+import InfoBoton from '@/components/ui/InfoBoton'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { colors } from '@/lib/design'
@@ -17,6 +18,8 @@ export default function PlanesPago({ pendiente }: { pendiente: Pendiente | null 
   const [cargando, setCargando] = useState(false)
   const [error, setError] = useState('')
   const [avisado, setAvisado] = useState(false)
+  // Si ya se avisó hace poco, el servidor dice por qué no se avisa otra vez y cuándo se podrá.
+  const [espera, setEspera] = useState<{ resumen: string; porQue: string } | null>(null)
 
   async function enviar(url: string, body: object) {
     if (cargando) return
@@ -25,7 +28,7 @@ export default function PlanesPago({ pendiente }: { pendiente: Pendiente | null 
       const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       const d = await r.json().catch(() => ({}))
       if (!d.ok) { setError(d.error ?? 'No se pudo completar'); return }
-      if (url === '/api/pago/insistir') setAvisado(true)
+      if (url === '/api/pago/insistir') { setAvisado(true); setEspera(typeof d.data?.resumen === 'string' && typeof d.data?.porQue === 'string' ? { resumen: d.data.resumen, porQue: d.data.porQue } : null) }
       router.refresh()
     } catch { setError('Error de conexión. Intenta de nuevo.') } finally { setCargando(false) }
   }
@@ -42,7 +45,15 @@ export default function PlanesPago({ pendiente }: { pendiente: Pendiente | null 
           : <p style={{ color: colors.textoMedio, fontSize: '14px', margin: '0 0 8px' }}>Te enviaremos los datos para pagar a tu correo, o escríbenos a <strong>hola@micompaz.com</strong>.</p>}
         <p style={{ color: colors.textoSutil, fontSize: '13px', lineHeight: 1.5, margin: '0 0 12px' }}>Cuando recibamos el pago, tus visitas se activan y te avisamos por correo.</p>
         {error && <p style={{ color: colors.rojo, fontSize: '13px', margin: '0 0 8px' }}>{error}</p>}
-        {avisado && <p style={{ color: colors.verde, fontSize: '13px', fontWeight: 700, lineHeight: 1.5, margin: '0 0 8px' }}>Avisamos al equipo. Confirmamos apenas llegue el dinero y te escribimos por correo. Compaz nunca te pide datos, códigos ni transferencias por teléfono o mensaje.</p>}
+        {avisado && (
+          <div role="status" style={{ margin: '0 0 8px' }}>
+            <p style={{ color: colors.verde, fontSize: '13px', fontWeight: 700, lineHeight: 1.5, margin: 0, display: 'flex', alignItems: 'center', gap: '2px', flexWrap: 'wrap' }}>
+              <span>{espera?.resumen ?? 'Avisamos al equipo. Te escribimos por correo apenas lo confirmemos.'}</span>
+              {espera && <InfoBoton que="Por qué no se avisa otra vez" texto={espera.porQue} />}
+            </p>
+            
+          </div>
+        )}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
         <button onClick={() => enviar('/api/pago/insistir', {})} disabled={cargando} style={{ background: colors.naranja, border: 'none', color: colors.blanco, borderRadius: '9999px', padding: '10px 18px', fontWeight: 800, fontSize: '13px', cursor: 'pointer', minHeight: '44px' }}>Ya envié el pago, avisar al equipo</button>
         <button onClick={() => enviar('/api/pago/cancelar', { id: pendiente.id })} disabled={cargando} style={{ background: 'none', border: `2px solid ${colors.gris400}`, color: colors.textoSutil, borderRadius: '9999px', padding: '8px 16px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', minHeight: '44px' }}>Cancelar solicitud</button>

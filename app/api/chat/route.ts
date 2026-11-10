@@ -1,3 +1,4 @@
+import { explicarEspera } from "@/lib/esperas";
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 
@@ -284,7 +285,7 @@ export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
   if (await isRateLimited(ip)) {
     return NextResponse.json(
-      { reply: "Has alcanzado el límite de mensajes. Escríbenos a hola@micompaz.com" },
+      { reply: explicarEspera("chat_limite").resumen },
       { status: 429, headers: SECURITY_HEADERS }
     );
   }

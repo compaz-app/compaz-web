@@ -156,10 +156,12 @@ describe('"Recordarle al cliente"', () => {
   test('con límite: dentro de 12 horas no repite, después sí, y hay un máximo de 3', async () => {
     const { compita, cliente } = mundo(); const s = mkSolicitud(cliente, compita, { estado: 'aceptada', tipo: 'entrevista', slots_propuestos: [] })
     await rc('hora', s.id); await rc('hora', s.id)
-    assert.equal(correos(/elijas la hora/).length, 1); assert.match(ultimo().text, /hace poco/)
+    assert.equal(correos(/elijas la hora/).length, 1); assert.match(ultimo().text, /Ya se lo recordaste hace un momento/); assert.match(ultimo().text, /no llenarle el correo/); assert.match(ultimo().text, /Podrás volver a hacerlo/)
     for (const n of [1, 2]) { eventos('recordatorio_al_cliente').at(-1)!.creado_en = hace(13 * 60); await rc('hora', s.id); assert.equal(correos(/elijas la hora/).length, 1 + n) }
     eventos('recordatorio_al_cliente').at(-1)!.creado_en = hace(13 * 60); await rc('hora', s.id)
-    assert.equal(correos(/elijas la hora/).length, 3, 'tope de 3'); assert.match(ultimo().text, /varias veces/)
+    assert.equal(correos(/elijas la hora/).length, 3, 'tope de 3'); assert.match(ultimo().text, /Ya llegaste al máximo de recordatorios \(3\)/); assert.match(ultimo().text, /El equipo se encarga desde aquí/)
+    // y es verdad: el equipo recibe UNA tarea, aunque el compita vuelva a tocar el botón
+    await rc('hora', s.id); assert.equal(db.rows('admin_flags').filter((f) => f.tipo === 'cliente_sin_respuesta').length, 1)
   })
   test('si el cliente ya hizo lo que faltaba, o no es de ese compita, no se manda nada', async () => {
     const { compita, cliente } = mundo(); const s = mkSolicitud(cliente, compita, { estado: 'aceptada', tipo: 'entrevista', slots_propuestos: [], slot_confirmado: new Date(Date.now() + 3600_000).toISOString() })

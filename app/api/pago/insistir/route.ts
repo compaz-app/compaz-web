@@ -10,5 +10,5 @@ export async function POST() {
   const s = await solicitudPendiente(cli.id)
   if (!s) return err('No tienes un pago pendiente', 404)
   const r = await registrarInsistenciaPago(s, String(cli.user_metadata?.nombre ?? cli.email ?? 'Un cliente'))
-  return ok({ avisado: true, veces: r.veces })
+  return ok({ avisado: true, veces: r.veces, alertado: r.alertado, mensaje: r.espera?.texto ?? null, resumen: r.espera?.resumen ?? null, porQue: r.espera?.porQue ?? null })
 }

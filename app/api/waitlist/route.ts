@@ -1,3 +1,4 @@
+import { explicarEspera } from "@/lib/esperas";
 import { NextRequest, NextResponse } from "next/server";
 import { registrarPostulacion, claveIdempotencia, fuenteValida } from "@/lib/captacion";
 import { avisarAdmin } from "@/lib/telegram";
@@ -145,7 +146,7 @@ export async function POST(req: NextRequest) {
   // 1. Rate limiting
   if (isRateLimited(ip)) {
     return NextResponse.json(
-      { error: "Demasiados intentos. Intenta de nuevo más tarde." },
+      { error: explicarEspera("postulacion_conexion").resumen, porQue: explicarEspera("postulacion_conexion").porQue },
       { status: 429, headers }
     );
   }
@@ -204,7 +205,7 @@ export async function POST(req: NextRequest) {
   const emailKey = email.toLowerCase();
   if (isEmailRateLimited(emailKey)) {
     return NextResponse.json(
-      { error: "Ya recibimos una postulación con este correo. Revisa tu WhatsApp y tu correo." },
+      { error: explicarEspera("postulacion_correo").resumen, porQue: explicarEspera("postulacion_correo").porQue },
       { status: 429, headers }
     );
   }

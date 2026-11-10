@@ -15,6 +15,11 @@ export function err(message: string, status = 400): NextResponse<ApiErr> {
   return NextResponse.json({ ok: false, error: message }, { status })
 }
 
+/** Respuesta de "espera o límite": `error` es la frase corta (qué pasó y cuándo seguir) y `porQue` la razón, para que la pantalla la esconda tras un ⓘ. */
+export function errEspera(e: { resumen: string; porQue: string }, status = 429) {
+  return NextResponse.json({ ok: false as const, error: e.resumen, porQue: e.porQue }, { status })
+}
+
 export const unauthorized = () => err('No autorizado', 401)
 export const forbidden = () => err('Acceso denegado', 403)
 export const notFound = (entity = 'Recurso') => err(`${entity} no encontrado`, 404)

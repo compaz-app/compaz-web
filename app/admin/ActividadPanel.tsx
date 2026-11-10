@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { colors, fonts, spacing, radius } from '@/lib/design'
+import InfoBoton from '@/components/ui/InfoBoton'
 
 interface Fila { id: string; creado_en: string; nivel: 'actividad' | 'tarea' | 'urgente'; resumen: string; categoria: string | null; entidad_nombre: string | null }
 
@@ -50,8 +51,8 @@ export default function ActividadPanel() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.md, fontFamily: fonts.body }}>
-      <p style={{ margin: 0, color: colors.textoMedio, fontSize: '14px', lineHeight: 1.5 }}>Todo lo que pasó en el sistema, en orden. Aquí no suena nada: lo urgente te llega por Telegram y lo que debes hacer está en Atención.</p>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: spacing.xs }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: spacing.xs, alignItems: 'center' }}>
+        <InfoBoton que="Qué es Actividad" texto="Todo lo que pasó en el sistema, en orden. Aquí no suena nada: lo urgente te llega por Telegram, con un tope por hora, y lo que debes hacer está en Atención." />
         {([['', 'Todo'], ['urgente', '🔴 Urgentes'], ['tarea', '🟠 Tareas'], ['actividad', '⚪ Informativo']] as const).map(([v, t]) => <button key={v} type="button" aria-pressed={nivel === v} onClick={() => poner({ act_nivel: v, act_pag: 0 })} style={chip(nivel === v)}>{t}</button>)}
         <span style={{ flex: 1 }} />
         {DIAS.map((d) => <button key={d} type="button" aria-pressed={dias === d} onClick={() => poner({ act_dias: d === 2 ? null : d, act_pag: 0 })} style={chip(dias === d)}>{d === 1 ? 'Hoy' : `${d} días`}</button>)}

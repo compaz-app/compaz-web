@@ -16,6 +16,7 @@ import { alertaAdmin } from '@/lib/alertas-admin'
 import { detectarContacto } from '@/lib/detectar-contacto'
 import { PLANTILLAS } from '@/lib/plantillas-aviso'
 import { esc } from '@/lib/html'
+import { explicarEspera, type Espera } from '@/lib/esperas'
 import type { Situacion } from '@/lib/que-me-toca'
 
 const VENTANA_ATASCO_MIN = 30
@@ -161,7 +162,7 @@ async function escalarDuda(compita: Compita, tipo: TipoDuda, etiqueta: string, u
 // ── 4. Recordarle al cliente ───────────────────────────────────────────────────────────────────────────────────
 export type TipoRecordatorio = 'hora' | 'dir' | 'pago' | 'fecha'
 export const esTipoRecordatorio = (t: unknown): t is TipoRecordatorio => t === 'hora' || t === 'dir' || t === 'pago' || t === 'fecha'
-export type ResultadoRecordatorio = { ok: true } | { ok: false; motivo: 'no_aplica' | 'reciente' | 'limite' }
+export type ResultadoRecordatorio = { ok: true } | { ok: false; motivo: 'no_aplica' } | { ok: false; motivo: 'reciente' | 'limite'; espera: Espera }
 
 /** ¿Sigue esperando el compita ese paso del cliente? Devuelve el id del cliente o null. */
 async function clienteQueEspera(tipo: TipoRecordatorio, id: string, compitaId: string): Promise<string | null> {
@@ -193,9 +194,18 @@ export async function recordarAlCliente(i: { tipo: TipoRecordatorio; id: string;
   const a = await getAjustes()
   const { data } = await createAdminSupabase().from('eventos').select('creado_en, datos').eq('entidad', i.tipo === 'hora' || i.tipo === 'pago' ? 'solicitud' : 'visita').eq('entidad_id', i.id).eq('tipo', 'recordatorio_al_cliente')
   const previos = ((data ?? []) as { creado_en: string; datos: { tipo?: string } | null }[]).filter((e) => e.datos?.tipo === i.tipo)
-  if (previos.length >= Number(a.recordatorio_cliente_max)) return { ok: false, motivo: 'limite' }
+  const max = Number(a.recordatorio_cliente_max)
+  if (previos.length >= max) {
+    // Se le dice al compita que el equipo se entera, así que de verdad se abre UNA tarea (una por paso pendiente).
+    const { data: cli } = await createAdminSupabase().from('usuarios').select('nombre').eq('id', clienteId).maybeSingle()
+    const nombreCli = (cli as { nombre: string } | null)?.nombre ?? 'El cliente'
+    await alertaAdmin('tarea', `🔔 <b>${esc(nombreCli)} no responde a los recordatorios</b>\n\n${esc(i.compita.nombre)} le recordó ${previos.length} veces (el máximo) y sigue sin completar su paso: ${i.tipo}. Conviene que el equipo lo contacte por correo.`,
+      { categoria: 'cliente_sin_respuesta', clave: `recordatorio_limite:${i.tipo}:${i.id}`, entidad: { tipo: 'cliente', id: clienteId, nombre: `🔔 Sin respuesta a recordatorios: ${nombreCli}` } })
+    return { ok: false, motivo: 'limite', espera: explicarEspera('recordatorio_limite', { usados: previos.length, max, ahora }) }
+  }
   const ultimo = previos.map((e) => new Date(e.creado_en).getTime()).sort((x, y) => y - x)[0]
-  if (ultimo && ahora.getTime() - ultimo < Number(a.recordatorio_cliente_horas) * 3600_000) return { ok: false, motivo: 'reciente' }
+  const cadaMs = Number(a.recordatorio_cliente_horas) * 3600_000
+  if (ultimo && ahora.getTime() - ultimo < cadaMs) return { ok: false, motivo: 'reciente', espera: explicarEspera('recordatorio_reciente', { desde: new Date(ultimo), duracionMs: cadaMs, ahora }) }
 
   const r = await notificar({
     plantilla: 'recordatorio_cliente', canal: 'correo', destinatario: { tipo: 'cliente', id: clienteId },

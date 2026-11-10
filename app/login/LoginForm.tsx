@@ -1,5 +1,7 @@
 'use client'
 
+import { explicarEspera } from '@/lib/esperas'
+import InfoBoton from '@/components/ui/InfoBoton'
 import { useState, useEffect } from 'react'
 
 // Formulario de acceso. Tres cosas nuevas frente a la versión anterior (ver docs/ciclo-comunicaciones.md, regla 5):
@@ -20,6 +22,8 @@ export default function LoginForm({ returnTo = '', error: errorInicial, motivo }
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(() => mensajeDeError(errorInicial, motivo))
   const [aviso, setAviso] = useState('')
+  // La razón de un límite (si el servidor la manda) va detrás de un ⓘ, no a la vista.
+  const [porQue, setPorQue] = useState('')
   const [cooldown, setCooldown] = useState(0)
   const [codigo, setCodigo] = useState('')
   const [verificando, setVerificando] = useState(false)
@@ -34,7 +38,7 @@ export default function LoginForm({ returnTo = '', error: errorInicial, motivo }
   async function pedirAcceso() {
     setLoading(true)
     setError('')
-    setAviso('')
+    setAviso(''); setPorQue('')
     try {
       const res = await fetch('/api/auth/solicitar-acceso', {
         method: 'POST',
@@ -43,13 +47,13 @@ export default function LoginForm({ returnTo = '', error: errorInicial, motivo }
       })
       const d = await res.json().catch(() => ({}))
       if (!res.ok) {
-        setError(d.error ?? 'No pudimos enviar el enlace. Intenta de nuevo en unos minutos o escríbenos a hola@micompaz.com.')
+        setError(d.error ?? 'No pudimos enviar el enlace. Intenta de nuevo en unos minutos o escríbenos a hola@micompaz.com.'); setPorQue(typeof d.porQue === 'string' ? d.porQue : '')
       } else {
         const espera = Number(d.data?.espera ?? 60)
         setEnviado(true)
         setCooldown(espera)
         // Menos de 60 s significa que ya se había enviado uno hace un momento: se dice, en vez de callar
-        if (espera < 60) setAviso('Ya te enviamos un correo hace un momento. Úsalo, o pide otro cuando termine la cuenta atrás.')
+        if (espera < 60) { const e = explicarEspera('acceso_correo', { desde: new Date(Date.now() - (60 - espera) * 1000), duracionMs: 60_000 }); setAviso(e.resumen); setPorQue(e.porQue) }
       }
     } catch {
       setError('Error de conexión. Intenta de nuevo.')
@@ -77,7 +81,7 @@ export default function LoginForm({ returnTo = '', error: errorInicial, motivo }
         window.location.href = d.data.destino
         return
       }
-      setError(d.error ?? 'Ese código no es válido o ya venció.')
+      setError(d.error ?? 'Ese código no es válido o ya venció.'); setPorQue(typeof d.porQue === 'string' ? d.porQue : '')
     } catch {
       setError('Error de conexión. Intenta de nuevo.')
     }
@@ -122,7 +126,7 @@ export default function LoginForm({ returnTo = '', error: errorInicial, motivo }
               </p>
               {aviso && (
                 <p style={{ background: '#FFF7E6', border: '2px solid #F5B800', borderRadius: '12px', padding: '10px 14px', color: '#7a5b00', fontSize: '14px', lineHeight: '1.5', marginBottom: '12px' }}>
-                  {aviso}
+                  {aviso}{porQue && <InfoBoton que="Por qué" texto={porQue} />}
                 </p>
               )}
               <p style={{ background: '#F5F0FF', borderRadius: '12px', padding: '10px 14px', color: '#4A3B6B', fontSize: '14px', lineHeight: '1.5', marginBottom: '20px' }}>
@@ -144,7 +148,7 @@ export default function LoginForm({ returnTo = '', error: errorInicial, motivo }
                   style={{ width: '100%', background: 'white', border: '2px solid rgba(45,20,100,0.2)', borderRadius: '12px', padding: '14px 18px', fontSize: '20px', letterSpacing: '4px', textAlign: 'center', fontFamily: 'Inter, sans-serif', color: '#1A0A3C', outline: 'none', boxSizing: 'border-box', marginBottom: '12px' }}
                 />
                 {error && (
-                  <p style={{ color: '#E05520', fontSize: '14px', marginBottom: '12px', fontFamily: 'Inter, sans-serif' }}>{error}</p>
+                  <p style={{ color: '#E05520', fontSize: '14px', marginBottom: '12px', fontFamily: 'Inter, sans-serif' }}>{error}{porQue && <InfoBoton que="Por qué" texto={porQue} />}</p>
                 )}
                 <button type="submit" disabled={verificando || codigo.length < 6} style={estiloBoton(!verificando && codigo.length >= 6)}>
                   {verificando ? 'Entrando...' : 'Entrar con el código'}

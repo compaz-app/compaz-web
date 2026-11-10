@@ -3,7 +3,7 @@ import { NextRequest } from 'next/server'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { getClienteActivo } from '@/lib/auth'
 import { crearSolicitud } from '@/lib/solicitudes'
-import { ok, err, unauthorized, serverError } from '@/lib/api'
+import { ok, err, unauthorized, serverError, errEspera } from '@/lib/api'
 
 import { esc } from '@/lib/html'
 import { esSlotFuturo } from '@/lib/format'
@@ -14,10 +14,13 @@ import { notificar } from '@/lib/avisos'
 import { registrarEvento } from '@/lib/eventos'
 import { fotoClienteVigente } from '@/lib/fotos-privadas'
 import { compitaEnPausa } from '@/lib/cancelaciones'
+import { explicarEspera } from '@/lib/esperas'
 import { parBloqueado } from '@/lib/bloqueos-compita'
 import { validarSolicitudNueva, mensajeDeSolicitud, type SolicitudNueva } from '@/lib/validar-solicitud'
 
 const MENSAJES_NEGOCIO = ['Límite de', 'Ya tienes una solicitud']
+
+const MAX_SOLICITUDES_DIA = 5
 
 export async function POST(req: NextRequest) {
   const user = await getClienteActivo()
@@ -77,13 +80,15 @@ export async function POST(req: NextRequest) {
 
   // Rate limit: máximo 5 solicitudes por usuario en las últimas 24 horas
   const hace24h = new Date(Date.now() - 24 * 60 * 60_000).toISOString()
-  const { count: solicitudesRecientes } = await admin
+  const { data: recientes } = await admin
     .from('solicitudes')
-    .select('id', { count: 'exact', head: true })
+    .select('created_at')
     .eq('cliente_id', user.id)
     .gte('created_at', hace24h)
-  if ((solicitudesRecientes ?? 0) >= 5) {
-    return err('Has enviado demasiadas solicitudes hoy. Espera 24 horas antes de enviar otra.', 429)
+    .order('created_at', { ascending: true })
+  if ((recientes ?? []).length >= MAX_SOLICITUDES_DIA) {
+    // Se libera un cupo cuando la más antigua cumple 24 horas.
+    return errEspera(explicarEspera('solicitudes_dia', { desde: (recientes as { created_at: string }[])[0].created_at, duracionMs: 24 * 3600_000, usados: (recientes ?? []).length }))
   }
   if ((cliente as { plan: string | null }).plan === 'bloqueado') {
     return err('Tu cuenta ha sido suspendida. Escríbenos a hola@micompaz.com para más información.', 403)

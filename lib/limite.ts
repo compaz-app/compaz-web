@@ -10,6 +10,13 @@ export async function intentosActuales(clave: string): Promise<number> {
   return parseInt(data.pendiente_accion ?? '0', 10) || 0
 }
 
+/** Cuándo termina la ventana vigente de intentos (para decirle a la persona cuándo podrá volver a intentar). Null si no hay ventana vigente. */
+export async function vencimientoIntentos(clave: string): Promise<Date | null> {
+  const { data } = await createAdminSupabase().from('telegram_estados').select('pendiente_expira').eq('chat_id', clave).maybeSingle()
+  const t = data?.pendiente_expira ? new Date(data.pendiente_expira) : null
+  return t && t.getTime() > Date.now() ? t : null
+}
+
 /** Suma un intento. La ventana empieza con el primero y no se renueva con los siguientes. */
 export async function sumarIntento(clave: string, ventanaMin: number): Promise<number> {
   const admin = createAdminSupabase()

@@ -3,6 +3,8 @@ import Link from 'next/link'
 import { Suspense, useState } from 'react'
 import { useEmbedded, useParam, useUrlState } from '../useUrlState'
 import AvisoSeguridad from '../AvisoSeguridad'
+import CuentaEliminar from './CuentaEliminar'
+import InfoBoton from '../InfoBoton'
 
 const PASOS = ['Elegir', 'Entrevista', 'Decidir', 'Pagar', 'Ficha', 'Visitas']
 
@@ -26,6 +28,7 @@ type Estado = {
 // Antes de pagar el cliente ve "María P."; el nombre completo llega con el pago (decisión del punto 2).
 const ESTADOS: Estado[] = [
   { id: 'enviada', etiqueta: '1. Solicitud enviada (hablar primero)', paso: 0, titulo: 'Esperando a María P.', texto: 'Le avisamos que quieres conocerla. Te escribimos apenas responda, normalmente en pocas horas.', boton: 'Ver otros compitas', href: '/prototipo/cliente/elegir', tono: 'espera' },
+  { id: 'enviada_recibida', etiqueta: '1d. María ya recibió tu solicitud', paso: 0, titulo: 'María P. ya recibió tu solicitud', texto: 'Le llegó el aviso a su Telegram. Normalmente responde en pocas horas. Si pasa un día sin respuesta, te ayudamos a elegir a otro compita sin que pagues nada.', boton: 'Ver otros compitas', href: '/prototipo/cliente/elegir', tono: 'espera' },
   { id: 'directa_enviada', etiqueta: '1b. Solicitud enviada (contratar directo)', paso: 0, titulo: 'Esperando que María P. acepte', texto: 'Aún no pagas nada. Si María acepta, pasas al pago. Si no puede, eliges a otro compita sin haber pagado.', boton: 'Ver otros compitas', href: '/prototipo/cliente/elegir', tono: 'espera' },
   { id: 'mandado_enviado', etiqueta: '1c. Mandado enviado', paso: 0, titulo: 'Esperando que María P. acepte tu mandado', texto: 'Tarifa plana de $22. Si acepta, pagas y ella lo hace. Si no puede, eliges a otro compita sin haber pagado.', boton: 'Ver otros compitas', href: '/prototipo/cliente/elegir', tono: 'espera' },
   { id: 'aceptada', etiqueta: '2. Aceptó, elegir horario', paso: 1, titulo: 'María P. aceptó. Elige tu horario', texto: 'La entrevista dura 20 minutos, por video o solo con voz. Estas son las horas que María tiene libres. Toca la que te quede mejor.', boton: '', sinBoton: true, extra: 'horarios' },
@@ -48,6 +51,7 @@ const ESTADOS: Estado[] = [
   { id: 'nadie_abre', etiqueta: '13. Llegó y nadie abre', paso: 5, titulo: 'María llegó y no le abren', texto: 'Está en la puerta esperando. Avísale a quien pueda abrir. Si en 30 minutos nadie aparece, la visita se cuenta como usada.', boton: 'Ya abrieron', href: '/prototipo/cliente?estado=llego', secundario: 'Avisar a Compaz', secRespuesta: 'Avisamos al equipo con urgencia. Te respondemos por correo lo antes posible.', extra: 'nadie' },
   { id: 'curso', etiqueta: '14. Visita en curso', paso: 5, titulo: 'María está con tu mamá', texto: 'Aquí verás las fotos y notas que María envíe durante la visita. También puedes escribirle.', boton: '', sinBoton: true, extra: 'chat' },
   { id: 'interrumpida', etiqueta: '15. Visita interrumpida (seguridad)', paso: 5, titulo: 'La visita se interrumpió', texto: 'María tuvo que retirarse antes de tiempo. No tienes que hacer nada: el equipo de Compaz te escribe hoy para organizar otra visita.', boton: 'Avisar a Compaz que recibí el aviso', respuesta: 'Gracias. El equipo te escribe hoy por correo para organizar otra visita.', tono: 'espera' },
+  { id: 'cancelada_equipo', etiqueta: '19. El equipo canceló tu visita (sin costo)', paso: 5, titulo: 'Tu visita con María ya no podrá realizarse', texto: 'Lamentamos las molestias. No tienes que hacer nada: esta visita no se descuenta de tu plan y el equipo de Compaz te escribe para ayudarte a encontrar otra opción.', boton: 'Elegir otro compita', href: '/prototipo/cliente/elegir', tono: 'accion' },
   { id: 'pausada', etiqueta: '17. Cuenta en pausa (2.º contacto compartido)', paso: 5, titulo: 'Tu cuenta está en pausa', texto: 'Por ahora tu cuenta está en pausa porque se intentó compartir contactos por segunda vez, y eso va contra las reglas de seguridad de Compaz. Compaz se comunicará contigo por correo para resolverlo. Mientras tanto no puedes escribir en el chat ni agendar visitas, y tu próxima visita queda en espera hasta que Compaz se comunique contigo.', boton: '', sinBoton: true, tono: 'espera' },
   { id: 'fin', etiqueta: '16. Visita terminada', paso: 5, titulo: 'La visita terminó. ¿Cómo te fue?', texto: 'Tu calificación ayuda a otras familias y a mejorar el servicio. Aquí tienes el reporte de María.', boton: '', sinBoton: true, extra: 'reporte' },
   { id: 'recurrente', etiqueta: '18. Cliente que ya tuvo visitas', paso: 5, titulo: 'Próxima visita: jueves 9:00 am', texto: 'Es tu hora de Miami; en Caracas son las 10:00 am. María Pérez volverá a visitar a tu mamá. Te quedan 1 de 2 visitas este ciclo.', boton: 'Ver mis visitas', href: '/prototipo/cliente?sec=visitas', tono: 'espera' },
@@ -157,15 +161,20 @@ function Reporte() {
 
 function Ayuda() {
   const [r, setR] = useState<string | null>(null)
+  const [avisos, setAvisos] = useState(0)
   return (
     <section className="mt-5 rounded-3xl border border-[var(--border-muted)] bg-white p-4">
       <h2 className="text-lg font-extrabold">¿No te llega el correo?</h2>
       <p className="mt-1 text-sm font-bold text-[#991B1B]">Si alguien te escribe o llama pidiéndote dinero para &quot;agilizar&quot; tu pago, es un fraude. Compaz no lo hace.</p>
       <p className="mt-1 text-base text-[var(--text-mid)]">No dependes de él: esta pantalla siempre muestra tu estado real.</p>
-      {r ? <p className="mt-3 rounded-xl bg-[var(--warm-gray)] p-3 font-bold">✓ {r}</p> : (
+      {r && <p role="status" className="mt-3 flex items-center gap-1 rounded-xl bg-[var(--warm-gray)] p-3 font-bold"><span className="min-w-0 flex-1">✓ {r}</span>{avisos > 1 && <InfoBoton que="Por qué no se avisa otra vez" texto="Tu pago ya está marcado como urgente. Avisar más seguido no acelera la confirmación: el equipo recibe una sola alerta urgente por ventana para que no se pierda entre mensajes. Te escribimos por correo apenas lo confirmemos." />}</p>}
+      {(
         <div className="mt-3 grid gap-2">
           <button onClick={() => setR('Te reenviamos la confirmación. Revisa también la carpeta de spam.')} className="min-h-12 rounded-xl border-2 border-[var(--purple)] font-extrabold text-[var(--purple)]">Reenviar la confirmación</button>
-          <button onClick={() => setR('Avisamos al equipo de Compaz con urgencia. Te responden por el teléfono que dejaste.')} className="min-h-12 rounded-xl bg-[var(--orange)] font-extrabold text-white">Contactar a Compaz</button>
+          <div className="flex items-center gap-1">
+            <button onClick={() => { setAvisos(avisos + 1); setR(avisos === 0 ? 'Avisamos al equipo de Compaz con urgencia. Te escribimos por correo apenas confirmemos tu pago.' : 'Ya avisamos al equipo hace un momento. Podrás avisar de nuevo en 30 minutos.') }} className="min-h-12 flex-1 rounded-xl bg-[var(--orange)] font-extrabold text-white">Contactar a Compaz</button>
+            <InfoBoton que="Contactar a Compaz" texto="Avisa al equipo, con urgencia, que ya pagaste. Si lo vuelves a tocar poco después, te explicamos por qué no se envía otro aviso y cuándo podrás hacerlo." alineado="izquierda" />
+          </div>
         </div>
       )}
     </section>
@@ -425,10 +434,40 @@ function CoordinarVisita() {
 }
 
 // En qué momento está el cliente: decide qué muestran "Mis visitas" y "Mi plan" (un cliente nuevo no tiene historial).
-const SIN_PAGO = ['enviada', 'directa_enviada', 'aceptada', 'horario_enviado', 'horario_rechazado', 'programada', 'ahora', 'decidir', 'motivo_no', 'directa_aceptada', 'pagar']
+const SIN_PAGO = ['enviada', 'enviada_recibida', 'directa_enviada', 'aceptada', 'horario_enviado', 'horario_rechazado', 'programada', 'ahora', 'decidir', 'motivo_no', 'directa_aceptada', 'pagar']
 const PAGO_EN_REVISION = ['pago_revision', 'ficha_espera', 'pago_ficha_lista']
 const RECURRENTE = ['fin', 'recurrente']
 const momentoDe = (estado: string) => (SIN_PAGO.includes(estado) ? 'sin_pago' : PAGO_EN_REVISION.includes(estado) ? 'revision' : RECURRENTE.includes(estado) ? 'recurrente' : 'primera')
+
+// Cómo ha estado el familiar a lo largo de las visitas: los mismos cuatro indicadores del reporte de cada visita, con la flecha respecto a la anterior.
+const INDICADORES = [
+  { n: 'Ánimo', e: '😊', v: [3, 4, 5] }, { n: 'Condición física', e: '💪', v: [3, 3, 4] },
+  { n: 'Participación', e: '🤝', v: [3, 4, 5] }, { n: 'Ambiente y entorno', e: '🏠', v: [4, 4, 5] },
+] as const
+const ESCALA = ['', 'Muy bajo', 'Bajo', 'Regular', 'Bueno', 'Excelente']
+function Tendencia() {
+  return (
+    <section className="mt-6 rounded-3xl border border-[var(--border-muted)] bg-white p-5">
+      <h2 className="text-lg font-extrabold">Cómo ha estado tu mamá</h2>
+      <p className="mt-1 text-sm text-[var(--text-mid)]">Lo que María anotó en sus últimas 3 visitas. La flecha compara con la visita anterior.</p>
+      <ul className="mt-3 grid gap-3">
+        {INDICADORES.map((i) => {
+          const ahora = i.v[i.v.length - 1]; const antes = i.v[i.v.length - 2]
+          return (
+            <li key={i.n} className="flex items-center gap-3">
+              <span aria-hidden className="text-2xl">{i.e}</span>
+              <div className="min-w-0 flex-1">
+                <div className="font-bold">{i.n}</div>
+                <div className="mt-1 flex gap-1" aria-label={`Últimas visitas: ${i.v.join(', ')} de 5`}>{i.v.map((x, k) => <span key={k} className={`h-2 flex-1 rounded-full ${x >= 4 ? 'bg-green-600' : x === 3 ? 'bg-yellow-500' : 'bg-red-500'}`} />)}</div>
+              </div>
+              <div className="text-right"><div className="font-extrabold">{ESCALA[ahora]}</div><div className={`text-sm font-bold ${ahora > antes ? 'text-green-700' : ahora < antes ? 'text-red-700' : 'text-[var(--text-light)]'}`}>{ahora > antes ? '↑ mejor' : ahora < antes ? '↓ menos' : '→ igual'}</div></div>
+            </li>
+          )
+        })}
+      </ul>
+    </section>
+  )
+}
 
 function Visitas() {
   const estado = useParam('estado') ?? 'aceptada'
@@ -497,6 +536,7 @@ function Visitas() {
               </li>
             ))}
           </ul>
+          <Tendencia />
         </>
       )}
     </>
@@ -552,6 +592,7 @@ function Plan() {
           </ul>
         </>
       )}
+      <CuentaEliminar momento={momento} visitasQuedan={visitasQuedan} />
       <Link href="/prototipo/cliente/entrar" className="mt-6 flex min-h-12 w-full items-center justify-center rounded-2xl border border-[var(--border-muted)] bg-white text-base font-bold text-[var(--text-mid)]">Cerrar sesión</Link>
     </>
   )

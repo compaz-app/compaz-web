@@ -1,5 +1,6 @@
 'use client'
 
+import InfoBoton from '@/components/ui/InfoBoton'
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -34,6 +35,7 @@ export default function SolicitarForm({ compitaId, compitaNombre, precioMandado,
   const [avisoContacto, setAvisoContacto] = useState(false)
   const [enviando, setEnviando] = useState(false)
   const [error, setError] = useState('')
+  const [porQueError, setPorQueError] = useState('')
   const [enviada, setEnviada] = useState(false)
   const [tieneFoto, setTieneFoto] = useState(tieneFotoInicial)
   const [subiendoFoto, setSubiendoFoto] = useState(false)
@@ -95,7 +97,7 @@ export default function SolicitarForm({ compitaId, compitaNombre, precioMandado,
         }),
       })
       const d = await r.json().catch(() => ({}))
-      if (!r.ok || !d.ok) { setError(d.error ?? 'No pudimos enviar tu solicitud. Intenta de nuevo.'); return }
+      if (!r.ok || !d.ok) { setError(d.error ?? 'No pudimos enviar tu solicitud. Intenta de nuevo.'); setPorQueError(typeof d.porQue === 'string' ? d.porQue : ''); return }
       setEnviada(true)
     } catch { setError('Sin conexión. Intenta de nuevo.') } finally { setEnviando(false) }
   }
@@ -230,7 +232,7 @@ export default function SolicitarForm({ compitaId, compitaNombre, precioMandado,
             <p style={{ color: colors.textoMedio, margin: `${spacing.xs} 0 0` }}>{familiar ? `${familiar}. Ya lo tenemos guardado; no lo escribes otra vez.` : 'Todavía no completaste su ficha. La completas en tu portal antes de agendar.'}</p>
           </div>
 
-          {error && <p role="alert" style={{ color: colors.rojo, fontSize: '15px', fontWeight: 700, margin: 0 }}>{error}</p>}
+          {error && <p role="alert" style={{ color: colors.rojo, fontSize: '15px', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '2px', flexWrap: 'wrap' }}><span>{error}</span>{porQueError && <InfoBoton que="Por qué" texto={porQueError} />}</p>}
 
           <button type="button" disabled={!listo || enviando} onClick={enviar} style={{ minHeight: '56px', borderRadius: radius.md, border: 'none', background: colors.naranja, color: colors.blanco, fontWeight: 800, fontSize: '18px', cursor: !listo || enviando ? 'not-allowed' : 'pointer', opacity: !listo || enviando ? 0.4 : 1 }}>
             {enviando ? 'Enviando…' : esMandado ? 'Pedir el mandado' : 'Enviar mi solicitud'}

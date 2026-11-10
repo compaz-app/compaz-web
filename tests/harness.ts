@@ -36,7 +36,8 @@ export const net = {
   },
 }
 
-const TAG = /<\/?(b|i|u|s|a|code|pre|em|strong)(\s[^>]*)?>/g
+// blockquote (también con el atributo expandable) es HTML válido de Telegram desde la Bot API 7.4.
+const TAG = /<\/?(b|i|u|s|a|code|pre|em|strong|blockquote)(\s[^>]*)?>/g
 function parseaComoTelegram(text: string): boolean {
   // Telegram HTML: solo tags permitidos; cualquier "<" suelto rompe el parseo ("can't parse entities")
   const sinTags = text.replace(TAG, '')

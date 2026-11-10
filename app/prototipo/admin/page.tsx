@@ -1,6 +1,8 @@
 'use client'
 import { Suspense, createContext, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { useEmbedded, useUrlState } from '../useUrlState'
+import InfoBoton from '../InfoBoton'
+import { CATALOGO, type ClaveEspera } from '@/lib/esperas'
 
 type Etapa = 'Solicitud' | 'Entrevista' | 'Decisión' | 'Pago' | 'Ficha' | 'Activo'
 const ETAPAS: Etapa[] = ['Solicitud', 'Entrevista', 'Decisión', 'Pago', 'Ficha', 'Activo']
@@ -70,6 +72,26 @@ function urgenciaDe(p: Persona): Urgencia {
   return h >= ro ? 'rojo' : h >= am ? 'amarillo' : 'verde'
 }
 
+
+// Qué hace cada botón de la Bandeja (el icono ⓘ que lo acompaña).
+const INFO_BOTON_TAREA: Record<string, string> = {
+  'Confirmar pago': 'Confirma que el dinero llegó. El cliente puede completar su ficha y agendar, y le llega un correo. Queda anotado quién lo confirmó.',
+  'Contactar al compita': 'Abre el contacto del compita para que le escribas por Telegram y preguntes si todo está bien. Al tocarlo, la tarea queda como contactada.',
+  'Decidir sobre el compita': 'Abre una ventana para reactivar al compita, darle otra oportunidad o bloquearlo. Tu decisión queda en el Registro de actividad.',
+  'Decidir sobre la cuenta': 'Abre una ventana para reactivar la cuenta del cliente, darle otra oportunidad o bloquearla. Tu decisión queda en el Registro de actividad.',
+  'Escribir al contacto otra vez': 'Manda otro mensaje a la persona que debía abrir la puerta. No se le dan datos del compita. Cierra la tarea si nadie vuelve a avisar.',
+  'Hablar con el compita': 'Abre el contacto del compita para conversar sobre sus cancelaciones. No cambia nada hasta que registres lo que decidiste.',
+  'Insistir al compita': 'Le manda de nuevo el aviso por Telegram al compita que no respondió. Queda anotado que se insistió.',
+  'Llamar al compita y decidir': 'Te muestra cómo contactar al compita tras salir de una visita por seguridad. Tú decides si se cobra la visita. Nunca le pidas datos por teléfono.',
+  'Marcar atendida': 'Indica que ya atendiste la emergencia. Quita la alerta roja y queda anotado quién y cuándo.',
+  'Marcar revisada': 'Indica que ya revisaste el mensaje bloqueado. Quita la tarea y queda anotado. No se envía nada a nadie.',
+  'Recordar al cliente': 'Le manda un correo de Compaz al cliente para que decida si contrata. No lleva datos del compita.',
+  'Recordarle por correo': 'Le manda un correo de Compaz al cliente para que complete la ficha de su familiar. Es lo único que le falta para agendar.',
+  'Registrar la llamada': 'Abre una ventana con el plazo, lo que sigue abierto con ese cliente y las cuatro decisiones. Al registrar, la tarea se cierra y queda quién llamó.',
+  'Reintentar aviso': 'Vuelve a mandar el aviso que no llegó. Si falla otra vez, la tarea sigue abierta con el motivo del fallo.',
+  'Responderle por Telegram': 'Abre el chat para que le respondas al compita su duda por Telegram. Nunca se resuelve por llamada.',
+}
+
 type Tarea = { id: string; tipo: string; icono: string; clienteId: string; compitaId: string; que: string; hace: string; boton: string; resuelta: string }
 const TAREAS: Tarea[] = [
   { id: 't0', tipo: 'Emergencia', icono: '🚨', clienteId: 'p4', compitaId: 'p6', que: 'El compita activó el botón de emergencia durante una visita en curso', hace: 'hace 2 min', boton: 'Marcar atendida', resuelta: 'Atendida ✓' },
@@ -86,7 +108,7 @@ const NUEVAS: Tarea[] = [
   { id: 'n2', tipo: 'No me siento seguro', icono: '🛑', clienteId: 'p2', compitaId: 'p7', que: 'El compita salió de la visita por seguridad. El cliente recibió un aviso neutro. Decide si cobra la visita', hace: 'hace 6 min', boton: 'Llamar al compita y decidir', resuelta: 'Atendida ✓' },
   { id: 'n3', tipo: 'Visita alargada', icono: '⏱️', clienteId: 'p3', compitaId: 'p8', que: 'La visita pasó 25 minutos de su hora de fin y el compita no respondió "¿Todo bien?" en 10 minutos', hace: 'hace 10 min', boton: 'Contactar al compita', resuelta: 'Contactado ✓' },
   { id: 'n4', tipo: 'Ficha incompleta', icono: '📋', clienteId: 'p9', compitaId: 'p6', que: 'Pagó hace 2 días y aún no completa la ficha del familiar. No puede agendar su primera cita', hace: 'hace 2 d', boton: 'Recordarle por correo', resuelta: 'Recordatorio enviado ✓' },
-  { id: 'n5', tipo: 'Reporte de un compita', icono: '🚩', clienteId: 'p5', compitaId: 'p7', que: 'El compita reportó un problema con este cliente: "Me pidió hacer algo fuera del servicio" y marcó no volver con él', hace: 'hace 1 h', boton: 'Revisar y decidir', resuelta: 'Revisado ✓' },
+  { id: 'n5', tipo: 'Reporte de un compita', icono: '🚩', clienteId: 'p5', compitaId: 'p7', que: 'El compita reportó un problema con este cliente: quiso arreglar pagos fuera de Compaz, durante la visita, y ya había pasado antes. Marcó no volver con él y pidió que lo llamemos. Llamar antes de mañana 4:00 pm', hace: 'hace 1 h', boton: 'Registrar la llamada', resuelta: 'Llamada registrada ✓' },
   { id: 'n6', tipo: 'Cancelación tardía', icono: '📆', clienteId: 'p2', compitaId: 'p8', que: 'El compita canceló con menos de 24 horas. Es su segunda en 30 días: se abre revisión. La cita se reprograma sin costo', hace: 'hace 4 h', boton: 'Hablar con el compita', resuelta: 'Revisada ✓' },
   { id: 'n9', tipo: 'Duda sin resolver', icono: '❓', clienteId: 'p4', compitaId: 'p7', que: 'El compita preguntó por la dirección y por cómo entrar, y el bot no pudo resolverlo en 2 intentos. Responder por Telegram, nunca por llamada', hace: 'hace 20 min', boton: 'Responderle por Telegram', resuelta: 'Respondida ✓' },
   { id: 'n10', tipo: 'Contacto bloqueado', icono: '🔒', clienteId: 'p4', compitaId: 'p7', que: 'Segunda detección en 30 días: este COMPITA compartió un teléfono con un cliente. Su disponibilidad quedó en pausa, sin fecha de fin, y sus visitas programadas en espera. Decide: reactivar, dar otra oportunidad o bloquear', hace: 'hace 35 min', boton: 'Decidir sobre el compita', resuelta: 'Decidido ✓' },
@@ -403,6 +425,54 @@ const PAGINA = 10
 // Etiquetas cortas para que los filtros quepan en dos líneas (el filtro sigue usando el nombre completo).
 const ETIQ_TIPO: Record<string, string> = { 'No me siento seguro': 'Inseguro', 'Visita alargada': 'Alargada', 'Ficha incompleta': 'Ficha', 'Cambio en el lugar': 'Cambio lugar', 'Duda sin resolver': 'Dudas', 'Reporte de un compita': 'Reporte', 'Cancelación tardía': 'Cancelación', 'Aviso fallido': 'Fallido', 'Sin respuesta': 'Sin resp.', 'Contacto bloqueado': 'Contacto' }
 
+
+// Registrar la llamada al compita que reportó un problema: el plazo, lo que sigue abierto con ese cliente y la decisión. Queda en el Registro de actividad.
+const RESULTADOS_LLAMADA = [
+  { id: 'resuelto', t: 'Resuelto', d: 'Ya hablaste con el compita y no hace falta nada más. Se cierra la tarea y queda anotado quién llamó y cuándo.' },
+  { id: 'hablar_cliente', t: 'Hablar con el cliente', d: 'Tras hablar con el compita, falta llamar o escribirle al cliente. Se cierra esta tarea y queda anotado; el seguimiento con el cliente lo haces tú.' },
+  { id: 'mantener', t: 'Mantener el bloqueo', d: 'Decides que el compita no vuelve con este cliente. El bloqueo sigue y ese cliente no podrá pedirle más visitas.' },
+  { id: 'levantar', t: 'Levantar el bloqueo', d: 'Decides que no hacía falta separarlos. El cliente vuelve a poder pedirle visitas a este compita.' },
+]
+function LlamadaReporte({ cliente, compita, onListo, onCancelar }: { cliente: string; compita: string; onListo: (id: string, canceladas: boolean) => void; onCancelar: () => void }) {
+  const [sel, setSel] = useState('')
+  const [canceladas, setCanceladas] = useState(false)
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center" onClick={onCancelar}>
+      <div onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Registrar la llamada" className="max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-white p-5 sm:rounded-3xl">
+        <h2 className="text-xl font-extrabold">Llamada a {compita}</h2>
+        <p className="mt-1 rounded-xl bg-[#FEF3C7] p-3 text-sm font-bold text-[#92400E]">📞 Llamar antes de mañana 4:00 pm. Es el plazo que se le prometió (24 horas). Si pasa sin llamada, el sistema te vuelve a avisar.</p>
+        <p className="mt-2 text-sm text-[var(--text-mid)]">Reporte sobre {cliente}: quiso arreglar pagos fuera de Compaz. Recuerda: no le pidas datos por teléfono; escucha y decide.</p>
+        <div className="mt-3 rounded-2xl border border-[var(--border-muted)] p-3 text-sm">
+          <div className="font-extrabold">Sigue abierto con este cliente</div>
+          <div className="text-[var(--text-mid)]">1 visita (jueves 5 nov, 10:00 am) y 1 solicitud.</div>
+          {canceladas ? <div role="status" className="mt-2 font-bold text-green-700">✓ Canceladas sin costo para el cliente. Se le avisó sin decirle el motivo.</div> : (
+            <div className="mt-2 flex items-center gap-1">
+              <button onClick={() => setCanceladas(true)} className="min-h-12 flex-1 rounded-xl border-2 border-[#991B1B] font-extrabold text-[#991B1B]">Cancelar y avisar al cliente</button>
+              <InfoBoton que="Cancelar y avisar al cliente" texto="Cancela la visita y la solicitud abiertas entre este compita y este cliente. Al cliente se le devuelve el crédito y recibe un aviso neutro, sin el motivo. Al compita no le cuenta como cancelación tardía. No se puede deshacer." />
+            </div>
+          )}
+        </div>
+        <div className="mt-3 grid gap-2">
+          <div className="text-sm font-bold text-[var(--text-mid)]">Después de llamar, registra qué decidiste:</div>
+          {RESULTADOS_LLAMADA.map((o) => (
+            <div key={o.id} className="flex items-center gap-1">
+              <button onClick={() => setSel(o.id)} aria-pressed={sel === o.id} className={`flex-1 rounded-2xl border-2 px-4 py-3 text-left ${sel === o.id ? 'border-[var(--purple)] bg-[var(--purple)]/5' : 'border-[var(--border-muted)]'}`}><div className="font-extrabold">{o.t}</div></button>
+              <InfoBoton que={o.t} texto={o.d} />
+            </div>
+          ))}
+        </div>
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          <button onClick={onCancelar} className="min-h-12 rounded-xl border border-[var(--border-muted)] font-bold">Cerrar</button>
+          <div className="flex items-center gap-1">
+            <button disabled={!sel} onClick={() => onListo(sel, canceladas)} className="min-h-12 flex-1 rounded-xl bg-[var(--orange)] font-extrabold text-white disabled:opacity-40">Registrar</button>
+            <InfoBoton que="Registrar la llamada" texto="Guarda quién llamó, cuándo y qué decidiste, y cierra la tarea. Si decidiste levantar el bloqueo, el cliente vuelve a poder pedirle visitas a este compita." alineado="izquierda" />
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // Decidir sobre una cuenta pausada: el administrador elige qué pasa. Queda en el Registro de actividad.
 const OPCIONES_CUENTA = [
   { id: 'reactivar', t: 'Reactivar la cuenta', d: 'Vuelve a usar el sistema con normalidad y sus visitas en espera siguen.' },
@@ -491,7 +561,7 @@ function Bandeja({ abrir }: { abrir: (id: string) => void }) {
                 <div className="line-clamp-2 text-sm text-[var(--text-mid)]">{t.que}</div>
               </div>
               {puede('chats') && <button onClick={() => verChat(cli.id, cmp.id)} aria-label={`Ver el chat de ${cli.nombre} y ${cmp.nombre}`} className="min-h-10 shrink-0 rounded-xl border border-[var(--border-muted)] bg-white px-3 text-sm font-bold text-[var(--text-mid)]">💬 Chat</button>}
-              <button disabled={bloqueada(t)} title={bloqueada(t) ? 'No tienes este permiso. Pídeselo a un administrador.' : undefined} onClick={() => (/^Decidir/.test(t.boton) ? setDecidiendo(t.id) : setHechas((h) => ({ ...h, [t.id]: true })))} className="min-h-10 shrink-0 rounded-xl bg-[var(--orange)] disabled:opacity-40 px-3 text-sm font-extrabold text-white active:bg-[var(--orange-dark)]">{t.boton}</button>
+              <span className="flex shrink-0 items-center"><button disabled={bloqueada(t)} title={bloqueada(t) ? 'No tienes este permiso. Pídeselo a un administrador.' : undefined} onClick={() => (/^Decidir|^Registrar la llamada/.test(t.boton) ? setDecidiendo(t.id) : setHechas((h) => ({ ...h, [t.id]: true })))} className="min-h-10 shrink-0 rounded-xl bg-[var(--orange)] disabled:opacity-40 px-3 text-sm font-extrabold text-white active:bg-[var(--orange-dark)]">{t.boton}</button><InfoBoton que={t.boton} texto={INFO_BOTON_TAREA[t.boton] ?? 'Hace lo que dice el botón y deja anotado quién lo hizo y cuándo.'} alineado="izquierda" /></span>
             </li>
           )
         })}
@@ -507,6 +577,10 @@ function Bandeja({ abrir }: { abrir: (id: string) => void }) {
         const t = TODAS_TAREAS.find((x) => x.id === decidiendo)!
         const cli = PERSONAS.find((x) => x.id === t.clienteId)!
         const cmp = PERSONAS.find((x) => x.id === t.compitaId)!
+        if (t.boton === 'Registrar la llamada') return <LlamadaReporte cliente={cli.nombre} compita={cmp.nombre} onCancelar={() => setDecidiendo(null)} onListo={(op, canc) => {
+          REGISTRO_EXTRA.unshift({ cuando: `hoy ${horaAhora()}`, quien: NOMBRE_ROL[rol], accion: `Llamada a ${cmp.nombre}: ${RESULTADOS_LLAMADA.find((o) => o.id === op)!.t}${canc ? ' (canceló lo abierto con el cliente)' : ''}`, motivo: `Reporte sobre ${cli.nombre}` })
+          setHechas((h) => ({ ...h, [t.id]: true })); setDecidiendo(null)
+        }} />
         return <DecisionCuenta cliente={cli.nombre} compita={cmp.nombre} onCancelar={() => setDecidiendo(null)} onListo={(op) => {
           REGISTRO_EXTRA.unshift({ cuando: `hoy ${horaAhora()}`, quien: NOMBRE_ROL[rol], accion: `${OPCIONES_CUENTA.find((o) => o.id === op)!.t}: ${cli.nombre}`, motivo: 'Cuenta en pausa por compartir contactos' })
           setHechas((h) => ({ ...h, [t.id]: true })); setDecidiendo(null)
@@ -860,6 +934,8 @@ const HUB: { id: string; i: string; t: string; d: string; m: Madurez; sub: boole
   { id: 'umbrales', i: '🚦', t: 'Ajustes del semáforo', d: 'Cuántas horas son normales en cada etapa antes de pasar a amarillo y rojo.', m: 'base', sub: true },
   { id: 'equipo', i: '🧑‍🤝‍🧑', t: 'Equipo y permisos', d: 'Quién entra al panel, con qué rol y qué puede hacer cada uno.', m: 'base', sub: true },
   { id: 'ajustes', i: '🎛️', t: 'Ajustes', d: 'Precios, plazos, topes y umbrales. Se cambian aquí, con registro de quién y cuándo; no hay que tocar el código.', m: 'base', sub: true },
+  { id: 'actividad', i: '📜', t: 'Actividad', d: 'Todo lo que pasó en el sistema, en orden. Aquí no suena nada: se consulta cuando hace falta.', m: 'base', sub: true },
+  { id: 'limites', i: '⏳', t: 'Límites y esperas', d: 'Lo que el sistema frena a propósito (plazos entre envíos, máximos) y por qué. Para responder "¿por qué no deja hacerlo otra vez?".', m: 'base', sub: true },
   { id: 'registro', i: '🗂️', t: 'Registro de actividad', d: 'Quién del equipo vio un teléfono o dato sensible, cuándo y por qué.', m: 'base', sub: true },
   { id: 'estado', i: '🩺', t: 'Estado del sistema', d: 'Procesos automáticos, avisos fallidos y salud de Telegram, correo y videollamadas.', m: 'base', sub: true },
 ]
@@ -1247,11 +1323,102 @@ function DudasCompitas() {
   )
 }
 
-function VistaEstado() {
-  const filas: [string, string, boolean][] = [['Revisión de avisos (cada 5 min)', 'corrió hace 2 min', true], ['Avisos fallidos sin resolver', '0', true], ['Telegram', 'responde', true], ['Correo', 'responde', true], ['Videollamadas', 'responde', true], ['Limpieza diaria', 'corrió hoy 3:00 am', true]]
+
+// Actividad: todo lo que pasa en el sistema, en orden. Aquí no suena nada: lo urgente llega por Telegram con un tope por hora y lo que hay que hacer está en la Bandeja.
+type NivelAct = 'urgente' | 'tarea' | 'actividad'
+const ACTIVIDAD: { n: NivelAct; t: string; h: string; d: number }[] = [
+  { n: 'urgente', t: 'No me siento seguro: Daniela salió de una visita', h: '9:12 am', d: 0 },
+  { n: 'urgente', t: 'Llamada vencida: se pasó el plazo para llamar a Yoselin por su reporte', h: '8:40 am', d: 0 },
+  { n: 'tarea', t: 'Reporte de Rosa sobre un cliente: pidió que la llamen antes de mañana 4:00 pm', h: '8:05 am', d: 0 },
+  { n: 'actividad', t: 'Visita terminada: Carmen con la mamá de Marta', h: '7:55 am', d: 0 },
+  { n: 'actividad', t: 'Visita iniciada: Carmen con la mamá de Marta', h: '6:02 am', d: 0 },
+  { n: 'tarea', t: 'Pago por confirmar: Elena Duarte, $75', h: '5:30 pm', d: 1 },
+  { n: 'actividad', t: 'Entrevista confirmada: Irene con Carolina para mañana 4:00 pm', h: '3:12 pm', d: 1 },
+  { n: 'actividad', t: 'Solicitud creada: Carolina pidió una entrevista a María', h: '1:44 pm', d: 1 },
+  { n: 'actividad', t: 'Cancelación gratis: un cliente canceló con más de 24 horas', h: '11:20 am', d: 1 },
+  { n: 'tarea', t: 'Compita sin Telegram vinculado: Beatriz no recibe avisos', h: '9:03 am', d: 1 },
+  { n: 'actividad', t: 'Tarea resuelta por equipo@compaz.com: Pago de Marta', h: '4:10 pm', d: 3 },
+  { n: 'actividad', t: 'Pago confirmado: Marta, plan Compañía', h: '4:09 pm', d: 3 },
+]
+const NIV_ACT: Record<NivelAct, { i: string; t: string }> = { urgente: { i: '🔴', t: 'Urgente' }, tarea: { i: '🟠', t: 'Tarea' }, actividad: { i: '⚪', t: 'Informativo' } }
+function VistaActividad() {
+  const [nivel, setNivel] = useUrlState('act_nivel', '')
+  const [dias, setDias] = useUrlState('act_dias', '2')
+  const [q, setQ] = useUrlState('act_q', '')
+  const [texto, setTexto] = useState(q)
+  const lista = ACTIVIDAD.filter((a) => (!nivel || a.n === nivel) && a.d < Number(dias) && (!q || a.t.toLowerCase().includes(q.toLowerCase())))
+  const chip = (on: boolean) => `min-h-12 rounded-full px-4 text-sm font-bold ${on ? 'bg-[var(--purple)] text-white' : 'border border-[var(--border-muted)] bg-white'}`
   return (
     <>
-      <p className="text-[var(--text-mid)]">Si algo automático deja de funcionar, aquí se ve en rojo y llega una alerta.</p>
+      <div className="flex flex-wrap items-center gap-2">
+        <InfoBoton que="Qué es Actividad" texto="Todo lo que pasó en el sistema, en orden. Aquí no suena nada: lo urgente te llega por Telegram, con un tope por hora, y lo que debes hacer está en la Bandeja." alineado="izquierda" />
+        {([['', 'Todo'], ['urgente', '🔴 Urgentes'], ['tarea', '🟠 Tareas'], ['actividad', '⚪ Informativo']] as const).map(([v, t]) => <button key={v} aria-pressed={nivel === v} onClick={() => setNivel(v)} className={chip(nivel === v)}>{t}</button>)}
+        <InfoBoton que="Filtrar por tipo" texto="Muestra solo un tipo de actividad: urgente, tarea o informativo. Todo vuelve a mostrar todo. No cambia ni resuelve nada." alineado="izquierda" />
+      </div>
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        {[['1', 'Hoy'], ['2', '2 días'], ['7', '7 días'], ['30', '30 días']].map(([v, t]) => <button key={v} aria-pressed={dias === v} onClick={() => setDias(v)} className={chip(dias === v)}>{t}</button>)}
+        <InfoBoton que="Filtrar por días" texto="Elige cuánto tiempo atrás quieres mirar. La actividad se conserva 90 días." alineado="izquierda" />
+      </div>
+      <form onSubmit={(e) => { e.preventDefault(); setQ(texto.trim()) }} className="mt-2 flex items-center gap-1">
+        <input value={texto} onChange={(e) => setTexto(e.target.value)} placeholder="Buscar por compita, cliente o texto" aria-label="Buscar en la actividad" className="min-h-12 min-w-0 flex-1 rounded-xl border border-[var(--border-muted)] px-3 text-base" />
+        <button type="submit" className={chip(false)}>Buscar</button>
+        <InfoBoton que="Buscar" texto="Filtra la lista por el texto que escribas, por ejemplo el nombre de un compita o un cliente." />
+      </form>
+      <ul className="mt-3 divide-y divide-[var(--border-muted)] overflow-hidden rounded-2xl border border-[var(--border-muted)] bg-white">
+        {lista.map((a) => (
+          <li key={a.t} className="flex items-baseline gap-3 px-3 py-3">
+            <span aria-label={NIV_ACT[a.n].t}>{NIV_ACT[a.n].i}</span>
+            <span className="min-w-0 flex-1 text-sm font-bold">{a.t}</span>
+            <span className="shrink-0 text-xs text-[var(--text-light)]">{a.d === 0 ? 'hoy' : a.d === 1 ? 'ayer' : `hace ${a.d} d`} · {a.h}</span>
+          </li>
+        ))}
+        {!lista.length && <li className="p-6 text-center text-[var(--text-light)]">No hay actividad con estos filtros.</li>}
+      </ul>
+    </>
+  )
+}
+
+// Límites y esperas: todo lo que el sistema frena a propósito y por qué. Responde "¿por qué no deja hacerlo otra vez?" sin escribirle al desarrollador.
+// Las razones salen de lib/esperas.ts (el mismo catálogo que usan los mensajes reales); los valores son los de hoy.
+const VALOR_LIMITE: Record<ClaveEspera, string> = {
+  recordatorio_reciente: 'Un mínimo de 12 horas entre recordatorios (editable en Ajustes)', recordatorio_limite: 'Máximo 3 por paso (editable en Ajustes)',
+  pago_insistencia: 'Una alerta urgente cada 30 minutos (editable en Ajustes)', solicitudes_dia: 'Máximo 5 solicitudes en 24 horas', solicitud_mismo_compita: 'Una por compita cada 24 horas',
+  codigo_fallos: '5 intentos fallidos en 15 minutos', codigo_conexion: '30 intentos en 15 minutos por conexión', acceso_conexion: '10 enlaces por hora por conexión',
+  acceso_correo: 'Un enlace por minuto y correo', reconexion_llamada: 'Una reconexión cada 2 minutos', chat_limite: '10 mensajes por hora y 50 por día por conexión',
+  postulacion_conexion: '50 postulaciones por hora por conexión', postulacion_correo: 'Una por correo',
+}
+const QUIEN_LIMITE = { compita: 'Compitas', cliente: 'Clientes y visitantes', equipo: 'Equipo' } as const
+function VistaLimites() {
+  const [quien, setQuien] = useUrlState('lim', '')
+  const filas = (Object.keys(CATALOGO) as ClaveEspera[]).filter((k) => !quien || CATALOGO[k].quien === quien)
+  const chip = (on: boolean) => `min-h-12 rounded-full px-4 text-sm font-bold ${on ? 'bg-[var(--purple)] text-white' : 'border border-[var(--border-muted)] bg-white'}`
+  return (
+    <>
+      <div className="flex flex-wrap items-center gap-2">
+        <InfoBoton que="Qué son los límites y esperas" texto="Cosas que el sistema frena a propósito: plazos entre envíos, máximos y límites de seguridad. Cuando alguien se topa con una, el mensaje que ve le explica lo mismo que lees aquí." alineado="izquierda" />
+        {([['', 'Todos'], ['compita', 'Compitas'], ['cliente', 'Clientes'], ['equipo', 'Equipo']] as const).map(([v, t]) => <button key={v} aria-pressed={quien === v} onClick={() => setQuien(v)} className={chip(quien === v)}>{t}</button>)}
+        <InfoBoton que="Filtrar por quién la ve" texto="Muestra solo las reglas con las que se topa un tipo de persona: compitas, clientes o equipo. No cambia ninguna regla." alineado="izquierda" />
+      </div>
+      <ul className="mt-3 grid gap-2">
+        {filas.map((k) => (
+          <li key={k} className="rounded-2xl border border-[var(--border-muted)] bg-white p-3">
+            <div className="flex items-start justify-between gap-2"><div className="font-extrabold">{CATALOGO[k].limita}</div><span className="shrink-0 rounded-full bg-[var(--purple)]/10 px-2 py-0.5 text-xs font-bold text-[var(--purple)]">{QUIEN_LIMITE[CATALOGO[k].quien]}</span></div>
+            <div className="flex items-center justify-between gap-1">
+              <div className="text-sm text-[var(--text-mid)]">{VALOR_LIMITE[k]}</div>
+              <InfoBoton que="Por qué existe esta regla" texto={CATALOGO[k].porQue} />
+            </div>
+          </li>
+        ))}
+      </ul>
+    </>
+  )
+}
+
+function VistaEstado() {
+  const filas: [string, string, boolean][] = [['Revisión de avisos (cada 5 min)', 'corrió hace 2 min', true], ['Avisos fallidos sin resolver', '0', true], ['Telegram', 'responde', true], ['Correo', 'responde', true], ['Videollamadas', 'responde', true], ['Limpieza diaria', 'corrió hoy 3:00 am', true], ['Timbre de Telegram: urgencias de la última hora', '3 de 8 (pasado el tope, un solo mensaje remite al panel)', true], ['Llamadas pendientes a compitas', '1, vence mañana 4:00 pm', true]]
+  return (
+    <>
+      <div className="flex items-center gap-1"><span className="font-bold text-[var(--text-mid)]">Procesos y avisos</span><InfoBoton que="Qué es Estado del sistema" texto="Si algo automático deja de funcionar, aquí se ve en rojo y llega una alerta." alineado="izquierda" /></div>
       <DudasCompitas />
       <Lista>{filas.map(([t, v, b]) => <li key={t} className="flex items-center gap-3 px-3 py-3"><span className={`h-3 w-3 rounded-full ${b ? 'bg-[#1f9d6b]' : 'bg-[#D93A3A]'}`} /><span className="flex-1">{t}</span><span className="text-sm text-[var(--text-mid)]">{v}</span></li>)}</Lista>
     </>
@@ -1285,6 +1452,8 @@ function Mas() {
         {sub === 'umbrales' && <VistaUmbrales />}
         {sub === 'ajustes' && <VistaAjustes />}
         {sub === 'equipo' && <VistaEquipo />}
+        {sub === 'actividad' && <VistaActividad />}
+        {sub === 'limites' && <VistaLimites />}
         {sub === 'registro' && <VistaRegistro />}
         {sub === 'estado' && <VistaEstado />}
       </section>
