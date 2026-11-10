@@ -27,6 +27,7 @@ const DEFAULTS: Record<string, () => Row> = {
   compita_edit_tokens: () => ({ id: randomUUID(), usado: false, created_at: nowIso() }),
   onboarding_tokens: () => ({ id: randomUUID(), usado: false, created_at: nowIso() }),
   action_tokens: () => ({ id: randomUUID(), usado: false, created_at: nowIso() }),
+  solicitudes_pago: () => ({ id: randomUUID(), estado: 'pendiente', pago_id: null, resuelta_at: null, created_at: nowIso() }),
   pagos_plan: () => ({ id: randomUUID(), estado: 'activo', horas: null, referencia: null, created_at: nowIso() }),
   admin_flags: () => ({ id: randomUUID(), resuelto: false, created_at: nowIso() }),
   resenas: () => ({ id: randomUUID(), publicada: false, created_at: nowIso() }),

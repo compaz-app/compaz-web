@@ -24,6 +24,7 @@ import { getOrCreateDailyRoom } from '@/lib/daily'
 import { sendVisitaInicio, sendVisitaResumen, sendResumenConReporte, sendCodigoTelegram } from '@/lib/resend'
 import { responderSolicitud, getSolicitudPorToken, aceptarSolicitudDirecta } from '@/lib/solicitudes'
 import { notificar } from '@/lib/avisos'
+import { confirmarPagoYAvisar } from '@/lib/confirmar-pago'
 import { registrarMotivo, MOTIVOS } from '@/lib/motivos'
 import { qRol } from '@/lib/links'
 import { sendEmail, SITE_URL as SITE_URL_PUBLICA } from '@/lib/email'
@@ -427,6 +428,15 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
   // Cuenta bloqueada: no puede usar nada del bot (salvo /reset del admin).
   if (compita?.estado === 'bloqueado' && text !== '/reset') {
     await sendTelegramMessage(chatId, `Tu cuenta está suspendida. Escríbenos a hola@micompaz.com.`)
+    return NextResponse.json({ ok: true })
+  }
+
+  // Confirmar un pago desde el botón del aviso al equipo. Solo el chat del administrador; el pago se confirma una sola vez.
+  if (isCallback && text.startsWith('pagoconf:')) {
+    const adminChatId = process.env.TELEGRAM_ADMIN_CHAT_ID
+    if (!adminChatId || chatId !== adminChatId) return NextResponse.json({ ok: true })
+    const r = await confirmarPagoYAvisar(text.slice('pagoconf:'.length), 'admin:telegram')
+    await sendTelegramMessage(chatId, r.ok ? `✅ Pago de $${r.pago.monto_usd} confirmado. ${esc(r.nombre)} ya tiene sus visitas activas y recibió el correo.` : `No se confirmó: ${esc(r.error)}`)
     return NextResponse.json({ ok: true })
   }
 

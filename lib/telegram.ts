@@ -151,11 +151,11 @@ export function validateTelegramWebhook(secretHeader: string | null): boolean {
 }
 
 /** Envía al admin y devuelve si realmente se entregó. Nunca lanza. */
-export async function avisarAdmin(text: string): Promise<boolean> {
+export async function avisarAdmin(text: string, replyMarkup?: InlineKeyboard): Promise<boolean> {
   const adminChat = process.env.TELEGRAM_ADMIN_CHAT_ID
   if (!adminChat) return false
   try {
-    await sendTelegramMessage(adminChat, text)
+    await sendTelegramMessage(adminChat, text, replyMarkup)
     return true
   } catch (e) {
     console.error('avisarAdmin falló:', e)

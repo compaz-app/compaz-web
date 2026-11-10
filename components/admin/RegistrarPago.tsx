@@ -21,7 +21,7 @@ export default function RegistrarPago({ usuarioId, nombre }: { usuarioId: string
   const [abierto, setAbierto] = useState(false)
   const [pagos, setPagos] = useState<Pago[]>([])
   const [cupo, setCupo] = useState<Cupo>(null)
-  const [pendiente, setPendiente] = useState<{ id: string; tipo: string; plan: string | null; horas: number | null; monto_usd: number; metodo: MetodoPago; referencia: string } | null>(null)
+  const [pendiente, setPendiente] = useState<{ id: string; tipo: string; plan: string | null; horas: number | null; monto_usd: number; metodo: MetodoPago; referencia: string; insistencias?: { veces: number; ultima: string | null } } | null>(null)
   const [cargando, setCargando] = useState(false)
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState('')
@@ -100,6 +100,11 @@ export default function RegistrarPago({ usuarioId, nombre }: { usuarioId: string
           {pendiente && (
             <div style={{ background: colors.amarilloClaro, border: `2px solid ${colors.amarillo}`, borderRadius: '12px', padding: '12px 14px', fontSize: '14px', color: colors.textoOscuro, lineHeight: 1.5 }}>
               <strong>{nombre} quiere pagar</strong> {pendiente.tipo === 'plan' ? `el plan ${PLANES[pendiente.plan as PlanId].nombre}` : `una visita extra de ${pendiente.horas} h`}: <strong>${pendiente.monto_usd}</strong> por {ETIQUETA_METODO[pendiente.metodo]}. Referencia <strong>{pendiente.referencia}</strong>.
+              {pendiente.insistencias && pendiente.insistencias.veces > 0 && pendiente.insistencias.ultima && (
+                <div style={{ marginTop: '8px', background: colors.rojoClaro, color: colors.rojo, borderRadius: '8px', padding: '6px 10px', fontWeight: 800, fontSize: '13px' }}>
+                  URGENTE: el cliente insistió {pendiente.insistencias.veces} {pendiente.insistencias.veces === 1 ? 'vez' : 'veces'}, la última hace {Math.max(1, Math.round((Date.now() - new Date(pendiente.insistencias.ultima).getTime()) / 60000))} min.
+                </div>
+              )}
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '10px' }}>
                 <button onClick={() => resolverSolicitud('confirmar')} disabled={guardando} style={{ background: colors.verde, color: colors.blanco, border: 'none', borderRadius: '9999px', padding: '8px 16px', fontWeight: 700, fontSize: '13px', cursor: 'pointer' }}>Confirmar pago recibido</button>
                 <button onClick={() => resolverSolicitud('cancelar')} disabled={guardando} style={{ background: colors.blanco, color: colors.rojo, border: `2px solid ${colors.rojo}`, borderRadius: '9999px', padding: '8px 16px', fontWeight: 700, fontSize: '13px', cursor: 'pointer' }}>Descartar</button>

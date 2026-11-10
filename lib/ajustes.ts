@@ -12,7 +12,7 @@ export type ValorAjuste = number | string
 
 export interface DefAjuste {
   clave: string
-  grupo: 'Precios' | 'Plazos de las citas' | 'Cancelaciones de compitas' | 'Ayuda automática' | 'Llamadas' | 'Seguridad y datos'
+  grupo: 'Precios' | 'Pagos' | 'Plazos de las citas' |'Cancelaciones de compitas' | 'Ayuda automática' | 'Llamadas' | 'Seguridad y datos'
   etiqueta: string
   tipo: TipoAjuste
   defecto: ValorAjuste
@@ -45,6 +45,9 @@ export const CATALOGO = [
   { clave: 'direccion_horas_antes', grupo: 'Plazos de las citas', etiqueta: 'Dirección exacta al compita, horas antes', tipo: 'numero', defecto: 3, unidad: 'h', min: 1, max: 24, usa: ['Aviso al compita en Telegram'] },
   { clave: 'reserva_horario_horas', grupo: 'Plazos de las citas', etiqueta: 'Reserva de un horario sin confirmar, horas (nunca pasa de la hora de la cita)', tipo: 'numero', defecto: 2, unidad: 'h', min: 1, max: 48, usa: ['Reserva de la entrevista', 'Recordatorio al compita'] },
   { clave: 'entrevista_anticipacion_horas', grupo: 'Plazos de las citas', etiqueta: 'Anticipación mínima para pedir una entrevista (0 = sin mínimo)', tipo: 'numero', defecto: 0, unidad: 'h', min: 0, max: 72, usa: ['Horas libres que ve el cliente'] },
+  // ── Pagos
+  { clave: 'pago_insistencia_min', grupo: 'Pagos', etiqueta: 'Entre alertas URGENTES cuando el cliente insiste en que ya pagó', tipo: 'numero', defecto: 30, unidad: 'min', min: 5, max: 240, usa: ['Aviso URGENTE de pago al equipo en Telegram'] },
+  { clave: 'pago_escalada_horas', grupo: 'Pagos', etiqueta: 'Horas sin confirmar un pago insistido antes de avisar a todos los administradores por correo', tipo: 'numero', defecto: 6, unidad: 'h', min: 1, max: 72, usa: ['Correo a los administradores', 'Aviso en Telegram'] },
   // ── Cancelaciones de compitas
   { clave: 'compita_aviso_minimo_horas', grupo: 'Cancelaciones de compitas', etiqueta: 'Aviso mínimo para que una cancelación sea a tiempo', tipo: 'numero', defecto: 24, unidad: 'h', min: 1, max: 168, usa: ['Columna y filtro de Personas', 'Ficha del compita', 'Aviso al compita al cancelar'] },
   { clave: 'canc_revision', grupo: 'Cancelaciones de compitas', etiqueta: 'Cancelaciones tardías para abrir una revisión', tipo: 'numero', defecto: 2, min: 1, max: 10, usa: ['Bandeja (tarea "Cancelación tardía")', 'Semáforo del compita (amarillo)'] },
