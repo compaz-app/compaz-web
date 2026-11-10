@@ -31,6 +31,7 @@ const DEFAULTS: Record<string, () => Row> = {
   admin_flags: () => ({ id: randomUUID(), resuelto: false, created_at: nowIso() }),
   resenas: () => ({ id: randomUUID(), publicada: false, created_at: nowIso() }),
   eventos: () => ({ id: randomUUID(), modulo: 'operacion', actor: 'sistema', datos: {}, creado_en: nowIso() }),
+  admin_emails: () => ({}),
   equipo: () => ({ id: randomUUID(), activo: true, permisos: {}, creado_en: nowIso(), actualizado_en: nowIso() }),
   equipo_historial: () => ({ hecho_en: nowIso() }),
   ajustes: () => ({ vigente_desde: nowIso(), actualizado_por: 'sistema', actualizado_en: nowIso() }),
@@ -40,7 +41,7 @@ const DEFAULTS: Record<string, () => Row> = {
   avisos: () => ({ id: randomUUID(), estado: 'pendiente', intentos: 0, variables: {}, error: null, accion_en: null, plazo_accion_hasta: null, ultimo_intento_en: null, respaldo_de: null, entidad: null, entidad_id: null, paso: null, programado_para: nowIso(), creado_en: nowIso() }),
 }
 
-const PK: Record<string, string> = { telegram_estados: 'chat_id', ajustes: 'clave' }
+const PK: Record<string, string> = { telegram_estados: 'chat_id', ajustes: 'clave', admin_emails: 'email' }
 
 function dupError(msg: string) { return { code: '23505', message: `duplicate key value violates unique constraint "${msg}"` } }
 

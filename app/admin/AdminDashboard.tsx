@@ -952,6 +952,10 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
               <AccessLink href="https://t.me/CompazVisitasBot" label="Bot de Telegram" desc="@CompazVisitasBot — lo que ve el compita al vincularse" external />
             </Section>
 
+            <Section title="Equipo del panel">
+              <AccessLink href="/admin/equipo" label="Equipo y permisos" desc="Invita colaboradores y elige qué puede hacer cada uno" />
+            </Section>
+
             <Section title="Páginas públicas">
               <AccessLink href="/" label="Landing page" desc="micompaz.com — página principal" external />
               <AccessLink href="/login" label="Login de clientes" desc="Página de inicio de sesión" external />

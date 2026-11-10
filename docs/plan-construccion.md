@@ -269,3 +269,19 @@ Reglas: negar por defecto; el administrador raíz sale de ADMIN_EMAILS y no se p
 Las 31 rutas de /api/admin usan la guardia. Permisos: pagos (pagos, registrar y anular pago), cuentas (bloquear, pausar, verificar, editar compita, foto, postulaciones), atender (flags, reseñas, asignar, confirmar, completar, cierre forzado, link de llamada), monitorear (vista previa de cliente), invitar (invitar cliente, generar invitación, registrar compita). Solo raíz: eliminar cliente o compita, todo lo de demo y la gestión del equipo (un colaborador nunca puede darse permisos). asignar-rapido sigue por token de un solo uso.
 Pruebas: tests/37-permisos.test.ts (24). Incluye una prueba estática: una ruta nueva en /api/admin sin permiso asignado hace fallar la suite. Comprobado por mutación.
 Falta: aplicar la migración en Supabase y verificarla contra la base real; datos sensibles con motivo en el servidor (hoy no hay ruta real que devuelva teléfonos al panel); pantallas del panel real para colaboradores (hoy las páginas app/admin siguen solo para el administrador raíz); revisar que admin_flags no tenga lectura en tiempo real abierta.
+
+## Revisión de lo pendiente de la guardia (2026-11-09)
+Base real: `equipo` y `equipo_historial` bien (servidor 200, anon 401, restricción de correo en minúsculas activa). `admin_emails`, mensajes, visitas, usuarios y compitas niegan a anon. `admin_flags` responde 200 vacío a anon: el filtro lo hace la política `is_admin()`, no la falta de permiso.
+Hallazgos, ninguno grave hoy:
+1. Dos fuentes de verdad de quién es administrador: la variable ADMIN_EMAILS (servidor) y la tabla `admin_emails` (política `is_admin()` de tiempo real). Hoy coinciden (3 correos). Si se cambia una y no la otra, el tiempo real y las rutas discrepan. Un colaborador NO está en `admin_emails`, así que no recibe flags, chats ni visitas en vivo: no hay fuga, pero tampoco tiempo real para el equipo.
+2. app/admin/page.tsx carga con la clave de servicio los usuarios y compitas completos (incluido el `codigo` del compita y `telegram_chat_id`) y los manda al navegador. Es aceptable mientras la página sea solo del administrador raíz (requireAdmin redirige a todo lo demás). Para colaboradores NO se puede reutilizar tal cual: el servidor debe recortar campos según permisos.
+3. setup-webhook y setup-daily-webhook usan getAdminUser (solo raíz): correcto.
+4. Ninguna ruta real entrega teléfonos al panel todavía; el motivo para datos sensibles se construye junto con esa ruta.
+Decisión pendiente: unificar la fuente de administradores (propuesta: la tabla `equipo` con rol, o que `is_admin()` lea la misma lista).
+
+## Pantalla Equipo en el panel real (2026-11-09)
+/admin/equipo (app/admin/equipo/page.tsx y EquipoPanel.tsx), enlazada desde Accesos rápidos del panel. Solo administrador raíz (requireAdmin; la ruta /api/admin/equipo exige 'raiz'). Lista colaboradores con los 9 permisos como interruptores que guardan al instante (si el servidor niega, el interruptor no cambia y se avisa), "Dejar los recomendados", quitar o devolver acceso, e invitar con los recomendados premarcados. Muestra la lista de administradores solo para verla, con la instrucción de ADMIN_EMAILS en Netlify. Probada con datos falsos en escritorio y teléfono (sin scroll horizontal) y con el rechazo del servidor sin sesión. No se pudo probar con una sesión real de administrador desde aquí.
+
+
+## Recorte de datos del panel por permiso (2026-11-09)
+`app/admin/page.tsx` ya no es solo raíz: entra la raíz o un colaborador activo con 'monitorear'. `lib/panel-datos.ts` recorta en el servidor antes de enviar al navegador: sin 'telefonos' no viajan correo, teléfono, código ni Telegram (solo si existe); sin 'atender' no viaja room_url. El middleware ya no bloquea a no administradores en /admin; cada página decide con su guardia. Pendiente: motivo para ver datos sensibles, tiempo real para colaboradores.

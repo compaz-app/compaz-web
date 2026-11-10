@@ -6,6 +6,7 @@ import { cronAutorizado } from '@/lib/cron'
 import { ok, err } from '@/lib/api'
 import { getAjuste } from '@/lib/ajustes'
 import { borrarFotosVencidas } from '@/lib/fotos-privadas'
+import { sincronizarAdmins } from '@/lib/admins'
 
 export async function POST(req: NextRequest) {
   if (!cronAutorizado(req)) return err('No autorizado', 401)
@@ -38,5 +39,9 @@ export async function POST(req: NextRequest) {
   // Fotos privadas cuyo plazo venció: se borran de verdad (archivo y marca) y queda un evento.
   const fotos = await borrarFotosVencidas()
   if (fotos.fallos > 0) fallos.push('fotos privadas')
+  // La lista de administradores de la base (tiempo real) se mantiene igual a ADMIN_EMAILS.
+  const admins = await sincronizarAdmins()
+  if (!admins.ok) { console.error('[limpieza] administradores:', admins.error); fallos.push('lista de administradores') }
+  else if (admins.agregados.length || admins.quitados.length) console.log('[limpieza] administradores sincronizados', admins.agregados.length, 'agregados,', admins.quitados.length, 'quitados')
   return fallos.length ? err(`Fallaron: ${fallos.join(', ')}`, 500) : ok(null)
 }
