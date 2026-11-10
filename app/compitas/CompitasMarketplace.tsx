@@ -701,12 +701,18 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
                   <p style={{ color: '#6B5C90', fontSize: '13px', margin: 0 }}>Ya tienes {MAX_SOLICITUDES} solicitudes pendientes.</p>
                 </div>
               ) : !mostrarFormulario ? (
-                <button
-                  onClick={() => setMostrarFormulario(true)}
-                  style={{ width: '100%', background: '#FF6B2B', color: 'white', border: 'none', borderRadius: '9999px', padding: '16px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '16px', cursor: 'pointer' }}
-                >
-                  Solicitar entrevista
-                </button>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <button
+                    onClick={() => setMostrarFormulario(true)}
+                    style={{ width: '100%', background: '#FF6B2B', color: 'white', border: 'none', borderRadius: '9999px', padding: '16px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '16px', cursor: 'pointer' }}
+                  >
+                    Solicitar entrevista
+                  </button>
+                  <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                    <a href={`/solicitar?compita=${seleccionada.id}&modo=directa`} style={{ flex: '1 1 160px', textAlign: 'center', boxSizing: 'border-box', minHeight: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #2D1464', borderRadius: '9999px', color: '#2D1464', fontWeight: 700, fontSize: '14px', textDecoration: 'none', padding: '0 14px' }}>Contratarlo directo</a>
+                    <a href={`/solicitar?compita=${seleccionada.id}&modo=mandado`} style={{ flex: '1 1 160px', textAlign: 'center', boxSizing: 'border-box', minHeight: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #2D1464', borderRadius: '9999px', color: '#2D1464', fontWeight: 700, fontSize: '14px', textDecoration: 'none', padding: '0 14px' }}>Pedir un mandado</a>
+                  </div>
+                </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   {/* Banner reagendando */}
