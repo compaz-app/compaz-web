@@ -1,18 +1,21 @@
 @import "tailwindcss";
+/* Colores y sombras: se generan desde lib/design.ts (única fuente). Ver scripts/generar-tokens.mjs. */
+@import "./tokens.generated.css";
 
+/* Nombres antiguos que usa el prototipo: ahora apuntan a los tokens (misma fuente). --orange-dark y --purple-light no tienen token equivalente todavía. */
 :root {
-  --orange: #FF6B2B;
+  --orange: var(--color-naranja);
   --orange-dark: #E05520;
-  --purple: #2D1464;
-  --purple-dark: #1A0A3C;
+  --purple: var(--color-morado-medio);
+  --purple-dark: var(--color-morado-profundo);
   --purple-light: #3D2080;
-  --yellow: #FFD23F;
-  --warm-white: #FDFAF6;
-  --warm-gray: #F5F0E8;
-  --text-dark: #1A0A3C;
-  --text-mid: #4A3B6B;
-  --text-light: #6B5C90;
-  --border-muted: #E8E0D4;
+  --yellow: var(--color-amarillo-marca);
+  --warm-white: var(--color-fondo-crudo);
+  --warm-gray: var(--color-fondo-claro);
+  --text-dark: var(--color-texto-oscuro);
+  --text-mid: var(--color-texto-medio);
+  --text-light: var(--color-texto-sutil);
+  --border-muted: var(--color-borde);
 }
 
 * {

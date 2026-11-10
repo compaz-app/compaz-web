@@ -6,8 +6,10 @@ Toda página o sección con tabs, filtros, selecciones o pasos multi-nivel debe 
 ## 2. Diseño responsive (obligatorio)
 Todo componente y página debe funcionar correctamente en mobile (≥375px) y desktop (≥1024px). Nunca diseñar solo para uno. Usar `flexWrap`, breakpoints con `@media`, o lógica condicional cuando la diferencia entre mobile y desktop sea significativa.
 
-## 3. Design tokens (obligatorio)
-Todos los colores, tipografías y espaciados deben venir de `lib/design.ts`. Nunca hardcodear `#1A0A3C`, `#FF6B2B`, etc. directamente en componentes. Importar `colors`, `spacing`, `radius`, `zIndex` de ese módulo.
+## 3. Design tokens y estilos (obligatorio, unificado 2026-11-10)
+UNA sola fuente de colores: `lib/design.ts`. De ahí se genera `app/tokens.generated.css` (`npm run tokens`), que Tailwind 4 convierte en clases (`bg-naranja`, `text-morado-profundo`, `border-borde`...) y en variables CSS; los estilos en línea usan `colors.naranja`. Nunca escribir `#1A0A3C`, `#FF6B2B`, etc. en una pantalla. Si falta un color, se agrega a `lib/design.ts` con su razón de diseño (y se regenera), no se escribe suelto.
+Pantallas NUEVAS: se construyen con Tailwind y los componentes base de `components/ui/base/` (`Boton`, `Tarjeta`, `Aviso`, `Pasos`; toda acción lleva su ⓘ en la prop `info`). Se revisan en `/guia-visual` (solo en desarrollo) a 375, 768 y 1280 px.
+Pantallas VIEJAS: se migran cuando se reemplazan (no antes). `tests/56-estilos.test.ts` es un trinquete: ningún archivo puede tener más colores sueltos que su línea base (`tests/estilos-base.json`), los archivos nuevos no traen ninguno, y al migrar una pantalla hay que bajar su línea base (`UPDATE_ESTILOS=1 node tests/run.mjs 56`). Los correos y mensajes de Telegram (`lib/resend.ts`, `lib/plantillas-aviso.ts`) quedan fuera porque no admiten variables CSS.
 
 ## 4. Capa de negocio separada (obligatorio)
 Toda query a Supabase va en `lib/compitas.ts`, `lib/solicitudes.ts`, `lib/usuarios.ts` o el módulo correspondiente — nunca directamente en una API route o componente. Las API routes solo orquestan: autentican, llaman la función de lib/, y retornan con los helpers de `lib/api.ts`.
