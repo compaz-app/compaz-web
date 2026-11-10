@@ -21,6 +21,7 @@ import LimpiarParamContratado from '@/components/ui/LimpiarParamContratado'
 import AutoRefresh from '@/components/ui/AutoRefresh'
 import ConfirmarInicioVisita from '@/components/ui/ConfirmarInicioVisita'
 import PrimerAccesoModal from '@/components/ui/PrimerAccesoModal'
+import { fichaCompleta } from '@/lib/ficha'
 import type { Visita, Compita, Mensaje, Usuario, ReporteVisita } from '@/types'
 
 export const dynamic = 'force-dynamic'
@@ -239,7 +240,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     <div style={{ minHeight: '100vh', background: '#FDFAF6', fontFamily: 'Inter, sans-serif' }}>
 
       {/* Modal de primer acceso — se muestra hasta que el cliente llene sus datos */}
-      {!previewUid && !usuario?.familiar_nombre && <PrimerAccesoModal />}
+      {!previewUid && !fichaCompleta(usuario) && <PrimerAccesoModal />}
 
       {/* Banner admin preview */}
       {previewUid && isAdmin && (

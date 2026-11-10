@@ -63,6 +63,13 @@ export interface Usuario {
   familiar_condicion: string | null
   familiar_notas: string | null
   telefono: string | null
+  pais?: string | null
+  parentesco?: string | null
+  lugar_privado?: boolean | null
+  ficha_personas?: string | null
+  ficha_sin_nadie?: boolean | null
+  terminos_version?: string | null
+  terminos_aceptados_en?: string | null
   created_at: string
   compita?: Compita
 }

@@ -128,7 +128,8 @@ export function mkCompita(o: Record<string, any> = {}) {
 }
 export function mkCliente(o: Record<string, any> = {}) {
   const id = randomUUID()
-  return db.seed('usuarios', { id, nombre: 'Carlos Ruiz', email: `carlos${Math.random().toString(36).slice(2, 6)}@mail.test`, ...o })
+  // Por defecto con la ficha completa y los términos aceptados; las pruebas de ficha incompleta lo ponen en null.
+  return db.seed('usuarios', { id, nombre: 'Carlos Ruiz', email: `carlos${Math.random().toString(36).slice(2, 6)}@mail.test`, familiar_nombre: 'Elena', telefono: '+58 412 000 0000', terminos_aceptados_en: new Date().toISOString(), ...o })
 }
 export function mkSolicitud(cliente: any, compita: any, o: Record<string, any> = {}) {
   return db.seed('solicitudes', { cliente_id: cliente.id, compita_id: compita.id, mensaje: 'Mi mamá necesita compañía', slots_propuestos: [ahoraMas(120), ahoraMas(240), ahoraMas(360)], ...o })

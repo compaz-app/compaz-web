@@ -2,8 +2,9 @@
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { PLANES, CICLO_PAGO_DIAS, type PlanId } from '@/lib/planes'
 import { calcularCreditos, type PaqueteCredito } from '@/lib/creditos'
+import { fichaCompleta } from '@/lib/ficha'
 
-export type MotivoNuevaVisita = 'sin_compita' | 'compita_no_disponible' | 'cliente_bloqueado' | 'visita_activa' | 'sin_visitas_previas' | 'limite_plan' | 'error'
+export type MotivoNuevaVisita = 'sin_compita' | 'compita_no_disponible' | 'cliente_bloqueado' | 'visita_activa' | 'sin_visitas_previas' | 'ficha_incompleta' | 'limite_plan' | 'error'
 export type ResultadoNuevaVisita =
   | { ok: true; visitaId: string; compitaNombre: string; clienteNombre: string; numero: number; telegramChatId: string | null; cupo: CupoPlan | null }
   | { ok: false; motivo: 'limite_plan'; mensaje: string; clienteNombre: string; compitaNombre: string; cupo: CupoPlan }
@@ -16,6 +17,7 @@ const MENSAJES: Record<MotivoNuevaVisita, string> = {
   visita_activa: 'Ya tienes una visita en coordinación o programada. Termínala o reagéndala antes de agendar otra.',
   limite_plan: 'Ya usaste todas las visitas de tu plan. Escríbenos a hola@micompaz.com para renovar o ampliar tu plan.',
   sin_visitas_previas: 'Tu primera visita se coordina al contratar. Escríbenos si no la ves en tu portal.',
+  ficha_incompleta: 'Antes de agendar completa la ficha de tu familiar y acepta los términos. La encuentras en tu portal.',
   error: 'No pudimos crear la visita. Intenta de nuevo.',
 }
 const falla = (motivo: Exclude<MotivoNuevaVisita, 'limite_plan'>): ResultadoNuevaVisita => ({ ok: false, motivo, mensaje: MENSAJES[motivo] })
@@ -93,9 +95,11 @@ export async function crearSiguienteVisita(usuarioId: string): Promise<Resultado
   const supabase = createAdminSupabase()
 
   const { data: usuario } = await supabase
-    .from('usuarios').select('nombre, plan, compita_id').eq('id', usuarioId).maybeSingle()
+    .from('usuarios').select('nombre, plan, compita_id, familiar_nombre, telefono, terminos_aceptados_en').eq('id', usuarioId).maybeSingle()
   if (!usuario?.compita_id) return falla('sin_compita')
   if (usuario.plan === 'bloqueado') return falla('cliente_bloqueado')
+  // Sin ficha completa y términos aceptados no se agenda (la validación vive aquí, no solo en la pantalla).
+  if (!fichaCompleta(usuario)) return falla('ficha_incompleta')
 
   const { data: compita } = await supabase
     .from('compitas').select('nombre, estado, verificado, telegram_chat_id').eq('id', usuario.compita_id).maybeSingle()

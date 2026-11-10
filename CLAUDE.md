@@ -38,6 +38,8 @@ Pendientes de seguridad antes de abrir al público (informes completos en `~/sec
 6. Limpiar datos de prueba: filas de `pagos_plan` con referencia "pago simulado", solicitudes de prueba y grabaciones de Clarity.
 7. Tercera pasada de la auditoría sobre lo que run-2 dejó sin cubrir (rutas admin cliente-preview, flags, invitar-cliente, toggle-estado, toggle-verificado; setup-webhook, setup-daily-webhook, auth/callback, login; perfil familiar y fechas de visita; cron y funciones Netlify restantes; componentes del dashboard).
 
+8. TEXTO LEGAL PROVISIONAL (2026-11-09): los términos que acepta el cliente en la ficha (`lib/terminos.ts`, versión `provisional-1`) NO son un texto legal revisado: los escribió el sistema con las reglas decididas. La pantalla lo avisa ("Texto provisional, pendiente de revisión legal"). Antes de abrir al público: reemplazarlos por el texto aprobado, cambiar `TERMINOS_VERSION` (al quitar el prefijo "provisional" el aviso desaparece solo) y actualizar `/privacidad`. Recordárselo al usuario.
+
 Datos y respaldo antes de abrir al público (decidido 2026-11-03, no olvidar):
 1. Hoy todos los datos de la base de Supabase (clientes y compitas) son de prueba y se pueden borrar sin problema (confirmado por el usuario, 2026-11-03). No hay copias de seguridad configuradas y no hace falta guardar nada de lo actual. Se decidió dejarlo para antes del lanzamiento.
 2. Antes de que entre el primer cliente real que pague: activar copias de seguridad automáticas en Supabase (confirmar plan y retención) y probar una restauración.
