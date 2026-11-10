@@ -34,7 +34,7 @@ export interface Plantilla {
 export type NombrePlantilla = 'solicitud_nueva' | 'directa_aceptada' | 'pago_confirmado' | 'llamada_terminada_cliente' | 'llamada_terminada_compita'
   | 'entrevista_aceptada' | 'reserva_pedida' | 'reserva_rechazada' | 'reserva_vencida' | 'lugar_respuesta' | 'direccion_visita' | 'direccion_faltante_cliente' | 'compita_en_camino'
   | 'compita_llego' | 'nadie_abre_cliente' | 'visita_sin_acceso_cliente' | 'nadie_abre_cerrar'
-  | 'salida_seguridad_cliente' | 'todo_bien' | 'recordatorio_cliente'
+  | 'salida_seguridad_cliente' | 'todo_bien' | 'recordatorio_cliente' | 'cancelacion_equipo_cliente'
 
 const etiquetaSlot = (iso: string) =>
   new Date(iso).toLocaleString('es-VE', {
@@ -551,6 +551,21 @@ const nadieAbreCerrar: Plantilla = {
   },
 }
 
+// El equipo canceló una visita o solicitud abierta (p. ej. tras un reporte del compita): aviso NEUTRO, sin motivo y sin costo para el cliente.
+const cancelacionEquipoCliente: Plantilla = {
+  canales: ['correo'],
+  async render(v) {
+    const { data: cmp } = await createAdminSupabase().from('compitas').select('nombre').eq('id', String(v.compitaId ?? '')).maybeSingle()
+    const corto = esc(nombreCorto(String(cmp?.nombre ?? '')) || 'tu compita')
+    const que = v.tipo === 'solicitud' ? 'tu solicitud' : 'tu visita'
+    return { correo: { asunto: `Ya no podremos continuar con ${que}`, html: marco(`
+      <h2 style="color:#2D1464;font-size:22px">Ya no podremos continuar con ${que}</h2>
+      <p style="color:#4A3B6B;font-size:16px;line-height:1.6">Con ${corto} ya no podremos continuar. Lamentamos las molestias: el equipo de Compaz se comunicará contigo para ayudarte a encontrar otra opción.</p>
+      <p style="color:#4A3B6B;font-size:15px;line-height:1.6">Esto no se te descuenta de tu plan.</p>
+      ${boton(`${SITE_URL}/dashboard`, 'Ir a mi portal →')}`) } }
+  },
+}
+
 // El compita interrumpió la visita por seguridad: el cliente recibe un aviso NEUTRO (sin culpas ni detalles).
 const salidaSeguridadCliente: Plantilla = {
   canales: ['correo'],
@@ -640,6 +655,7 @@ export const PLANTILLAS: Record<NombrePlantilla, Plantilla> = {
   visita_sin_acceso_cliente: visitaSinAccesoCliente,
   nadie_abre_cerrar: nadieAbreCerrar,
   salida_seguridad_cliente: salidaSeguridadCliente,
+  cancelacion_equipo_cliente: cancelacionEquipoCliente,
   todo_bien: todoBien,
   recordatorio_cliente: recordatorioCliente,
 }

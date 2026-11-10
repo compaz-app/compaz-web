@@ -1057,6 +1057,7 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
             tareas={flagsAbiertos as never}
             puedeAtender={permisos.atender}
             onResolver={resolverFlag}
+            onLlamadaRegistrada={(reporteId) => setFlags((prev) => prev.filter((f) => !String(f.nota ?? '').includes(`[reporte:${reporteId}]`)))}
             onVer={(f) => {
               if (f.entidad_tipo === 'compita') { setCompitaPerfilId(f.entidad_id); setTab('perfil') }
               else if (f.entidad_tipo === 'cliente') setTab('clientes')

@@ -5,6 +5,9 @@ import { createAdminSupabase } from '@/lib/supabase-server'
 import { registrarEvento } from '@/lib/eventos'
 import { alertaAdmin } from '@/lib/alertas-admin'
 import { getAjustes } from '@/lib/ajustes'
+import { registrarCancelacion } from '@/lib/cancelaciones'
+import { programarBorradoVisita } from '@/lib/fotos-privadas'
+import { notificar } from '@/lib/avisos'
 import { esc } from '@/lib/html'
 
 export const MOTIVOS_REPORTE = {
@@ -89,7 +92,7 @@ export async function reportarCliente(compita: Compita, usuarioId: string, d: Da
   return { resultado: 'ok', llamar, plazo }
 }
 
-export interface ReportePendiente { id: string; compita_id: string; compita_nombre: string; cliente_nombre: string; motivo: string; cuando: string | null; esta_bien: boolean | null; reincidente: boolean | null; no_volver: boolean; plazo_llamada: string; vencido: boolean; creado_en: string }
+export interface ReportePendiente { id: string; compita_id: string; compita_nombre: string; cliente_nombre: string; motivo: string; cuando: string | null; esta_bien: boolean | null; reincidente: boolean | null; no_volver: boolean; plazo_llamada: string; vencido: boolean; creado_en: string; abiertas: AbiertasDelPar }
 
 /** Reportes con llamada pendiente, el más próximo a vencer primero. */
 export async function reportesPendientes(ahora: Date = new Date()): Promise<ReportePendiente[]> {
@@ -103,7 +106,8 @@ export async function reportesPendientes(ahora: Date = new Date()): Promise<Repo
   ])
   const c = new Map(((cs ?? []) as { id: string; nombre: string }[]).map((x) => [x.id, x.nombre]))
   const u = new Map(((us ?? []) as { id: string; nombre: string }[]).map((x) => [x.id, x.nombre]))
-  return f.map((x) => ({ id: x.id, compita_id: x.compita_id, compita_nombre: c.get(x.compita_id) ?? '', cliente_nombre: u.get(x.usuario_id) ?? '', motivo: MOTIVOS_REPORTE[x.motivo as MotivoReporte] ?? x.motivo, cuando: x.cuando, esta_bien: x.esta_bien, reincidente: x.reincidente, no_volver: x.no_volver, plazo_llamada: x.plazo_llamada, vencido: new Date(x.plazo_llamada).getTime() < ahora.getTime(), creado_en: x.creado_en }))
+  const abiertas = await Promise.all(f.map((x) => abiertasDelPar(x.compita_id, x.usuario_id)))
+  return f.map((x, i) => ({ abiertas: abiertas[i], id: x.id, compita_id: x.compita_id, compita_nombre: c.get(x.compita_id) ?? '', cliente_nombre: u.get(x.usuario_id) ?? '', motivo: MOTIVOS_REPORTE[x.motivo as MotivoReporte] ?? x.motivo, cuando: x.cuando, esta_bien: x.esta_bien, reincidente: x.reincidente, no_volver: x.no_volver, plazo_llamada: x.plazo_llamada, vencido: new Date(x.plazo_llamada).getTime() < ahora.getTime(), creado_en: x.creado_en }))
 }
 
 export const RESULTADOS_LLAMADA = ['resuelto', 'hablar_cliente', 'mantener_bloqueo', 'levantar_bloqueo'] as const
@@ -168,4 +172,53 @@ export async function levantarBloqueo(id: string, por: string): Promise<boolean>
   const { data } = await createAdminSupabase().from('bloqueos_compita_cliente').update({ activo: false, levantado_por: por, levantado_en: new Date().toISOString() }).eq('id', id).eq('activo', true).select('id').maybeSingle()
   if (data) await alertaAdmin('actividad', `Bloqueo compita-cliente levantado por ${por}`, { categoria: 'bloqueo_levantado' })
   return !!data
+}
+
+// ── Lo que sigue abierto entre el par: el equipo decide en la llamada si se cancela ────────────────────────────────
+export interface AbiertasDelPar { visitas: { id: string; estado: string; fecha: string | null; cancelable: boolean }[]; solicitudes: { id: string; estado: string }[] }
+
+export async function abiertasDelPar(compitaId: string, usuarioId: string): Promise<AbiertasDelPar> {
+  const admin = createAdminSupabase()
+  const [{ data: v }, { data: s }] = await Promise.all([
+    admin.from('visitas').select('id, estado, fecha_programada').eq('compita_id', compitaId).eq('usuario_id', usuarioId).in('estado', ['pre_visita', 'programada', 'confirmando_inicio', 'en_curso']),
+    admin.from('solicitudes').select('id, estado').eq('compita_id', compitaId).eq('cliente_id', usuarioId).in('estado', ['pendiente', 'aceptada']),
+  ])
+  return {
+    // Una visita que ya empezó no se cancela desde aquí: es una situación en vivo.
+    visitas: ((v ?? []) as { id: string; estado: string; fecha_programada: string | null }[]).map((x) => ({ id: x.id, estado: x.estado, fecha: x.fecha_programada, cancelable: x.estado === 'pre_visita' || x.estado === 'programada' })),
+    solicitudes: (s ?? []) as { id: string; estado: string }[],
+  }
+}
+
+/**
+ * Cancela lo abierto entre el compita y el cliente: la cancelación queda JUSTIFICADA para el compita (no cuenta en su semáforo),
+ * a la visita se le devuelve el crédito al cliente (se borra) y el cliente recibe un aviso neutro, sin el motivo.
+ */
+export async function cancelarAbiertasDelPar(reporteId: string, por: string, ahora: Date = new Date()): Promise<{ visitas: number; solicitudes: number } | null> {
+  const admin = createAdminSupabase()
+  const { data: rep } = await admin.from('reportes_compita').select('compita_id, usuario_id').eq('id', reporteId).maybeSingle()
+  if (!rep) return null
+  const { compita_id: compitaId, usuario_id: usuarioId } = rep as { compita_id: string; usuario_id: string }
+  const abiertas = await abiertasDelPar(compitaId, usuarioId)
+  let visitas = 0; let solicitudes = 0
+  for (const v of abiertas.visitas.filter((x) => x.cancelable)) {
+    const { data: fila } = await admin.from('visitas').select('id, created_at, fecha_programada, hora_inicio_programada, llegada_en').eq('id', v.id).maybeSingle()
+    const vv = fila as { id: string; created_at: string; fecha_programada: string | null; hora_inicio_programada: string | null; llegada_en: string | null } | null
+    if (!vv) continue
+    const idCanc = await registrarCancelacion({ visitaId: vv.id, compitaId, usuarioId, canceladoPor: 'compita', fechaProgramada: vv.fecha_programada, horaInicioProgramada: vv.hora_inicio_programada, motivo: 'Cancelada por el equipo tras un reporte', visitaCreadaEn: vv.created_at, cuentaComoUsada: false, ahora })
+    if (idCanc) await admin.from('cancelaciones').update({ justificada: true, justificada_por: `admin: ${por}`, justificada_en: ahora.toISOString() }).eq('id', idCanc)
+    if (vv.llegada_en) await programarBorradoVisita(vv.id, ahora)
+    await admin.from('visitas').delete().eq('id', vv.id)
+    await notificar({ plantilla: 'cancelacion_equipo_cliente', canal: 'correo', destinatario: { tipo: 'cliente', id: usuarioId }, variables: { compitaId, tipo: 'visita' }, entidad: 'cliente', entidadId: usuarioId, paso: 12, claveUnica: `cancel_equipo:${vv.id}` })
+    visitas++
+  }
+  for (const s of abiertas.solicitudes) {
+    const { data: ok } = await admin.from('solicitudes').update({ estado: 'rechazada', respondido_at: ahora.toISOString() }).eq('id', s.id).in('estado', ['pendiente', 'aceptada']).select('id').maybeSingle()
+    if (!ok) continue
+    await admin.from('reservas_horario').update({ estado: 'liberada', resuelta_en: ahora.toISOString() }).eq('solicitud_id', s.id).in('estado', ['reservada', 'confirmada'])
+    await notificar({ plantilla: 'cancelacion_equipo_cliente', canal: 'correo', destinatario: { tipo: 'cliente', id: usuarioId }, variables: { compitaId, tipo: 'solicitud' }, entidad: 'cliente', entidadId: usuarioId, paso: 12, claveUnica: `cancel_equipo:${s.id}` })
+    solicitudes++
+  }
+  await alertaAdmin('actividad', `${por} canceló lo abierto entre un compita y su cliente tras un reporte: ${visitas} visita(s) y ${solicitudes} solicitud(es).`, { categoria: 'reporte_cancelacion', entidad: { tipo: 'compita', id: compitaId } })
+  return { visitas, solicitudes }
 }

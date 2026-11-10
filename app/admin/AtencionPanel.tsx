@@ -1,6 +1,8 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import InfoBoton from '@/components/ui/InfoBoton'
+import LlamadaReporte, { type ReportePendiente } from './LlamadaReporte'
 import { colors, fonts, spacing, radius } from '@/lib/design'
 
 export interface TareaPanel {
@@ -30,7 +32,18 @@ const NIVELES = [
 ] as const
 
 /** La bandeja del equipo: lo urgente primero, agrupado por persona, con un botón para resolver. Sirve igual al administrador y al colaborador. */
-export default function AtencionPanel({ tareas, puedeAtender, onResolver, onVer }: { tareas: TareaPanel[]; puedeAtender: boolean; onResolver: (id: string) => void; onVer: (t: TareaPanel) => void }) {
+const idReporte = (nota: string) => /\[reporte:([0-9a-f-]{36})\]/.exec(nota)?.[1] ?? null
+
+export default function AtencionPanel({ tareas, puedeAtender, onResolver, onVer, onLlamadaRegistrada }: { tareas: TareaPanel[]; puedeAtender: boolean; onResolver: (id: string) => void; onVer: (t: TareaPanel) => void; onLlamadaRegistrada: (reporteId: string) => void }) {
+  // Llamadas pendientes a compitas que reportaron un problema: se cargan solo si hay tareas de ese tipo y el usuario puede atender.
+  const hayReportes = puedeAtender && tareas.some((t) => t.tipo === 'reporte_cliente')
+  const [reportes, setReportes] = useState<Record<string, ReportePendiente>>({})
+  useEffect(() => {
+    if (!hayReportes) return
+    let vivo = true
+    fetch('/api/admin/reportes-compita').then((r) => r.json()).then((d) => { if (vivo && Array.isArray(d.data)) setReportes(Object.fromEntries((d.data as ReportePendiente[]).map((r) => [r.id, r]))) }).catch(() => {})
+    return () => { vivo = false }
+  }, [hayReportes, tareas.length])
   const [q, setQ] = useState('')
   const [soloUrgentes, setSoloUrgentes] = useState(false)
   const [cerrados, setCerrados] = useState<Record<string, boolean>>({})
@@ -55,6 +68,7 @@ export default function AtencionPanel({ tareas, puedeAtender, onResolver, onVer 
         <button type="button" aria-pressed={soloUrgentes} onClick={() => setSoloUrgentes((v) => !v)} style={{ minHeight: '44px', padding: `0 ${spacing.md}`, borderRadius: radius.pill, border: soloUrgentes ? 'none' : `1px solid ${colors.gris200}`, background: soloUrgentes ? colors.rojo : colors.blanco, color: soloUrgentes ? colors.blanco : colors.textoOscuro, fontWeight: 700, cursor: 'pointer' }}>
           Solo urgentes ({nUrgentes})
         </button>
+        <InfoBoton que="Solo urgentes" texto="Muestra únicamente lo urgente y oculta lo demás. Vuelve a tocarlo para ver todo otra vez. No cambia ni resuelve nada." />
       </div>
 
       {NIVELES.map((nivel) => {
@@ -81,10 +95,11 @@ export default function AtencionPanel({ tareas, puedeAtender, onResolver, onVer 
                           <div style={{ fontWeight: 700, color: colors.textoOscuro, fontSize: '14px', marginBottom: '4px', overflowWrap: 'anywhere' }}>{t.entidad_nombre}</div>
                           <div style={{ fontSize: '14px', color: colors.textoMedio, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', lineHeight: 1.5 }}>{limpiarNota(t.nota)}</div>
                           <div style={{ fontSize: '12px', color: colors.textoSutil, marginTop: '6px' }}>{hace(t.created_at)} · {t.reportado_por}</div>
+                          {puedeAtender && t.tipo === 'reporte_cliente' && idReporte(t.nota) && reportes[idReporte(t.nota)!] && <LlamadaReporte reporte={reportes[idReporte(t.nota)!]} onHecho={onLlamadaRegistrada} />}
                         </div>
                         <div style={{ display: 'flex', gap: spacing.xs, flexWrap: 'wrap' }}>
-                          {t.entidad_id !== 'sistema' && <button type="button" onClick={() => onVer(t)} style={{ minHeight: '44px', padding: `0 ${spacing.md}`, borderRadius: radius.pill, border: `1.5px solid ${colors.gris200}`, background: colors.blanco, fontWeight: 700, cursor: 'pointer', color: colors.textoOscuro }}>Ver →</button>}
-                          {puedeAtender && <button type="button" onClick={() => onResolver(t.id)} style={{ minHeight: '44px', padding: `0 ${spacing.md}`, borderRadius: radius.pill, border: `1.5px solid ${colors.verde}`, background: colors.verdeClaro, color: colors.verde, fontWeight: 700, cursor: 'pointer' }}>✓ Resolver</button>}
+                          {t.entidad_id !== 'sistema' && <span style={{ display: 'inline-flex', alignItems: 'center' }}><button type="button" onClick={() => onVer(t)} style={{ minHeight: '44px', padding: `0 ${spacing.md}`, borderRadius: radius.pill, border: `1.5px solid ${colors.gris200}`, background: colors.blanco, fontWeight: 700, cursor: 'pointer', color: colors.textoOscuro }}>Ver →</button><InfoBoton que="Ver" texto="Abre la ficha de la persona o la visita a la que se refiere esta tarea, para que veas el detalle. No cambia nada." /></span>}
+                          {puedeAtender && !(t.tipo === 'reporte_cliente' && idReporte(t.nota) && reportes[idReporte(t.nota)!]) && <span style={{ display: 'inline-flex', alignItems: 'center' }}><button type="button" onClick={() => onResolver(t.id)} style={{ minHeight: '44px', padding: `0 ${spacing.md}`, borderRadius: radius.pill, border: `1.5px solid ${colors.verde}`, background: colors.verdeClaro, color: colors.verde, fontWeight: 700, cursor: 'pointer' }}>✓ Resolver</button><InfoBoton que="Resolver" texto="Marca esta tarea como atendida y la quita de la bandeja. Queda anotado quién la resolvió. Úsalo cuando ya no haya nada más por hacer." /></span>}
                         </div>
                       </div>
                     ))}

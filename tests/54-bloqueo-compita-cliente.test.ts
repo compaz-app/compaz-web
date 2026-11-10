@@ -2,12 +2,13 @@
 // Reportar un problema con un cliente y "no volver con él": motivo de un toque, tarea para el equipo, bloqueo del par en
 // solicitudes y visitas nuevas, el cliente nunca ve el motivo, y solo el equipo puede levantarlo.
 import { db, net, session, limpiar, req, mkCompita, mkCliente, mkSolicitud, mkVisita, tgText, tgBtn, tgPara, avisosAdmin } from './harness'
+import { emailsA } from './harness'
 import { beforeEach, test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import { POST as webhook } from '@/app/api/telegram-webhook/route'
 import { POST as crear } from '@/app/api/solicitudes/route'
 import { GET as bloqGet, PATCH as bloqPatch } from '@/app/api/admin/bloqueos-compita/route'
-import { GET as repGet, PATCH as repPatch } from '@/app/api/admin/reportes-compita/route'
+import { GET as repGet, PATCH as repPatch, POST as repPost } from '@/app/api/admin/reportes-compita/route'
 import { setAjuste, limpiarCacheAjustes } from '@/lib/ajustes'
 import { crearSiguienteVisita } from '@/lib/visitas'
 import { parBloqueado, reportarCliente, compitasBloqueadosPara, escalarLlamadasVencidas } from '@/lib/bloqueos-compita'
@@ -174,5 +175,50 @@ describe('el equipo lo levanta', () => {
   })
   test('un cliente cualquiera no entra', async () => {
     session.user = { id: 'cli', email: 'cli@mail.test' }; assert.ok([401, 403].includes((await bloqGet()).status))
+  })
+})
+
+describe('cancelar lo que sigue abierto entre el par (lo decide el equipo en la llamada)', () => {
+  const conAbiertas = async () => {
+    const { compita, cliente } = mundo()
+    const prog = mkVisita(cliente, compita, { estado: 'programada', fecha_programada: '2099-01-10', hora_inicio_programada: '09:00', hora_fin_programada: '11:00' })
+    await reportarCliente({ id: compita.id, nombre: 'María Pérez' }, cliente.id, { motivo: 'pago', noVolver: true })
+    session.user = { id: 'adm', email: 'admin@compaz.test' }
+    return { compita, cliente, prog, rid: db.rows('reportes_compita')[0].id as string }
+  }
+  const cancelar = (id: string) => repPost(req('/api/admin/reportes-compita', { json: { id } }))
+
+  test('la lista de llamadas pendientes trae lo abierto con ese cliente', async () => {
+    const { prog } = await conAbiertas()
+    const d = (await (await repGet()).json()).data[0]
+    assert.equal(d.abiertas.visitas[0].id, prog.id); assert.equal(d.abiertas.visitas[0].cancelable, true); assert.equal(d.abiertas.solicitudes.length, 1)
+  })
+  test('cancela visita programada y solicitud: cancelación justificada, crédito intacto (visita borrada), cliente avisado sin el motivo', async () => {
+    const { prog, rid, cliente } = await conAbiertas()
+    const r = await cancelar(rid); assert.equal(r.status, 200); assert.deepEqual((await r.json()).data, { visitas: 1, solicitudes: 1 })
+    assert.equal(db.rows('visitas').find((v) => v.id === prog.id), undefined)
+    assert.equal(db.rows('solicitudes').some((x) => x.estado === 'aceptada' || x.estado === 'pendiente'), false)
+    const c = db.rows('cancelaciones')[0]; assert.equal(c.justificada, true); assert.match(c.justificada_por, /admin: admin@compaz.test/); assert.equal(c.cuenta_como_usada, false)
+    const correos = emailsA(cliente.email); assert.ok(JSON.stringify(correos).includes('Ya no podremos continuar con tu visita'), 'aviso de la visita'); assert.ok(JSON.stringify(correos).includes('Ya no podremos continuar con tu solicitud'), 'aviso de la solicitud')
+    const html = JSON.stringify(correos); assert.doesNotMatch(html, /reporte|pago|bloque|problema|inseguro/i, 'nunca el motivo')
+  })
+  test('una visita que ya está en curso NO se cancela desde aquí y se avisa que es aparte', async () => {
+    const { compita, cliente } = mundo(); mkVisita(cliente, compita, { estado: 'en_curso' })
+    await reportarCliente({ id: compita.id, nombre: 'M' }, cliente.id, { motivo: 'pago', noVolver: true }); session.user = { id: 'adm', email: 'admin@compaz.test' }
+    const rid = db.rows('reportes_compita')[0].id
+    assert.deepEqual((await (await cancelar(rid)).json()).data, { visitas: 0, solicitudes: 1 }); assert.equal(db.rows('visitas').length, 1)
+    assert.equal((await (await repGet()).json()).data[0].abiertas.visitas[0].cancelable, false)
+  })
+  test('una visita de otro cliente con el mismo compita no se toca', async () => {
+    const { compita } = mundo(); const otro = mkCliente({ email: 'otro@mail.test' }); const vOtro = mkVisita(otro, compita, { estado: 'programada', fecha_programada: '2099-01-10', hora_inicio_programada: '09:00' })
+    const { cliente } = { cliente: db.rows('usuarios')[0] }
+    await reportarCliente({ id: compita.id, nombre: 'M' }, cliente.id, { motivo: 'pago', noVolver: true }); session.user = { id: 'adm', email: 'admin@compaz.test' }
+    await cancelar(db.rows('reportes_compita')[0].id); assert.ok(db.rows('visitas').some((v) => v.id === vOtro.id))
+  })
+  test('sin el permiso de atender no se puede cancelar; un reporte inexistente da 404', async () => {
+    const { rid } = await conAbiertas()
+    assert.equal((await cancelar('00000000-0000-0000-0000-000000000000')).status, 404)
+    db.seed('equipo', { correo: 'c@mail.test', nombre: 'c', permisos: { monitorear: true }, activo: true, creado_por: 'admin@compaz.test' }); session.user = { id: 'u-c', email: 'c@mail.test' }
+    assert.equal((await cancelar(rid)).status, 403); assert.equal(db.rows('visitas').length, 1)
   })
 })
