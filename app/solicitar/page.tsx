@@ -5,6 +5,7 @@ import { Suspense } from 'react'
 import { requireAuth, getClienteActivo, getUsuario } from '@/lib/auth'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { getAjuste } from '@/lib/ajustes'
+import { compitaEnPausa } from '@/lib/cancelaciones'
 import { fotoClienteVigente } from '@/lib/fotos-privadas'
 import { nombreCorto } from '@/lib/plantillas-aviso'
 import SolicitarForm from './SolicitarForm'
@@ -20,7 +21,7 @@ export default async function SolicitarPage({ searchParams }: { searchParams: Pr
   const { data: c } = await createAdminSupabase()
     .from('compitas').select('id, nombre, estado, verificado, telegram_chat_id').eq('id', compitaId).maybeSingle()
   // Solo se puede pedir a un compita activo, verificado y alcanzable por Telegram (igual que el listado).
-  if (!c || c.estado !== 'activo' || !c.verificado || !c.telegram_chat_id) redirect('/compitas')
+  if (!c || c.estado !== 'activo' || !c.verificado || !c.telegram_chat_id || await compitaEnPausa(c.id as string)) redirect('/compitas')
 
   const [usuario, precioMandado, antifraude] = await Promise.all([
     getUsuario(), getAjuste('precio_mandado'), getAjuste('antifraude_cliente'),

@@ -3,6 +3,7 @@ import { createAdminSupabase } from '@/lib/supabase-server'
 import { PLANES, CICLO_PAGO_DIAS, type PlanId } from '@/lib/planes'
 import { calcularCreditos, type PaqueteCredito } from '@/lib/creditos'
 import { fichaCompleta } from '@/lib/ficha'
+import { visitasConsumidasPorCancelacion } from '@/lib/cancelaciones'
 
 export type MotivoNuevaVisita = 'sin_compita' | 'compita_no_disponible' | 'cliente_bloqueado' | 'visita_activa' | 'sin_visitas_previas' | 'ficha_incompleta' | 'limite_plan' | 'error'
 export type ResultadoNuevaVisita =
@@ -49,7 +50,8 @@ export async function cupoDelPlan(usuarioId: string): Promise<CupoPlan | null> {
   if (!eP && (pagos ?? []).length > 0) {
     const { data: vs } = await supabase.from('visitas').select('created_at').eq('usuario_id', usuarioId)
     const todos = pagos as PaqueteCredito[]
-    const r = calcularCreditos(todos, (vs ?? []).map((v) => v.created_at as string))
+    // Las visitas canceladas con poco aviso cuentan como usadas aunque la visita ya no exista.
+    const r = calcularCreditos(todos, [...(vs ?? []).map((v) => v.created_at as string), ...(await visitasConsumidasPorCancelacion(usuarioId))])
     const ultimoPlan = todos.filter((p) => p.tipo === 'plan' && p.estado !== 'anulado').sort((a, b) => (a.inicio < b.inicio ? 1 : -1))[0]
     const plan = (ultimoPlan?.plan as PlanId | undefined) ?? null
     const hayActivos = todos.some((p) => p.estado !== 'anulado')

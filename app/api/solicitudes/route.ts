@@ -12,6 +12,7 @@ import { detectarContacto, reportarContactoEnTexto } from '@/lib/chat-moderacion
 import { notificar } from '@/lib/avisos'
 import { registrarEvento } from '@/lib/eventos'
 import { fotoClienteVigente } from '@/lib/fotos-privadas'
+import { compitaEnPausa } from '@/lib/cancelaciones'
 import { validarSolicitudNueva, mensajeDeSolicitud, type SolicitudNueva } from '@/lib/validar-solicitud'
 
 const MENSAJES_NEGOCIO = ['Límite de', 'Ya tienes una solicitud']
@@ -88,6 +89,8 @@ export async function POST(req: NextRequest) {
   if ((compita as { estado: string; verificado: boolean }).estado !== 'activo' || !(compita as { estado: string; verificado: boolean }).verificado) {
     return err('Este compita no está disponible', 400)
   }
+  // Pausado por cancelaciones tardías sin justificar: no recibe solicitudes nuevas hasta que el equipo lo resuelva.
+  if (await compitaEnPausa(compita_id)) return err('Este compita no está disponible', 400)
 
   // Foto opcional: solo si el cliente la eligió mostrar y de verdad tiene una guardada.
   const fotoId = nueva && body.con_foto === true ? (await fotoClienteVigente(user.id))?.id ?? null : null

@@ -24,6 +24,8 @@ import { getOrCreateDailyRoom } from '@/lib/daily'
 import { sendVisitaInicio, sendVisitaResumen, sendResumenConReporte, sendCodigoTelegram } from '@/lib/resend'
 import { responderSolicitud, getSolicitudPorToken, getSolicitudPorId, aceptarSolicitudDirecta } from '@/lib/solicitudes'
 import { confirmarReserva, rechazarReserva } from '@/lib/agenda'
+import { registrarCancelacion, alertarCancelacionesCompita, horasDeAviso } from '@/lib/cancelaciones'
+import { getAjustes } from '@/lib/ajustes'
 import { notificar } from '@/lib/avisos'
 import { confirmarPagoYAvisar } from '@/lib/confirmar-pago'
 import { anunciarEntrevistaConfirmada } from '@/lib/entrevista-confirmada'
@@ -955,6 +957,16 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
       return NextResponse.json({ ok: true })
     }
 
+    // Cancelación del compita: se reprograma sin costo para el cliente, y SE REGISTRA (patrones, semáforo, pausa).
+    await registrarCancelacion({
+      visitaId: objetivo.id, compitaId: compita.id, usuarioId: objetivo.usuario_id, canceladoPor: 'compita',
+      fechaProgramada: objetivo.fecha_programada, horaInicioProgramada: objetivo.hora_inicio_programada,
+    })
+    const avisoHoras = horasDeAviso(objetivo.fecha_programada, objetivo.hora_inicio_programada)
+    const minimoCompita = Number((await getAjustes()).compita_aviso_minimo_horas)
+    const avisoTardio = avisoHoras !== null && avisoHoras < minimoCompita
+    if (avisoTardio) await alertarCancelacionesCompita(compita.id, compita.nombre)
+
     const clienteNombre = esc(objetivo.usuario?.nombre ?? 'El cliente')
     const clienteEmail = objetivo.usuario?.email
     let emailEnviado = false
@@ -993,6 +1005,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
           : `Registramos el cambio de fecha${fechaAnterior ? ` del ${esc(fechaAnterior)}` : ''}, pero no pudimos enviar el correo a <b>${clienteNombre}</b>. Escríbele desde este chat para avisarle.`,
         ``,
         `Escríbele desde este mismo chat para acordar un nuevo día. Ellos lo verán en su portal.`,
+        ...(avisoTardio ? [``, `⚠️ Avisaste con menos de ${minimoCompita} horas de anticipación. Queda registrado: varias veces seguidas puede pausar tus solicitudes nuevas.`] : []),
       ].join('\n'),
       TECLADO_SIN_VISITA,
     )

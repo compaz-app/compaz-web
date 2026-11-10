@@ -6,6 +6,8 @@
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { getAjustes } from '@/lib/ajustes'
 import { registrarEvento } from '@/lib/eventos'
+import { avisarAdmin } from '@/lib/telegram'
+import { esc } from '@/lib/html'
 
 export type CanceladoPor = 'cliente' | 'compita' | 'admin' | 'sistema'
 
@@ -20,7 +22,25 @@ export interface NuevaCancelacion {
   horaInicioProgramada?: string | null
   /** Texto libre del cliente: se guarda solo en la tabla (la ve el administrador), nunca en el evento. */
   motivo?: string | null
+  /** Cuándo se creó la visita: hace falta para descontarla del saldo si cuenta como usada (la visita se borra). */
+  visitaCreadaEn?: string | null
   ahora?: Date
+}
+
+export interface EvaluacionCancelacion {
+  /** Horas que faltan para la visita (null si aún no tiene fecha: está en coordinación). */
+  horasDeAviso: number | null
+  /** Horas mínimas de aviso para cancelar gratis (Ajustes). */
+  minimo: number
+  /** Cancelar ahora cuesta la visita (menos aviso que el mínimo). */
+  cuentaComoUsada: boolean
+}
+
+/** Qué pasaría si el cliente cancelara ahora. Sin fecha no hay costo: no hay nada que perder todavía. */
+export async function evaluarCancelacionCliente(fecha: string | null | undefined, hora: string | null | undefined, ahora: Date = new Date()): Promise<EvaluacionCancelacion> {
+  const minimo = Number((await getAjustes()).cancelacion_gratis_horas)
+  const horas = horasDeAviso(fecha, hora, ahora)
+  return { horasDeAviso: horas, minimo, cuentaComoUsada: horas !== null && horas < minimo }
 }
 
 /** Horas que faltaban para la visita al cancelar. null si la visita aún no tiene fecha (está en coordinación). */
@@ -42,7 +62,7 @@ export async function registrarCancelacion(c: NuevaCancelacion): Promise<string 
     // Tardía: se canceló con menos aviso que el mínimo. Sin fecha no hay forma de saberlo, así que no cuenta.
     const tardia = minimo !== null && aviso !== null && aviso < minimo
 
-    const { data, error } = await createAdminSupabase().from('cancelaciones').insert({
+    const fila = {
       visita_id: c.visitaId ?? null,
       solicitud_id: c.solicitudId ?? null,
       compita_id: c.compitaId,
@@ -51,7 +71,16 @@ export async function registrarCancelacion(c: NuevaCancelacion): Promise<string 
       horas_de_aviso: aviso,
       tardia,
       motivo: c.motivo ? c.motivo.slice(0, 500) : null,
+    }
+    const admin = createAdminSupabase()
+    // Solo cancela el cliente con poco aviso la visita que cuenta como usada.
+    let { data, error } = await admin.from('cancelaciones').insert({
+      ...fila, cuenta_como_usada: c.canceladoPor === 'cliente' && tardia, visita_creada_en: c.visitaCreadaEn ?? null,
     }).select('id').single()
+    // Si la migración de las columnas nuevas aún no está aplicada, igual se registra la cancelación (sin ese dato).
+    if (error && /cuenta_como_usada|visita_creada_en/.test(error.message)) {
+      ;({ data, error } = await admin.from('cancelaciones').insert(fila).select('id').single())
+    }
     if (error || !data) { console.error('[cancelaciones] no se pudo registrar:', error?.message); return null }
 
     if (c.visitaId) {
@@ -113,4 +142,75 @@ export async function resumenCancelacionesCompita(compitaId: string, ahora: Date
     console.error('[cancelaciones] error en resumen:', e)
     return vacio
   }
+}
+
+/**
+ * Fechas de creación de las visitas que el cliente canceló con poco aviso y siguen contando como usadas (no justificadas).
+ * Se suman a las visitas reales al calcular su saldo. Si la columna aún no existe devuelve vacío (no rompe el saldo).
+ */
+export async function visitasConsumidasPorCancelacion(usuarioId: string): Promise<string[]> {
+  try {
+    const { data, error } = await createAdminSupabase().from('cancelaciones')
+      .select('visita_creada_en').eq('usuario_id', usuarioId).eq('cancelado_por', 'cliente').eq('cuenta_como_usada', true).eq('justificada', false)
+    if (error) { console.error('[cancelaciones] consumidas:', error.message); return [] }
+    return ((data ?? []) as { visita_creada_en: string | null }[]).map((f) => f.visita_creada_en).filter((x): x is string => !!x)
+  } catch (e) {
+    console.error('[cancelaciones] error leyendo consumidas:', e)
+    return []
+  }
+}
+
+/** ¿Este compita está en pausa por cancelaciones tardías? (Derivado de las cancelaciones: justificar una lo levanta solo.) */
+export async function compitaEnPausa(compitaId: string): Promise<boolean> {
+  return (await resumenCancelacionesCompita(compitaId)).nivel === 'pausa'
+}
+
+/**
+ * Tras una cancelación del compita: si llegó a "revisión" o "pausa" abre UNA tarea para el equipo (y avisa por Telegram).
+ * No repite mientras haya una tarea sin resolver del mismo compita.
+ */
+export async function alertarCancelacionesCompita(compitaId: string, nombre: string): Promise<'normal' | 'revision' | 'pausa'> {
+  const r = await resumenCancelacionesCompita(compitaId)
+  if (r.nivel === 'normal') return 'normal'
+  try {
+    const admin = createAdminSupabase()
+    const { data: abiertas } = await admin.from('admin_flags').select('id, nota').eq('entidad_tipo', 'compita').eq('entidad_id', compitaId).eq('tipo', 'cancelacion_tardia').eq('resuelto', false)
+    const yaPausa = ((abiertas ?? []) as { nota: string }[]).some((f) => f.nota.startsWith('PAUSA'))
+    // Una tarea abierta de pausa cubre todo; una de revisión se reemplaza solo si ahora toca pausa.
+    if ((abiertas ?? []).length > 0 && (r.nivel === 'revision' || yaPausa)) return r.nivel
+    const pausa = r.nivel === 'pausa'
+    await admin.from('admin_flags').insert({
+      entidad_tipo: 'compita', entidad_id: compitaId, entidad_nombre: `${pausa ? '⛔' : '⚠️'} Cancelaciones tardías: ${nombre}`,
+      nota: pausa
+        ? `PAUSA: ${nombre} suma ${r.cuentanContra} cancelaciones tardías sin justificar. Sus solicitudes nuevas están en pausa hasta que el equipo hable con esta persona y justifique o resuelva.`
+        : `REVISIÓN: ${nombre} suma ${r.cuentanContra} cancelaciones tardías sin justificar. Conviene hablar con esta persona antes de que se pausen sus solicitudes nuevas.`,
+      reportado_por: 'cancelaciones automáticas', resuelto: false, tipo: 'cancelacion_tardia', prioridad: pausa ? 1 : 2,
+    })
+    await avisarAdmin(`${pausa ? '⛔' : '⚠️'} <b>Cancelaciones tardías de ${esc(nombre)}</b>\n\n${r.cuentanContra} sin justificar. ${pausa ? 'Sus solicitudes nuevas quedaron en pausa.' : 'Abrimos una tarea de revisión en la Bandeja.'}`)
+  } catch (e) {
+    console.error('[cancelaciones] no se pudo alertar:', e)
+  }
+  return r.nivel
+}
+
+/**
+ * Cuáles de estos compitas están en pausa por cancelaciones tardías (una sola consulta para todos, para el listado).
+ * Misma regla que `resumenCancelacionesCompita`: tardías sin justificar en la ventana de Ajustes >= `canc_pausa`.
+ */
+export async function compitasEnPausa(ids: string[], ahora: Date = new Date()): Promise<Set<string>> {
+  const enPausa = new Set<string>()
+  if (ids.length === 0) return enPausa
+  try {
+    const a = await getAjustes()
+    const desde = new Date(ahora.getTime() - Number(a.canc_ventana_dias) * 86_400_000).toISOString()
+    const { data, error } = await createAdminSupabase().from('cancelaciones')
+      .select('compita_id').in('compita_id', ids).eq('cancelado_por', 'compita').eq('tardia', true).eq('justificada', false).gte('creado_en', desde)
+    if (error) { console.error('[cancelaciones] pausa en lote:', error.message); return enPausa }
+    const cuenta = new Map<string, number>()
+    for (const f of (data ?? []) as { compita_id: string }[]) cuenta.set(f.compita_id, (cuenta.get(f.compita_id) ?? 0) + 1)
+    for (const [id, n] of cuenta) if (n >= Number(a.canc_pausa)) enPausa.add(id)
+  } catch (e) {
+    console.error('[cancelaciones] error calculando pausas:', e)
+  }
+  return enPausa
 }

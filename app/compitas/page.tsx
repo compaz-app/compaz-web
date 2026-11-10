@@ -2,6 +2,7 @@ import { requireAuth, getUsuario, getClienteActivo } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import CompitasMarketplace from './CompitasMarketplace'
 import { createAdminSupabase } from '@/lib/supabase-server'
+import { compitasEnPausa } from '@/lib/cancelaciones'
 import type { Compita } from '@/types'
 import { Suspense } from 'react'
 
@@ -19,8 +20,12 @@ export default async function CompitasPage() {
     .not('telegram_chat_id', 'is', null)
     .order('visitas_realizadas', { ascending: false }) as { data: Compita[] | null }
 
+  // Un compita en pausa por cancelaciones tardías no se ofrece: así el cliente no elige a alguien que no puede recibirlo.
+  const enPausa = await compitasEnPausa((compitasRaw ?? []).map((c) => c.id))
+  const visibles = (compitasRaw ?? []).filter((c) => !enPausa.has(c.id))
+
   // Calcular tasa de aceptación por compita
-  const compitaIds = (compitasRaw ?? []).map((c) => c.id)
+  const compitaIds = visibles.map((c) => c.id)
   const { data: statsRaw } = compitaIds.length > 0
     ? await supabase
         .from('solicitudes')
@@ -41,7 +46,7 @@ export default async function CompitasPage() {
     statsMap.set(row.compita_id, entry)
   }
 
-  const compitas: Compita[] = (compitasRaw ?? []).map((c) => {
+  const compitas: Compita[] = visibles.map((c) => {
     const s = statsMap.get(c.id)
     const total = (s?.aceptadas ?? 0) + (s?.rechazadas ?? 0)
     return {
