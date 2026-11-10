@@ -17,6 +17,7 @@ export type TipoEvento =
   | 'motivo_no_contratar' | 'motivo_rechazo'
   // Rediseño (Lote 1): se registran desde los lotes siguientes; los tipos existen desde ya para no tocar esto dos veces.
   | 'visita_cancelada' | 'cancelacion_justificada' | 'lugar_personas_cambiadas' | 'pago_insistido' | 'pago_escalado'
+  | 'horario_reservado' | 'reserva_confirmada' | 'reserva_rechazada' | 'reserva_vencida'
   | 'terminos_aceptados' | 'contacto_bloqueado' | 'llegada_registrada' | 'llegada_sin_acceso' | 'visita_sin_acceso'
   | 'salida_por_seguridad' | 'visita_alargada' | 'reporte_cliente' | 'duda_compita' | 'foto_borrada'
   | 'consulta_dato_sensible' | 'ajuste_cambiado'

@@ -27,6 +27,7 @@ const DEFAULTS: Record<string, () => Row> = {
   compita_edit_tokens: () => ({ id: randomUUID(), usado: false, created_at: nowIso() }),
   onboarding_tokens: () => ({ id: randomUUID(), usado: false, created_at: nowIso() }),
   action_tokens: () => ({ id: randomUUID(), usado: false, created_at: nowIso() }),
+  reservas_horario: () => ({ id: randomUUID(), estado: 'reservada', solicitud_id: null, resuelta_en: null, creada_en: nowIso() }),
   solicitudes_pago: () => ({ id: randomUUID(), estado: 'pendiente', pago_id: null, resuelta_at: null, created_at: nowIso() }),
   pagos_plan: () => ({ id: randomUUID(), estado: 'activo', horas: null, referencia: null, created_at: nowIso() }),
   admin_flags: () => ({ id: randomUUID(), resuelto: false, created_at: nowIso() }),
@@ -102,6 +103,10 @@ export class FakeDB {
     if (t === 'visitas' && ['confirmando_inicio', 'en_curso'].includes(row.estado) && others.some((r) => r.compita_id === row.compita_id && ['confirmando_inicio', 'en_curso'].includes(r.estado))) return dupError('visitas_una_en_curso_por_compita')
     if (t === 'visitas' && ['pre_visita', 'programada', 'confirmando_inicio', 'en_curso'].includes(row.estado) && others.some((r) => r.usuario_id === row.usuario_id && ['pre_visita', 'programada', 'confirmando_inicio', 'en_curso'].includes(r.estado))) return dupError('visitas_una_activa_por_cliente')
     if (t === 'solicitudes' && row.estado === 'pendiente' && others.some((r) => r.cliente_id === row.cliente_id && r.compita_id === row.compita_id && r.estado === 'pendiente')) return dupError('solicitudes_una_pendiente_por_par')
+    // Índices de la migración 20261109f (reservas de horario)
+    const viva = (r: Row) => ['reservada', 'confirmada'].includes(r.estado)
+    if (t === 'reservas_horario' && viva(row) && others.some((r) => viva(r) && r.compita_id === row.compita_id && r.inicio === row.inicio)) return dupError('reservas_horario_hora_unica')
+    if (t === 'reservas_horario' && viva(row) && row.solicitud_id && others.some((r) => viva(r) && r.solicitud_id === row.solicitud_id)) return dupError('reservas_horario_una_por_solicitud')
     if (t === 'avisos' && row.clave_unica && others.some((r) => r.clave_unica === row.clave_unica)) return dupError('avisos_clave_unica_key')
     if (t === 'reportes_visita' && others.some((r) => r.visita_id === row.visita_id)) return dupError('reportes_visita_unico_por_visita')
     for (const col of ['token']) if ((t === 'compita_edit_tokens' || t === 'onboarding_tokens' || t === 'action_tokens') && others.some((r) => r[col] === row[col])) return dupError(`${t}_token_key`)
