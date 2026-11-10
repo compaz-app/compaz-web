@@ -22,6 +22,7 @@ export function generarBloques(horarios: HorarioDisponible[] | null | undefined,
   if (!horarios?.length) return []
   const vePared = new Date(ahora.getTime() - OFFSET_VE_MS) // "reloj de pared" de Caracas leído como UTC
   const salida: Bloque[] = []
+  const vistos = new Set<string>()
   for (let d = 0; d < dias; d++) {
     const dia = new Date(Date.UTC(vePared.getUTCFullYear(), vePared.getUTCMonth(), vePared.getUTCDate() + d))
     const nombre = DIAS[dia.getUTCDay()]
@@ -29,9 +30,14 @@ export function generarBloques(horarios: HorarioDisponible[] | null | undefined,
       const [iH, iM] = h.inicio.split(':').map(Number)
       const [fH, fM] = h.fin.split(':').map(Number)
       if ([iH, iM, fH, fM].some((n) => !Number.isFinite(n))) continue
-      for (let m = iH * 60 + iM; m + BLOQUE_MIN <= fH * 60 + fM; m += BLOQUE_MIN) {
+      // Los bloques SIEMPRE caen en :00, :20 o :40 (la reserva lo exige): una franja que empieza en otro minuto se alinea hacia adelante.
+      const primero = Math.ceil((iH * 60 + iM) / BLOQUE_MIN) * BLOQUE_MIN
+      for (let m = primero; m + BLOQUE_MIN <= fH * 60 + fM; m += BLOQUE_MIN) {
         const inicio = Date.UTC(dia.getUTCFullYear(), dia.getUTCMonth(), dia.getUTCDate(), 0, m) + OFFSET_VE_MS
-        salida.push({ inicio: new Date(inicio).toISOString(), fin: new Date(inicio + BLOQUE_MIN * MIN_MS).toISOString() })
+        const iso = new Date(inicio).toISOString()
+        if (vistos.has(iso)) continue // franjas que se solapan no duplican horas
+        vistos.add(iso)
+        salida.push({ inicio: iso, fin: new Date(inicio + BLOQUE_MIN * MIN_MS).toISOString() })
       }
     }
   }

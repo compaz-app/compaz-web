@@ -51,10 +51,12 @@ const SERVICIOS_GRUPOS = [
 type HorarioItem = { dia: string; inicio: string; fin: string }
 
 const DIAS_SEMANA = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo']
-const BLOQUES_HORA = Array.from({ length: 13 }, (_, i) => {
-  const h = 8 + i
-  return `${String(h).padStart(2, '0')}:00`
+// Horas de inicio y fin en pasos de 20 minutos, de 08:00 a 20:00 (los bloques que ve el cliente son de 20 minutos).
+const BLOQUES_HORA = Array.from({ length: 37 }, (_, i) => {
+  const min = 8 * 60 + i * 20
+  return `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`
 })
+const aMin = (hhmm: string) => Number(hhmm.slice(0, 2)) * 60 + Number(hhmm.slice(3))
 
 interface Props {
   token: string
@@ -349,6 +351,13 @@ export default function EditarPerfil({ token, inicial }: Props) {
         <p style={{ ...s.hint, color: '#9B8AB8', marginTop: '-6px' }}>
           🕐 Horarios en hora de Venezuela (UTC−4) — ahora son las {new Date().toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Caracas' })} VET
         </p>
+
+        {horarios.length > 0 && (() => {
+          // Cuántas horas de 20 minutos verán los clientes por semana (franjas que se solapan no se cuentan dos veces).
+          const bloques = new Set<string>()
+          for (const h of horarios) for (let m = Math.ceil(aMin(h.inicio) / 20) * 20; m + 20 <= aMin(h.fin); m += 20) bloques.add(`${h.dia}-${m}`)
+          return <p style={{ ...s.hint, color: '#2D1464', fontWeight: 700 }}>Los clientes verán {bloques.size} {bloques.size === 1 ? 'hora libre' : 'horas libres'} de 20 minutos por semana.</p>
+        })()}
 
         {horarios.length > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>

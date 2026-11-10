@@ -32,7 +32,7 @@ export interface Plantilla {
 
 /** Cada plantilla nueva se agrega aquí y en el tipo NombrePlantilla. */
 export type NombrePlantilla = 'solicitud_nueva' | 'directa_aceptada' | 'pago_confirmado' | 'llamada_terminada_cliente' | 'llamada_terminada_compita'
-  | 'entrevista_aceptada' | 'reserva_pedida' | 'reserva_rechazada' | 'reserva_vencida' | 'lugar_respuesta'
+  | 'entrevista_aceptada' | 'reserva_pedida' | 'reserva_rechazada' | 'reserva_vencida' | 'lugar_respuesta' | 'direccion_visita' | 'direccion_faltante_cliente' | 'compita_en_camino'
 
 const etiquetaSlot = (iso: string) =>
   new Date(iso).toLocaleString('es-VE', {
@@ -401,6 +401,82 @@ const lugarRespuesta: Plantilla = {
   },
 }
 
+// La dirección exacta llega al compita unas horas antes de la cita, por Telegram y NUNCA por el chat. El teléfono del
+// contacto en el sitio no se incluye: solo lo ve el equipo.
+const direccionVisita: Plantilla = {
+  canales: ['telegram'],
+  async render(v) {
+    const visitaId = String(v.visitaId ?? '')
+    if (!visitaId) return null
+    const admin = createAdminSupabase()
+    const { data: vis } = await admin.from('visitas').select('id, usuario_id, estado, fecha_programada, hora_inicio_programada, direccion, indicaciones, quien_abre, contacto_nombre, personas_en_lugar').eq('id', visitaId).maybeSingle()
+    if (!vis || vis.estado !== 'programada' || !vis.direccion) return null // se canceló o se reagendó sin dirección
+    const { data: cli } = await admin.from('usuarios').select('nombre').eq('id', vis.usuario_id).maybeSingle()
+    const primero = esc(String(cli?.nombre ?? 'El cliente').split(' ')[0])
+    const personas = textoPersonas(vis.personas_en_lugar)
+    const antifraude = esc(String(await getAjuste('antifraude_compita')))
+    const fecha = new Date(`${vis.fecha_programada}T12:00:00-04:00`).toLocaleDateString('es-VE', { timeZone: 'America/Caracas', weekday: 'long', day: 'numeric', month: 'long' })
+    return { telegram: {
+      texto: [
+        `📍 <b>Dirección de tu visita</b>`, ``,
+        `Visita con <b>${primero}</b>: ${esc(fecha)}, ${esc(String(vis.hora_inicio_programada).slice(0, 5))}.`, ``,
+        `<b>Dirección:</b> ${esc(String(vis.direccion))}`,
+        ...(vis.indicaciones ? [`<b>Cómo entrar:</b> ${esc(String(vis.indicaciones))}`] : []),
+        ...(vis.quien_abre ? [`<b>Quién abre:</b> ${esc(String(vis.quien_abre))}`] : []),
+        ...(vis.contacto_nombre ? [`<b>Contacto en el sitio:</b> ${esc(String(vis.contacto_nombre))}`] : []),
+        ...(personas ? [`<b>Quién más estará:</b> ${esc(personas)}`] : []),
+        ``, `🔒 Esta dirección es solo para ti: no la compartas. Se entrega por aquí y nunca por el chat.`,
+        ``, `⚠️ ${antifraude}`,
+      ].join('\n'),
+      teclado: makeInlineKeyboard([[{ text: '🚗 Voy en camino', callback_data: `camino:${vis.id}` }]]),
+    } }
+  },
+}
+
+// El cliente no registró la dirección y la cita está cerca.
+const direccionFaltanteCliente: Plantilla = {
+  canales: ['correo'],
+  async render(v) {
+    const visitaId = String(v.visitaId ?? '')
+    if (!visitaId) return null
+    const admin = createAdminSupabase()
+    const { data: vis } = await admin.from('visitas').select('usuario_id, compita_id, estado, direccion').eq('id', visitaId).maybeSingle()
+    if (!vis || vis.estado !== 'programada' || vis.direccion) return null // ya la registró, o se canceló
+    const [{ data: cli }, { data: cmp }] = await Promise.all([
+      admin.from('usuarios').select('nombre').eq('id', vis.usuario_id).maybeSingle(),
+      admin.from('compitas').select('nombre').eq('id', vis.compita_id).maybeSingle(),
+    ])
+    const primero = esc(String(cli?.nombre ?? '').split(' ')[0])
+    const corto = esc(nombreCorto(String(cmp?.nombre ?? '')) || 'Tu compita')
+    return { correo: { asunto: 'Falta la dirección de tu visita', html: marco(`
+      <h2 style="color:#2D1464;font-size:22px">Falta la dirección de tu visita</h2>
+      <p style="color:#4A3B6B;font-size:16px;line-height:1.6">Hola, ${primero}. ${corto} visita a tu familiar muy pronto y todavía no registraste dónde será. Regístrala ahora en tu portal para que ${corto} la reciba a tiempo.</p>
+      ${boton(`${SITE_URL}/dashboard`, 'Registrar la dirección →')}`) } }
+  },
+}
+
+// El compita avisa que va en camino: el cliente se entera.
+const compitaEnCamino: Plantilla = {
+  canales: ['correo'],
+  async render(v) {
+    const visitaId = String(v.visitaId ?? '')
+    if (!visitaId) return null
+    const admin = createAdminSupabase()
+    const { data: vis } = await admin.from('visitas').select('usuario_id, compita_id, estado').eq('id', visitaId).maybeSingle()
+    if (!vis || vis.estado !== 'programada') return null
+    const [{ data: cli }, { data: cmp }] = await Promise.all([
+      admin.from('usuarios').select('nombre').eq('id', vis.usuario_id).maybeSingle(),
+      admin.from('compitas').select('nombre').eq('id', vis.compita_id).maybeSingle(),
+    ])
+    const primero = esc(String(cli?.nombre ?? '').split(' ')[0])
+    const corto = esc(nombreCorto(String(cmp?.nombre ?? '')) || 'Tu compita')
+    return { correo: { asunto: `${nombreCorto(String(cmp?.nombre ?? '')) || 'Tu compita'} va en camino`, html: marco(`
+      <h2 style="color:#2D1464;font-size:22px">${corto} va en camino</h2>
+      <p style="color:#4A3B6B;font-size:16px;line-height:1.6">Hola, ${primero}. ${corto} salió hacia donde está tu familiar. Avisa a quien debe abrir la puerta.</p>
+      ${boton(`${SITE_URL}/dashboard`, 'Ir a mi portal →')}`) } }
+  },
+}
+
 export const PLANTILLAS: Record<NombrePlantilla, Plantilla> = {
   solicitud_nueva: solicitudNueva,
   directa_aceptada: directaAceptada,
@@ -412,4 +488,7 @@ export const PLANTILLAS: Record<NombrePlantilla, Plantilla> = {
   reserva_rechazada: reservaLiberada('rechazada'),
   reserva_vencida: reservaLiberada('vencida'),
   lugar_respuesta: lugarRespuesta,
+  direccion_visita: direccionVisita,
+  direccion_faltante_cliente: direccionFaltanteCliente,
+  compita_en_camino: compitaEnCamino,
 }

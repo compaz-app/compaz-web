@@ -27,6 +27,7 @@ import { confirmarReserva, rechazarReserva } from '@/lib/agenda'
 import { registrarCancelacion, alertarCancelacionesCompita, horasDeAviso } from '@/lib/cancelaciones'
 import { getAjustes } from '@/lib/ajustes'
 import { responderCambioLugar } from '@/lib/lugar'
+import { registrarEvento } from '@/lib/eventos'
 import { notificar } from '@/lib/avisos'
 import { confirmarPagoYAvisar } from '@/lib/confirmar-pago'
 import { anunciarEntrevistaConfirmada } from '@/lib/entrevista-confirmada'
@@ -1051,6 +1052,24 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
     })
     await sendTelegramMessage(chatId, `✅ <b>Aceptaste</b>\n\nEl cliente paga primero. Te avisamos apenas el pago esté confirmado.`, TECLADO_SIN_VISITA)
     await avisarAdmin(`🤝 <b>${esc(compita.nombre)}</b> aceptó una contratación directa. Esperando el pago del cliente.`)
+    return NextResponse.json({ ok: true })
+  }
+
+  // ── "Voy en camino": el compita avisa que salió hacia la visita ───────────────────────────────────────────────
+  if (isCallback && text.startsWith('camino:')) {
+    const visitaId = text.slice('camino:'.length)
+    if (!compita || !visitaId) return NextResponse.json({ ok: true })
+    const { data: vis } = await supabase.from('visitas').select('id, usuario_id, estado').eq('id', visitaId).eq('compita_id', compita.id).maybeSingle()
+    if (!vis || vis.estado !== 'programada') {
+      await sendTelegramMessage(chatId, `Esta visita ya no está programada.`, TECLADO_SIN_VISITA)
+      return NextResponse.json({ ok: true })
+    }
+    await registrarEvento({ entidad: 'visita', entidadId: visitaId, tipo: 'compita_en_camino', actor: `compita:${compita.id}` })
+    await notificar({
+      plantilla: 'compita_en_camino', canal: 'correo', destinatario: { tipo: 'cliente', id: vis.usuario_id as string },
+      variables: { visitaId }, entidad: 'visita', entidadId: visitaId, paso: 11, claveUnica: `compita_en_camino:${visitaId}`,
+    })
+    await sendTelegramMessage(chatId, `🚗 Gracias. Le avisamos al cliente que vas en camino. Cuando llegues, toca el botón ▶️ de tu teclado.`, TECLADO_INICIO)
     return NextResponse.json({ ok: true })
   }
 

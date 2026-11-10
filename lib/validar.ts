@@ -4,6 +4,8 @@ import { esc } from '@/lib/html'
 const HOSTS_YOUTUBE = ['youtube.com', 'www.youtube.com', 'm.youtube.com', 'youtu.be']
 const DIAS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo']
 const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/
+/** Las horas libres son bloques de 20 minutos: una franja debe empezar y terminar en :00, :20 o :40. */
+const en20 = (hhmm: string) => Number(hhmm.slice(3)) % 20 === 0
 
 export function esUrlYoutube(url: string | null | undefined): boolean {
   if (!url) return true
@@ -77,6 +79,7 @@ export function validarPerfil(e: PerfilEntrada | Record<string, unknown>, opts: 
         || !DIAS.includes(h.dia) || !HHMM.test(h.inicio) || !HHMM.test(h.fin) || h.fin <= h.inicio) {
         return { ok: false, error: 'Horarios inválidos' }
       }
+      if (!en20(h.inicio) || !en20(h.fin)) return { ok: false, error: 'Los horarios van en bloques de 20 minutos (por ejemplo 09:00, 09:20 o 09:40)' }
       hs.push({ dia: h.dia, inicio: h.inicio, fin: h.fin })
     }
     out.horarios_disponibles = hs

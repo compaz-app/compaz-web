@@ -6,6 +6,7 @@ import assert from 'node:assert/strict'
 import { generarBloques, horasLibres, reservarHorario, confirmarReserva, rechazarReserva, liberarReserva, liberarVencidas } from '@/lib/agenda'
 import { dosHoras, zonaValida } from '@/lib/zonas'
 import { setAjuste, limpiarCacheAjustes } from '@/lib/ajustes'
+import { validarPerfil } from '@/lib/validar'
 
 beforeEach(() => { limpiar(); limpiarCacheAjustes() })
 const DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado']
@@ -34,6 +35,34 @@ describe('generarBloques', () => {
     assert.deepEqual(b.map((x) => x.inicio), [ve(9, 23), ve(9, 23, 20)])
   })
   test('sin franjas no hay bloques', () => { assert.deepEqual(generarBloques(null, AHORA), []); assert.deepEqual(generarBloques([], AHORA), []) })
+})
+
+describe('franjas del perfil: siempre se ofrecen horas que se pueden reservar', () => {
+  test('una franja que empieza en un minuto raro se alinea a bloques de :00, :20 o :40', () => {
+    const b = generarBloques([{ dia: hoy as any, inicio: '09:07', fin: '10:00' }], AHORA, 1)
+    assert.deepEqual(b.map((x) => x.inicio), [ve(9, 9, 20), ve(9, 9, 40)])
+    for (const x of b) assert.equal(new Date(x.inicio).getTime() % 1_200_000, 0)
+  })
+  test('franjas que se solapan no duplican horas', () => {
+    const b = generarBloques([{ dia: hoy as any, inicio: '09:00', fin: '10:00' }, { dia: hoy as any, inicio: '09:20', fin: '10:20' }], AHORA, 1)
+    assert.deepEqual(b.map((x) => x.inicio), [ve(9, 9), ve(9, 9, 20), ve(9, 9, 40), ve(9, 10)])
+  })
+  test('toda hora que se ofrece como libre se puede reservar de verdad (aunque la franja guardada venga desalineada)', async () => {
+    const c = mkCompita({ horarios_disponibles: [{ dia: hoy, inicio: '09:07', fin: '10:00' }, { dia: manana, inicio: '09:00', fin: '09:50' }] })
+    const todas = await horasLibres(c.id, { ahora: AHORA, dias: 2 })
+    assert.ok(todas.length > 0)
+    for (const h of todas) {
+      const r = await reservarHorario({ compitaId: c.id, clienteId: mkCliente({ email: `${Math.random()}@x.test` }).id, solicitudId: null, inicio: h.inicio, ahora: AHORA })
+      assert.equal(r.ok, true, `${h.inicio}: ${JSON.stringify(r)}`)
+    }
+  })
+  test('el servidor rechaza horarios que no van en bloques de 20 minutos y acepta los que sí', () => {
+    const f = (inicio: string, fin: string) => validarPerfil({ horarios_disponibles: [{ dia: 'lunes', inicio, fin }] })
+    assert.equal(f('09:07', '10:00').ok, false); assert.equal(f('09:00', '10:15').ok, false)
+    assert.match((f('09:07', '10:00') as any).error, /20 minutos/)
+    assert.equal(f('09:00', '10:00').ok, true); assert.equal(f('09:20', '10:40').ok, true); assert.equal(f('18:40', '20:00').ok, true)
+    assert.equal(f('10:00', '09:00').ok, false, 'lo anterior sigue valiendo')
+  })
 })
 
 describe('horasLibres', () => {
