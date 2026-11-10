@@ -8,6 +8,7 @@ import { liberarVencidas } from '@/lib/agenda'
 import { escalarCambiosLugar } from '@/lib/lugar'
 import { entregarDirecciones } from '@/lib/direccion'
 import { procesarNadieAbre } from '@/lib/llegada'
+import { preguntarTodoBien, escalarTodoBien } from '@/lib/seguridad'
 import { cronAutorizado, latido } from '@/lib/cron'
 import { ok, err } from '@/lib/api'
 
@@ -18,7 +19,8 @@ export async function POST(req: NextRequest) {
   const cambiosLugarEscalados = await escalarCambiosLugar().catch((e) => { console.error('[escalera] cambios de lugar:', e); return 0 })
   const direcciones = await entregarDirecciones().catch((e) => { console.error('[escalera] direcciones:', e); return { enviadas: 0, sinDireccion: 0 } })
   const nadieAbre = await procesarNadieAbre().catch((e) => { console.error('[escalera] nadie abre:', e); return { tareas: 0, cierres: 0 } })
+  const todoBien = await (async () => ({ preguntas: await preguntarTodoBien(), alertas: await escalarTodoBien() }))().catch((e) => { console.error('[escalera] todo bien:', e); return { preguntas: 0, alertas: 0 } })
   const pagosEscalados = await escalarPagosInsistidos().catch((e) => { console.error('[escalera] pagos insistidos:', e); return 0 })
   await latido('escalera-avisos')
-  return ok({ ...resultado, pagosEscalados, reservasVencidas, cambiosLugarEscalados, direcciones, nadieAbre })
+  return ok({ ...resultado, pagosEscalados, reservasVencidas, cambiosLugarEscalados, direcciones, nadieAbre, todoBien })
 }

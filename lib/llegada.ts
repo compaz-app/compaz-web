@@ -158,5 +158,6 @@ export async function procesarNadieAbre(ahora: Date = new Date()): Promise<{ tar
 export const tecladoLlegada = (visitaId: string) => makeInlineKeyboard([
   [{ text: '✅ Sí, iniciar', callback_data: '✅ Sí, iniciar' }],
   [{ text: '🚪 Llegué y nadie abre', callback_data: `nadie:${visitaId}` }],
+  [{ text: '🛡️ No me siento seguro', callback_data: 'seguro' }],
   [{ text: '🔄 Necesito reagendar', callback_data: 'reagendar_visita' }],
 ])

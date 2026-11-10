@@ -34,6 +34,7 @@ export interface Plantilla {
 export type NombrePlantilla = 'solicitud_nueva' | 'directa_aceptada' | 'pago_confirmado' | 'llamada_terminada_cliente' | 'llamada_terminada_compita'
   | 'entrevista_aceptada' | 'reserva_pedida' | 'reserva_rechazada' | 'reserva_vencida' | 'lugar_respuesta' | 'direccion_visita' | 'direccion_faltante_cliente' | 'compita_en_camino'
   | 'compita_llego' | 'nadie_abre_cliente' | 'visita_sin_acceso_cliente' | 'nadie_abre_cerrar'
+  | 'salida_seguridad_cliente' | 'todo_bien'
 
 const etiquetaSlot = (iso: string) =>
   new Date(iso).toLocaleString('es-VE', {
@@ -550,6 +551,36 @@ const nadieAbreCerrar: Plantilla = {
   },
 }
 
+// El compita interrumpió la visita por seguridad: el cliente recibe un aviso NEUTRO (sin culpas ni detalles).
+const salidaSeguridadCliente: Plantilla = {
+  canales: ['correo'],
+  async render(v) {
+    const compitaId = String(v.compitaId ?? '')
+    const { data: cmp } = await createAdminSupabase().from('compitas').select('nombre').eq('id', compitaId).maybeSingle()
+    const corto = esc(nombreCorto(String(cmp?.nombre ?? '')) || 'Tu compita')
+    return { correo: { asunto: 'Tu visita se interrumpió', html: marco(`
+      <h2 style="color:#2D1464;font-size:22px">Tu visita se interrumpió</h2>
+      <p style="color:#4A3B6B;font-size:16px;line-height:1.6">${corto} tuvo que interrumpir la visita. Lo más importante es la seguridad de todos, y el equipo de Compaz se comunicará contigo muy pronto.</p>
+      <p style="color:#4A3B6B;font-size:15px;line-height:1.6">Esta visita no se te descuenta de tu plan. Cuando quieras, puedes agendar otra.</p>
+      ${boton(`${SITE_URL}/dashboard`, 'Ir a mi portal →')}`) } }
+  },
+}
+
+// Pasó la hora de fin y la visita sigue abierta: el bot le pregunta al compita si todo está bien.
+const todoBien: Plantilla = {
+  canales: ['telegram'],
+  async render(v) {
+    const visitaId = String(v.visitaId ?? '')
+    const admin = createAdminSupabase()
+    const { data: vis } = await admin.from('visitas').select('estado').eq('id', visitaId).maybeSingle()
+    if (!vis || vis.estado !== 'en_curso') return null // ya terminó: no hace falta preguntar
+    return { telegram: {
+      texto: [`⏱️ <b>¿Todo bien?</b>`, ``, `La hora de fin de la visita ya pasó. Cuéntanos cómo estás:`].join('\n'),
+      teclado: makeInlineKeyboard([[{ text: '✅ Todo bien', callback_data: `tb:ok:${visitaId}` }], [{ text: '🆘 Necesito ayuda', callback_data: `tb:ayuda:${visitaId}` }]]),
+    } }
+  },
+}
+
 export const PLANTILLAS: Record<NombrePlantilla, Plantilla> = {
   solicitud_nueva: solicitudNueva,
   directa_aceptada: directaAceptada,
@@ -568,4 +599,6 @@ export const PLANTILLAS: Record<NombrePlantilla, Plantilla> = {
   nadie_abre_cliente: nadieAbreCliente,
   visita_sin_acceso_cliente: visitaSinAccesoCliente,
   nadie_abre_cerrar: nadieAbreCerrar,
+  salida_seguridad_cliente: salidaSeguridadCliente,
+  todo_bien: todoBien,
 }

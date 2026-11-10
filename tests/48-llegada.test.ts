@@ -61,7 +61,7 @@ describe('llegada con foto obligatoria', () => {
     assert.ok(emailsA('caro@mail.test').some((e) => /llegó/.test(e.subject) && /dashboard/.test(e.html)))
     assert.ok(db.rows('eventos').some((e) => e.tipo === 'llegada_registrada'))
     const m = tgPara(CHAT).at(-1)!; assert.match(m.text, /Llegada registrada/)
-    assert.deepEqual(botones(m), ['✅ Sí, iniciar', `nadie:${fila().id}`, 'reagendar_visita'])
+    assert.deepEqual(botones(m), ['✅ Sí, iniciar', `nadie:${fila().id}`, 'seguro', 'reagendar_visita'])
   })
 
   test('una foto que NO se pidió no cuenta como llegada (tiene que ser después de tocar Iniciar)', async () => {

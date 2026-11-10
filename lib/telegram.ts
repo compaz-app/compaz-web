@@ -75,7 +75,7 @@ export const INLINE_INICIAR_O_REAGENDAR = makeInlineKeyboard([
 export const TEXTO_NOTA_DE_VOZ = '🎤 Las notas de voz no están activas: el cliente no las recibe. Escribe tu mensaje en texto o manda una foto. Gracias por entender 🙏'
 
 export const TECLADO_SIN_VISITA = {
-  keyboard: [[{ text: '📋 Menú' }]],
+  keyboard: [[{ text: '🚨 Emergencia' }, { text: '📋 Menú' }]],
   resize_keyboard: true,
 } satisfies ReplyKeyboard
 
@@ -83,6 +83,7 @@ export const TECLADO_SIN_VISITA = {
 export const TECLADO_INICIO = {
   keyboard: [
     [{ text: '▶️ Iniciar visita' }, { text: '🔴 Terminar visita' }],
+    [{ text: '🛡️ No me siento seguro' }],
     [{ text: '🚨 Emergencia' }, { text: '📋 Menú' }],
   ],
   resize_keyboard: true,
@@ -92,6 +93,7 @@ export const TECLADO_INICIO = {
 export const TECLADO_DURANTE_VISITA = {
   keyboard: [
     [{ text: '🔴 Terminar visita' }, { text: '📹 Llamar al cliente' }],
+    [{ text: '🛡️ No me siento seguro' }],
     [{ text: '🚨 Emergencia' }, { text: '📋 Menú' }],
   ],
   resize_keyboard: true,

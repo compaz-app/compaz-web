@@ -28,6 +28,7 @@ import { registrarCancelacion, alertarCancelacionesCompita, horasDeAviso } from 
 import { getAjustes } from '@/lib/ajustes'
 import { responderCambioLugar } from '@/lib/lugar'
 import { registrarEvento } from '@/lib/eventos'
+import { salidaPorSeguridad, responderTodoBien } from '@/lib/seguridad'
 import { llegadaConFotoObligatoria, registrarLlegada, declararNadieAbre, cerrarSinAcceso, tecladoLlegada } from '@/lib/llegada'
 import { notificar } from '@/lib/avisos'
 import { confirmarPagoYAvisar } from '@/lib/confirmar-pago'
@@ -895,13 +896,37 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
     return NextResponse.json({ ok: true })
   }
 
+  // ── "No me siento seguro": interrumpe la visita sin penalización. Nunca pide confirmar: la prioridad es poder salir ──
+  if ((isCallback && text === 'seguro') || text === '🛡️ No me siento seguro') {
+    if (!compita) return NextResponse.json({ ok: true })
+    const r = await salidaPorSeguridad({ id: compita.id, nombre: compita.nombre })
+    await sendTelegramMessage(chatId, [
+      `🛡️ <b>Entendido. Tu seguridad es lo primero.</b>`, ``,
+      `Sal del lugar cuando puedas. ${r.hayVisita ? 'La visita quedó interrumpida y no tendrás ninguna penalización.' : ''}`,
+      `Ya avisamos al equipo de Compaz con urgencia y te contactará enseguida.`, ``,
+      `Si estás en peligro inmediato, llama al <b>911</b>.`,
+    ].join('\n'), TECLADO_SIN_VISITA)
+    return NextResponse.json({ ok: true })
+  }
+
+  // ── "¿Todo bien?": respuesta del compita tras la hora de fin ──────────────────────────────────────────────────
+  if (isCallback && text.startsWith('tb:')) {
+    const [, accion, visitaId] = text.split(':')
+    if (!compita || !visitaId || (accion !== 'ok' && accion !== 'ayuda')) return NextResponse.json({ ok: true })
+    const r = await responderTodoBien(visitaId, { id: compita.id, nombre: compita.nombre }, accion)
+    await sendTelegramMessage(chatId, r === 'no_aplica'
+      ? `Esa visita ya no está abierta.`
+      : accion === 'ok' ? `✅ Gracias por avisar. Cuando termines, toca 🔴 Terminar visita.` : `🆘 Ya avisamos al equipo con urgencia. Te contactarán de inmediato. Si estás en peligro, llama al <b>911</b>.`, TECLADO_DURANTE_VISITA)
+    return NextResponse.json({ ok: true })
+  }
+
   // ── Botón: Emergencia ────────────────────────────────────────────────────────
   if ((isCallback && text === 'emergencia') || text === '🚨 Emergencia') {
     const { data: visitaEmergencia } = await supabase
       .from('visitas')
       .select('id, usuario:usuarios(nombre, email, zona, familiar_nombre, familiar_condicion)')
       .eq('compita_id', compita.id)
-      .eq('estado', 'en_curso')
+      .in('estado', ['en_curso', 'confirmando_inicio'])
       .order('inicio', { ascending: false })
       .limit(1)
       .maybeSingle() as { data: { id: string; usuario: { nombre: string; email: string; zona: string | null; familiar_nombre: string | null; familiar_condicion: string | null } | null } | null }
