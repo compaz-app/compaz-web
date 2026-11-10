@@ -32,6 +32,7 @@ import { registrarEvento } from '@/lib/eventos'
 import { salidaPorSeguridad, responderTodoBien } from '@/lib/seguridad'
 import { situacionDelCompita } from '@/lib/que-me-toca'
 import { registrarConsultaQueMeToca, menuDudas, responderDuda, dudaNoResuelta, dudaResuelta, dudaConTexto, recordarAlCliente, esTipoDuda, esTipoRecordatorio } from '@/lib/ayuda'
+import { clientesReportables, reportarCliente, esMotivoReporte, MOTIVOS_REPORTE, MOTIVOS_DE_RIESGO, CUANDO, type MotivoReporte, type Cuando } from '@/lib/bloqueos-compita'
 import { llegadaConFotoObligatoria, registrarLlegada, declararNadieAbre, cerrarSinAcceso, tecladoLlegada } from '@/lib/llegada'
 import { notificar } from '@/lib/avisos'
 import { confirmarPagoYAvisar } from '@/lib/confirmar-pago'
@@ -919,6 +920,70 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
     if (res === 'ok') { await dudaResuelta(tipo, { id: compita.id, nombre: compita.nombre }); await sendTelegramMessage(chatId, `✅ Me alegra. Si te surge otra cosa, toca 🙋 Tengo una duda.`, await tecladoSegunEstado()) }
     else { const r = await dudaNoResuelta(tipo, { id: compita.id, nombre: compita.nombre }); await sendTelegramMessage(chatId, r.texto, r.teclado ?? await tecladoSegunEstado()) }
     return NextResponse.json({ ok: true })
+  }
+  // ── Reportar un problema con un cliente (motivo de un toque) y, si quiere, no volver con él ──────────────────────────
+  if (isCallback && text === 'xp') {
+    if (!compita) return NextResponse.json({ ok: true })
+    const lista = await clientesReportables(compita.id)
+    if (lista.length === 0) { await sendTelegramMessage(chatId, `Todavía no has tenido trato con ningún cliente, así que no hay a quién reportar. Si algo no está bien, toca 🙋 Tengo una duda y elige "Algo no está bien".`, await tecladoSegunEstado()); return NextResponse.json({ ok: true }) }
+    await sendTelegramMessage(chatId, `🚩 <b>¿Con qué cliente tuviste el problema?</b>`, makeInlineKeyboard(lista.map((c) => [{ text: c.nombre, callback_data: `xp1:${c.id}` }])))
+    return NextResponse.json({ ok: true })
+  }
+  if (isCallback && text.startsWith('xp1:')) {
+    const uid = text.slice(4)
+    if (!compita || !(await clientesReportables(compita.id)).some((c) => c.id === uid)) return NextResponse.json({ ok: true })
+    await sendTelegramMessage(chatId, `¿Qué pasó?`, makeInlineKeyboard((Object.keys(MOTIVOS_REPORTE) as MotivoReporte[]).map((m) => [{ text: MOTIVOS_REPORTE[m], callback_data: `xpm:${uid}:${m}` }])))
+    return NextResponse.json({ ok: true })
+  }
+  // Preguntas de un toque después del motivo. Todo el estado viaja en el botón: xpm:<cliente>:<motivo> → xpw:…:<cuándo> → xpb:…:<bien> → xpr:…:<antes> → xpn:…:<no volver> → (si es leve) xpv
+  const CODIGO_CUANDO: Record<Cuando, string> = { durante: 'd', llegada: 'l', despues: 'p' }
+  const pasoReporte = (p: string[]): boolean => !!compita && esMotivoReporte(p[1]) && p[0].length === 36
+  if (isCallback && text.startsWith('xpm:')) {
+    const [, uid, motivo] = text.split(':')
+    if (!pasoReporte([uid, motivo])) return NextResponse.json({ ok: true })
+    await sendTelegramMessage(chatId, `¿Cuándo pasó?`, makeInlineKeyboard((Object.keys(CUANDO) as Cuando[]).map((k) => [{ text: CUANDO[k], callback_data: `xpw:${uid}:${motivo}:${CODIGO_CUANDO[k]}` }])))
+    return NextResponse.json({ ok: true })
+  }
+  if (isCallback && text.startsWith('xpw:')) {
+    const [, uid, motivo, cw] = text.split(':')
+    if (!pasoReporte([uid, motivo]) || !['d', 'l', 'p'].includes(cw)) return NextResponse.json({ ok: true })
+    await sendTelegramMessage(chatId, `¿Estás bien ahora?`, makeInlineKeyboard([[{ text: '✅ Sí, estoy bien', callback_data: `xpb:${uid}:${motivo}:${cw}:s` }], [{ text: '🆘 Necesito ayuda', callback_data: `xpb:${uid}:${motivo}:${cw}:n` }]]))
+    return NextResponse.json({ ok: true })
+  }
+  if (isCallback && text.startsWith('xpb:')) {
+    const [, uid, motivo, cw, bien] = text.split(':')
+    if (!pasoReporte([uid, motivo]) || (bien !== 's' && bien !== 'n')) return NextResponse.json({ ok: true })
+    if (bien === 'n') await sendTelegramMessage(chatId, `Si estás en peligro ahora mismo, toca 🚨 Emergencia o 🛡️ No me siento seguro. Seguimos con el reporte y el equipo te llamará.`)
+    await sendTelegramMessage(chatId, `¿Ya te había pasado esto con este cliente?`, makeInlineKeyboard([[{ text: 'Sí, ya había pasado', callback_data: `xpr:${uid}:${motivo}:${cw}:${bien}:s` }], [{ text: 'No, es la primera vez', callback_data: `xpr:${uid}:${motivo}:${cw}:${bien}:n` }]]))
+    return NextResponse.json({ ok: true })
+  }
+  if (isCallback && text.startsWith('xpr:')) {
+    const [, uid, motivo, cw, bien, rep] = text.split(':')
+    if (!pasoReporte([uid, motivo]) || (rep !== 's' && rep !== 'n')) return NextResponse.json({ ok: true })
+    await sendTelegramMessage(chatId, `¿Quieres <b>no volver a trabajar</b> con este cliente? Si dices que sí, Compaz no te lo asignará más.`, makeInlineKeyboard([[{ text: '🚫 Sí, no volver con él', callback_data: `xpn:${uid}:${motivo}:${cw}:${bien}:${rep}:s` }], [{ text: 'No, solo avisar al equipo', callback_data: `xpn:${uid}:${motivo}:${cw}:${bien}:${rep}:n` }]]))
+    return NextResponse.json({ ok: true })
+  }
+  if (isCallback && text.startsWith('xpn:')) {
+    const [, uid, motivo, cw, bien, rep, nv] = text.split(':')
+    if (!pasoReporte([uid, motivo]) || (nv !== 's' && nv !== 'n')) return NextResponse.json({ ok: true })
+    // Los motivos de riesgo y el "necesito ayuda" siempre llevan llamada; en los leves se le pregunta.
+    if (MOTIVOS_DE_RIESGO.includes(motivo as MotivoReporte) || bien === 'n') { await cerrarReporte(uid, motivo, cw, bien, rep, nv, 's'); return NextResponse.json({ ok: true }) }
+    await sendTelegramMessage(chatId, `¿Quieres que el equipo te llame para hablar de lo que pasó?`, makeInlineKeyboard([[{ text: '📞 Sí, llámenme', callback_data: `xpv:${uid}:${motivo}:${cw}:${bien}:${rep}:${nv}:s` }], [{ text: 'No hace falta', callback_data: `xpv:${uid}:${motivo}:${cw}:${bien}:${rep}:${nv}:n` }]]))
+    return NextResponse.json({ ok: true })
+  }
+  if (isCallback && text.startsWith('xpv:')) {
+    const [, uid, motivo, cw, bien, rep, nv, ll] = text.split(':')
+    if (!pasoReporte([uid, motivo]) || (ll !== 's' && ll !== 'n')) return NextResponse.json({ ok: true })
+    await cerrarReporte(uid, motivo, cw, bien, rep, nv, ll)
+    return NextResponse.json({ ok: true })
+  }
+  async function cerrarReporte(uid: string, motivo: string, cw: string, bien: string, rep: string, nv: string, ll: string) {
+    if (!compita) return
+    const r = await reportarCliente({ id: compita.id, nombre: compita.nombre }, uid, { motivo, cuando: ({ d: 'durante', l: 'llegada', p: 'despues' } as Record<string, string>)[cw], estaBien: bien === 's', reincidente: rep === 's', noVolver: nv === 's', llamar: ll === 's' })
+    const horas = Number((await getAjustes()).reporte_llamada_horas)
+    await sendTelegramMessage(chatId, r.resultado === 'ok'
+      ? `✅ Gracias, ya avisamos al equipo.${nv === 's' ? ' No se te volverá a asignar este cliente.' : ''}${r.llamar ? ` 📞 Te llamaremos en las próximas ${horas} horas.` : ''}`
+      : `No pude registrar el reporte. Toca 🙋 Tengo una duda y elige "Algo no está bien" para avisar al equipo.`, await tecladoSegunEstado())
   }
   // ── "Recordarle al cliente": un toque que manda un correo de Compaz (con límite) ─────────────────────────────────
   if (isCallback && text.startsWith('rc:')) {

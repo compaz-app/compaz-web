@@ -14,6 +14,7 @@ import { notificar } from '@/lib/avisos'
 import { registrarEvento } from '@/lib/eventos'
 import { fotoClienteVigente } from '@/lib/fotos-privadas'
 import { compitaEnPausa } from '@/lib/cancelaciones'
+import { parBloqueado } from '@/lib/bloqueos-compita'
 import { validarSolicitudNueva, mensajeDeSolicitud, type SolicitudNueva } from '@/lib/validar-solicitud'
 
 const MENSAJES_NEGOCIO = ['Límite de', 'Ya tienes una solicitud']
@@ -92,6 +93,8 @@ export async function POST(req: NextRequest) {
   }
   // Pausado por cancelaciones tardías sin justificar: no recibe solicitudes nuevas hasta que el equipo lo resuelva.
   if (await compitaEnPausa(compita_id)) return err('Este compita no está disponible', 400)
+  // El compita pidió no volver con este cliente: el cliente solo ve que no está disponible, nunca el motivo.
+  if (await parBloqueado(compita_id, user.id)) return err('Este compita no está disponible', 400)
 
   // Foto opcional: solo si el cliente la eligió mostrar y de verdad tiene una guardada.
   const fotoId = nueva && body.con_foto === true ? (await fotoClienteVigente(user.id))?.id ?? null : null

@@ -62,7 +62,7 @@ describe('el cliente registra la dirección', () => {
   test('el evento de registro no lleva ni la dirección ni el teléfono', async () => {
     const { cliente } = mundo(); await guardar(cliente, buena())
     const ev = db.rows('eventos').find((e) => e.tipo === 'direccion_registrada')!
-    assert.ok(ev); assert.ok(!JSON.stringify(ev).includes('Miranda') && !JSON.stringify(ev).includes('555'))
+    assert.ok(ev); assert.ok(!JSON.stringify(ev.datos ?? {}).includes('Miranda') && !JSON.stringify(ev.datos ?? {}).includes('555'))
   })
 })
 

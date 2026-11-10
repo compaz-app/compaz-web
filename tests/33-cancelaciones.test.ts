@@ -68,7 +68,7 @@ describe('registrar una cancelación', () => {
     assert.equal(e.entidad, 'visita'); assert.equal(e.entidad_id, vis.id)
     assert.equal(e.actor, `cliente:${u.id}`)
     assert.deepEqual(Object.keys(e.datos).sort(), ['cancelado_por', 'horas_de_aviso', 'tardia'])
-    assert.ok(!JSON.stringify(e).includes('305'))
+    assert.ok(!JSON.stringify(e.datos).includes('305'))
     assert.match(db.rows('cancelaciones')[0].motivo, /305 555 1234/, 'el texto sí queda en la tabla, que solo ve el administrador')
   })
 

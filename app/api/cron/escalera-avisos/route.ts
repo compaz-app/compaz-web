@@ -9,6 +9,7 @@ import { escalarCambiosLugar } from '@/lib/lugar'
 import { entregarDirecciones } from '@/lib/direccion'
 import { procesarNadieAbre } from '@/lib/llegada'
 import { preguntarTodoBien, escalarTodoBien } from '@/lib/seguridad'
+import { escalarLlamadasVencidas } from '@/lib/bloqueos-compita'
 import { cronAutorizado, latido } from '@/lib/cron'
 import { ok, err } from '@/lib/api'
 
@@ -21,6 +22,7 @@ export async function POST(req: NextRequest) {
   const nadieAbre = await procesarNadieAbre().catch((e) => { console.error('[escalera] nadie abre:', e); return { tareas: 0, cierres: 0 } })
   const todoBien = await (async () => ({ preguntas: await preguntarTodoBien(), alertas: await escalarTodoBien() }))().catch((e) => { console.error('[escalera] todo bien:', e); return { preguntas: 0, alertas: 0 } })
   const pagosEscalados = await escalarPagosInsistidos().catch((e) => { console.error('[escalera] pagos insistidos:', e); return 0 })
+  const llamadasVencidas = await escalarLlamadasVencidas().catch((e) => { console.error('[escalera] llamadas vencidas:', e); return 0 })
   await latido('escalera-avisos')
-  return ok({ ...resultado, pagosEscalados, reservasVencidas, cambiosLugarEscalados, direcciones, nadieAbre, todoBien })
+  return ok({ ...resultado, pagosEscalados, reservasVencidas, cambiosLugarEscalados, direcciones, nadieAbre, todoBien, llamadasVencidas })
 }

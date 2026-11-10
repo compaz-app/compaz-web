@@ -28,7 +28,7 @@ export type TipoDuda = keyof typeof DUDAS
 export const esTipoDuda = (t: unknown): t is TipoDuda => typeof t === 'string' && t in DUDAS
 
 export function menuDudas(): InlineKeyboard {
-  return makeInlineKeyboard((Object.keys(DUDAS) as TipoDuda[]).map((t) => [{ text: DUDAS[t], callback_data: `d:${t}` }]))
+  return makeInlineKeyboard([...(Object.keys(DUDAS) as TipoDuda[]).map((t) => [{ text: DUDAS[t], callback_data: `d:${t}` }]), [{ text: '🚩 Reportar un problema con un cliente', callback_data: 'xp' }]])
 }
 
 type Compita = { id: string; nombre: string }

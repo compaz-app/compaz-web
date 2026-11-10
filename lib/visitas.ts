@@ -4,6 +4,7 @@ import { PLANES, CICLO_PAGO_DIAS, type PlanId } from '@/lib/planes'
 import { calcularCreditos, type PaqueteCredito } from '@/lib/creditos'
 import { fichaCompleta } from '@/lib/ficha'
 import { visitasConsumidasPorCancelacion } from '@/lib/cancelaciones'
+import { parBloqueado } from '@/lib/bloqueos-compita'
 
 export type MotivoNuevaVisita = 'sin_compita' | 'compita_no_disponible' | 'cliente_bloqueado' | 'visita_activa' | 'sin_visitas_previas' | 'ficha_incompleta' | 'limite_plan' | 'error'
 export type ResultadoNuevaVisita =
@@ -106,6 +107,7 @@ export async function crearSiguienteVisita(usuarioId: string): Promise<Resultado
   const { data: compita } = await supabase
     .from('compitas').select('nombre, estado, verificado, telegram_chat_id').eq('id', usuario.compita_id).maybeSingle()
   if (!compita || compita.estado !== 'activo' || !compita.verificado) return falla('compita_no_disponible')
+  if (await parBloqueado(usuario.compita_id, usuarioId)) return falla('compita_no_disponible')
 
   const { data: visitas, error: eV } = await supabase
     .from('visitas').select('id, estado').eq('usuario_id', usuarioId)

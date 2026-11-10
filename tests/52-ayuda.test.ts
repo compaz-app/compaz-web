@@ -79,10 +79,10 @@ describe('el compita atascado', () => {
 })
 
 describe('"Tengo una duda"', () => {
-  test('el botón está en todos los teclados y en el aviso de la dirección; abre el menú de 5 opciones', async () => {
+  test('el botón está en todos los teclados y en el aviso de la dirección; abre el menú de 6 opciones', async () => {
     for (const t of [TECLADO_SIN_VISITA, TECLADO_INICIO, TECLADO_DURANTE_VISITA]) assert.ok(t.keyboard.flat().some((b: any) => b.text === '🙋 Tengo una duda'))
     mundo(); await webhook(tgText(CHAT, '🙋 Tengo una duda'))
-    assert.deepEqual(botones(ultimo()), ['d:dir', 'd:ent', 'd:hora', 'd:mal', 'd:otra']); await btn('duda'); assert.equal(botones(ultimo()).length, 5)
+    assert.deepEqual(botones(ultimo()), ['d:dir', 'd:ent', 'd:hora', 'd:mal', 'd:otra', 'xp']); await btn('duda'); assert.equal(botones(ultimo()).length, 6)
   })
   test('"No encuentro la dirección" con dirección: se la vuelve a dar (sin teléfono) y pregunta si se resolvió', async () => {
     const { compita, cliente } = mundo(); visita(compita, cliente, 90); await btn('d:dir')
@@ -120,7 +120,7 @@ describe('"Tengo una duda"', () => {
   test('"Se resolvió" queda registrado; "Sigo con la duda": 1.º otro intento, 2.º pasa a una persona, y no se duplica', async () => {
     const { compita, cliente } = mundo(); visita(compita, cliente, 90, { direccion: null })
     await btn('d:dir'); await btn('dr:ok:dir'); assert.equal(eventos('duda_compita').at(-1)!.datos.resultado, 'resuelta'); assert.equal(tareas('duda_sin_resolver').length, 0)
-    await btn('dr:no:dir'); assert.equal(tareas('duda_sin_resolver').length, 0, 'el primer "no" aún no escala'); assert.deepEqual(botones(ultimo()), ['d:dir', 'd:ent', 'd:hora', 'd:mal', 'd:otra'])
+    await btn('dr:no:dir'); assert.equal(tareas('duda_sin_resolver').length, 0, 'el primer "no" aún no escala'); assert.deepEqual(botones(ultimo()), ['d:dir', 'd:ent', 'd:hora', 'd:mal', 'd:otra', 'xp'])
     await btn('dr:no:dir'); assert.equal(tareas('duda_sin_resolver').length, 1); assert.match(ultimo().text, /persona del equipo/); assert.match(ultimo().text, /por Telegram/)
     await btn('dr:no:dir'); assert.equal(tareas('duda_sin_resolver').length, 1)
   })
