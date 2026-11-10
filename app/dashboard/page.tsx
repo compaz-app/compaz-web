@@ -10,6 +10,7 @@ import PerfilFamiliar from '@/components/ui/PerfilFamiliar'
 import HistorialVisitas from '@/components/ui/HistorialVisitas'
 import FechaProgramada from '@/components/ui/FechaProgramada'
 import PreVisitaActions from '@/components/ui/PreVisitaActions'
+import LugarPersonas from '@/components/ui/LugarPersonas'
 import ChatColapsable from '@/components/ui/ChatColapsable'
 import ReagendarButton from '@/components/ui/ReagendarButton'
 import AgendarOtraVisita from '@/components/ui/AgendarOtraVisita'
@@ -630,6 +631,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                 tieneFecha={!!visitaPreVisita.fecha_programada}
               />
             )}
+            {!previewUid && <LugarPersonas />}
           </section>
         )}
 
@@ -681,6 +683,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                 compitaNombre={visitaProgramada.compita.nombre}
               />
               <ReagendarButton visitaId={visitaProgramada.id} compitaNombre={visitaProgramada.compita.nombre} />
+              {!previewUid && <LugarPersonas />}
             </section>
           )
         })()}

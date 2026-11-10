@@ -32,7 +32,7 @@ export interface Plantilla {
 
 /** Cada plantilla nueva se agrega aquí y en el tipo NombrePlantilla. */
 export type NombrePlantilla = 'solicitud_nueva' | 'directa_aceptada' | 'pago_confirmado' | 'llamada_terminada_cliente' | 'llamada_terminada_compita'
-  | 'entrevista_aceptada' | 'reserva_pedida' | 'reserva_rechazada' | 'reserva_vencida'
+  | 'entrevista_aceptada' | 'reserva_pedida' | 'reserva_rechazada' | 'reserva_vencida' | 'lugar_respuesta'
 
 const etiquetaSlot = (iso: string) =>
   new Date(iso).toLocaleString('es-VE', {
@@ -52,7 +52,7 @@ export function nombreCorto(nombre: string): string {
 export const esEntrevistaConHoras = (s: Record<string, unknown>) => s.tipo === 'entrevista' && Array.isArray(s.slots_propuestos) && s.slots_propuestos.length === 0
 
 /** Qué ve el compita sobre quién más estará: solo el TIPO de cada persona, nunca nombres. */
-function textoPersonas(personas: unknown): string | null {
+export function textoPersonas(personas: unknown): string | null {
   if (!Array.isArray(personas)) return null // el lugar no es privado
   if (personas.length === 0) return 'Nadie más, solo su familiar'
   const cuenta = new Map<string, number>()
@@ -373,6 +373,34 @@ const reservaLiberada = (motivo: 'rechazada' | 'vencida'): Plantilla => ({
   },
 })
 
+// El compita respondió al cambio de quién estará en el lugar: el cliente se entera de qué decidió.
+const lugarRespuesta: Plantilla = {
+  canales: ['correo'],
+  async render(v) {
+    const cambioId = String(v.cambioId ?? '')
+    if (!cambioId) return null
+    const admin = createAdminSupabase()
+    const { data: c } = await admin.from('cambios_lugar').select('estado, cliente_id, compita_id').eq('id', cambioId).maybeSingle()
+    if (!c || (c.estado !== 'sigue' && c.estado !== 'no_va')) return null
+    const [{ data: cli }, { data: cmp }] = await Promise.all([
+      admin.from('usuarios').select('nombre').eq('id', c.cliente_id).maybeSingle(),
+      admin.from('compitas').select('nombre').eq('id', c.compita_id).maybeSingle(),
+    ])
+    const primero = esc(String(cli?.nombre ?? '').split(' ')[0])
+    const corto = esc(nombreCorto(String(cmp?.nombre ?? '')) || 'Tu compita')
+    const sigue = c.estado === 'sigue'
+    return { correo: {
+      asunto: sigue ? `${nombreCorto(String(cmp?.nombre ?? '')) || 'Tu compita'} confirmó que sigue con la visita` : `${nombreCorto(String(cmp?.nombre ?? '')) || 'Tu compita'} prefirió no ir a esta visita`,
+      html: marco(`
+        <h2 style="color:#2D1464;font-size:22px">${sigue ? `${corto} sigue con la visita` : `${corto} prefirió no ir`}</h2>
+        <p style="color:#4A3B6B;font-size:16px;line-height:1.6">Hola, ${primero}. ${sigue
+          ? `${corto} vio el cambio de quién estará en el lugar y confirmó que sigue con la visita.`
+          : `${corto} vio el cambio de quién estará en el lugar y prefirió no ir. No pasa nada: tu visita no se pierde ni te cobramos nada por esto. Puedes elegir otro horario o a otro compita sin costo.`}</p>
+        ${boton(`${SITE_URL}/dashboard`, sigue ? 'Ir a mi portal →' : 'Elegir otro horario o compita →')}`),
+    } }
+  },
+}
+
 export const PLANTILLAS: Record<NombrePlantilla, Plantilla> = {
   solicitud_nueva: solicitudNueva,
   directa_aceptada: directaAceptada,
@@ -383,4 +411,5 @@ export const PLANTILLAS: Record<NombrePlantilla, Plantilla> = {
   reserva_pedida: reservaPedida,
   reserva_rechazada: reservaLiberada('rechazada'),
   reserva_vencida: reservaLiberada('vencida'),
+  lugar_respuesta: lugarRespuesta,
 }

@@ -193,7 +193,9 @@ describe('de la reserva al enlace de la sala', () => {
     const objetivo = Math.ceil((Date.now() + 45 * 60_000) / 1_200_000) * 1_200_000
     const pared = new Date(objetivo - 4 * 3600_000) // reloj de Caracas
     const hh = (n: number) => String(n).padStart(2, '0')
-    const { compita, cliente } = mundo({ horarios_disponibles: [{ dia: DIAS[pared.getUTCDay()], inicio: `${hh(pared.getUTCHours())}:${hh(pared.getUTCMinutes())}`, fin: `${hh(new Date(objetivo + 1_200_000 - 4 * 3600_000).getUTCHours())}:${hh(new Date(objetivo + 1_200_000 - 4 * 3600_000).getUTCMinutes())}` }] })
+    // Minutos del día en Caracas; el fin puede ser 24:00 (si el bloque llega a medianoche), nunca "00:00".
+    const iniMin = pared.getUTCHours() * 60 + pared.getUTCMinutes(); const finMin = iniMin + 20
+    const { compita, cliente } = mundo({ horarios_disponibles: [{ dia: DIAS[pared.getUTCDay()], inicio: `${hh(Math.floor(iniMin / 60))}:${hh(iniMin % 60)}`, fin: `${hh(Math.floor(finMin / 60))}:${hh(finMin % 60)}` }] })
     const sol = await pedirYAceptar(compita, cliente)
     const hora = (await libres(cliente, sol)).horas.find((h: any) => h.inicio === new Date(objetivo).toISOString())
     assert.ok(hora, 'la hora de dentro de 45 minutos está libre')

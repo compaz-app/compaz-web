@@ -26,6 +26,7 @@ import { responderSolicitud, getSolicitudPorToken, getSolicitudPorId, aceptarSol
 import { confirmarReserva, rechazarReserva } from '@/lib/agenda'
 import { registrarCancelacion, alertarCancelacionesCompita, horasDeAviso } from '@/lib/cancelaciones'
 import { getAjustes } from '@/lib/ajustes'
+import { responderCambioLugar } from '@/lib/lugar'
 import { notificar } from '@/lib/avisos'
 import { confirmarPagoYAvisar } from '@/lib/confirmar-pago'
 import { anunciarEntrevistaConfirmada } from '@/lib/entrevista-confirmada'
@@ -1050,6 +1051,22 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
     })
     await sendTelegramMessage(chatId, `✅ <b>Aceptaste</b>\n\nEl cliente paga primero. Te avisamos apenas el pago esté confirmado.`, TECLADO_SIN_VISITA)
     await avisarAdmin(`🤝 <b>${esc(compita.nombre)}</b> aceptó una contratación directa. Esperando el pago del cliente.`)
+    return NextResponse.json({ ok: true })
+  }
+
+  // ── Cambio de quién estará en el lugar: el compita sigue o prefiere no ir (sin penalización) ──────────────────
+  if (isCallback && text.startsWith('lugar:')) {
+    const [, accion, cambioId] = text.split(':')
+    if (!compita || !cambioId || (accion !== 'ok' && accion !== 'no')) return NextResponse.json({ ok: true })
+    const r = await responderCambioLugar(cambioId, compita.id, accion === 'ok' ? 'sigue' : 'no_va')
+    if (!r.ok) {
+      await sendTelegramMessage(chatId, r.motivo === 'no_encontrado' ? `Este cambio no es tuyo o ya no existe.` : `Ya respondiste a este cambio.`, TECLADO_SIN_VISITA)
+      return NextResponse.json({ ok: true })
+    }
+    await sendTelegramMessage(chatId, accion === 'ok'
+      ? `✅ Perfecto. Seguimos con la visita y le avisamos al cliente.`
+      : `Entendido. Tu seguridad primero: no habrá ninguna penalización. Le avisamos al cliente y la visita vuelve a coordinación.`, TECLADO_SIN_VISITA)
+    if (accion === 'no') await avisarAdmin(`🚫 <b>${esc(compita.nombre)}</b> prefirió no ir a una visita por un cambio de personas en el lugar. Sin penalización; el cliente elegirá otro horario o compita sin costo.`)
     return NextResponse.json({ ok: true })
   }
 
