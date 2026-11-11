@@ -372,7 +372,7 @@ export async function resolverPostulacion(
 export async function avisarBandeja(): Promise<number> {
   const pendientes = await postulacionesPorResolver(500)
   if (pendientes.length === 0) return 0
-  const enlace = `${SITE_URL}/admin/postulaciones`
+  const enlace = `${SITE_URL}/panel?sec=mas&mas=postulaciones`
 
   const nuevas: PostulacionPorResolver[] = []
   for (const p of pendientes) if (await reclamarUnaVez(`alerta_post:${p.id}`)) nuevas.push(p)

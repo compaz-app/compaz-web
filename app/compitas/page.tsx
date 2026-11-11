@@ -69,7 +69,7 @@ export default async function CompitasPage() {
       compitas={compitas ?? []}
       usuarioNombre={usuario?.nombre ?? ''}
       usuarioEmail={usuario?.email ?? ''}
-backHref={esAdmin ? '/admin?tab=accesos' : '/dashboard'}
+backHref={esAdmin ? '/panel?sec=personas' : '/dashboard'}
       backLabel={esAdmin ? '← Panel admin' : '← Mi portal'}
     />
     </Suspense>

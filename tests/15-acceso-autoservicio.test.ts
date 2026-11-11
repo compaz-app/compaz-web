@@ -41,7 +41,7 @@ test('INVITACIÓN VENCIDA o sin activar: el cliente pide otro enlace solo y entr
 
 test('el admin también puede pedir su acceso aunque no tenga fila de cliente', async () => {
   await pedir('admin@compaz.test')
-  assert.equal(await entrar(enlace('admin@compaz.test')), '/admin')
+  assert.equal(await entrar(enlace('admin@compaz.test')), '/panel')
 })
 
 test('límites: 1 correo por minuto por dirección y 10 solicitudes por hora por IP', async () => {

@@ -95,10 +95,10 @@ describe('entrar con el código', () => {
     assert.equal((await r2.json()).data.destino, '/dashboard')
   })
 
-  test('el admin entra a /admin', async () => {
+  test('el admin entra a /panel', async () => {
     await pedir('admin@compaz.test')
     const r = await verifica({ email: 'admin@compaz.test', codigo: codigoDe('admin@compaz.test') })
-    assert.equal((await r.json()).data.destino, '/admin')
+    assert.equal((await r.json()).data.destino, '/panel')
   })
 
   test('acepta el código escrito con espacios', async () => {
@@ -161,8 +161,8 @@ describe('quien ya tiene sesión entra directo desde /login', () => {
     assert.equal(await destinoDe({ returnTo: '//evil.com' }), '/dashboard')
   })
 
-  test('el admin con sesión va a /admin', async () => {
+  test('el admin con sesión va a /panel', async () => {
     session.user = { id: 'adm', email: 'admin@compaz.test' }
-    assert.equal(await destinoDe({ returnTo: '/dashboard' }), '/admin')
+    assert.equal(await destinoDe({ returnTo: '/dashboard' }), '/panel')
   })
 })

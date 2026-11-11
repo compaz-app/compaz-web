@@ -28,7 +28,7 @@ export default async function PortalPage({ searchParams }: { searchParams: Promi
   if (!esAdmin && !(await getClienteActivo())) redirect('/login?error=bloqueado')
   const activo = esAdmin ? false : await clienteVePortalNuevo(session.user.id)
   const acceso = accesoPortal({ esAdmin, previewUid: preview ?? null, portalNuevoActivo: activo })
-  if (acceso === 'admin') redirect('/admin')
+  if (acceso === 'admin') redirect('/panel')
   if (acceso === 'viejo') redirect('/dashboard')
 
   const uid = esAdmin && preview ? preview : session.user.id

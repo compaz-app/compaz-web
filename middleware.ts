@@ -20,7 +20,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(urlPublica('/se-compita', request), 307)
   }
 
-  const isAdminRoute = pathname.startsWith('/admin')
+  const isAdminRoute = pathname.startsWith('/admin') || pathname.startsWith('/panel')
   const isAreaCliente = pathname.startsWith('/dashboard') || pathname.startsWith('/compitas') || pathname.startsWith('/pago')
   if (!isAdminRoute && !isAreaCliente) return NextResponse.next()
 
@@ -77,5 +77,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/', '/dashboard/:path*', '/compitas/:path*', '/pago/:path*', '/admin/:path*'],
+  matcher: ['/', '/dashboard/:path*', '/compitas/:path*', '/pago/:path*', '/admin/:path*', '/panel/:path*'],
 }

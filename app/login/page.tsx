@@ -11,7 +11,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   if (!params.error) {
     const supabase = await createServerSupabase()
     const { data: { user } } = await supabase.auth.getUser()
-    if (user) redirect(isAdminEmail(user.email ?? '') ? '/admin' : rutaInterna(params.returnTo, '/dashboard'))
+    if (user) redirect(isAdminEmail(user.email ?? '') ? '/panel' : rutaInterna(params.returnTo, '/dashboard'))
   }
   return <LoginForm returnTo={rutaInterna(params.returnTo, '')} error={params.error} motivo={params.motivo} />
 }

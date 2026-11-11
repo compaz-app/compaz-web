@@ -25,7 +25,7 @@ test('POST: cliente invitado entra a su dashboard con la sesión en cookies (sin
 
 test('POST: el admin va a /admin; el enlace es de un solo uso', async () => {
   otps.set('h3', { id: 'adm', email: 'admin@compaz.test', usado: false })
-  assert.equal(loc(await confPost(req(url('h3'), { method: 'POST' }))), '/admin')
+  assert.equal(loc(await confPost(req(url('h3'), { method: 'POST' }))), '/panel')
   const r2 = await confPost(req(url('h3'), { method: 'POST' }))
   assert.match(loc(r2), /^\/login\?error=auth&motivo=verificacion/)
 })

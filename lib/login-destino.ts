@@ -10,7 +10,7 @@ export const BLOQUEADO = 'BLOQUEADO' as const
  * BLOQUEADO si la cuenta está suspendida; null si no fue invitada.
  */
 export async function destinoTrasLogin(userId: string, email: string | null | undefined, redirectTo: string): Promise<string | typeof BLOQUEADO | null> {
-  if (isAdminEmail(email ?? '')) return '/admin'
+  if (isAdminEmail(email ?? '')) return '/panel'
   const { data } = await createAdminSupabase().from('usuarios').select('plan, eliminacion_programada_en, eliminada_en').eq('id', userId).maybeSingle()
   if (!data) return null
   if (data.plan === 'bloqueado' || data.eliminada_en) return BLOQUEADO

@@ -18,6 +18,7 @@ import ReagendarButton from '@/components/ui/ReagendarButton'
 import AgendarOtraVisita from '@/components/ui/AgendarOtraVisita'
 import { cupoDelPlan } from '@/lib/visitas'
 import PlanesPago from '@/components/ui/PlanesPago'
+import { rutaLlamada } from '@/lib/llamada-ruta'
 import { solicitudPendiente, instruccionesPago, referenciaDe, type MetodoDirecto } from '@/lib/solicitudes-pago'
 import { qRol, firmaRol } from '@/lib/links'
 import LimpiarParamContratado from '@/components/ui/LimpiarParamContratado'
@@ -44,7 +45,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   if (!isAdmin && (await clienteVePortalNuevo(session.user.id))) redirect('/portal')
 
   // Admin sin preview → redirigir al panel
-  if (isAdmin && !previewUid) redirect('/admin')
+  if (isAdmin && !previewUid) redirect('/panel')
 
   // Modo preview: solo admins pueden ver el dashboard de otro usuario
   const targetUid = (previewUid && isAdmin) ? previewUid : session.user.id
@@ -256,7 +257,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       {previewUid && isAdmin && (
         <div style={{ background: '#1A0A3C', color: 'white', padding: '8px 24px', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span>Vista admin — {usuario?.nombre ?? previewUid} &lt;{usuario?.email}&gt;</span>
-          <a href="/admin?tab=clientes" style={{ color: '#FF6B2B', fontWeight: 700, textDecoration: 'none', fontFamily: 'Bricolage Grotesque, sans-serif' }}>← Volver al panel</a>
+          <a href="/panel?sec=personas" style={{ color: '#FF6B2B', fontWeight: 700, textDecoration: 'none', fontFamily: 'Bricolage Grotesque, sans-serif' }}>← Volver al panel</a>
         </div>
       )}
 
@@ -578,7 +579,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             )}
             {visitaActiva.estado === 'en_curso' && previewUid && visitaActiva.room_url && (
               <div style={{ marginBottom: '16px' }}>
-                <a href={`${visitaActiva.room_url}${visitaActiva.room_url.includes('?') ? '&' : '?'}lang=es`} target="_blank" rel="noreferrer"
+                <a href={rutaLlamada(visitaActiva.room_url)} target="_blank" rel="noreferrer"
                   style={{ background: '#2D1464', color: 'white', borderRadius: '9999px', padding: '10px 20px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '14px', textDecoration: 'none' }}>
                   📹 Unirse a la llamada activa
                 </a>
