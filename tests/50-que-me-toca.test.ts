@@ -18,7 +18,7 @@ function base() {
   const compita = mkCompita({ telegram_chat_id: CHAT, nombre: 'María Pérez', horarios_disponibles: HORAS }); const cliente = mkCliente({ nombre: 'Carolina Pérez Gómez', email: 'caro@mail.test', telefono: '+58 412 000 0000' })
   return { compita, cliente }
 }
-const visitaEn = (compita: any, cliente: any, min: number, o: any = {}) => { const i = ve(min); return mkVisita(cliente, compita, { estado: 'programada', fecha_programada: i.fecha, hora_inicio_programada: i.hora, hora_fin_programada: ve(min + 120).hora, direccion: 'Av. Miranda, Edif. Sol', ...o }) }
+const visitaEn = (compita: any, cliente: any, min: number, o: any = {}) => { const i = ve(min); return mkVisita(cliente, compita, { estado: 'programada', fecha_programada: i.fecha, hora_inicio_programada: i.hora, hora_fin_programada: (ve(min + 120).fecha === i.fecha ? ve(min + 120).hora : '23:59'), direccion: 'Av. Miranda, Edif. Sol', ...o }) }
 const botones = (s: any) => (s.teclado?.inline_keyboard ?? []).flat().map((b: any) => b.callback_data)
 
 describe('"nada pendiente" solo cuando de verdad no hay nada', () => {

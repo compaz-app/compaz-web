@@ -7,6 +7,10 @@ type Row = Record<string, any>
 const nowIso = () => new Date().toISOString()
 
 // FK: tabla → { tablaRelacionada: columna FK }
+// Relaciones inversas (una fila tiene VARIAS en otra tabla): tabla → { tablaRelacionada: columna FK de ESA tabla que apunta a esta }
+const REV: Record<string, Record<string, string>> = {
+  visitas: { mensajes: 'visit_id', reportes_visita: 'visita_id' },
+}
 const REL: Record<string, Record<string, string>> = {
   visitas: { usuarios: 'usuario_id', compitas: 'compita_id' },
   solicitudes: { usuarios: 'cliente_id', compitas: 'compita_id' },
@@ -269,6 +273,8 @@ class Query {
       const q = new Query(this.db, table)
       return q.project(target, sub)
     }
+    const rev = REV[this.table]?.[table]
+    if (rev) return this.db.rows(table).filter((r) => r[rev] === row.id).map((r) => new Query(this.db, table).project(r, sub))
     throw new Error(`Relación no definida en el fake: ${this.table} → ${table}`)
   }
   private finish(rows: Row[]): any {
