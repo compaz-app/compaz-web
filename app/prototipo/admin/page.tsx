@@ -2,7 +2,10 @@
 import { Suspense, createContext, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { useEmbedded, useUrlState } from '../useUrlState'
 import InfoBoton from '../InfoBoton'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { CATALOGO, type ClaveEspera } from '@/lib/esperas'
+import { ENTRADAS, SECCIONES as SECCIONES_MANUAL, buscarEnManual, puedeLaEntrada, permisosDelManual, limitesDelManual, type EntradaManual } from '@/lib/manual'
+import { PERMISOS as PERMISOS_MANUAL, ETIQUETA_PERMISO as ETIQUETA_PERMISO_MANUAL } from '@/lib/permisos-catalogo'
 
 type Etapa = 'Solicitud' | 'Entrevista' | 'Decisión' | 'Pago' | 'Ficha' | 'Activo'
 const ETAPAS: Etapa[] = ['Solicitud', 'Entrevista', 'Decisión', 'Pago', 'Ficha', 'Activo']
@@ -945,6 +948,7 @@ const HUB: { id: string; i: string; t: string; d: string; m: Madurez; sub: boole
   { id: 'ajustes', i: '🎛️', t: 'Ajustes', d: 'Precios, plazos, topes y umbrales. Se cambian aquí, con registro de quién y cuándo; no hay que tocar el código.', m: 'base', sub: true },
   { id: 'actividad', i: '📜', t: 'Actividad', d: 'Todo lo que pasó en el sistema, en orden. Aquí no suena nada: se consulta cuando hace falta.', m: 'base', sub: true },
   { id: 'limites', i: '⏳', t: 'Límites y esperas', d: 'Lo que el sistema frena a propósito (plazos entre envíos, máximos) y por qué. Para responder "¿por qué no deja hacerlo otra vez?".', m: 'base', sub: true },
+  { id: 'manual', i: '📖', t: 'Manual', d: 'Cómo funciona todo el sistema y qué hacer en cada situación. Se busca con tus palabras.', m: 'base', sub: true },
   { id: 'registro', i: '🗂️', t: 'Registro de actividad', d: 'Quién del equipo vio un teléfono o dato sensible, cuándo y por qué.', m: 'base', sub: true },
   { id: 'estado', i: '🩺', t: 'Estado del sistema', d: 'Procesos automáticos, avisos fallidos y salud de Telegram, correo y videollamadas.', m: 'base', sub: true },
 ]
@@ -1429,6 +1433,99 @@ function VistaLimites() {
   )
 }
 
+// Manual del equipo: se organiza por PREGUNTAS ("¿qué hago cuando...?"). El contenido sale de lib/manual.ts, el mismo módulo del sistema real:
+// lo escrito a mano más lo automático (permisos y límites), que nunca queda viejo. Búsqueda, sección y pregunta abierta viven en la URL.
+const PANTALLA_A_RUTA: Record<string, { tab: string; mas?: string }> = {
+  bandeja: { tab: 'bandeja' }, seguimiento: { tab: 'seguimiento' }, personas: { tab: 'personas' }, visitas: { tab: 'visitas' },
+}
+function VistaManual() {
+  const router = useRouter(); const sp = useSearchParams()
+  const rol = useContext(RolCtx); const puede = usePuede()
+  const [q, setQ] = useUrlState('man_q', ''); const [sec, setSec] = useUrlState('man_sec', ''); const [abierta, setAbierta] = useUrlState('man_abierta', '')
+  const [texto, setTexto] = useState(q)
+  const permisos = Object.fromEntries(PERMISOS_MANUAL.map((p) => [p, puede(p as Permiso)])) as Record<string, boolean>
+  const lista = buscarEnManual(q).filter((e) => !sec || e.seccion === sec)
+  const chip = (on: boolean) => `min-h-12 rounded-full px-4 text-sm font-bold ${on ? 'bg-[var(--purple)] text-white' : 'border border-[var(--border-muted)] bg-white'}`
+  const irA = (p: string) => {
+    const r = PANTALLA_A_RUTA[p] ?? { tab: 'herramientas', mas: p }
+    const params = new URLSearchParams(sp.toString()); for (const k of ['man_q', 'man_sec', 'man_abierta']) params.delete(k)
+    params.set('tab', r.tab); if (r.mas) params.set('mas', r.mas); else params.delete('mas')
+    router.replace(`/prototipo/admin?${params.toString()}`)
+  }
+  const nombrePermiso = (p: string) => ETIQUETA_PERMISO_MANUAL[p as keyof typeof ETIQUETA_PERMISO_MANUAL] ?? p
+  const tarjeta = (e: EntradaManual) => {
+    const ok = puedeLaEntrada(e, permisos, rol === 'admin'); const abiertaAhora = abierta === e.id
+    return (
+      <li key={e.id} className={`overflow-hidden rounded-2xl border bg-white ${abiertaAhora ? 'border-[var(--purple)]' : 'border-[var(--border-muted)]'} ${ok ? '' : 'opacity-70'}`}>
+        <button onClick={() => setAbierta(abiertaAhora ? '' : e.id)} aria-expanded={abiertaAhora} className="flex min-h-14 w-full items-center gap-2 px-4 py-2 text-left">
+          <span className="flex-1 font-extrabold">{e.titulo}</span>
+          {!ok && <span className="shrink-0 rounded-full bg-[var(--warm-gray)] px-2 py-0.5 text-xs font-bold">🔒</span>}
+          <span aria-hidden className="text-[var(--text-light)]">{abiertaAhora ? '▾' : '▸'}</span>
+        </button>
+        {abiertaAhora && (
+          <div className="border-t border-[var(--border-muted)] px-4 pb-4 pt-3">
+            <p className="font-bold">{e.paraQue}</p>
+            {!ok && <p role="note" className="mt-2 rounded-xl bg-[#FEF3C7] p-3 text-sm font-bold text-[#92400E]">{e.permiso === 'raiz' ? 'Solo un administrador puede hacer esto.' : `Necesitas el permiso "${nombrePermiso(String(e.permiso))}". Pídeselo a un administrador.`}</p>}
+            <ol className="mt-3 grid gap-2">
+              {e.pasos.map((p, i) => <li key={i} className="flex gap-3"><span aria-hidden className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--purple)] text-sm font-extrabold text-white">{i + 1}</span><span className="pt-0.5">{p}</span></li>)}
+            </ol>
+            {e.despues && <p className="mt-3 rounded-xl bg-[var(--warm-gray)] p-3 text-sm text-[var(--text-mid)]">{e.despues}</p>}
+            {e.pantalla && e.pantalla !== 'manual' && (
+              <div className="mt-3 flex items-center gap-1">
+                <button onClick={() => irA(e.pantalla!)} className="min-h-12 rounded-xl border-2 border-[var(--purple)] px-4 font-extrabold text-[var(--purple)]">Ir a esta pantalla</button>
+                <InfoBoton que="Ir a esta pantalla" texto="Te lleva a la pantalla del panel donde se hace esto. No cambia nada." alineado="izquierda" />
+              </div>
+            )}
+          </div>
+        )}
+      </li>
+    )
+  }
+  return (
+    <>
+      <div className="flex items-center gap-1">
+        <form onSubmit={(ev) => { ev.preventDefault(); setQ(texto.trim()); setAbierta('') }} className="flex min-w-0 flex-1 gap-1">
+          <input type="search" value={texto} onChange={(ev) => { setTexto(ev.target.value); setQ(ev.target.value.trim()) }} placeholder="Busca con tus palabras: pago, no abre, pausa…" aria-label="Buscar en el manual" className="min-h-12 min-w-0 flex-1 rounded-xl border border-[var(--border-muted)] px-3 text-base" />
+        </form>
+        <InfoBoton que="Qué es el manual" texto="Responde las preguntas más comunes del equipo y se mantiene al día con el sistema. Busca con tus palabras o elige una sección. Las preguntas con candado necesitan un permiso que no tienes." />
+      </div>
+      <div className="-mx-4 mt-2 flex gap-2 overflow-x-auto px-4 pb-1" role="group" aria-label="Secciones del manual">
+        <button aria-pressed={sec === ''} onClick={() => setSec('')} className={`shrink-0 whitespace-nowrap ${chip(sec === '')}`}>Todo</button>
+        {SECCIONES_MANUAL.map((x) => <button key={x.id} aria-pressed={sec === x.id} onClick={() => setSec(x.id)} className={`shrink-0 whitespace-nowrap ${chip(sec === x.id)}`}>{x.titulo}</button>)}
+      </div>
+      {lista.length === 0 && <p role="status" className="mt-4 rounded-2xl border border-dashed border-[var(--border-muted)] bg-white p-6 text-center text-[var(--text-mid)]">No encontré nada con esas palabras. Prueba con otras, o quita el filtro de sección.</p>}
+      {q && lista.length > 0 && (
+        <section className="mt-5">
+          <h2 className="text-lg font-extrabold">{lista.length} {lista.length === 1 ? 'resultado' : 'resultados'}</h2>
+          <p className="text-sm text-[var(--text-mid)]">Los más parecidos a lo que buscas, primero.</p>
+          <ul className="mt-2 grid gap-2">{lista.map(tarjeta)}</ul>
+        </section>
+      )}
+      {!q && SECCIONES_MANUAL.map((x) => {
+        const delaSeccion = lista.filter((e) => e.seccion === x.id)
+        if (delaSeccion.length === 0) return null
+        return (
+          <section key={x.id} className="mt-5">
+            <h2 className="text-lg font-extrabold">{x.titulo}</h2>
+            <p className="text-sm text-[var(--text-mid)]">{x.descripcion}</p>
+            <ul className="mt-2 grid gap-2">{delaSeccion.map(tarjeta)}</ul>
+          </section>
+        )
+      })}
+      {!q && (!sec || sec === 'cuentas' || sec === 'configuracion') && (
+        <section className="mt-6 grid gap-2">
+          <h2 className="text-lg font-extrabold">Siempre al día</h2>
+          <p className="text-sm text-[var(--text-mid)]">Estas dos listas se arman solas desde el sistema.</p>
+          <details className="rounded-2xl border border-[var(--border-muted)] bg-white px-4 py-3"><summary className="cursor-pointer font-extrabold">Qué puede hacer cada permiso</summary>
+            <ul className="mt-2 grid gap-1 text-sm">{permisosDelManual().map((p) => <li key={p.id} className="flex items-center justify-between gap-2"><span>{p.titulo}</span><span aria-label={permisos[p.id] ? 'Lo tienes' : 'No lo tienes'}>{permisos[p.id] ? '✅' : '🔒'}</span></li>)}</ul></details>
+          <details className="rounded-2xl border border-[var(--border-muted)] bg-white px-4 py-3"><summary className="cursor-pointer font-extrabold">Límites y esperas del sistema</summary>
+            <ul className="mt-2 grid gap-2 text-sm">{limitesDelManual().map((l) => <li key={l.id}><div className="font-bold">{l.titulo}</div><div className="text-[var(--text-mid)]">{l.texto}</div></li>)}</ul></details>
+        </section>
+      )}
+    </>
+  )
+}
+
 function VistaEstado() {
   const filas: [string, string, boolean][] = [['Revisión de avisos (cada 5 min)', 'corrió hace 2 min', true], ['Avisos fallidos sin resolver', '0', true], ['Telegram', 'responde', true], ['Correo', 'responde', true], ['Videollamadas', 'responde', true], ['Limpieza diaria', 'corrió hoy 3:00 am', true], ['Timbre de Telegram: urgencias de la última hora', '3 de 8 (pasado el tope, un solo mensaje remite al panel)', true], ['Llamadas pendientes a compitas', '1, vence mañana 4:00 pm', true]]
   return (
@@ -1468,6 +1565,7 @@ function Mas() {
         {sub === 'ajustes' && <VistaAjustes />}
         {sub === 'equipo' && <VistaEquipo />}
         {sub === 'actividad' && <VistaActividad />}
+        {sub === 'manual' && <VistaManual />}
         {sub === 'limites' && <VistaLimites />}
         {sub === 'registro' && <VistaRegistro />}
         {sub === 'estado' && <VistaEstado />}

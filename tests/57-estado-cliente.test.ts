@@ -37,6 +37,7 @@ const CASOS: Record<CodigoEstado, FotoCliente> = {
   ficha_lista_espera: foto({ pagoPendiente: { id: 'p1', insistido: true } }),
   ficha: foto({ compitaAsignado: COMPITA, fichaCompleta: false, visitas: [vis({ estado: 'pre_visita', fechaProgramada: null })] }),
   agendar_visita: foto({ compitaAsignado: COMPITA, visitas: [vis({ estado: 'pre_visita', fechaProgramada: null })] }),
+  cita_pendiente: foto({ compitaAsignado: COMPITA, visitas: [vis({ estado: 'pre_visita', fechaProgramada: null, citaPropuesta: { fecha: '2026-11-12', inicio: '10:00' } })] }),
   visita_programada: foto({ compitaAsignado: COMPITA, visitas: [vis()] }),
   compita_llego: foto({ visitas: [vis({ estado: 'confirmando_inicio', llegadaEn: min(-2) })] }),
   nadie_abre: foto({ visitas: [vis({ llegadaEn: min(-10), sinAccesoEn: min(-9) })] }),
@@ -70,6 +71,10 @@ describe('prioridades: lo que pasa en vivo manda', () => {
   test('con varias visitas programadas muestra la más próxima', () => {
     const e = decidirEstado(foto({ visitas: [vis({ id: 'lejana', fechaProgramada: '2026-11-20' }), vis({ id: 'cercana', fechaProgramada: '2026-11-11' })] }))
     assert.equal(e.visitaId, 'cercana')
+  })
+  test('una hora propuesta sin confirmar gana a la fecha anterior de la visita, y se muestra la propuesta', () => {
+    const e = decidirEstado(foto({ visitas: [vis({ fechaProgramada: '2026-11-11', citaPropuesta: { fecha: '2026-11-14', inicio: '15:00' } })] }))
+    assert.equal(e.codigo, 'cita_pendiente'); assert.equal(e.cuando, '2026-11-14T19:00:00.000Z')
   })
   test('sin ficha NO se puede agendar: primero la ficha, aunque la visita ya exista', () => assert.equal(codigo(foto({ fichaCompleta: false, visitas: [vis({ estado: 'pre_visita', fechaProgramada: null })] })), 'ficha'))
   test('un aviso de cancelación o interrupción vence a las 72 horas', () => {

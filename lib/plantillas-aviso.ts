@@ -34,7 +34,7 @@ export interface Plantilla {
 export type NombrePlantilla = 'solicitud_nueva' | 'directa_aceptada' | 'pago_confirmado' | 'llamada_terminada_cliente' | 'llamada_terminada_compita'
   | 'entrevista_aceptada' | 'reserva_pedida' | 'reserva_rechazada' | 'reserva_vencida' | 'lugar_respuesta' | 'direccion_visita' | 'direccion_faltante_cliente' | 'compita_en_camino'
   | 'compita_llego' | 'nadie_abre_cliente' | 'visita_sin_acceso_cliente' | 'nadie_abre_cerrar'
-  | 'salida_seguridad_cliente' | 'todo_bien' | 'recordatorio_cliente' | 'cancelacion_equipo_cliente' | 'pausa_cuenta_cliente' | 'pausa_cuenta_decision'
+  | 'salida_seguridad_cliente' | 'todo_bien' | 'recordatorio_cliente' | 'cancelacion_equipo_cliente' | 'pausa_cuenta_cliente' | 'pausa_cuenta_decision' | 'cita_propuesta_cliente' | 'cita_rechazada_cliente' | 'cita_sin_respuesta_cliente'
 
 const etiquetaSlot = (iso: string) =>
   new Date(iso).toLocaleString('es-VE', {
@@ -594,6 +594,40 @@ const pausaCuentaDecision: Plantilla = {
   },
 }
 
+// Confirmación de la cita de la visita: el cliente propone, el compita confirma. Tres avisos al cliente, todos cortos y con lo que sigue.
+const citaTexto = (v: Record<string, unknown>) => esc(String(v.cuando ?? ''))
+const nombreCompitaDe = async (id: unknown) => esc(nombreCorto(String((await createAdminSupabase().from('compitas').select('nombre').eq('id', String(id ?? '')).maybeSingle()).data?.nombre ?? '')) || 'tu compita')
+const citaPropuestaCliente: Plantilla = {
+  canales: ['correo'],
+  async render(v) {
+    const c = await nombreCompitaDe(v.compitaId)
+    return { correo: { asunto: `Le pedimos a ${c} que confirme tu visita`, html: marco(`
+      <h2 style="color:#2D1464;font-size:22px">Esperando que ${c} confirme</h2>
+      <p style="color:#4A3B6B;font-size:16px;line-height:1.6">Elegiste <strong>${citaTexto(v)}</strong>. Le avisamos a ${c} para que confirme esa hora. Apenas responda te escribimos; si no puede, te ofrecemos elegir otra sin costo.</p>
+      ${boton(`${SITE_URL}/dashboard`, 'Ver en mi portal →')}`) } }
+  },
+}
+const citaRechazadaCliente: Plantilla = {
+  canales: ['correo'],
+  async render(v) {
+    const c = await nombreCompitaDe(v.compitaId)
+    return { correo: { asunto: `${c} no puede a esa hora: elige otra`, html: marco(`
+      <h2 style="color:#2D1464;font-size:22px">${c} no puede a esa hora</h2>
+      <p style="color:#4A3B6B;font-size:16px;line-height:1.6">Le surgió un imprevisto para <strong>${citaTexto(v)}</strong>. No pasa nada: elige otra hora y se la volvemos a pedir. Tu visita sigue segura y no se descuenta de tu plan.</p>
+      ${boton(`${SITE_URL}/dashboard`, 'Elegir otra hora →')}`) } }
+  },
+}
+const citaSinRespuestaCliente: Plantilla = {
+  canales: ['correo'],
+  async render(v) {
+    const c = await nombreCompitaDe(v.compitaId)
+    return { correo: { asunto: 'Seguimos esperando la confirmación de tu visita', html: marco(`
+      <h2 style="color:#2D1464;font-size:22px">Seguimos esperando a ${c}</h2>
+      <p style="color:#4A3B6B;font-size:16px;line-height:1.6">${c} todavía no confirma <strong>${citaTexto(v)}</strong>. Ya avisamos a nuestro equipo para ayudarte; si prefieres, puedes elegir otra hora desde tu portal.</p>
+      ${boton(`${SITE_URL}/dashboard`, 'Ver en mi portal →')}`) } }
+  },
+}
+
 // El compita interrumpió la visita por seguridad: el cliente recibe un aviso NEUTRO (sin culpas ni detalles).
 const salidaSeguridadCliente: Plantilla = {
   canales: ['correo'],
@@ -686,6 +720,9 @@ export const PLANTILLAS: Record<NombrePlantilla, Plantilla> = {
   cancelacion_equipo_cliente: cancelacionEquipoCliente,
   pausa_cuenta_cliente: pausaCuentaCliente,
   pausa_cuenta_decision: pausaCuentaDecision,
+  cita_propuesta_cliente: citaPropuestaCliente,
+  cita_rechazada_cliente: citaRechazadaCliente,
+  cita_sin_respuesta_cliente: citaSinRespuestaCliente,
   todo_bien: todoBien,
   recordatorio_cliente: recordatorioCliente,
 }

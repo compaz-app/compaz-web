@@ -1,5 +1,5 @@
 /* eslint-disable */
-import { db, net, session, limpiar, req, tgText, tgBtn, tgFoto, ultimoTg, tgPara, emailsA, ahoraMas, hoyVEstr, mkCompita, mkCliente, mkSolicitud, mkVisita, confirmarLlegada, avisosAdmin } from './harness'
+import { db, net, session, limpiar, req, tgText, tgBtn, tgFoto, ultimoTg, tgPara, emailsA, ahoraMas, hoyVEstr, mkCompita, mkCliente, mkSolicitud, mkVisita, confirmarLlegada, avisosAdmin, confirmarPropuesta } from './harness'
 import { beforeEach, test, describe, afterEach } from 'node:test'
 import assert from 'node:assert/strict'
 import { POST as pagoConfirmar } from '@/app/api/pago/confirmar/route'
@@ -259,7 +259,7 @@ describe('Ciclo de la visita (cliente ↔ compita)', () => {
 
 describe('Fecha de la visita (cliente)', () => {
   const mundo = () => { const compita = mkCompita({ telegram_chat_id: '920' }); const cli = mkCliente({ email: 'cli@mail.test' }); const v = mkVisita(cli, compita); comoCliente(cli); return { compita, cli, v } }
-  const put = (v: any, f: string, i = '10:00', fin = '12:00') => fechaPut(req('/api/visita/fecha', { method: 'PUT', json: { visita_id: v.id, fecha_programada: f, hora_inicio: i, hora_fin: fin } }))
+  const put = async (v: any, f: string, i = '10:00', fin = '12:00') => { const r = await fechaPut(req('/api/visita/fecha', { method: 'PUT', json: { visita_id: v.id, fecha_programada: f, hora_inicio: i, hora_fin: fin } })); if (r.status === 200) await confirmarPropuesta(v.id); return r }
 
   test('validaciones: pasado, 30 feb, hora 99:99, fin<inicio, hoy a hora pasada, muy lejana', async () => {
     const { v } = mundo()

@@ -34,6 +34,7 @@ import { situacionDelCompita } from '@/lib/que-me-toca'
 import { registrarConsultaQueMeToca, menuDudas, responderDuda, dudaNoResuelta, dudaResuelta, dudaConTexto, recordarAlCliente, esTipoDuda, esTipoRecordatorio } from '@/lib/ayuda'
 import { esperaTelegram } from '@/lib/esperas'
 import { personaPausada } from '@/lib/pausas'
+import { confirmarCita, rechazarCita } from '@/lib/citas'
 import { clientesReportables, reportarCliente, esMotivoReporte, MOTIVOS_REPORTE, MOTIVOS_DE_RIESGO, CUANDO, type MotivoReporte, type Cuando } from '@/lib/bloqueos-compita'
 import { llegadaConFotoObligatoria, registrarLlegada, declararNadieAbre, cerrarSinAcceso, tecladoLlegada } from '@/lib/llegada'
 import { notificar } from '@/lib/avisos'
@@ -935,6 +936,18 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
     const uid = text.slice(4)
     if (!compita || !(await clientesReportables(compita.id)).some((c) => c.id === uid)) return NextResponse.json({ ok: true })
     await sendTelegramMessage(chatId, `¿Qué pasó?`, makeInlineKeyboard((Object.keys(MOTIVOS_REPORTE) as MotivoReporte[]).map((m) => [{ text: MOTIVOS_REPORTE[m], callback_data: `xpm:${uid}:${m}` }])))
+    return NextResponse.json({ ok: true })
+  }
+  // ── Confirmar o rechazar la hora que el cliente eligió para la visita ─────────────────────────────────────────
+  if (isCallback && text.startsWith('cita:')) {
+    const [, accion, visitaId, version] = text.split(':')
+    if (!compita || (accion !== 'ok' && accion !== 'no') || !visitaId) return NextResponse.json({ ok: true })
+    const r = accion === 'ok' ? await confirmarCita(visitaId, compita.id, version ?? '') : await rechazarCita(visitaId, compita.id, version ?? '')
+    await sendTelegramMessage(chatId, r === 'ok'
+      ? (accion === 'ok' ? `✅ Cita confirmada. Te mandamos la dirección 3 horas antes y un recordatorio.` : `Anotado ✓ Le avisamos al cliente para que elija otra hora. Gracias por avisar.`)
+      : r === 'cambio' ? `Esa propuesta ya cambió: el cliente eligió otra hora. Revisa el mensaje más reciente.`
+      : r === 'choque' ? `Ya tienes otra visita a esa hora, así que no se puede confirmar. Toca "No puedo a esa hora" y el cliente elige otra.`
+      : `Esa propuesta ya no está pendiente.`, await tecladoSegunEstado())
     return NextResponse.json({ ok: true })
   }
   // Preguntas de un toque después del motivo. Todo el estado viaja en el botón: xpm:<cliente>:<motivo> → xpw:…:<cuándo> → xpb:…:<bien> → xpr:…:<antes> → xpn:…:<no volver> → (si es leve) xpv

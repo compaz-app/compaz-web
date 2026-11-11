@@ -172,3 +172,14 @@ export const avisosAdmin = () => [
   ...net.tg.filter((m) => m.chat === '999'),
   ...db.rows('actividad_admin').filter((r) => r.nivel !== 'urgente').map((r) => ({ chat: '999', text: String(r.resumen), markup: undefined as any })),
 ]
+
+/**
+ * El compita confirma la hora que el cliente propuso para la visita. Desde que la cita SIEMPRE se confirma, elegir la fecha deja una propuesta
+ * y la visita se programa al confirmar: las pruebas que necesitan la visita ya programada llaman a esto después de elegir la fecha.
+ */
+export async function confirmarPropuesta(visitaId: string): Promise<boolean> {
+  const v = db.rows('visitas').find((x: any) => x.id === visitaId)
+  if (!v?.cita_propuesta_en) return false
+  const { confirmarCita, versionCita } = await import('@/lib/citas')
+  return (await confirmarCita(visitaId, v.compita_id, versionCita(v.cita_propuesta_en))) === 'ok'
+}

@@ -10,6 +10,7 @@ import { getAjustes } from '@/lib/ajustes'
 import { inicioDeLaCita } from '@/lib/direccion'
 import { compitaEnPausa } from '@/lib/cancelaciones'
 import { formatFechaVE } from '@/lib/format'
+import { versionCita } from '@/lib/citas'
 import { qRol } from '@/lib/links'
 import { esc } from '@/lib/html'
 import { PLANTILLAS } from '@/lib/plantillas-aviso'
@@ -33,7 +34,7 @@ const CODIGOS: [RegExp, string][] = [
   [/confirmar que vas a empezar/, 'confirmar_iniciar'], [/confirmar que terminaste/, 'confirmar_terminar'], [/pasó la hora de fin/, 'todo_bien'], [/Estás en una visita/, 'en_curso'],
   [/confirme que llegaste/, 'confirmando_inicio'], [/Puedes cerrar la visita/, 'nadie_abre_cerrar'], [/espera de hasta/, 'nadie_abre_espera'], [/Ya registraste tu llegada/, 'llegada_sin_iniciar'],
   [/no la iniciaste/, 'visita_vencida'], [/Ya tienes la dirección/, 'direccion_entregada'], [/todavía no registró la dirección/, 'direccion_faltante'], [/La dirección te llega/, 'visita_futura'],
-  [/te escribió por el chat/, 'chat_cliente_espera_respuesta'], [/Estás coordinando la fecha/, 'coordinacion'], [/cambió quién estará/, 'cambio_lugar'], [/falta que la confirmes/, 'reserva_por_confirmar'],
+  [/te escribió por el chat/, 'chat_cliente_espera_respuesta'], [/Estás coordinando la fecha/, 'coordinacion'], [/cambió quién estará/, 'cambio_lugar'], [/eligió el horario de la visita/, 'cita_por_confirmar'], [/falta que la confirmes/, 'reserva_por_confirmar'],
   [/espera tu respuesta/, 'solicitud_por_responder'], [/eligiendo una de tus horas libres/, 'espera_cliente_hora'], [/Tienes una videollamada/, 'videollamada_proxima'], [/Cuéntanos cómo estuvo/, 'videollamada_feedback'],
   [/Esperamos su pago/, 'espera_pago'], [/en pausa por varias cancelaciones/, 'pausa'], [/no cargaste tus horas libres/, 'sin_horas'], [/no sabemos explicarte/, 'guia_general'],
 ]
@@ -49,6 +50,7 @@ const AYUDA = 'Si no sabes qué hacer, escríbenos a hola@micompaz.com y te ayud
 type VisitaQ = {
   id: string; usuario_id: string; estado: string; fecha_programada: string | null; hora_inicio_programada: string | null; hora_fin_programada: string | null
   llegada_en: string | null; sin_acceso_en: string | null; direccion: string | null; usuario: { nombre: string } | null
+  cita_propuesta_fecha: string | null; cita_propuesta_inicio: string | null; cita_propuesta_fin: string | null; cita_propuesta_en: string | null
 }
 type Sol = { id: string; estado: string; tipo: string | null; slot_confirmado: string | null; slots_propuestos: string[] | null; cliente_id: string; token_respuesta: string; usuarios: { nombre: string } | null }
 type Estado = { chat_id: string; pendiente_accion: string | null; pendiente_expira: string | null }
@@ -59,7 +61,7 @@ export async function situacionDelCompita(compitaId: string, ahora: Date = new D
   const espera = Number(a.nadie_abre_espera_min); const horasDir = Number(a.direccion_horas_antes)
   const filasEstado = chatId ? [chatId, `conf:${chatId}`, `lleg:${chatId}`] : []
   const [{ data: vs }, { data: cambios }, { data: reservas }, { data: sols }, { data: cmp }, { data: estados }] = await Promise.all([
-    admin.from('visitas').select('id, usuario_id, estado, fecha_programada, hora_inicio_programada, hora_fin_programada, llegada_en, sin_acceso_en, direccion, usuario:usuarios(nombre)')
+    admin.from('visitas').select('id, usuario_id, estado, fecha_programada, hora_inicio_programada, hora_fin_programada, llegada_en, sin_acceso_en, direccion, cita_propuesta_fecha, cita_propuesta_inicio, cita_propuesta_fin, cita_propuesta_en, usuario:usuarios(nombre)')
       .eq('compita_id', compitaId).in('estado', ['pre_visita', 'programada', 'confirmando_inicio', 'en_curso']),
     admin.from('cambios_lugar').select('id, visita_id').eq('compita_id', compitaId).eq('estado', 'pendiente'),
     admin.from('reservas_horario').select('id, cliente_id, inicio, vence_en').eq('compita_id', compitaId).eq('estado', 'reservada').gt('vence_en', ahora.toISOString()),
@@ -98,7 +100,12 @@ export async function situacionDelCompita(compitaId: string, ahora: Date = new D
     const cli = primero(v.usuario?.nombre)
     const inicio = inicioDeLaCita(v.fecha_programada, v.hora_inicio_programada); const fin = inicioDeLaCita(v.fecha_programada, v.hora_fin_programada)
     const antes = items.length
-    if (v.estado === 'en_curso') {
+    if (v.cita_propuesta_en && v.cita_propuesta_fecha && v.cita_propuesta_inicio && v.cita_propuesta_fin && ['pre_visita', 'programada'].includes(v.estado)) {
+      // El cliente eligió una hora y falta que ella la confirme: es lo que le toca ahora.
+      const v6 = versionCita(v.cita_propuesta_en)
+      items.push({ tipo: 'turno', orden: 1, texto: `📅 <b>${cli}</b> eligió el horario de la visita (${esc(formatFechaVE(v.cita_propuesta_fecha, true))}, ${hora(v.cita_propuesta_inicio)} a ${hora(v.cita_propuesta_fin)}, hora de Caracas) y falta que lo confirmes.`, botones: [[{ text: '✅ Confirmo la cita', callback_data: `cita:ok:${v.id}:${v6}` }], [{ text: '🕒 No puedo a esa hora', callback_data: `cita:no:${v.id}:${v6}` }]] })
+      manejadas.add(v.id)
+    } else if (v.estado === 'en_curso') {
       const pasado = fin && ahora.getTime() > fin.getTime() + Number(a.todo_bien_min) * 60_000
       if (pasado) items.push({ tipo: 'turno', orden: 1, texto: `⏱️ Tu visita con <b>${cli}</b> ya pasó la hora de fin (${hora(v.hora_fin_programada)}). Responde: ¿todo bien? Si ya terminaste, toca 🔴 Terminar visita.`, botones: [[{ text: '✅ Todo bien', callback_data: `tb:ok:${v.id}` }], [{ text: '🆘 Necesito ayuda', callback_data: `tb:ayuda:${v.id}` }]] })
       else items.push({ tipo: 'turno', orden: 2, texto: `▶️ Estás en una visita con <b>${cli}</b>${v.hora_fin_programada ? ` que termina a las ${hora(v.hora_fin_programada)}` : ''}. Cuando termines toca 🔴 Terminar visita. Si algo no está bien, toca 🛡️ No me siento seguro o 🚨 Emergencia.` })

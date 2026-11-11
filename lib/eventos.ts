@@ -19,7 +19,7 @@ export type TipoEvento =
   | 'visita_cancelada' | 'cancelacion_justificada' | 'lugar_personas_cambiadas' | 'pago_insistido' | 'pago_escalado'
   | 'horario_reservado' | 'que_me_toca' | 'recordatorio_al_cliente' | 'direccion_registrada' | 'direccion_entregada' | 'compita_en_camino' | 'entrevista_reagendada' | 'reserva_confirmada' | 'reserva_rechazada' | 'reserva_vencida'
   | 'terminos_aceptados' | 'contacto_bloqueado' | 'llegada_registrada' | 'llegada_sin_acceso' | 'visita_sin_acceso'
-  | 'salida_por_seguridad' | 'visita_alargada' | 'reporte_cliente' | 'duda_compita' | 'foto_borrada' | 'cuenta_pausada' | 'cuenta_pausa_decidida'
+  | 'salida_por_seguridad' | 'visita_alargada' | 'reporte_cliente' | 'duda_compita' | 'foto_borrada' | 'cuenta_pausada' | 'cuenta_pausa_decidida' | 'cita_propuesta' | 'cita_confirmada' | 'cita_rechazada'
   | 'consulta_dato_sensible' | 'ajuste_cambiado'
 
 export type ActorEvento = 'sistema' | `cliente:${string}` | `compita:${string}` | `admin:${string}`

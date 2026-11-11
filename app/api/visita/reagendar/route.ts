@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
 
   const { data: reseteada, error } = await admin
     .from('visitas')
-    .update({ estado: 'pre_visita', fecha_programada: null })
+    .update({ estado: 'pre_visita', fecha_programada: null, cita_propuesta_fecha: null, cita_propuesta_inicio: null, cita_propuesta_fin: null, cita_propuesta_en: null })
     .eq('id', visita_id)
     .in('estado', ['pre_visita', 'programada'])
     .select('id')

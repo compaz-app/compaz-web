@@ -28,7 +28,7 @@ export const CODIGOS_ESTADO = [
   // 4 Ficha
   'ficha',
   // 5 Visitas
-  'agendar_visita', 'visita_programada', 'compita_llego', 'nadie_abre', 'visita_en_curso', 'visita_interrumpida', 'visita_cancelada_equipo',
+  'agendar_visita', 'cita_pendiente', 'visita_programada', 'compita_llego', 'nadie_abre', 'visita_en_curso', 'visita_interrumpida', 'visita_cancelada_equipo',
   'visita_terminada', 'agendar_otra', 'plan_agotado', 'cuenta_pausada',
 ] as const
 export type CodigoEstado = (typeof CODIGOS_ESTADO)[number]
@@ -49,6 +49,8 @@ export interface VisitaFoto {
   id: string; estado: string; compitaNombre: string
   fechaProgramada: string | null; horaInicio: string | null
   llegadaEn: string | null; sinAccesoEn: string | null; fin: string | null; creadaEn: string
+  /** Hora que el cliente propuso y que el compita aún no confirma. */
+  citaPropuesta?: { fecha: string; inicio: string } | null
 }
 export interface CancelacionFoto { visitaId: string | null; por: 'cliente' | 'compita' | 'admin' | 'sistema'; justificadaPor: string | null; creadaEn: string }
 export interface FotoCliente {
@@ -83,7 +85,7 @@ const PASO: Record<CodigoEstado, number> = {
   decidir: 2, motivo_no: 2,
   directa_aceptada: 3, pagar: 3, pago_revision: 3, ficha_lista_espera: 3,
   ficha: 4,
-  agendar_visita: 5, visita_programada: 5, compita_llego: 5, nadie_abre: 5, visita_en_curso: 5, visita_interrumpida: 5, visita_cancelada_equipo: 5,
+  agendar_visita: 5, cita_pendiente: 5, visita_programada: 5, compita_llego: 5, nadie_abre: 5, visita_en_curso: 5, visita_interrumpida: 5, visita_cancelada_equipo: 5,
   visita_terminada: 5, agendar_otra: 5, plan_agotado: 5, cuenta_pausada: 5,
 }
 export const pasoDe = (c: CodigoEstado) => PASO[c]
@@ -115,7 +117,9 @@ export function decidirEstado(f: FotoCliente): EstadoCliente {
   const sinAcceso = f.visitas.find((v) => v.estado === 'programada' && v.llegadaEn && v.sinAccesoEn)
   if (sinAcceso) return e('nadie_abre', { visitaId: sinAcceso.id, compitaNombre: sinAcceso.compitaNombre })
 
-  // 2. Visitas por venir.
+  // 2. Visitas por venir. Una hora propuesta que el compita aún no confirma va primero: es lo que el cliente está esperando.
+  const propuesta = f.visitas.find((v) => (v.estado === 'pre_visita' || v.estado === 'programada') && v.citaPropuesta)
+  if (propuesta) return e('cita_pendiente', { visitaId: propuesta.id, compitaNombre: propuesta.compitaNombre, cuando: inicioVisita({ fechaProgramada: propuesta.citaPropuesta!.fecha, horaInicio: propuesta.citaPropuesta!.inicio })?.toISOString() })
   const programada = f.visitas.filter((v) => v.estado === 'programada').sort((a, b) => (inicioVisita(a)?.getTime() ?? 0) - (inicioVisita(b)?.getTime() ?? 0))[0]
   if (programada) return e('visita_programada', { visitaId: programada.id, compitaNombre: programada.compitaNombre, cuando: inicioVisita(programada)?.toISOString() })
   const pre = f.visitas.find((v) => v.estado === 'pre_visita')
@@ -194,7 +198,7 @@ export async function cargarFoto(clienteId: string, ahora: Date = new Date()): P
   const [{ data: u }, { data: sols }, { data: vis }, { data: canc }, { data: pago }, cupo] = await Promise.all([
     admin.from('usuarios').select('*, compita:compitas(id, nombre)').eq('id', clienteId).maybeSingle(),
     admin.from('solicitudes').select('id, estado, tipo, compita_id, slot_confirmado, slots_propuestos, seguimiento_enviado, token_respuesta, confirmacion_cliente, created_at, compitas(nombre)').eq('cliente_id', clienteId).gte('created_at', hace30).order('created_at', { ascending: false }),
-    admin.from('visitas').select('id, estado, fecha_programada, hora_inicio_programada, llegada_en, sin_acceso_en, fin, created_at, compita:compitas(nombre)').eq('usuario_id', clienteId).in('estado', ['pre_visita', 'programada', 'confirmando_inicio', 'en_curso', 'terminada']).order('created_at', { ascending: false }).limit(20),
+    admin.from('visitas').select('id, estado, fecha_programada, hora_inicio_programada, llegada_en, sin_acceso_en, fin, created_at, cita_propuesta_fecha, cita_propuesta_inicio, compita:compitas(nombre)').eq('usuario_id', clienteId).in('estado', ['pre_visita', 'programada', 'confirmando_inicio', 'en_curso', 'terminada']).order('created_at', { ascending: false }).limit(20),
     admin.from('cancelaciones').select('visita_id, cancelado_por, justificada_por, creado_en').eq('usuario_id', clienteId).gte('creado_en', new Date(ahora.getTime() - AVISO_CANCELACION_H * HORA).toISOString()),
     admin.from('solicitudes_pago').select('id').eq('usuario_id', clienteId).eq('estado', 'pendiente').maybeSingle(),
     cupoDelPlan(clienteId).catch(() => null),
@@ -228,7 +232,8 @@ export async function cargarFoto(clienteId: string, ahora: Date = new Date()): P
     })),
     pagoPendiente: pago ? { id: (pago as { id: string }).id, insistido } : null,
     cupo: cupo ? { restantes: cupo.restantes } : null,
-    visitas: ((vis ?? []) as unknown as { id: string; estado: string; fecha_programada: string | null; hora_inicio_programada: string | null; llegada_en: string | null; sin_acceso_en: string | null; fin: string | null; created_at: string; compita: { nombre: string } | null }[]).map((v) => ({
+    visitas: ((vis ?? []) as unknown as { id: string; estado: string; fecha_programada: string | null; hora_inicio_programada: string | null; llegada_en: string | null; sin_acceso_en: string | null; fin: string | null; created_at: string; cita_propuesta_fecha: string | null; cita_propuesta_inicio: string | null; compita: { nombre: string } | null }[]).map((v) => ({
+      citaPropuesta: v.cita_propuesta_fecha && v.cita_propuesta_inicio ? { fecha: v.cita_propuesta_fecha, inicio: v.cita_propuesta_inicio } : null,
       id: v.id, estado: v.estado, compitaNombre: v.compita?.nombre ?? '', fechaProgramada: v.fecha_programada, horaInicio: v.hora_inicio_programada,
       llegadaEn: v.llegada_en, sinAccesoEn: v.sin_acceso_en, fin: v.fin, creadaEn: v.created_at,
     })),
