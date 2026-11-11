@@ -47,6 +47,13 @@ create table if not exists public.cmc_sincronizaciones (
 
 create index if not exists cmc_sincronizaciones_recibida_idx on public.cmc_sincronizaciones (recibida_en desc);
 
--- Solo el servidor (service_role) la usa.
+-- Solo el servidor (service_role) la usa, y solo para leer y añadir (registro de solo anexado).
+-- Los privilegios por defecto de este proyecto NO dan SELECT/INSERT a service_role en tablas
+-- nuevas: hay que concederlos explícitamente (igual que en 20261022_captacion.sql).
+-- RLS activado y sin políticas: anon y authenticated no ven nada aunque tuvieran privilegios.
 alter table public.cmc_sincronizaciones enable row level security;
-revoke all on public.cmc_sincronizaciones from anon, authenticated;
+revoke all on public.cmc_sincronizaciones from public, anon, authenticated, service_role;
+grant select, insert on public.cmc_sincronizaciones to service_role;
+
+-- Las columnas nuevas de compitas NO se añaden a los permisos por columna de anon/authenticated
+-- (20261009_auditoria_seguridad.sql): no son legibles desde el navegador.
