@@ -5,16 +5,13 @@ import { createAdminSupabase } from '@/lib/supabase-server'
 import { avisarAdmin } from '@/lib/telegram'
 import { alertaAdmin } from '@/lib/alertas-admin'
 import { detectarContacto } from '@/lib/detectar-contacto'
+import { getAjuste } from '@/lib/ajustes'
 import { registrarContactoBloqueado } from '@/lib/pausas'
 export { detectarContacto }
 
 
 // ── Aviso automático en el chat ───────────────────────────────────────────────
 
-const AVISO =
-  '🚫 *Dato de contacto detectado y reportado al equipo Compaz.* ' +
-  'Toda comunicación debe ocurrir en esta plataforma. ' +
-  'Acordar servicios por fuera viola los términos y puede suspender tu cuenta sin reembolso.'
 
 // ── Acción completa: aviso en chat + flag en Atención + Telegram al admin ─────
 
@@ -42,7 +39,7 @@ export async function moderarMensaje({
     visit_id: visitaId,
     origen: 'admin',
     tipo: 'texto',
-    contenido: AVISO,
+    contenido: String(await getAjuste('recordatorio_chat_contactos')),
   })
 
   // 2. Crear flag en Atención (entidad: visita)

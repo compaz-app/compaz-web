@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import LlamadaIncrustada from '@/components/llamada/LlamadaIncrustada'
 
 interface Props {
   visitaId: string
@@ -69,11 +70,7 @@ export default function VideoCall({ compitaNombre, roomUrlInicial }: Props) {
             Colgar
           </button>
         </div>
-        <iframe
-          src={`${roomUrl}${roomUrl.includes('?') ? '&' : '?'}lang=es`}
-          allow="camera; microphone; fullscreen; speaker; display-capture"
-          style={{ width: '100%', height: '480px', border: 'none', display: 'block' }}
-        />
+        <LlamadaIncrustada roomUrl={roomUrl} />
       </div>
     )
   }

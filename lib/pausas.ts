@@ -12,12 +12,14 @@ import { sendTelegramMessage } from '@/lib/telegram'
 import { bloquearCompita } from '@/lib/compitas'
 import { bloquearCliente } from '@/lib/usuarios'
 import { esc } from '@/lib/html'
+import { getAjustes } from '@/lib/ajustes'
 
 export type RolPausa = 'cliente' | 'compita'
 export const DECISIONES_PAUSA = ['reactivar', 'otra_oportunidad', 'bloquear'] as const
 export type DecisionPausa = (typeof DECISIONES_PAUSA)[number]
 
 /** Cuántas detecciones en la ventana pausan a la persona, y cuánto dura la ventana. */
+/** Valores de fábrica; los que rigen son los de Ajustes (detecciones_umbral y detecciones_ventana_dias). */
 export const DETECCIONES_PARA_PAUSA = 2
 export const VENTANA_DIAS = 30
 const DIA = 86_400_000
@@ -49,13 +51,14 @@ export async function compitasPausadosPorContacto(ids: string[]): Promise<Set<st
 export async function registrarContactoBloqueado(p: { rol: RolPausa; personaId: string; nombre: string; donde: string }, ahora: Date = new Date()): Promise<boolean> {
   try {
     const admin = createAdminSupabase()
+    const aj = await getAjustes()
     await registrarEvento({ entidad: p.rol, entidadId: p.personaId, tipo: 'contacto_bloqueado', actor: 'sistema', datos: { donde: p.donde } })
     // Lo que el equipo decidió antes cambia la cuenta: "reactivar" borra la cuenta de detecciones (empieza de cero); "otra oportunidad" deja
     // a la persona advertida, así que la PRÓXIMA detección ya la pausa (y se marca como reincidente).
     const { data: ultima } = await admin.from('pausas_contacto').select('decision, decidida_en').eq('rol', p.rol).eq('persona_id', p.personaId).not('decidida_en', 'is', null).order('decidida_en', { ascending: false }).limit(1).maybeSingle()
     const u = ultima as { decision: DecisionPausa; decidida_en: string } | null
-    let desde = new Date(ahora.getTime() - VENTANA_DIAS * DIA).toISOString()
-    let umbral = DETECCIONES_PARA_PAUSA
+    let desde = new Date(ahora.getTime() - Number(aj.detecciones_ventana_dias) * DIA).toISOString()
+    let umbral = Number(aj.detecciones_umbral)
     if (u && u.decidida_en > desde) {
       if (u.decision === 'reactivar') desde = u.decidida_en
       else if (u.decision === 'otra_oportunidad') { desde = u.decidida_en; umbral = 1 }
@@ -71,6 +74,7 @@ export async function registrarContactoBloqueado(p: { rol: RolPausa; personaId: 
 
 export async function pausarPersona(p: { rol: RolPausa; personaId: string; nombre: string; donde?: string }, ahora: Date = new Date()): Promise<boolean> {
   const admin = createAdminSupabase()
+  const aj = await getAjustes()
   if (await personaPausada(p.rol, p.personaId)) return false // ya está en pausa: no se duplica
   // ¿Ya había recibido otra oportunidad en los últimos 90 días?
   const { data: previa } = await admin.from('pausas_contacto').select('id').eq('rol', p.rol).eq('persona_id', p.personaId).eq('decision', 'otra_oportunidad').gte('decidida_en', new Date(ahora.getTime() - 90 * DIA).toISOString()).limit(1).maybeSingle()
@@ -84,14 +88,14 @@ export async function pausarPersona(p: { rol: RolPausa; personaId: string; nombr
   else {
     const { data: c } = await admin.from('compitas').select('telegram_chat_id').eq('id', p.personaId).maybeSingle()
     const chat = (c as { telegram_chat_id: string | null } | null)?.telegram_chat_id
-    if (chat) await sendTelegramMessage(chat, `⏸️ <b>Tu cuenta está en pausa</b>\n\nDetectamos por segunda vez un intento de compartir datos de contacto. Mientras el equipo lo revisa no recibirás solicitudes nuevas ni podrás escribir en el chat. El equipo se comunica contigo por aquí. Si estás en una visita, sigue con normalidad.`).catch(() => {})
+    if (chat) await sendTelegramMessage(chat, `⏸️ <b>Tu cuenta está en pausa</b>\n\nDetectamos varios intentos de compartir datos de contacto. Mientras el equipo lo revisa no recibirás solicitudes nuevas ni podrás escribir en el chat. El equipo se comunica contigo por aquí. Si estás en una visita, sigue con normalidad.`).catch(() => {})
   }
 
   // Lo programado con esta persona, para que el equipo decida con la información completa.
   const { data: vs } = await admin.from('visitas').select('id').eq(p.rol === 'cliente' ? 'usuario_id' : 'compita_id', p.personaId).in('estado', ['pre_visita', 'programada'])
   const n = (vs ?? []).length
   await alertaAdmin('tarea',
-    `⏸️ <b>Cuenta en pausa por compartir contactos</b>\n\n<b>${esc(p.nombre)}</b> (${p.rol}) compartió datos de contacto por ${DETECCIONES_PARA_PAUSA}.ª vez en ${VENTANA_DIAS} días${p.donde ? ` (último: ${esc(p.donde)})` : ''}. Quedó en pausa y no tiene fecha de fin hasta que decidas: reactivar, dar otra oportunidad o bloquear.${reincidente ? '\n\n⚠️ Ya había recibido otra oportunidad: lo recomendable es bloquear.' : ''}${n ? `\n\nTiene ${n} visita(s) programada(s) o por agendar con esta persona.` : ''}`,
+    `⏸️ <b>Cuenta en pausa por compartir contactos</b>\n\n<b>${esc(p.nombre)}</b> (${p.rol}) compartió datos de contacto por ${Number(aj.detecciones_umbral)}.ª vez en ${Number(aj.detecciones_ventana_dias)} días${p.donde ? ` (último: ${esc(p.donde)})` : ''}. Quedó en pausa y no tiene fecha de fin hasta que decidas: reactivar, dar otra oportunidad o bloquear.${reincidente ? '\n\n⚠️ Ya había recibido otra oportunidad: lo recomendable es bloquear.' : ''}${n ? `\n\nTiene ${n} visita(s) programada(s) o por agendar con esta persona.` : ''}`,
     { categoria: 'cuenta_pausada', clave: `pausa:${p.rol}:${p.personaId}`, entidad: { tipo: p.rol, id: p.personaId, nombre: `⏸️ Cuenta en pausa: ${p.nombre}` } },
   )
   return true

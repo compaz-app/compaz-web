@@ -1,3 +1,4 @@
+import { minutosCorteLlamada } from '@/lib/llamada'
 // POST /api/admin/enviar-link-llamada
 // Fuerza el envío del link de sala al cliente y al compita para una solicitud específica,
 // y adelanta slot_confirmado a ahora mismo para que la sala quede abierta de inmediato
@@ -17,6 +18,7 @@ import { reclamarFlag } from '@/lib/solicitudes'
 import { ok, err, notFound, serverError } from '@/lib/api'
 
 export async function POST(req: NextRequest) {
+  const corteLlamada = await minutosCorteLlamada()
   const g = await requierePermiso('atender'); if (!g.ok) return g.res
 
   const { solicitud_id } = (await req.json().catch(() => ({}))) as { solicitud_id?: string }
@@ -85,7 +87,7 @@ export async function POST(req: NextRequest) {
               <strong>${esc(slotLabel)}</strong>
             </p>
             <p style="color:#C84B0E;background:#FFF3E8;border:2px solid #FF6B2B;border-radius:12px;padding:14px;font-size:14px">
-              ⏱️ Recuerda: la llamada tiene un límite de 20 minutos. La sala se cierra automáticamente a los 23 min.
+              ⏱️ Recuerda: la llamada tiene un límite de 20 minutos. La sala se cierra automáticamente a los ${corteLlamada} min.
             </p>
             <a href="${salaClienteUrl}" style="display:inline-block;background:#FF6B2B;color:white;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:16px;margin-top:8px">
               Entrar a la llamada →
@@ -117,7 +119,7 @@ export async function POST(req: NextRequest) {
           ``,
           `Con <b>${esc(cliente?.nombre ?? 'el cliente')}</b> — <b>${esc(slotLabel)}</b>`,
           ``,
-          `⏱️ La llamada es de <b>20 minutos</b>. La sala se cierra a los 23 min.`,
+          `⏱️ La llamada es de <b>20 minutos</b>. La sala se cierra a los ${corteLlamada} min.`,
           ``,
           `Si no puedes a esa hora, toca Reagendar abajo.`,
         ].join('\n'),
@@ -146,7 +148,7 @@ export async function POST(req: NextRequest) {
               <strong>${esc(slotLabel)}</strong>
             </p>
             <p style="color:#C84B0E;background:#FFF3E8;border:2px solid #FF6B2B;border-radius:12px;padding:14px;font-size:14px">
-              ⏱️ Recuerda: la llamada tiene un límite de 20 minutos. La sala se cierra automáticamente a los 23 min.
+              ⏱️ Recuerda: la llamada tiene un límite de 20 minutos. La sala se cierra automáticamente a los ${corteLlamada} min.
             </p>
             <a href="${salaCompitaUrl}" style="display:inline-block;background:#FF6B2B;color:white;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:16px;margin-top:8px">
               Entrar a la llamada →

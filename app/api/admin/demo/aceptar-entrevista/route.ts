@@ -1,3 +1,4 @@
+import { minutosCorteLlamada } from '@/lib/llamada'
 // POST /api/admin/demo/aceptar-entrevista
 // Acepta la solicitud pendiente del inversionista demo: fija slot=NOW(), crea sala Daily,
 // guarda room_url y envía el link al cliente por email.
@@ -12,6 +13,7 @@ import { qRol } from '@/lib/links'
 import { ok, err, notFound, serverError } from '@/lib/api'
 
 export async function POST(req: NextRequest) {
+  const corteLlamada = await minutosCorteLlamada()
   const g = await requierePermiso('raiz'); if (!g.ok) return g.res
 
   const { solicitud_id } = (await req.json().catch(() => ({}))) as { solicitud_id?: string }
@@ -70,7 +72,7 @@ export async function POST(req: NextRequest) {
               Tu llamada con <strong>${esc(compitaNombre)}</strong> comienza ahora.
             </p>
             <p style="color:#C84B0E;background:#FFF3E8;border:2px solid #FF6B2B;border-radius:12px;padding:14px;font-size:14px">
-              ⏱️ La llamada tiene un límite de 20 minutos. La sala se cierra automáticamente a los 23 min.
+              ⏱️ La llamada tiene un límite de 20 minutos. La sala se cierra automáticamente a los ${corteLlamada} min.
             </p>
             <a href="${salaClienteUrl}" style="display:inline-block;background:#FF6B2B;color:white;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:16px;margin-top:8px">
               Entrar a la llamada →

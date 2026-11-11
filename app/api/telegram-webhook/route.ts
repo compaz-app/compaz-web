@@ -22,6 +22,8 @@ import {
 } from '@/lib/telegram'
 import { generarTokenPerfil } from '@/lib/compita-tokens'
 import { getOrCreateDailyRoom } from '@/lib/daily'
+import { rutaLlamada } from '@/lib/llamada-ruta'
+import { minutosLlamadaVisita } from '@/lib/llamada'
 import { sendVisitaInicio, sendVisitaResumen, sendResumenConReporte, sendCodigoTelegram } from '@/lib/resend'
 import { responderSolicitud, getSolicitudPorToken, getSolicitudPorId, aceptarSolicitudDirecta } from '@/lib/solicitudes'
 import { confirmarReserva, rechazarReserva } from '@/lib/agenda'
@@ -859,19 +861,16 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
       return NextResponse.json({ ok: true })
     }
 
-    let roomUrl = visitaLlamada.room_url
-    if (!roomUrl) {
-      const room = await getOrCreateDailyRoom(visitaLlamada.id, null)
-      roomUrl = room.url
-      await supabase.from('visitas').update({ room_url: roomUrl, llamada_solicitada_at: new Date().toISOString() }).eq('id', visitaLlamada.id)
-    } else {
-      await supabase.from('visitas').update({ llamada_solicitada_at: new Date().toISOString() }).eq('id', visitaLlamada.id)
-    }
+    // Cada llamada tiene su sala con duración limitada: si la anterior ya se cerró, se crea otra (getOrCreateDailyRoom la reutiliza si sigue abierta).
+    const room = await getOrCreateDailyRoom(visitaLlamada.id, visitaLlamada.room_url)
+    const roomUrl = room.url
+    await supabase.from('visitas').update({ room_url: roomUrl, llamada_solicitada_at: new Date().toISOString() }).eq('id', visitaLlamada.id)
+    const minutosLlamada = await minutosLlamadaVisita()
 
-    const roomUrlEs = `${roomUrl}${roomUrl.includes('?') ? '&' : '?'}lang=es`
+    const roomUrlEs = `${SITE_URL_PUBLICA}${rutaLlamada(roomUrl)}`
     await sendTelegramMessage(
       chatId,
-      `📹 <b>Enlace de videollamada</b>\n\nAbre este enlace para llamar al cliente:\n${roomUrlEs}`,
+      `📹 <b>Enlace de videollamada</b>\n\nAbre este enlace para llamar al cliente (dura ${minutosLlamada} min):\n${roomUrlEs}`,
       TECLADO_DURANTE_VISITA,
     )
 

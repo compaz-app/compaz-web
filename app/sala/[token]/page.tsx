@@ -3,6 +3,7 @@ import { getSolicitudPorToken } from '@/lib/solicitudes'
 import SalaEntrevista from './SalaEntrevista'
 import { firmaRol, rolValido } from '@/lib/links'
 import { formatSlotVE } from '@/lib/format'
+import { minutosCorteLlamada } from '@/lib/llamada'
 
 export default async function SalaPage({
   params,
@@ -49,6 +50,7 @@ export default async function SalaPage({
       compitaNombre={compitaRow?.nombre ?? solicitud.compita_nombre ?? 'Compita'}
       clienteNombre={clienteRow?.nombre ?? 'Cliente'}
       slotLabel={formatSlotVE(solicitud.slot_confirmado)}
+      corteMin={await minutosCorteLlamada()}
       slotIso={solicitud.slot_confirmado}
       sig={firmaRol(token, quien)}
     />

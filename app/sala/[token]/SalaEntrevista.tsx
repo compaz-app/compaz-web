@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { rutaLlamada } from '@/lib/llamada-ruta'
 
 type Paso = 'antes' | 'en_llamada' | 'terminado' | 'problema_tecnico' | 'reconectando' | 'resultado'
 type Resultado = 'contratar' | 'reagendar' | 'no_contratar'
@@ -14,10 +15,11 @@ interface Props {
   clienteNombre: string
   slotLabel: string
   slotIso: string // instante UTC de la llamada
+  corteMin: number // minutos tras los que la sala se cierra sola
   sig: string // firma del rol (evita que cliente y compita se suplanten)
 }
 
-export default function SalaEntrevista({ token, quien, roomUrl, compitaNombre, clienteNombre, slotLabel, slotIso, sig }: Props) {
+export default function SalaEntrevista({ token, quien, roomUrl, compitaNombre, clienteNombre, slotLabel, slotIso, corteMin, sig }: Props) {
   const [paso, setPaso] = useState<Paso>('antes')
   const [resultado, setResultado] = useState<Resultado | null>(null)
   const [cargando, setCargando] = useState(false)
@@ -43,7 +45,7 @@ export default function SalaEntrevista({ token, quien, roomUrl, compitaNombre, c
     ? `${Math.floor(faltanSeg / 3600)} h ${Math.floor((faltanSeg % 3600) / 60)} min`
     : `${Math.floor(faltanSeg / 60)}:${String(faltanSeg % 60).padStart(2, '0')}`
 
-  const urlActual = nuevaRoomUrl ?? roomUrl
+  const urlActual = rutaLlamada(nuevaRoomUrl ?? roomUrl)
   const rolQs = `quien=${quien}&s=${sig}`
 
   // Polling: cuando el Daily webhook ya procesó la llamada, avanzar automáticamente
@@ -91,7 +93,7 @@ export default function SalaEntrevista({ token, quien, roomUrl, compitaNombre, c
       if (url) {
         setNuevaRoomUrl(url)
         setPaso('reconectando')
-        window.open(url, '_blank', 'noopener,noreferrer')
+        window.open(rutaLlamada(url), '_blank', 'noopener,noreferrer')
       } else {
         alert('No pudimos crear la sala. Intenta de nuevo o escríbenos a hola@micompaz.com.')
       }
@@ -161,7 +163,7 @@ export default function SalaEntrevista({ token, quien, roomUrl, compitaNombre, c
       if (url) {
         setNuevaRoomUrl(url)
         setPaso('reconectando')
-        window.open(url, '_blank', 'noopener,noreferrer')
+        window.open(rutaLlamada(url), '_blank', 'noopener,noreferrer')
       } else {
         alert('No pudimos crear la sala. Intenta de nuevo o escríbenos a hola@micompaz.com.')
       }
@@ -191,7 +193,7 @@ export default function SalaEntrevista({ token, quien, roomUrl, compitaNombre, c
             </h2>
             <p style={{ color: '#4A3B6B', fontSize: '15px', lineHeight: 1.6, marginBottom: '8px' }}>{slotLabel}</p>
             <p style={{ color: '#C84B0E', background: '#FFF3E8', border: '2px solid #FF6B2B', borderRadius: '12px', padding: '12px', fontSize: '13px', margin: '16px 0' }}>
-              ⏱️ La llamada dura 20 minutos. La sala se cierra automáticamente a los 23 min.
+              ⏱️ La llamada dura 20 minutos. La sala se cierra automáticamente a los {corteMin} min.
             </p>
             {salaAbierta ? (
               <button onClick={() => abrirSala()} style={btnPrimario}>Entrar a la llamada →</button>

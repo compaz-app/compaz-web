@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.131.0",
+    "@daily-co/daily-js": "^0.95.0",
     "@heroicons/react": "^2.2.0",
     "@netlify/plugin-nextjs": "^5.15.13",
     "@supabase/ssr": "^0.12.7",

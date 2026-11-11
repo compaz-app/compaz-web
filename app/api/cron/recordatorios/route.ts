@@ -1,3 +1,4 @@
+import { minutosCorteLlamada } from '@/lib/llamada'
 // POST /api/cron/recordatorios — Netlify Scheduled Function cada 5 min
 // Busca llamadas en la próxima hora, crea la sala Daily y envía el link a cliente, compita y admin.
 import { NextRequest } from 'next/server'
@@ -14,6 +15,7 @@ import { cronAutorizado, latido, vigilarLatidos, reclamarUnaVez } from '@/lib/cr
 import { ok, err } from '@/lib/api'
 
 export async function POST(req: NextRequest) {
+  const corteLlamada = await minutosCorteLlamada()
   if (!cronAutorizado(req)) return err('No autorizado', 401)
 
   const solicitudes = await getSolicitudesParaRecordatorio()
@@ -25,7 +27,7 @@ export async function POST(req: NextRequest) {
       const slotMs = new Date(solicitud.slot_confirmado!).getTime()
       const slotLabel = formatSlotVE(solicitud.slot_confirmado!)
       const horaLabel = `a las ${horaSlotVE(solicitud.slot_confirmado!)} (hora de Venezuela)`
-      const recordatorio20 = '⏱️ Recuerda: la llamada tiene un límite de 20 minutos. La sala se cierra automáticamente a los 23 min.'
+      const recordatorio20 = `⏱️ Recuerda: la llamada tiene un límite de 20 minutos. La sala se cierra automáticamente a los ${corteLlamada} min.`
 
       let roomUrl = solicitud.room_url ?? ''
       if (!roomUrl) {
@@ -83,7 +85,7 @@ export async function POST(req: NextRequest) {
             [
               `⏰ <b>Tu llamada empieza ${esc(horaLabel)}</b>`, ``,
               `Con <b>${esc(cliente?.nombre ?? 'el cliente')}</b>: <b>${esc(slotLabel)}</b>.`, ``,
-              `⏱️ La llamada es de <b>20 minutos</b>. La sala se cierra automáticamente a los 23 min.`, ``,
+              `⏱️ La llamada es de <b>20 minutos</b>. La sala se cierra automáticamente a los ${corteLlamada} min.`, ``,
               `🔓 La sala ya está lista. Puedes entrar cuando quieras.`, ``,
               `<a href="${salaCompitaUrl}">Entrar a la llamada →</a>`,
             ].join('\n'),

@@ -4,7 +4,8 @@ import InfoBoton from '@/components/ui/InfoBoton'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { colors } from '@/lib/design'
-import { PLANES, PLANES_IDS, ETIQUETA_METODO, PRECIO_HORA_EXTRA_USD, HORAS_MINIMAS_EXTRA, etiquetaHoras, VIGENCIA_CREDITOS_DIAS, TEXTO_REEMBOLSO, type PlanId } from '@/lib/planes'
+import { usePrecios, dolares } from '@/components/ui/usePrecios'
+import { PLANES, PLANES_IDS, ETIQUETA_METODO, HORAS_MINIMAS_EXTRA, etiquetaHoras, VIGENCIA_CREDITOS_DIAS, TEXTO_REEMBOLSO, type PlanId } from '@/lib/planes'
 
 type Pendiente = { id: string; tipo: string; plan: string | null; horas: number | null; monto_usd: number; metodo: 'zelle' | 'transferencia'; referencia: string; lineas: string[]; configurado: boolean }
 const titulo = { fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800 } as const
@@ -12,6 +13,7 @@ const titulo = { fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800 
 /** Sección del dashboard: elegir y pagar un plan sin pasar antes por una compita. */
 export default function PlanesPago({ pendiente }: { pendiente: Pendiente | null }) {
   const router = useRouter()
+  const precios = usePrecios()
   const [plan, setPlan] = useState<PlanId | 'extra'>('quincenal')
   const [horas, setHoras] = useState(HORAS_MINIMAS_EXTRA)
   const [metodo, setMetodo] = useState<'zelle' | 'transferencia'>('zelle')
@@ -62,7 +64,7 @@ export default function PlanesPago({ pendiente }: { pendiente: Pendiente | null 
     )
   }
 
-  const monto = plan === 'extra' ? horas * PRECIO_HORA_EXTRA_USD : PLANES[plan].precioUsd
+  const monto = precios ? (plan === 'extra' ? horas * precios.hora : precios.planes[plan]) : undefined
   const tarjeta = (activo: boolean) => ({ flex: '1 1 200px', textAlign: 'left', cursor: 'pointer', background: activo ? colors.blanco : colors.fondoCrudo, border: `2px solid ${activo ? colors.naranja : colors.fondoCard}`, borderRadius: '14px', padding: '14px 16px', fontFamily: 'Inter, sans-serif' } as const)
 
   return (
@@ -73,13 +75,13 @@ export default function PlanesPago({ pendiente }: { pendiente: Pendiente | null 
         {PLANES_IDS.map((id) => (
           <button key={id} onClick={() => setPlan(id)} style={tarjeta(plan === id)}>
             <div style={{ ...titulo, fontSize: '15px', color: colors.moradoMedio }}>{PLANES[id].nombre}</div>
-            <div style={{ ...titulo, fontSize: '22px', color: colors.naranja }}>${PLANES[id].precioUsd}</div>
+            <div style={{ ...titulo, fontSize: '22px', color: colors.naranja }}>{dolares(precios?.planes[id])}</div>
             <div style={{ fontSize: '13px', color: colors.textoSutil }}>{PLANES[id].visitas} {PLANES[id].visitas === 1 ? 'visita' : 'visitas'}</div>
           </button>
         ))}
         <button onClick={() => setPlan('extra')} style={tarjeta(plan === 'extra')}>
           <div style={{ ...titulo, fontSize: '15px', color: colors.moradoMedio }}>Visita extra</div>
-          <div style={{ ...titulo, fontSize: '22px', color: colors.naranja }}>${PRECIO_HORA_EXTRA_USD}/h</div>
+          <div style={{ ...titulo, fontSize: '22px', color: colors.naranja }}>{dolares(precios?.hora)}/h</div>
           <div style={{ fontSize: '13px', color: colors.textoSutil }}>Mínimo {etiquetaHoras(HORAS_MINIMAS_EXTRA)}</div>
         </button>
       </div>
@@ -100,7 +102,7 @@ export default function PlanesPago({ pendiente }: { pendiente: Pendiente | null 
         disabled={cargando}
         style={{ background: cargando ? colors.fondoCard : colors.naranja, color: colors.blanco, border: 'none', borderRadius: '9999px', padding: '12px 24px', ...titulo, fontSize: '15px', cursor: cargando ? 'not-allowed' : 'pointer' }}
       >
-        {cargando ? 'Un momento…' : `Pagar $${monto} por ${ETIQUETA_METODO[metodo]}`}
+        {cargando ? 'Un momento…' : `Pagar ${dolares(monto)} por ${ETIQUETA_METODO[metodo]}`}
       </button>
       <p style={{ color: colors.textoSutil, fontSize: '12px', margin: '12px 0 0', lineHeight: 1.5 }}>{TEXTO_REEMBOLSO}</p>
     </div>

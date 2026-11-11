@@ -5,6 +5,9 @@ import { getOrCreateDailyRoom } from '@/lib/daily'
 import { sendTelegramMessage, avisarAdmin } from '@/lib/telegram'
 import { alertaAdmin } from '@/lib/alertas-admin'
 import { esc } from '@/lib/html'
+import { SITE_URL } from '@/lib/email'
+import { rutaLlamada } from '@/lib/llamada-ruta'
+import { minutosLlamadaVisita } from '@/lib/llamada'
 import { ok, err, unauthorized, serverError } from '@/lib/api'
 import type { Visita, Compita, Usuario } from '@/types'
 
@@ -27,6 +30,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({})) as { solo_audio?: boolean }
   const soloAudio = body.solo_audio ?? false
 
+  const minutos = await minutosLlamadaVisita()
   let room
   try {
     room = await getOrCreateDailyRoom(visita.id, visita.room_url ?? null, soloAudio)
@@ -39,7 +43,7 @@ export async function POST(req: NextRequest) {
 
   if (visita.compita.telegram_chat_id) {
     const tipo = soloAudio ? '📞 El cliente quiere hacer una llamada de voz' : '📹 El cliente quiere hacer una videollamada'
-    try { await sendTelegramMessage(visita.compita.telegram_chat_id, `${tipo}.\n\nEntra aquí: ${room.url}`) }
+    try { await sendTelegramMessage(visita.compita.telegram_chat_id, `${tipo}. Dura ${minutos} min.\n\nEntra aquí: ${SITE_URL}${rutaLlamada(room.url)}`) }
     catch (e) { console.error('Error Telegram create-call:', e) }
   }
 

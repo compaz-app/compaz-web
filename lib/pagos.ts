@@ -2,9 +2,10 @@
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { registrarEvento } from '@/lib/eventos'
 import {
-  PLANES, PLANES_IDS, METODOS_PAGO, VIGENCIA_CREDITOS_DIAS, PRECIO_HORA_EXTRA_USD, HORAS_MINIMAS_EXTRA,
+  PLANES, PLANES_IDS, METODOS_PAGO, VIGENCIA_CREDITOS_DIAS, HORAS_MINIMAS_EXTRA,
   type PlanId, type MetodoPago,
 } from '@/lib/planes'
+import { preciosVigentes } from '@/lib/precios'
 
 export type PagoRow = {
   id: string; usuario_id: string; tipo: 'plan' | 'extra'; plan: string | null; visitas: number; horas: number | null
@@ -26,16 +27,17 @@ export type PagoInput = {
 export async function registrarPago(i: PagoInput): Promise<{ ok: true; pago: PagoRow } | { ok: false; error: string }> {
   if (!(METODOS_PAGO as readonly string[]).includes(i.metodo)) return { ok: false, error: 'Método de pago inválido' }
 
+  const precios = await preciosVigentes()
   let visitas: number, plan: PlanId | null = null, horas: number | null = null, monto: number
   if (i.tipo === 'plan') {
     if (!i.plan || !PLANES_IDS.includes(i.plan as PlanId)) return { ok: false, error: 'Plan inválido' }
     plan = i.plan as PlanId
     visitas = PLANES[plan].visitas
-    monto = PLANES[plan].precioUsd
+    monto = precios.planes[plan]
   } else if (i.tipo === 'extra') {
     const h = Number(i.horas ?? HORAS_MINIMAS_EXTRA)
     if (!Number.isInteger(h) || h < HORAS_MINIMAS_EXTRA || h > 12) return { ok: false, error: `La visita extra es de ${HORAS_MINIMAS_EXTRA} a 12 horas` }
-    horas = h; visitas = 1; monto = h * PRECIO_HORA_EXTRA_USD
+    horas = h; visitas = 1; monto = h * precios.hora
   } else {
     return { ok: false, error: 'Tipo de pago inválido' }
   }

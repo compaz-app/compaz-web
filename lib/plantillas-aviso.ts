@@ -572,7 +572,7 @@ const pausaCuentaCliente: Plantilla = {
   async render() {
     return { correo: { asunto: 'Tu cuenta de Compaz está en pausa', html: marco(`
       <h2 style="color:#2D1464;font-size:22px">Tu cuenta está en pausa</h2>
-      <p style="color:#4A3B6B;font-size:16px;line-height:1.6">Detectamos por segunda vez un intento de compartir datos de contacto. Por la seguridad de todos, toda la comunicación debe ocurrir dentro de Compaz.</p>
+      <p style="color:#4A3B6B;font-size:16px;line-height:1.6">Detectamos varios intentos de compartir datos de contacto. Por la seguridad de todos, toda la comunicación debe ocurrir dentro de Compaz.</p>
       <p style="color:#4A3B6B;font-size:15px;line-height:1.6">Mientras el equipo lo revisa no puedes escribir en el chat ni agendar visitas nuevas. Te escribimos por este correo para resolverlo.</p>`) } }
   },
 }

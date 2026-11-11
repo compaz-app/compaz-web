@@ -2,7 +2,8 @@
 // el admin pulsa "Confirmar pago recibido" y recién entonces se crea el pago real con sus visitas.
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { registrarPago, type PagoRow } from '@/lib/pagos'
-import { PLANES, PLANES_IDS, PRECIO_HORA_EXTRA_USD, HORAS_MINIMAS_EXTRA, type PlanId } from '@/lib/planes'
+import { PLANES_IDS, HORAS_MINIMAS_EXTRA, type PlanId } from '@/lib/planes'
+import { preciosVigentes } from '@/lib/precios'
 
 export const METODOS_DIRECTOS = ['zelle', 'transferencia'] as const
 export type MetodoDirecto = (typeof METODOS_DIRECTOS)[number]
@@ -35,14 +36,15 @@ export async function crearSolicitudPago(i: {
   usuarioId: string; tipo: string; plan?: string | null; horas?: number | null; metodo: string
 }): Promise<{ ok: true; solicitud: SolicitudPago } | { ok: false; error: string }> {
   if (!(METODOS_DIRECTOS as readonly string[]).includes(i.metodo)) return { ok: false, error: 'Elige Zelle o transferencia' }
+  const precios = await preciosVigentes()
   let monto: number, plan: PlanId | null = null, horas: number | null = null
   if (i.tipo === 'plan') {
     if (!i.plan || !PLANES_IDS.includes(i.plan as PlanId)) return { ok: false, error: 'Plan inválido' }
-    plan = i.plan as PlanId; monto = PLANES[plan].precioUsd
+    plan = i.plan as PlanId; monto = precios.planes[plan]
   } else if (i.tipo === 'extra') {
     const h = Number(i.horas ?? HORAS_MINIMAS_EXTRA)
     if (!Number.isInteger(h) || h < HORAS_MINIMAS_EXTRA || h > 12) return { ok: false, error: `La visita extra es de ${HORAS_MINIMAS_EXTRA} a 12 horas` }
-    horas = h; monto = h * PRECIO_HORA_EXTRA_USD
+    horas = h; monto = h * precios.hora
   } else return { ok: false, error: 'Tipo inválido' }
 
   const supabase = createAdminSupabase()

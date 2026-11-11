@@ -1,5 +1,7 @@
 'use client'
 
+import { rutaLlamada } from '@/lib/llamada-ruta'
+
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createBrowserSupabase } from '@/lib/supabase'
@@ -94,7 +96,7 @@ export default function VisitaWatcher({ usuarioId, visitaActivaId, compitaNombre
           </p>
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
             <a
-              href={`${llamadaEntrante.roomUrl}${llamadaEntrante.roomUrl.includes('?') ? '&' : '?'}lang=es`}
+              href={rutaLlamada(llamadaEntrante.roomUrl)}
               target="_blank"
               rel="noreferrer"
               style={{
