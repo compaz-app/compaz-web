@@ -46,7 +46,7 @@ export default function GuiaVisual() {
 
       <Tarjeta>
         <h2 className="text-lg font-extrabold text-morado-profundo">Portal del cliente: los {CODIGOS_ESTADO.length} estados</h2>
-        <p className="mt-1 text-morado-claro">Así se ve la tarjeta de cada estado, con datos de ejemplo. Los botones de acción salen apagados hasta el siguiente paso de la migración.</p>
+        <p className="mt-1 text-morado-claro">Así se ve la tarjeta de cada estado, con datos de ejemplo. Aquí los botones de acción salen apagados (vista previa: no se ejecutan).</p>
         <div className="mt-4 grid gap-6">
           {CODIGOS_ESTADO.map((c) => {
             const estado = { codigo: c, paso: pasoDe(c), compitaNombre: 'María Pérez Gómez', solicitudId: 'ejemplo', cuando: new Date(Date.now() + 26 * 3600_000).toISOString() }
@@ -55,7 +55,7 @@ export default function GuiaVisual() {
             return (
               <div key={c}>
                 <div className="mb-1 text-xs font-extrabold uppercase tracking-wider text-morado-sutil">{c} · paso {pasoDe(c) + 1}</div>
-                <TarjetaEstado tarjeta={t} compita={pagado ? 'María Pérez' : 'María P.'} />
+                <TarjetaEstado tarjeta={t} compita={pagado ? 'María Pérez' : 'María P.'} vistaPrevia />
               </div>
             )
           })}

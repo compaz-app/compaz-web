@@ -5,7 +5,7 @@
 export type ClaveEspera =
   | 'recordatorio_reciente' | 'recordatorio_limite' | 'pago_insistencia' | 'solicitudes_dia' | 'solicitud_mismo_compita'
   | 'codigo_fallos' | 'codigo_conexion' | 'acceso_conexion' | 'acceso_correo' | 'reconexion_llamada'
-  | 'chat_limite' | 'postulacion_conexion' | 'postulacion_correo'
+  | 'chat_limite' | 'postulacion_conexion' | 'postulacion_correo' | 'ayuda_cliente'
 
 export interface Espera {
   clave: ClaveEspera
@@ -42,6 +42,7 @@ export const CATALOGO: Record<ClaveEspera, { quien: 'compita' | 'cliente' | 'equ
   codigo_conexion: { quien: 'cliente', limita: 'Escribir códigos de acceso: un máximo de intentos por conexión', porQue: 'Es una medida de seguridad contra quien intenta adivinar códigos desde una misma conexión.' },
   acceso_conexion: { quien: 'cliente', limita: 'Pedir enlaces de acceso: un máximo por hora desde una misma conexión', porQue: 'Protege las cuentas y evita que se use el envío de correos para molestar a alguien.' },
   acceso_correo: { quien: 'cliente', limita: 'Pedir el enlace de acceso: uno por minuto y correo', porQue: 'Así no se mezclan varios enlaces y siempre usas el más reciente.' },
+  ayuda_cliente: { quien: 'cliente', limita: 'Avisar al equipo que necesitas ayuda desde el portal: una vez por hora', porQue: 'El equipo ya recibió tu aviso y te escribe por correo. Avisar más seguido no lo acelera y hace que se pierda entre otros mensajes.' },
   chat_limite: { quien: 'cliente', limita: 'Mensajes al asistente de la página: 10 por hora y 50 por día desde una conexión', porQue: 'Así todas las familias pueden usarlo y se evita el abuso.' },
   postulacion_conexion: { quien: 'compita', limita: 'Postulaciones de compitas: un máximo por hora desde una misma conexión', porQue: 'Es una medida contra envíos automáticos que llenarían la bandeja de postulaciones falsas.' },
   postulacion_correo: { quien: 'compita', limita: 'Postulaciones de compitas: una por correo', porQue: 'Evita postulaciones duplicadas de la misma persona.' },
@@ -103,6 +104,7 @@ export function explicarEspera(clave: ClaveEspera, p: ParamsEspera = {}): Espera
     acceso_conexion: ['Pediste muchos enlaces en la última hora.', `Espera ${faltaTxt}. Revisa también tu spam.`],
     acceso_correo: [`Ya te enviamos un correo ${hace}.`, `Úsalo, o pide otro en ${faltaTxt}.`],
     reconexion_llamada: [`Acabas de reconectar la sala ${hace}.`, `Entra con el mismo enlace o espera ${faltaTxt}.`],
+    ayuda_cliente: [`Ya avisamos al equipo ${hace}.`, `Te escribimos por correo. Podrás avisar de nuevo ${cuando}.`],
     chat_limite: ['Llegaste al límite de mensajes.', 'Vuelve a escribir en un rato o escríbenos a hola@micompaz.com.'],
     postulacion_conexion: ['Hubo muchas postulaciones desde tu conexión.', 'Espera un rato o escríbenos a hola@micompaz.com.'],
     postulacion_correo: ['Ya recibimos una postulación con este correo.', 'Te escribimos por WhatsApp y correo.'],

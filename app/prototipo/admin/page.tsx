@@ -1403,7 +1403,7 @@ const VALOR_LIMITE: Record<ClaveEspera, string> = {
   recordatorio_reciente: 'Un mínimo de 12 horas entre recordatorios (editable en Ajustes)', recordatorio_limite: 'Máximo 3 por paso (editable en Ajustes)',
   pago_insistencia: 'Una alerta urgente cada 30 minutos (editable en Ajustes)', solicitudes_dia: 'Máximo 5 solicitudes en 24 horas', solicitud_mismo_compita: 'Una por compita cada 24 horas',
   codigo_fallos: '5 intentos fallidos en 15 minutos', codigo_conexion: '30 intentos en 15 minutos por conexión', acceso_conexion: '10 enlaces por hora por conexión',
-  acceso_correo: 'Un enlace por minuto y correo', reconexion_llamada: 'Una reconexión cada 2 minutos', chat_limite: '10 mensajes por hora y 50 por día por conexión',
+  acceso_correo: 'Un enlace por minuto y correo', reconexion_llamada: 'Una reconexión cada 2 minutos', ayuda_cliente: 'Un aviso por hora por cliente', chat_limite: '10 mensajes por hora y 50 por día por conexión',
   postulacion_conexion: '50 postulaciones por hora por conexión', postulacion_correo: 'Una por correo',
 }
 const QUIEN_LIMITE = { compita: 'Compitas', cliente: 'Clientes y visitantes', equipo: 'Equipo' } as const

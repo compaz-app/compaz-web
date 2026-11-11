@@ -124,7 +124,7 @@ describe('cada estado tiene su tarjeta completa', () => {
     for (const c of CODIGOS_ESTADO) { const t = tarjetaDelEstado(ctx(c)); const tiene = !!(t.principal || t.secundario); assert.equal(tiene, !SIN_BOTON_A_PROPOSITO.includes(c), `${c}: ${tiene ? 'tiene' : 'no tiene'} botón`) }
   })
   test('los destinos son rutas internas o acciones conocidas (nunca un enlace externo ni vacío)', () => {
-    for (const c of CODIGOS_ESTADO) { const t = tarjetaDelEstado(ctx(c)); for (const b of [t.principal, t.secundario].filter(Boolean)) { const d = b!.destino; if ('ruta' in d) assert.match(d.ruta, /^\/[a-z]/, c); else assert.ok(['avisar_pago', 'confirmar_inicio', 'avisar_abrieron', 'entrar_entrevista', 'avisar_equipo'].includes(d.accion), c) } }
+    for (const c of CODIGOS_ESTADO) { const t = tarjetaDelEstado(ctx(c)); for (const b of [t.principal, t.secundario].filter(Boolean)) { const d = b!.destino; if ('ruta' in d) assert.match(d.ruta, /^\/[a-z]/, c); else assert.ok(['avisar_pago', 'confirmar_inicio', 'avisar_abrieron', 'avisar_equipo'].includes(d.accion), c) } }
   })
   test('PRIVACIDAD: antes de pagar solo "María P."; con el pago, el nombre', () => {
     const antes = tarjetaDelEstado(ctx('solicitud_recibida')); assert.match(antes.titulo, /María P\./); assert.doesNotMatch(antes.titulo + antes.texto, /Pérez|Gómez/)

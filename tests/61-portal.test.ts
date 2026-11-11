@@ -13,7 +13,7 @@ import { accesoPortal, cargarPortal } from '@/lib/portal'
 
 beforeEach(limpiar)
 const ctx = (c: CodigoEstado, o: any = {}) => ({ estado: { codigo: c, paso: pasoDe(c), compitaNombre: 'María Pérez Gómez', solicitudId: 's1', cuando: new Date(Date.now() + 26 * 3600_000).toISOString() }, pagado: false, zonaCliente: 'America/New_York', ...o })
-const html = (c: CodigoEstado, o: any = {}) => { const t = tarjetaDelEstado(ctx(c, o)); return { t, h: renderToStaticMarkup(createElement(TarjetaEstado, { tarjeta: t, compita: nombreVisible('María Pérez Gómez', !!o.pagado) })) } }
+const html = (c: CodigoEstado, o: any = {}) => { const t = tarjetaDelEstado(ctx(c, o)); return { t, h: renderToStaticMarkup(createElement(TarjetaEstado, { tarjeta: t, compita: nombreVisible('María Pérez Gómez', !!o.pagado), vistaPrevia: true })) } }
 
 describe('la tarjeta de cada estado se dibuja completa', () => {
   for (const c of CODIGOS_ESTADO) test(`${c}`, () => {
@@ -25,7 +25,7 @@ describe('la tarjeta de cada estado se dibuja completa', () => {
     assert.equal(infos, botones.length, `${c}: cada botón lleva su ⓘ`)
     assert.ok(/<h2/.test(h), 'tiene un título de sección')
   })
-  test('los botones con destino de ruta son enlaces reales y los de acción salen apagados (se activan en el siguiente paso)', () => {
+  test('los botones con destino de ruta son enlaces reales y, en la vista previa del equipo, los de acción salen apagados', () => {
     const decidir = html('decidir').h; assert.match(decidir, /href="\/pago"/); assert.match(decidir, /href="\/compitas"/)
     const pagar = html('pagar').h; assert.match(pagar, /<button[^>]* disabled=""[^>]*>Ya hice el pago<\/button>/); assert.match(pagar, /aria-label="Qué hace: Ya hice el pago"/)
   })

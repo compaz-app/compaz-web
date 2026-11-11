@@ -37,6 +37,8 @@ export type CodigoEstado = (typeof CODIGOS_ESTADO)[number]
 export interface SolicitudFoto {
   id: string; estado: string; tipo: string | null; compitaId: string; compitaNombre: string
   slotConfirmado: string | null; slotsPropuestos: number; seguimientoEnviado: boolean; tokenRespuesta: boolean
+  /** El token de la sala de la entrevista (para el enlace de entrada del cliente). */
+  token?: string | null
   /** true si el cliente dijo que NO contrata tras la entrevista. */
   clienteDijoNo: boolean; motivoRegistrado: boolean
   /** El aviso de "nueva solicitud" ya le llegó al compita. */
@@ -80,6 +82,8 @@ export interface EstadoCliente {
   compitaNombre?: string
   /** Inicio de la entrevista o de la visita (ISO), si aplica. */
   cuando?: string
+  /** Token de la sala de la entrevista (solo en 'entrevista_ahora'). */
+  sala?: string
 }
 
 const PASO: Record<CodigoEstado, number> = {
@@ -162,7 +166,7 @@ export function decidirEstado(f: FotoCliente): EstadoCliente {
   const conHora = f.solicitudes.filter((s) => s.estado === 'aceptada' && s.slotConfirmado).sort((a, b) => a.slotConfirmado!.localeCompare(b.slotConfirmado!))[0]
   if (conHora) {
     const t = new Date(conHora.slotConfirmado!).getTime()
-    const base = { solicitudId: conHora.id, compitaNombre: conHora.compitaNombre, cuando: conHora.slotConfirmado! }
+    const base = { solicitudId: conHora.id, compitaNombre: conHora.compitaNombre, cuando: conHora.slotConfirmado!, ...(conHora.token ? { sala: conHora.token } : {}) }
     return ahora >= t - ENTREVISTA_ANTES_MIN * MIN ? e('entrevista_ahora', base) : e('entrevista_programada', base)
   }
   const sinHora = f.solicitudes.find((s) => s.estado === 'aceptada' && s.tipo === 'entrevista' && !s.slotConfirmado && s.slotsPropuestos === 0)
@@ -231,7 +235,7 @@ export async function cargarFoto(clienteId: string, ahora: Date = new Date()): P
     compitaAsignado: usuario?.compita ?? null,
     solicitudes: solRows.map((s) => ({
       id: s.id, estado: s.estado, tipo: s.tipo, compitaId: s.compita_id, compitaNombre: s.compitas?.nombre ?? '', slotConfirmado: s.slot_confirmado,
-      slotsPropuestos: (s.slots_propuestos ?? []).length, seguimientoEnviado: !!s.seguimiento_enviado, tokenRespuesta: !!s.token_respuesta,
+      slotsPropuestos: (s.slots_propuestos ?? []).length, seguimientoEnviado: !!s.seguimiento_enviado, tokenRespuesta: !!s.token_respuesta, token: s.token_respuesta,
       clienteDijoNo: s.confirmacion_cliente === false, motivoRegistrado: conMotivo.has(s.id), avisoEntregado: entregados.has(s.id),
       reserva: (reservaDe.get(s.id) as SolicitudFoto['reserva']) ?? null, creadaEn: s.created_at,
     })),

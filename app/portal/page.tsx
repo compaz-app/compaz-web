@@ -25,13 +25,13 @@ export default async function PortalPage({ searchParams }: { searchParams: Promi
   const portal = await cargarPortal(esAdmin && preview ? preview : session.user.id)
   return (
     <main className="mx-auto max-w-xl space-y-5 px-4 pb-12 pt-4 lg:max-w-2xl">
-      {esAdmin && <Aviso tono="advertencia">Vista previa del portal nuevo de {portal.nombre || 'este cliente'}. Los botones de acción se conectan en el siguiente paso.</Aviso>}
+      {esAdmin && <Aviso tono="advertencia">Vista previa del portal nuevo de {portal.nombre || 'este cliente'}. Los botones de acción no se ejecutan en la vista previa.</Aviso>}
       <header className="flex items-center justify-between">
         <span className="text-lg font-extrabold text-morado-medio">Compaz</span>
         <span className="text-base text-morado-claro">Hola, {portal.nombre.split(' ')[0] || 'bienvenido'}</span>
       </header>
       <Pasos pasos={portal.pasos} actual={portal.estado.paso} />
-      <TarjetaEstado tarjeta={portal.tarjeta} compita={portal.compita} />
+      <TarjetaEstado tarjeta={portal.tarjeta} compita={portal.compita} visitaId={portal.estado.visitaId} estado={portal.estado.codigo} vistaPrevia={esAdmin} />
     </main>
   )
 }

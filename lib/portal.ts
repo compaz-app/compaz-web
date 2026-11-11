@@ -4,6 +4,7 @@
 
 import { cargarFoto, decidirEstado, PASOS_PORTAL, type EstadoCliente } from '@/lib/estado-cliente'
 import { tarjetaDelEstado, nombreVisible, type TarjetaPortal } from '@/lib/portal-estados'
+import { qRol } from '@/lib/links'
 
 export type AccesoPortal = 'portal' | 'admin' | 'viejo'
 
@@ -28,7 +29,8 @@ export async function cargarPortal(clienteId: string, ahora: Date = new Date()):
   const estado = decidirEstado(foto)
   // Con un plan pagado (o un compita ya asignado) se ve el nombre completo; antes de pagar, solo el nombre y la inicial.
   const pagado = !!foto.compitaAsignado || foto.cupo !== null
-  const tarjeta = tarjetaDelEstado({ estado, pagado, zonaCliente: foto.zonaHoraria, restantes: foto.cupo?.restantes })
+  const rutaSala = estado.sala ? `/sala/${estado.sala}?${qRol(estado.sala, 'cliente')}` : undefined
+  const tarjeta = tarjetaDelEstado({ estado, pagado, zonaCliente: foto.zonaHoraria, restantes: foto.cupo?.restantes, rutaSala })
   const nombreCompleto = estado.compitaNombre ?? foto.compitaAsignado?.nombre ?? null
   return { nombre: foto.nombre, estado, tarjeta, pasos: PASOS_PORTAL, pagado, compita: nombreCompleto ? nombreVisible(nombreCompleto, pagado) : null }
 }
