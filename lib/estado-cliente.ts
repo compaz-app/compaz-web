@@ -58,6 +58,9 @@ export interface FotoCliente {
   /** La cuenta está en pausa por compartir contactos (tabla pausas_contacto) hasta que el equipo decida. */
   pausada: boolean
   fichaCompleta: boolean
+  /** Zona horaria del cliente (para mostrar la hora de las citas en su hora y en la de Caracas). */
+  zonaHoraria: string | null
+  nombre: string
   /** Compita asignado al contratar (el que ya lo conoce). */
   compitaAsignado: { id: string; nombre: string } | null
   solicitudes: SolicitudFoto[]
@@ -223,6 +226,8 @@ export async function cargarFoto(clienteId: string, ahora: Date = new Date()): P
     ahora,
     pausada: await personaPausada('cliente', clienteId),
     fichaCompleta: usuario ? fichaCompleta(usuario as never) : false,
+    zonaHoraria: (usuario?.zona_horaria as string | null | undefined) ?? null,
+    nombre: String(usuario?.nombre ?? ''),
     compitaAsignado: usuario?.compita ?? null,
     solicitudes: solRows.map((s) => ({
       id: s.id, estado: s.estado, tipo: s.tipo, compitaId: s.compita_id, compitaNombre: s.compitas?.nombre ?? '', slotConfirmado: s.slot_confirmado,

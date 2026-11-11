@@ -33,6 +33,8 @@ await build({
   outdir: out, bundle: true, platform: 'node', format: 'cjs', outExtension: { '.js': '.cjs' },
   external: ['next', 'next/*', 'react', 'react-dom', 'resend', '@anthropic-ai/sdk', 'esbuild'],
   plugins: [aliasPlugin], logLevel: 'error', sourcemap: 'inline',
+  // Los componentes usan el JSX moderno de React (sin importar React en cada archivo), igual que Next.
+  jsx: 'automatic',
 })
 
 const r = spawnSync(process.execPath, ['--enable-source-maps', '--test', '--test-concurrency=1', ...files.map((f) => path.join(out, f.replace('.ts', '.cjs')))], { stdio: 'inherit', cwd: root })

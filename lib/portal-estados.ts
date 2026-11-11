@@ -29,7 +29,9 @@ export interface ContextoPortal {
   restantes?: number
 }
 
-const nombre = (c: ContextoPortal) => (c.pagado ? (c.estado.compitaNombre ?? 'tu compita').split(' ').slice(0, 2).join(' ') : nombreCorto(c.estado.compitaNombre ?? '') || 'tu compita')
+/** Cómo se ve el compita: antes de pagar solo "María P."; con el pago, su nombre (los dos primeros). */
+export const nombreVisible = (nombreCompleto: string | null | undefined, pagado: boolean): string => (pagado ? (nombreCompleto ?? '').split(' ').slice(0, 2).join(' ') : nombreCorto(nombreCompleto ?? '')) || 'tu compita'
+const nombre = (c: ContextoPortal) => nombreVisible(c.estado.compitaNombre, c.pagado)
 const primero = (c: ContextoPortal) => (nombre(c).split(' ')[0] || 'tu compita')
 const cuando = (c: ContextoPortal) => (c.estado.cuando ? dosHoras(c.estado.cuando, c.zonaCliente).texto : '')
 

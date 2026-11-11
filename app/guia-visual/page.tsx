@@ -5,6 +5,9 @@ import Tarjeta from '@/components/ui/base/Tarjeta'
 import Aviso from '@/components/ui/base/Aviso'
 import Pasos from '@/components/ui/base/Pasos'
 import { colors } from '@/lib/design'
+import TarjetaEstado from '@/components/portal/TarjetaEstado'
+import { CODIGOS_ESTADO, pasoDe } from '@/lib/estado-cliente'
+import { tarjetaDelEstado } from '@/lib/portal-estados'
 
 export const metadata = { title: 'Guía visual', robots: { index: false, follow: false } }
 
@@ -38,6 +41,24 @@ export default function GuiaVisual() {
           <Boton variante="primario" disabled info="Un botón deshabilitado se ve apagado y no se puede tocar.">Deshabilitado</Boton>
           <Boton variante="primario" cargando info="Mientras se envía, el botón avisa y no se puede tocar otra vez.">Enviando</Boton>
           <Boton variante="fantasma" href="/guia-visual" navegacion>Navegación pura (sin ⓘ)</Boton>
+        </div>
+      </Tarjeta>
+
+      <Tarjeta>
+        <h2 className="text-lg font-extrabold text-morado-profundo">Portal del cliente: los {CODIGOS_ESTADO.length} estados</h2>
+        <p className="mt-1 text-morado-claro">Así se ve la tarjeta de cada estado, con datos de ejemplo. Los botones de acción salen apagados hasta el siguiente paso de la migración.</p>
+        <div className="mt-4 grid gap-6">
+          {CODIGOS_ESTADO.map((c) => {
+            const estado = { codigo: c, paso: pasoDe(c), compitaNombre: 'María Pérez Gómez', solicitudId: 'ejemplo', cuando: new Date(Date.now() + 26 * 3600_000).toISOString() }
+            const pagado = pasoDe(c) >= 3
+            const t = tarjetaDelEstado({ estado, pagado, zonaCliente: 'America/New_York' })
+            return (
+              <div key={c}>
+                <div className="mb-1 text-xs font-extrabold uppercase tracking-wider text-morado-sutil">{c} · paso {pasoDe(c) + 1}</div>
+                <TarjetaEstado tarjeta={t} compita={pagado ? 'María Pérez' : 'María P.'} />
+              </div>
+            )
+          })}
         </div>
       </Tarjeta>
 

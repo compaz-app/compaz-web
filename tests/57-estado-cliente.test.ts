@@ -10,7 +10,7 @@ import { tarjetaDelEstado, CATALOGO_PORTAL } from '@/lib/portal-estados'
 beforeEach(limpiar)
 const AHORA = new Date('2026-11-10T15:00:00.000Z') // 11:00 am en Caracas
 const min = (n: number) => new Date(AHORA.getTime() + n * 60_000).toISOString()
-const foto = (o: Partial<FotoCliente> = {}): FotoCliente => ({ ahora: AHORA, pausada: false, fichaCompleta: true, compitaAsignado: null, solicitudes: [], pagoPendiente: null, cupo: null, visitas: [], cancelaciones: [], ...o })
+const foto = (o: Partial<FotoCliente> = {}): FotoCliente => ({ ahora: AHORA, pausada: false, fichaCompleta: true, zonaHoraria: null, nombre: 'Carolina Rojas', compitaAsignado: null, solicitudes: [], pagoPendiente: null, cupo: null, visitas: [], cancelaciones: [], ...o })
 const sol = (o: Partial<SolicitudFoto> = {}): SolicitudFoto => ({ id: 's1', estado: 'pendiente', tipo: 'entrevista', compitaId: 'c1', compitaNombre: 'María Pérez Gómez', slotConfirmado: null, slotsPropuestos: 0, seguimientoEnviado: false, tokenRespuesta: true, clienteDijoNo: false, motivoRegistrado: false, avisoEntregado: false, reserva: null, creadaEn: min(-120), ...o })
 const vis = (o: Partial<VisitaFoto> = {}): VisitaFoto => ({ id: 'v1', estado: 'programada', compitaNombre: 'María Pérez Gómez', fechaProgramada: '2026-11-12', horaInicio: '10:00', llegadaEn: null, sinAccesoEn: null, fin: null, creadaEn: min(-5000), ...o })
 const COMPITA = { id: 'c1', nombre: 'María Pérez Gómez' }
