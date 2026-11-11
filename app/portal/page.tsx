@@ -2,7 +2,7 @@
 // Hoy solo lo ve el equipo en vista previa de un cliente (?preview=<id>) mientras el ajuste `portal_nuevo` esté en 0.
 import { redirect } from 'next/navigation'
 import { requireAuth, getClienteActivo, isAdminEmail } from '@/lib/auth'
-import { getAjustes } from '@/lib/ajustes'
+import { clienteVePortalNuevo } from '@/lib/portal-activacion'
 import { accesoPortal, cargarPortal } from '@/lib/portal'
 import Pasos from '@/components/ui/base/Pasos'
 import Aviso from '@/components/ui/base/Aviso'
@@ -26,7 +26,7 @@ export default async function PortalPage({ searchParams }: { searchParams: Promi
   const esAdmin = isAdminEmail(session.user.email ?? '')
   // Cliente bloqueado o eliminado: fuera, aunque su sesión siga vigente.
   if (!esAdmin && !(await getClienteActivo())) redirect('/login?error=bloqueado')
-  const activo = Number((await getAjustes()).portal_nuevo) === 1
+  const activo = esAdmin ? false : await clienteVePortalNuevo(session.user.id)
   const acceso = accesoPortal({ esAdmin, previewUid: preview ?? null, portalNuevoActivo: activo })
   if (acceso === 'admin') redirect('/admin')
   if (acceso === 'viejo') redirect('/dashboard')

@@ -21,6 +21,7 @@ import PlanesPago from '@/components/ui/PlanesPago'
 import { solicitudPendiente, instruccionesPago, referenciaDe, type MetodoDirecto } from '@/lib/solicitudes-pago'
 import { qRol, firmaRol } from '@/lib/links'
 import LimpiarParamContratado from '@/components/ui/LimpiarParamContratado'
+import { clienteVePortalNuevo } from '@/lib/portal-activacion'
 import AutoRefresh from '@/components/ui/AutoRefresh'
 import ConfirmarInicioVisita from '@/components/ui/ConfirmarInicioVisita'
 import PrimerAccesoModal from '@/components/ui/PrimerAccesoModal'
@@ -38,6 +39,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const isAdmin = isAdminEmail(session.user.email ?? '')
   // Cliente bloqueado o eliminado: fuera, aunque su sesión siga vigente
   if (!isAdmin && !(await getClienteActivo())) redirect('/login?error=bloqueado')
+
+  // El portal nuevo reemplaza a este por etapas: si a este cliente ya le toca, todos los enlaces viejos a /dashboard lo llevan allí.
+  if (!isAdmin && (await clienteVePortalNuevo(session.user.id))) redirect('/portal')
 
   // Admin sin preview → redirigir al panel
   if (isAdmin && !previewUid) redirect('/admin')

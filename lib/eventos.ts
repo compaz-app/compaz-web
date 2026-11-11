@@ -20,7 +20,7 @@ export type TipoEvento =
   | 'horario_reservado' | 'que_me_toca' | 'recordatorio_al_cliente' | 'direccion_registrada' | 'direccion_entregada' | 'compita_en_camino' | 'entrevista_reagendada' | 'reserva_confirmada' | 'reserva_rechazada' | 'reserva_vencida'
   | 'terminos_aceptados' | 'contacto_bloqueado' | 'llegada_registrada' | 'llegada_sin_acceso' | 'visita_sin_acceso'
   | 'salida_por_seguridad' | 'visita_alargada' | 'reporte_cliente' | 'duda_compita' | 'foto_borrada' | 'cuenta_pausada' | 'cuenta_pausa_decidida' | 'cita_propuesta' | 'cita_confirmada' | 'cita_rechazada' | 'ayuda_cliente'
-  | 'eliminacion_solicitada' | 'eliminacion_confirmada' | 'eliminacion_cancelada' | 'cuenta_eliminada'
+  | 'eliminacion_solicitada' | 'eliminacion_confirmada' | 'eliminacion_cancelada' | 'cuenta_eliminada' | 'portal_nuevo_cambiado'
   | 'consulta_dato_sensible' | 'ajuste_cambiado'
 
 export type ActorEvento = 'sistema' | `cliente:${string}` | `compita:${string}` | `admin:${string}`
