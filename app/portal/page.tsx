@@ -12,6 +12,7 @@ import SeccionVisitas from '@/components/portal/SeccionVisitas'
 import SeccionFamiliar from '@/components/portal/SeccionFamiliar'
 import SeccionPlan from '@/components/portal/SeccionPlan'
 import AutoRefresh from '@/components/ui/AutoRefresh'
+import VisitaWatcher from '@/components/ui/VisitaWatcher'
 import { cargarDatosPortal } from '@/lib/portal-datos'
 import { esPestana } from '@/lib/portal-secciones'
 
@@ -50,6 +51,7 @@ export default async function PortalPage({ searchParams }: { searchParams: Promi
       {datos && pestana === 'visitas' && <SeccionVisitas d={datos} vistaPrevia={esAdmin} />}
       {datos && pestana === 'familiar' && <SeccionFamiliar d={datos} vistaPrevia={esAdmin} />}
       {datos && pestana === 'plan' && <SeccionPlan d={datos} vistaPrevia={esAdmin} />}
+      {!esAdmin && <VisitaWatcher usuarioId={uid} visitaActivaId={portal.estado.visitaId ?? null} compitaNombre={portal.compita ?? undefined} />}
       {!esAdmin && <AutoRefresh intervaloSeg={15} />}
     </main>
   )
