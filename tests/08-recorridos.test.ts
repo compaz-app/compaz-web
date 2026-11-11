@@ -52,7 +52,7 @@ describe('RECORRIDO 1: de la invitación de la compita hasta la valoración, tod
     const inv = await (await (generarInvite as any)()).json()
     const token = inv.data.token
     session.user = null
-    const reg = await registrar(req('/api/onboarding/registrar', { json: { token, nombre: 'Lucía Fernández', email: 'lucia@mail.test', zona: 'Zulia', descripcion: 'Cuidadora', servicios: ['Compañía'], foto_url: foto } }))
+    const reg = await registrar(req('/api/onboarding/registrar', { json: { token, nombre: 'Lucía Fernández', email: 'lucia@mail.test', telefono: '0412 123 4567', zona: 'Zulia', descripcion: 'Cuidadora', servicios: ['Compañía'], foto_url: foto } }))
     assert.equal(reg.status, 200)
     const lucia = db.rows('compitas')[0]
     assert.equal(lucia.verificado, false)

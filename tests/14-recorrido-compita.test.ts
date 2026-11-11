@@ -17,7 +17,7 @@ async function registrarCompita(email: string | null = 'rosa@mail.test') {
   admin()
   const token = (await (await (generarInvite as any)()).json()).data.token
   session.user = null
-  await registrar(req('/api/onboarding/registrar', { json: { token, nombre: 'Rosa Díaz', email, zona: 'Zulia', descripcion: 'Cuidadora', servicios: ['Compañía'] } }))
+  await registrar(req('/api/onboarding/registrar', { json: { token, nombre: 'Rosa Díaz', email, telefono: '0412 123 4567', zona: 'Zulia', descripcion: 'Cuidadora', servicios: ['Compañía'] } }))
   return db.rows('compitas').at(-1)!
 }
 

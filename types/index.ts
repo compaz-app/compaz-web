@@ -26,6 +26,8 @@ export interface Compita {
   nombre: string
   apellido: string | null
   email: string | null
+  /** WhatsApp en formato +código de país. Solo lo lee el panel con el permiso de teléfonos. */
+  telefono?: string | null
   telegram_chat_id: string | null
   zona: string
   estado: ZonaEstado

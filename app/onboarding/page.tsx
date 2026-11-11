@@ -135,6 +135,7 @@ function OnboardingForm() {
   const [form, setForm] = useState({
     nombre: '',
     email: '',
+    telefono: '',
     descripcion: '',
     servicios: [] as string[],
     habilidades: '',
@@ -258,6 +259,7 @@ function OnboardingForm() {
     const faltantes: string[] = []
     if (!form.nombre) faltantes.push('nombre completo')
     if (!form.email) faltantes.push('correo electrónico')
+    if (!form.telefono.trim()) faltantes.push('teléfono de WhatsApp')
     if (zonas.length === 0) faltantes.push('zona de cobertura')
     if (!form.descripcion) faltantes.push('descripción')
     if (form.servicios.length === 0) faltantes.push('al menos un servicio')
@@ -286,7 +288,7 @@ function OnboardingForm() {
       const res = await fetch('/api/onboarding/registrar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nombre: form.nombre, email: form.email, descripcion: form.descripcion, servicios: form.servicios, habilidades: form.habilidades, youtube_url: form.youtube_url, zona, foto_url, token, horarios_disponibles: horarios }),
+        body: JSON.stringify({ nombre: form.nombre, email: form.email, telefono: form.telefono, descripcion: form.descripcion, servicios: form.servicios, habilidades: form.habilidades, youtube_url: form.youtube_url, zona, foto_url, token, horarios_disponibles: horarios }),
       })
 
       if (res.ok) {
@@ -411,6 +413,13 @@ function OnboardingForm() {
             <label style={s.label}>Correo electrónico *</label>
             <input required type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} style={s.input} placeholder="tu@correo.com" />
             <p style={s.hint}>Lo usaremos para enviarte el código de verificación al activar tu cuenta en Telegram.</p>
+          </div>
+
+          {/* Teléfono */}
+          <div>
+            <label style={s.label}>Teléfono de WhatsApp *</label>
+            <input required type="tel" inputMode="tel" autoComplete="tel" maxLength={30} value={form.telefono} onChange={(e) => setForm({ ...form, telefono: e.target.value })} style={s.input} placeholder="0412 123 4567" />
+            <p style={s.hint}>Solo lo ve el equipo de Compaz, para escribirte si hace falta. Nunca se le muestra a las familias.</p>
           </div>
 
           {/* Zonas — múltiples */}

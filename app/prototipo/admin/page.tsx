@@ -1406,6 +1406,7 @@ const VALOR_LIMITE: Record<ClaveEspera, string> = {
   codigo_fallos: '5 intentos fallidos en 15 minutos', codigo_conexion: '30 intentos en 15 minutos por conexión', acceso_conexion: '10 enlaces por hora por conexión',
   acceso_correo: 'Un enlace por minuto y correo', reconexion_llamada: 'Una reconexión cada 2 minutos', ayuda_cliente: 'Un aviso por hora por cliente', eliminar_cuenta_enlace: 'Un enlace cada 10 minutos por cliente', chat_limite: '10 mensajes por hora y 50 por día por conexión',
   postulacion_conexion: '50 postulaciones por hora por conexión', postulacion_correo: 'Una por correo',
+  insistir_aviso: 'Uno cada 30 minutos y 3 por aviso',
 }
 const QUIEN_LIMITE = { compita: 'Compitas', cliente: 'Clientes y visitantes', equipo: 'Equipo' } as const
 function VistaLimites() {

@@ -6,7 +6,10 @@ const TONOS = {
   peligro: { clase: 'bg-rojo-claro text-rojo-oscuro border-rojo', rol: 'alert' },
 } as const
 
-export default function Aviso({ tono = 'info', children }: { tono?: keyof typeof TONOS; children: React.ReactNode }) {
+// `compacto` es el de las pantallas densas del panel del equipo: menos relleno y texto más chico. Por defecto, el grande de la familia.
+const TAMANOS = { normal: 'rounded-2xl p-4 text-base font-bold', compacto: 'rounded-xl px-3 py-2 text-sm font-semibold' } as const
+
+export default function Aviso({ tono = 'info', tamano = 'normal', children }: { tono?: keyof typeof TONOS; tamano?: keyof typeof TAMANOS; children: React.ReactNode }) {
   const t = TONOS[tono]
-  return <div role={t.rol} className={`rounded-2xl border p-4 text-base font-bold leading-snug ${t.clase}`}>{children}</div>
+  return <div role={t.rol} className={`border leading-snug ${TAMANOS[tamano]} ${t.clase}`}>{children}</div>
 }

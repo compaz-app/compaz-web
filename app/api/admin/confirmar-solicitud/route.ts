@@ -7,7 +7,7 @@ import { confirmarPagoYAvisar } from '@/lib/confirmar-pago'
 import { ok, err } from '@/lib/api'
 
 export async function POST(req: NextRequest) {
-  const g = await requierePermiso('atender'); if (!g.ok) return g.res
+  const g = await requierePermiso('pagos'); if (!g.ok) return g.res
   const b = await req.json().catch(() => null) as { solicitud_id?: string; accion?: string } | null
   if (!b?.solicitud_id) return err('Falta solicitud_id')
 

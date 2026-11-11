@@ -6,6 +6,7 @@ import { sendBienvenidaCompita } from '@/lib/resend'
 import { validarPerfil, emailValido } from '@/lib/validar'
 import { avisarAdmin } from '@/lib/telegram'
 import { alertaAdmin } from '@/lib/alertas-admin'
+import { normalizarTelefono } from '@/lib/captacion'
 
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null)
@@ -25,6 +26,10 @@ export async function POST(req: NextRequest) {
   if (!Array.isArray(body.servicios) || !body.servicios.length) faltantes.push('al menos un servicio')
   if (faltantes.length) return err(`Faltan campos requeridos: ${faltantes.join(', ')}`)
   if (email && !emailValido(email)) return err('Correo inválido')
+  // El teléfono es obligatorio en el formulario (lo usa el equipo para escribirle por WhatsApp). El administrador puede registrar sin él.
+  const telefono = typeof body.telefono === 'string' && body.telefono.trim() ? normalizarTelefono(body.telefono) : null
+  if (typeof body.telefono === 'string' && body.telefono.trim() && !telefono) return err('Teléfono inválido. Escríbelo con código de país, por ejemplo +58 412 123 4567')
+  if (!esAdmin && !telefono) return err('Falta el teléfono de WhatsApp')
   const v = validarPerfil(body, { permitirNombre: true })
   if (!v.ok) {
     await alertaAdmin('actividad', `⚠️ <b>Validación fallida en onboarding</b>\n\n<b>Nombre:</b> ${body.nombre ?? '—'}\n<b>Email:</b> ${email ?? '—'}\n<b>Error:</b> ${v.error}`)
@@ -61,6 +66,7 @@ export async function POST(req: NextRequest) {
   const { error } = await admin.from('compitas').insert({
     nombre,
     email: email || null,
+    telefono,
     zona,
     descripcion: habil ? `${descripcion}\n\nHabilidades especiales: ${habil}` : descripcion,
     servicios,

@@ -17,6 +17,7 @@ const REL: Record<string, Record<string, string>> = {
   usuarios: { compitas: 'compita_id' },
   mensajes: { visitas: 'visit_id' },
   pagos_plan: { usuarios: 'usuario_id' },
+  resenas: { compitas: 'compita_id', usuarios: 'cliente_id' },
 }
 const REL_INVERSA: Record<string, Record<string, string>> = {}
 
@@ -45,6 +46,8 @@ const DEFAULTS: Record<string, () => Row> = {
   admin_emails: () => ({}),
   equipo: () => ({ id: randomUUID(), activo: true, permisos: {}, creado_en: nowIso(), actualizado_en: nowIso() }),
   equipo_historial: () => ({ hecho_en: nowIso() }),
+  notas_persona: () => ({ id: randomUUID(), creado_en: nowIso() }),
+  postulaciones: () => ({ id: randomUUID(), recibida_en: nowIso() }),
   ajustes: () => ({ vigente_desde: nowIso(), actualizado_por: 'sistema', actualizado_en: nowIso() }),
   ajustes_historial: () => ({ cambiado_en: nowIso(), vigente_desde: nowIso() }),
   cancelaciones: () => ({ id: randomUUID(), horas_de_aviso: null, tardia: false, motivo: null, justificada: false, justificada_por: null, justificada_en: null, visita_id: null, solicitud_id: null, cuenta_como_usada: false, visita_creada_en: null, creado_en: nowIso() }),
@@ -200,6 +203,7 @@ class Query {
   private head = false
   private orders: Array<{ col: string; asc: boolean }> = []
   private lim: number | null = null
+  private off = 0
   private mode: 'many' | 'single' | 'maybe' = 'many'
   private onConflict?: string
 
@@ -249,6 +253,7 @@ class Query {
   }
   order(col: string, o?: { ascending?: boolean; nullsFirst?: boolean }) { this.orders.push({ col, asc: o?.ascending !== false }); return this }
   limit(n: number) { this.lim = n; return this }
+  range(desde: number, hasta: number) { this.off = desde; this.lim = hasta - desde + 1; return this }
   single() { this.mode = 'single'; return this }
   maybeSingle() { this.mode = 'maybe'; return this }
   then(res: (v: any) => any, rej?: (e: any) => any) { return Promise.resolve(this.run()).then(res, rej) }
@@ -288,7 +293,7 @@ class Query {
         return o.asc ? cmp(x, y) : cmp(y, x)
       })
     }
-    if (this.lim !== null) out = out.slice(0, this.lim)
+    if (this.lim !== null) out = out.slice(this.off, this.off + this.lim)
     const count = this.count ? rows.length : null
     if (this.head) return { data: null, error: null, count }
     const proj = out.map((r) => this.project(r, this.selStr))

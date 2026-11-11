@@ -31,9 +31,9 @@ const ESPERADO: Record<string, string> = {
   'eliminar-cliente': 'raiz', 'eliminar-compita': 'raiz', 'equipo': 'raiz',
   'demo/aceptar-entrevista': 'raiz', 'demo/cerrar-visita': 'raiz', 'demo/crear-visita': 'raiz', 'demo/estado': 'raiz',
   'demo/iniciar-visita': 'raiz', 'demo/reset': 'raiz',
-  'flags': 'atender', 'resenas': 'atender', 'asignar-compita': 'atender', 'confirmar-solicitud': 'atender',
+  'flags': 'atender', 'resenas': 'atender', 'asignar-compita': 'atender', 'confirmar-solicitud': 'pagos',
   'completar-solicitud': 'atender', 'forzar-cierre-visita': 'atender', 'enviar-link-llamada': 'atender',
-  'cliente-preview': 'monitorear', 'bloqueos-compita': 'atender', 'reportes-compita': 'atender', 'dudas': 'monitorear', 'esperas': 'monitorear', 'pausas': 'cuentas', 'actividad': 'monitorear', 'portal-nuevo': 'cuentas',
+  'cliente-preview': 'monitorear', 'bloqueos-compita': 'atender', 'reportes-compita': 'atender', 'dudas': 'monitorear', 'esperas': 'monitorear', 'pausas': 'cuentas', 'actividad': 'monitorear', 'portal-nuevo': 'cuentas', 'contacto': 'telefonos', 'notas': 'atender', 'confirmar-pago': 'pagos', 'ajustes': 'ajustes_editar', 'insistir-aviso': 'atender', 'reintentar-aviso': 'atender', 'chat': 'chats',
   'generar-invite': 'invitar', 'invitar-cliente': 'invitar', 'registrar-compita': 'invitar',
 }
 // Rutas que NO usan sesión de panel sino un enlace de un solo uso (token) enviado al administrador.

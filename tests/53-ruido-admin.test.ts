@@ -120,7 +120,7 @@ describe('el colaborador trabaja desde el panel', () => {
   test('con permiso de atender ve la bandeja SIN teléfonos ni correos, y el administrador sí los ve', async () => {
     await sembrar(); colab('c@x.test', { atender: true })
     como('c@x.test'); const r = await flagsGet(req('/api/admin/flags')); assert.equal(r.status, 200)
-    const notas = JSON.stringify((await r.json()).data)
+    const filas = (await r.json()).data; const notas = filas.map((f: any) => `${f.nota} ${f.entidad_nombre}`).join(' ')  // solo los textos: un id o una hora al azar podía traer "555"
     assert.ok(!/caro@mail|555/.test(notas), 'el colaborador no ve contactos'); assert.match(notas, /Falta la dirección/)
     session.user = { id: 'adm', email: 'admin@compaz.test' }
     assert.match(JSON.stringify((await (await flagsGet(req('/api/admin/flags'))).json()).data), /caro@mail\.com/)
@@ -148,7 +148,7 @@ describe('el colaborador trabaja desde el panel', () => {
   test('la actividad: con monitorear se ve recortada; sin sesión 401; sin permiso 403; los filtros funcionan', async () => {
     await sembrar(); colab('m@x.test', { monitorear: true }); colab('s@x.test', { atender: true }); como('m@x.test')
     const todo = (await (await actividadGet(req('/api/admin/actividad?dias=2'))).json()).data
-    assert.equal(todo.total, 3); assert.ok(!/caro@mail|555/.test(JSON.stringify(todo.filas)))
+    assert.equal(todo.total, 3); assert.ok(!/caro@mail|555/.test(todo.filas.map((f: any) => f.resumen).join(' ')))  // solo los textos: un id o una hora al azar podía traer "555" y fallar sin motivo
     const urg = (await (await actividadGet(req('/api/admin/actividad?nivel=urgente'))).json()).data; assert.equal(urg.total, 1); assert.match(urg.filas[0].resumen, /Nadie abre/)
     const q = (await (await actividadGet(req('/api/admin/actividad?q=iniciada'))).json()).data; assert.equal(q.total, 1)
     como('s@x.test'); assert.equal((await actividadGet(req('/api/admin/actividad'))).status, 403)

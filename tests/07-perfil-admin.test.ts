@@ -70,7 +70,7 @@ describe('Capa de datos', () => {
 
 describe('Onboarding de compita (invitación del admin)', () => {
   const invitacion = () => db.seed('onboarding_tokens', { token: 'tok-inv', expires_at: ahoraMas(60 * 24) })
-  const cuerpo = (o: any = {}) => ({ token: 'tok-inv', nombre: 'Rosa <b>Díaz', email: 'rosa@mail.test', zona: 'Zulia', descripcion: 'Cuidadora con 10 años', servicios: ['Compañía'], ...o })
+  const cuerpo = (o: any = {}) => ({ token: 'tok-inv', nombre: 'Rosa <b>Díaz', email: 'rosa@mail.test', telefono: '0412 123 4567', zona: 'Zulia', descripcion: 'Cuidadora con 10 años', servicios: ['Compañía'], ...o })
 
   test('registro OK: queda activa SIN verificar; el token es de un solo uso; el nombre con HTML se escapa en el correo', async () => {
     invitacion()

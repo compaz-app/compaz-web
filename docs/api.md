@@ -150,6 +150,36 @@ Lista todas las solicitudes de entrevista (admin).
 
 ---
 
+### `POST /api/admin/contacto`
+Permiso `telefonos`. Cuerpo `{ tipo: 'compita'|'cliente', id, canal: 'correo'|'telefono'|'whatsapp', motivo }`. Entrega el dato de contacto (`data.valor`). Un colaborador debe dar un motivo (uno de la lista o `Otro: <explicación>`); el administrador no. El acceso se anota en Actividad (categoría `acceso_contacto`) ANTES de entregar el dato; si no se puede anotar, no se entrega (503). Del compita: correo y teléfono (`compitas.telefono`, pedido en el formulario de registro).
+
+### `POST /api/onboarding/registrar`
+El cuerpo ahora incluye `telefono` (WhatsApp, obligatorio salvo que lo llame un administrador). Se normaliza a `+código de país` con `normalizarTelefono` y se guarda en `compitas.telefono`; si no es válido responde 400. `POST /api/admin/registrar-compita` lo acepta como opcional.
+
+### `POST /api/admin/notas`
+Permiso `atender`. Cuerpo `{ tipo: 'compita'|'cliente', id, texto }` (1 a 1000 letras). Agrega una nota interna a la ficha, con el correo de quien la escribe. Solo se agregan: no hay editar ni borrar. Las notas se leen con la ficha (sin teléfonos ni correos si falta el permiso `telefonos`). Tabla `notas_persona`.
+
+### `POST /api/admin/chat`
+Permiso `chats`. Cuerpo `{ clienteId, compitaId, motivo }`. Devuelve `{ cliente, compita, mensajes: [{ de, texto, cuando, esFoto }] }` con los mensajes de todas las visitas entre ambos (hasta 500, más antiguo primero). Un colaborador debe dar motivo; el administrador no. La consulta se anota en Actividad (categoría `acceso_chat`) ANTES de entregar nada; si no se puede anotar, responde 503 y no entrega el chat. Sin el permiso `telefonos`, los textos llegan sin teléfonos ni correos.
+
+### `POST /api/admin/confirmar-pago`
+Permiso `pagos`. Cuerpo `{ flag_id }` (una tarea de pago de la Bandeja). La solicitud de pago se busca por el cliente de la tarea: el navegador no elige qué pago confirmar. Confirma el pago, avisa al cliente por correo, cierra las tareas de pago de ese cliente y anota quién en Actividad (`pago_confirmado_bandeja`). Responde 409 si el pago ya no está pendiente. La ruta vieja `confirmar-solicitud` también exige `pagos` (antes pedía `atender`).
+
+### `POST /api/admin/insistir-aviso`
+Permiso `atender`. Cuerpo `{ flag_id }`. Reenvía el aviso que la persona de una tarea no atendió (tareas de la escalera, cambio en el lugar, cita sin confirmar y dirección faltante). El reenvío es un aviso nuevo con clave `reenvio:<aviso>:<n>` y `respaldo_de`. Tope: uno cada 30 minutos y 3 por aviso (regla `insistir_aviso`); al alcanzarlo responde 429 con `error` corto y `porQue`. La tarea queda abierta. Anota `aviso_reenviado` en Actividad.
+
+### `POST /api/admin/reintentar-aviso`
+Permiso `atender`. Cuerpo `{ aviso_id }`. Reintenta un aviso FALLIDO (Estado del sistema). 409 si ya no está pendiente o llegó al máximo de intentos (5); 502 si vuelve a fallar, con el motivo. Anota `aviso_reintentado`.
+
+### Contacto en el sitio
+`POST /api/admin/contacto` acepta también `tipo: 'visita'` (canal `telefono` o `whatsapp`): devuelve el teléfono y el nombre del contacto en el sitio de esa visita, con las mismas reglas de motivo y registro en Actividad.
+
+### `/api/admin/equipo`
+Permiso `raiz` (solo administradores de ADMIN_EMAILS). `GET` lista, `POST { correo, nombre, permisos? }` invita (no manda correo), `PATCH { correo, permisos?, activo? }` cambia permisos o activa o desactiva, `DELETE { correo }` quita al colaborador del equipo (borra su fila; el historial `equipo_historial` es de solo inserción y conserva `alta`, `permisos`, `desactivado`, `reactivado` y `eliminado`). Los administradores no se quitan por aquí: viven en ADMIN_EMAILS.
+
+### `PATCH /api/admin/ajustes`
+Permiso `ajustes_editar`. Cuerpo `{ cambios: { clave: valor, ... }, confirmar_incoherente? }`. Guarda varios ajustes a la vez, TODO O NADA: se valida cada valor, las reglas entre ajustes (por ejemplo el rojo del semáforo después del amarillo) y los precios; un plan más caro que las horas sueltas responde 409 hasta que se confirma. Cada cambio deja su fila en `ajustes_historial` y una línea `ajustes_cambiados` en Actividad. Los ajustes se LEEN en el servidor al abrir la pantalla (permiso `ajustes_ver`). Los umbrales del semáforo de Seguimiento son los ajustes `semaforo_<etapa>_amarillo|rojo`.
+
 ## Llamadas (Daily.co)
 
 ### `POST /api/llamada/crear`
@@ -193,3 +223,6 @@ Actualiza campos editables del perfil de una compita. Solo admin.
 | 403 | Sin permisos suficientes |
 | 404 | Recurso no encontrado |
 | 500 | Error interno del servidor |
+
+### GET /api/precios
+Pública. Devuelve los precios vigentes (`hora`, `mandado`, `planes.{carta,quincenal,semanal}`) tomados de Ajustes. Solo para mostrar: al cobrar, el servidor recalcula el importe con `lib/precios.ts` y nunca acepta uno del navegador.

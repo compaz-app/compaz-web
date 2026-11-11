@@ -3,9 +3,10 @@
 //   GET    → lista del equipo
 //   POST   { correo, nombre, permisos? }  → invita (permisos por defecto: ninguno)
 //   PATCH  { correo, permisos? , activo? } → cambia permisos y/o activa o desactiva
+//   DELETE { correo }                      → quita al colaborador del equipo (los administradores no se quitan aquí: viven en ADMIN_EMAILS)
 import { NextRequest } from 'next/server'
 import { requierePermiso } from '@/lib/permisos'
-import { listarEquipo, invitarColaborador, cambiarPermisos, cambiarActivo } from '@/lib/equipo'
+import { listarEquipo, invitarColaborador, cambiarPermisos, cambiarActivo, eliminarColaborador } from '@/lib/equipo'
 import { ok, err, serverError } from '@/lib/api'
 
 function permisosDe(v: unknown): Record<string, boolean> | null {
@@ -41,4 +42,13 @@ export async function PATCH(req: NextRequest) {
   if (perm) r = await cambiarPermisos(b.correo, perm, g.actor.correo)
   if ((!r || r.ok) && typeof b.activo === 'boolean') r = await cambiarActivo(b.correo, b.activo, g.actor.correo)
   return r!.ok ? ok(r!.colaborador) : err(r!.error, r!.status)
+}
+
+export async function DELETE(req: NextRequest) {
+  const g = await requierePermiso('raiz')
+  if (!g.ok) return g.res
+  const b = (await req.json().catch(() => null)) as Record<string, unknown> | null
+  if (!b || typeof b.correo !== 'string') return err('Falta el correo')
+  const r = await eliminarColaborador(b.correo, g.actor.correo)
+  return r.ok ? ok({ eliminado: true }) : err(r.error, r.status)
 }

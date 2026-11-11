@@ -8,6 +8,7 @@ import { getAjuste } from '@/lib/ajustes'
 import { borrarFotosVencidas } from '@/lib/fotos-privadas'
 import { borrarCuentasVencidas } from '@/lib/cuenta-eliminar'
 import { sincronizarAdmins } from '@/lib/admins'
+import { CATEGORIAS_ACCESO } from '@/lib/panel-mas-tipos'
 
 export async function POST(req: NextRequest) {
   if (!cronAutorizado(req)) return err('No autorizado', 401)
@@ -18,10 +19,15 @@ export async function POST(req: NextRequest) {
   const hace30d = new Date(Date.now() - 30 * 86400_000).toISOString()
   // La retención de avisos sale de Ajustes (por defecto 90 días).
   const hace90d = new Date(Date.now() - Number(await getAjuste('avisos_retencion_dias')) * 86400_000).toISOString()
+  // Quién vio un dato sensible y por qué se conserva MÁS tiempo (1 año por defecto, editable en Ajustes): es la garantía de privacidad.
+  const haceAccesos = new Date(Date.now() - Number(await getAjuste('accesos_retencion_dias')) * 86400_000).toISOString()
 
   const tareas: Array<[string, PromiseLike<{ error: { message: string } | null }>]> = [
-    // El registro de actividad del equipo se conserva el mismo tiempo que el de avisos (90 días por defecto); las tareas viven en admin_flags.
-    ['actividad_admin', admin.from('actividad_admin').delete().lt('creado_en', hace90d)],
+    // La actividad del equipo se conserva el mismo tiempo que el registro de avisos (90 días por defecto); las tareas viven en admin_flags.
+    // Los accesos a datos sensibles (categorías de CATEGORIAS_ACCESO) se conservan según `accesos_retencion_dias`.
+    ['actividad_admin', admin.from('actividad_admin').delete().lt('creado_en', hace90d).is('categoria', null)],
+    ['actividad_admin (otras categorías)', admin.from('actividad_admin').delete().lt('creado_en', hace90d).not('categoria', 'in', `(${CATEGORIAS_ACCESO.join(',')})`)],
+    ['accesos a datos sensibles', admin.from('actividad_admin').delete().lt('creado_en', haceAccesos).in('categoria', [...CATEGORIAS_ACCESO])],
     ['timbre colapsado', admin.from('telegram_estados').delete().like('chat_id', 'timbre_colapsado:%').lt('updated_at', hace1d)],
     ['onboarding_tokens', admin.from('onboarding_tokens').delete().or(`usado.eq.true,expires_at.lt.${ahora}`)],
     ['compita_edit_tokens', admin.from('compita_edit_tokens').delete().lt('expires_at', ahora)],

@@ -59,7 +59,7 @@ Toda pantalla nueva del panel, todo permiso nuevo y toda regla de espera nueva d
 ## 7. Cómo agregar o quitar a alguien del panel (recordar siempre)
 Hay dos tipos de persona y cada uno tiene su ruta:
 1. **Administrador (acceso total):** se agrega o quita SOLO en la variable `ADMIN_EMAILS` de Netlify (correos separados por coma, y también en `.env.local` para pruebas locales). Después hay que volver a desplegar para que el servidor la lea. La lista de la base (`admin_emails`, que usa el tiempo real) se copia sola en la limpieza diaria de las 3 am; para verla al instante, llamar a `POST /api/cron/limpieza` con la cabecera `x-cron-secret`. Nunca editar la tabla `admin_emails` a mano: la siguiente limpieza la deja igual a `ADMIN_EMAILS`.
-2. **Colaborador (acceso limitado):** lo gestiona un administrador por `/api/admin/equipo` (GET lista, POST invita con sus permisos, PATCH cambia permisos o desactiva). Cada permiso se activa o apaga por separado y todo queda en `equipo_historial`. Un colaborador nunca puede dar permisos, ni a sí mismo. La pantalla del panel real para esto aún no existe; hasta entonces se usa la ruta.
+2. **Colaborador (acceso limitado):** lo gestiona un administrador por `/api/admin/equipo` (GET lista, POST invita con sus permisos, PATCH cambia permisos o desactiva). Cada permiso se activa o apaga por separado y todo queda en `equipo_historial`. Un colaborador nunca puede dar permisos, ni a sí mismo. La pantalla está en el panel: Más, Equipo y permisos (/panel?sec=mas&mas=equipo).
 Código: `lib/permisos.ts`, `lib/equipo.ts`, `lib/admins.ts`. Toda ruta nueva de `/api/admin` debe llamar a `requierePermiso('...')` y registrarse en `tests/37-permisos.test.ts` (si no, la suite falla).
 
 ---

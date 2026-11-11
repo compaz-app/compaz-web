@@ -5,7 +5,7 @@
 export type ClaveEspera =
   | 'recordatorio_reciente' | 'recordatorio_limite' | 'pago_insistencia' | 'solicitudes_dia' | 'solicitud_mismo_compita'
   | 'codigo_fallos' | 'codigo_conexion' | 'acceso_conexion' | 'acceso_correo' | 'reconexion_llamada'
-  | 'chat_limite' | 'postulacion_conexion' | 'postulacion_correo' | 'ayuda_cliente' | 'eliminar_cuenta_enlace'
+  | 'chat_limite' | 'postulacion_conexion' | 'postulacion_correo' | 'ayuda_cliente' | 'eliminar_cuenta_enlace' | 'insistir_aviso'
 
 export interface Espera {
   clave: ClaveEspera
@@ -47,6 +47,7 @@ export const CATALOGO: Record<ClaveEspera, { quien: 'compita' | 'cliente' | 'equ
   chat_limite: { quien: 'cliente', limita: 'Mensajes al asistente de la página: 10 por hora y 50 por día desde una conexión', porQue: 'Así todas las familias pueden usarlo y se evita el abuso.' },
   postulacion_conexion: { quien: 'compita', limita: 'Postulaciones de compitas: un máximo por hora desde una misma conexión', porQue: 'Es una medida contra envíos automáticos que llenarían la bandeja de postulaciones falsas.' },
   postulacion_correo: { quien: 'compita', limita: 'Postulaciones de compitas: una por correo', porQue: 'Evita postulaciones duplicadas de la misma persona.' },
+  insistir_aviso: { quien: 'equipo', limita: 'Insistir con un aviso desde la Bandeja: uno cada 30 minutos y un máximo de 3 por aviso', porQue: 'Mandar el mismo aviso muchas veces llena el Telegram o el correo de la persona y deja de leerse. Si ya insististe y sigue sin responder, conviene escribirle tú directamente o ofrecerle al cliente otro compita.' },
   reconexion_llamada: { quien: 'cliente', limita: 'Reconectar la sala de la entrevista: una cada 2 minutos', porQue: 'Cada reconexión crea una sala nueva de videollamada; limitarlas evita salas duplicadas y gastos innecesarios.' },
 }
 
@@ -110,6 +111,7 @@ export function explicarEspera(clave: ClaveEspera, p: ParamsEspera = {}): Espera
     chat_limite: ['Llegaste al límite de mensajes.', 'Vuelve a escribir en un rato o escríbenos a hola@micompaz.com.'],
     postulacion_conexion: ['Hubo muchas postulaciones desde tu conexión.', 'Espera un rato o escríbenos a hola@micompaz.com.'],
     postulacion_correo: ['Ya recibimos una postulación con este correo.', 'Te escribimos por WhatsApp y correo.'],
+    insistir_aviso: [p.max !== undefined && (p.usados ?? 0) >= p.max ? `Ya insististe ${p.usados} veces con este aviso (el máximo).` : `Ya insististe con este aviso ${hace}.`, p.max !== undefined && (p.usados ?? 0) >= p.max ? 'Escríbele tú directamente o ofrece otra opción.' : `Podrás volver a insistir ${cuando}.`],
   }
   const [situacion, siguiente] = partes[clave]
   return { clave, texto: `${situacion} ${porQue} ${siguiente}`, resumen: `${situacion} ${siguiente}`, porQue, vuelveEn: vuelve?.toISOString() ?? null, segundos: falta === null ? null : Math.ceil(falta / 1000) }

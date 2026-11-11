@@ -4,6 +4,7 @@ import { requierePermiso } from '@/lib/permisos'
 import { ok, err, serverError } from '@/lib/api'
 import { sendBienvenidaCompita } from '@/lib/resend'
 import { validarPerfil, emailValido } from '@/lib/validar'
+import { normalizarTelefono } from '@/lib/captacion'
 
 export async function POST(req: NextRequest) {
   const g = await requierePermiso('invitar'); if (!g.ok) return g.res
@@ -17,6 +18,9 @@ export async function POST(req: NextRequest) {
   if (faltantes.length) return err(`Faltan campos: ${faltantes.join(', ')}`)
   const email = typeof body.email === 'string' && body.email.trim() ? body.email.trim() : null
   if (email && !emailValido(email)) return err('Correo inválido')
+  const telefonoCrudo = typeof body.telefono === 'string' ? body.telefono.trim() : ''
+  const telefono = telefonoCrudo ? normalizarTelefono(telefonoCrudo) : null
+  if (telefonoCrudo && !telefono) return err('Teléfono inválido. Escríbelo con código de país, por ejemplo +58 412 123 4567')
   const v = validarPerfil(body, { permitirNombre: true })
   if (!v.ok) return err(v.error)
   const { nombre, zona, descripcion, servicios, foto_url, youtube_url } = v.datos
@@ -33,6 +37,7 @@ export async function POST(req: NextRequest) {
       descripcion,
       servicios,
       email,
+      telefono,
       foto_url: foto_url ?? null,
       youtube_url: youtube_url ?? null,
       horarios_disponibles: [],

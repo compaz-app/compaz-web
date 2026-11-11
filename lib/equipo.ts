@@ -78,3 +78,18 @@ export async function cambiarActivo(correo: string, activo: boolean, por: string
   await historial(c, activo ? 'reactivado' : 'desactivado', {}, por)
   return { ok: true, colaborador: data as Colaborador }
 }
+
+/**
+ * Quita a un colaborador del equipo (borra su fila). Solo el administrador raíz (la ruta lo exige). El acceso se corta al instante: la guardia
+ * consulta la fila en cada petición. Lo que hizo queda en Actividad y en el historial, que no se borra. Los administradores NO se quitan aquí:
+ * viven en ADMIN_EMAILS y no están en esta tabla.
+ */
+export async function eliminarColaborador(correo: string, por: string): Promise<ResultadoEquipo> {
+  const c = correo.trim().toLowerCase()
+  const actual = await obtenerColaborador(c)
+  if (!actual) return { ok: false, error: 'Esa persona no está en el equipo', status: 404 }
+  const { error } = await createAdminSupabase().from('equipo').delete().eq('correo', c)
+  if (error) return { ok: false, error: 'No se pudo quitar del equipo', status: 500 }
+  await historial(c, 'eliminado', { nombre: actual.nombre, permisos: soloActivados(actual.permisos), estabaActivo: actual.activo }, por)
+  return { ok: true, colaborador: actual }
+}
