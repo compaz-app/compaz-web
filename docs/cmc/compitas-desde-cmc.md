@@ -2,7 +2,11 @@
 
 Integración unidireccional: el CMC (hoja `03 · Compitas`) publica cada hora las Compitas con «Etapa de selección» = **Habilitado**; la web las incorpora a `compitas` por su **ID Compita** (`COM-NNNN`), las muestra en el dashboard de Juan y, una vez activadas, reciben solicitudes.
 
-Aprobado por Luis el 10-nov-2026. Estado: **rama preparada, nada aplicado en producción.**
+Aprobado por Luis el 10-nov-2026.
+
+**Estado (11-nov-2026, 03:49 UTC): etapa 1 aplicada.**
+- La migración `20261111_cmc_compitas` está en Supabase (versión 20261111034855).
+- Etapas 2 a 5 pendientes. El código sigue sin fusionar ni desplegar.
 
 ## Reparto de autoridad
 
@@ -56,6 +60,12 @@ En Supabase, nombre, email y zona (provisional) se escriben **solo al crear**. D
 **Etapa 1 — Migración** (Supabase).
 - Aplicar `20261111_cmc_compitas.sql`.
 - Verificar: las 4 columnas existen y son NULL en las 23 filas; `codigo` sigue NULL en todas; `cmc_sincronizaciones` vacía; restricción `compitas_codigo_formato` creada.
+- **Hecho el 11-nov.**
+  - Huella de `compitas` sin las columnas `cmc_*`: e3da8e5b…, la misma antes y después.
+  - Sin cambios en las huellas de usuarios, solicitudes, visitas y admin_flags.
+  - La oferta pública sigue con las mismas 21 Compitas.
+  - `service_role` tiene SELECT e INSERT en la tabla nueva; `anon` y `authenticated` no tienen ningún privilegio.
+  - Las columnas `cmc_*` no se añaden a los permisos públicos por columna.
 - Reversión: `alter table compitas drop column cmc_permite, drop column cmc_estado, drop column cmc_actualizado_en, drop column cmc_bienvenida_enviada_en, drop constraint compitas_codigo_formato; drop table cmc_sincronizaciones;` (solo mientras el código de la etapa 2 no esté publicado).
 - **Debe ir antes de la etapa 2**: el código nuevo lee esas columnas.
 
