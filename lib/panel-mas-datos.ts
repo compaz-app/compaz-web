@@ -1,5 +1,6 @@
 // Datos de las herramientas de Más: reseñas, pagos, avisos enviados y cobertura (servidor). Las queries viven aquí.
 import { createAdminSupabase } from '@/lib/supabase-server'
+import { conCacheCorto } from '@/lib/cache-corto'
 import type { Actor } from '@/lib/permisos'
 import { recortarTexto } from '@/lib/panel-datos'
 import { PLANES } from '@/lib/planes'
@@ -50,7 +51,11 @@ export async function listarAvisos(): Promise<FilaAviso[]> {
 }
 
 /** Compitas que pueden recibir solicitudes contra solicitudes del último mes, por estado. */
-export async function cargarCobertura(ahora: Date = new Date()): Promise<FilaCobertura[]> {
+export function cargarCobertura(ahora: Date = new Date()): Promise<FilaCobertura[]> {
+  return conCacheCorto('cobertura', 60_000, () => calcularCobertura(ahora))
+}
+
+async function calcularCobertura(ahora: Date): Promise<FilaCobertura[]> {
   const db = createAdminSupabase()
   const desde = new Date(ahora.getTime() - 30 * 86_400_000).toISOString()
   const [compitas, sol] = await Promise.all([listarCompitas(ahora), db.from('solicitudes').select('cliente_id').gte('created_at', desde).limit(5000)])

@@ -1,14 +1,16 @@
 // Datos de Seguimiento (servidor). La etapa sale del MISMO motor que el portal del cliente (cargarFoto + decidirEstado): así lo que ve el
 // equipo nunca contradice lo que ve la familia. Cuesta varias consultas por cliente, por eso se limita a los 150 más recientes y se
-// procesan de 8 en 8. Si algún día hay cientos de clientes activos, hay que pasar a una consulta por lotes.
+// procesan de 25 en 25. Si algún día hay cientos de clientes activos, hay que pasar a una consulta por lotes.
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { cargarFoto, decidirEstado, pasoDe, type FotoCliente } from '@/lib/estado-cliente'
 import { getAjustes } from '@/lib/ajustes'
 import { etapaDePaso, umbralesDeAjustes, urgenciaDe, type FilaSeguimiento } from '@/lib/panel-seguimiento-tipos'
 import { SITUACION } from '@/lib/panel-caso-tipos'
+import { conCacheCorto } from '@/lib/cache-corto'
 
 export const MAX_CLIENTES_SEGUIMIENTO = 150
-const LOTE = 8
+const LOTE = 25
+export const CACHE_SEGUIMIENTO_MS = 30_000
 
 /** Cuándo pasó lo último con este cliente (solicitud, visita o cancelación); si no hay nada, desde que se registró (el registro solo cuenta de respaldo: siempre es anterior a lo demás). */
 export function ultimoMovimiento(f: FotoCliente, registrado: string): string {
@@ -17,7 +19,12 @@ export function ultimoMovimiento(f: FotoCliente, registrado: string): string {
   return fechas.sort().at(-1) ?? registrado
 }
 
-export async function listarSeguimiento(ahora: Date = new Date()): Promise<FilaSeguimiento[]> {
+/** Con memoria de 30 s: filtrar o paginar no vuelve a calcular la etapa de cada cliente. Lo que se ve puede tener hasta 30 s de retraso. */
+export function listarSeguimiento(ahora: Date = new Date()): Promise<FilaSeguimiento[]> {
+  return conCacheCorto('seguimiento', CACHE_SEGUIMIENTO_MS, () => calcularSeguimiento(ahora))
+}
+
+async function calcularSeguimiento(ahora: Date): Promise<FilaSeguimiento[]> {
   const { data, error } = await createAdminSupabase().from('usuarios').select('id, created_at, plan, eliminada_en').order('created_at', { ascending: false }).limit(MAX_CLIENTES_SEGUIMIENTO * 2)
   if (error) throw new Error(`No se pudo leer Seguimiento: ${error.message}`)
   const clientes = (data ?? []).filter((u) => !u.eliminada_en && u.plan !== 'bloqueado').slice(0, MAX_CLIENTES_SEGUIMIENTO)

@@ -1,5 +1,6 @@
 import { createServerSupabase, createAdminSupabase } from '@/lib/supabase-server'
 import { redirect } from 'next/navigation'
+import { cache } from 'react'
 import type { Usuario } from '@/types'
 
 function getAdminEmails(): string[] {
@@ -12,9 +13,15 @@ export async function getSession() {
   return session
 }
 
+/** La sesión verificada de ESTA visita: varias partes de una misma página la piden y Supabase solo se consulta una vez. */
+export const usuarioVerificado = cache(async () => {
+  const supabase = await createServerSupabase()
+  return supabase.auth.getUser()
+})
+
 export async function requireAuth() {
   const supabase = await createServerSupabase()
-  const { data: { user }, error } = await supabase.auth.getUser()
+  const { data: { user }, error } = await usuarioVerificado()
   if (error || !user) redirect('/login')
   // Construir un objeto session-like para compatibilidad
   const { data: { session } } = await supabase.auth.getSession()

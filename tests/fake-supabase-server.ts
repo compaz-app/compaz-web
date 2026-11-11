@@ -1,5 +1,8 @@
 /* eslint-disable */
 import { FakeDB, makeClient, OTPS } from './fake-db'
+import { desactivarCacheCorto } from '@/lib/cache-corto'
+
+desactivarCacheCorto() // cada prueba arranca con datos propios
 
 export const db = new FakeDB()
 export const session: { user: { id: string; email: string } | null } = { user: null }

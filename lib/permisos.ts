@@ -9,7 +9,7 @@
 
 import type { NextResponse } from 'next/server'
 import { createServerSupabase } from '@/lib/supabase-server'
-import { isAdminEmail } from '@/lib/auth'
+import { isAdminEmail, usuarioVerificado } from '@/lib/auth'
 import { obtenerColaborador } from '@/lib/equipo'
 import { err, unauthorized, forbidden } from '@/lib/api'
 import { TODOS, normalizarPermisos, type PermisosActor, type PermisoRequerido } from '@/lib/permisos-catalogo'
@@ -63,8 +63,7 @@ export async function requierePermiso(permiso: PermisoRequerido): Promise<Guardi
 /** Para páginas del servidor: quién es esta persona, o null si no puede entrar al panel. */
 export async function actorDePagina(): Promise<Actor | null> {
   try {
-    const supabase = await createServerSupabase()
-    const { data: { user } } = await supabase.auth.getUser()
+    const { data: { user } } = await usuarioVerificado()
     if (!user?.email) return null
     const correo = user.email.toLowerCase()
     const fila = isAdminEmail(correo) ? null : await obtenerColaborador(correo)
