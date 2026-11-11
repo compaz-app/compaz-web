@@ -28,7 +28,7 @@ describe('el correo de acceso', () => {
     const html = emailsA('carlos@mail.test')[0].html
     assert.match(html, /\/auth\/confirm\?token_hash=/)
     assert.match(codigoDe('carlos@mail.test'), /^\d{8}$/)
-    assert.match(html, /otra app o en otro teléfono/)
+    assert.match(html, /El botón no funciona\? Entra con este código/)
     assert.match(html, /usa siempre el correo más reciente/)
   })
 

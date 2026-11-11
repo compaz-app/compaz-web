@@ -364,6 +364,7 @@ function ContactoCompita({ p, etiqueta = false }: { p: Persona; etiqueta?: boole
       <button type="button" onClick={() => pedir('correo')} className={base} title={`Escribirle a ${p.nombre} por correo`} aria-label={`Escribirle a ${p.nombre} por correo`}>
         <span aria-hidden>✉️</span>{etiqueta && <span>Correo</span>}
       </button>
+      <InfoBoton que="Escribirle por WhatsApp o correo" texto="Abre WhatsApp o tu correo para escribirle a esta persona. Es un dato sensible: si no eres administrador te pide un motivo, y queda anotado en Actividad junto con tu nombre. Compaz no guarda la conversación." />
       {pidiendo && <MotivoDialog titulo={`¿Por qué le escribes a ${p.nombre}?`} texto="Es un dato de contacto sensible. Debes indicar un motivo. Queda anotado junto con tu nombre." onListo={(m) => abrirCanal(pidiendo, m)} onCancelar={() => setPidiendo(null)} />}
     </span>
   )
@@ -696,14 +697,14 @@ function urgCompita(s: StatsCompita): Urgencia {
 const ORD_URG: Record<Urgencia, number> = { rojo: 0, amarillo: 1, verde: 2 }
 const COLUMNAS: { id: string; t: string; ayuda?: string; clase: string; v: (p: Persona) => number | string }[] = [
   { id: 'nombre', t: 'Nombre', clase: '', v: (p) => p.nombre },
-  { id: 'zona', ayuda: 'Zona de la ciudad donde atiende.', t: 'Zona', clase: 'hidden md:table-cell', v: (p) => p.zona },
-  { id: 'estado', ayuda: 'Si puede recibir solicitudes nuevas (Disponible, Con cupo), si está en pausa o si es nuevo y falta verificarlo.', t: 'Estado', clase: 'hidden sm:table-cell', v: (p) => p.stats!.estado },
-  { id: 'activos', ayuda: 'Familias que atiende ahora.', t: 'Clientes', clase: 'hidden xl:table-cell', v: (p) => p.stats!.activos },
-  { id: 'visitas', ayuda: 'Visitas que hizo en el último mes.', t: 'Visitas mes', clase: 'hidden xl:table-cell', v: (p) => p.stats!.visitas },
+  { id: 'zona', ayuda: 'Zona de la ciudad donde atiende.', t: 'Zona', clase: 'hidden @2xl:table-cell', v: (p) => p.zona },
+  { id: 'estado', ayuda: 'Si puede recibir solicitudes nuevas (Disponible, Con cupo), si está en pausa o si es nuevo y falta verificarlo.', t: 'Estado', clase: 'hidden @lg:table-cell', v: (p) => p.stats!.estado },
+  { id: 'activos', ayuda: 'Familias que atiende ahora.', t: 'Clientes', clase: 'hidden @4xl:table-cell', v: (p) => p.stats!.activos },
+  { id: 'visitas', ayuda: 'Visitas que hizo en el último mes.', t: 'Visitas mes', clase: 'hidden @4xl:table-cell', v: (p) => p.stats!.visitas },
   { id: 'rating', ayuda: 'Calificación promedio que le dan las familias, de 1 a 5. Menos de 4 se marca en rojo.', t: '★', clase: '', v: (p) => p.stats!.rating },
-  { id: 'respuesta', ayuda: 'Porcentaje de solicitudes que respondió. Menos de 75% se marca en amarillo y menos de 50% en rojo.', t: 'Respuesta', clase: 'hidden sm:table-cell', v: (p) => p.stats!.respuesta },
-  { id: 'canc', ayuda: 'Cancelaciones del compita en los últimos 30 días. Entre paréntesis, las tardías (con menos de 24 horas de aviso). Con 2 tardías se abre una revisión; con 3 o más se pausan sus solicitudes nuevas.', t: 'Cancelaciones', clase: 'hidden sm:table-cell', v: (p) => p.stats!.tardias * 100 + p.stats!.canc },
-  { id: 'inactivo', ayuda: 'Tiempo desde la última vez que respondió o usó Telegram. Más de 24 horas se marca en amarillo y más de 72 en rojo.', t: 'Sin actividad', clase: 'hidden lg:table-cell', v: (p) => p.stats!.inactivoH },
+  { id: 'respuesta', ayuda: 'Porcentaje de solicitudes que respondió. Menos de 75% se marca en amarillo y menos de 50% en rojo.', t: 'Respuesta', clase: 'hidden @lg:table-cell', v: (p) => p.stats!.respuesta },
+  { id: 'canc', ayuda: 'Cancelaciones del compita en los últimos 30 días. Entre paréntesis, las tardías (con menos de 24 horas de aviso). Con 2 tardías se abre una revisión; con 3 o más se pausan sus solicitudes nuevas.', t: 'Cancelaciones', clase: 'hidden @2xl:table-cell', v: (p) => p.stats!.tardias * 100 + p.stats!.canc },
+  { id: 'inactivo', ayuda: 'Tiempo desde la última vez que respondió o usó Telegram. Más de 24 horas se marca en amarillo y más de 72 en rojo.', t: 'Sin actividad', clase: 'hidden @4xl:table-cell', v: (p) => p.stats!.inactivoH },
 ]
 const POR_PAG = 25
 
@@ -761,7 +762,7 @@ function Personas({ abrir }: { abrir: (id: string) => void }) {
       </div>
       <input value={q} onChange={(e) => { setQ(e.target.value); setPag('1') }} placeholder="Buscar por nombre o zona" className="mt-3 min-h-12 w-full rounded-xl border border-[var(--border-muted)] bg-white px-3 text-base sm:w-80" />
 
-      <div className="mt-3 rounded-2xl border border-[var(--border-muted)] bg-white">
+      <div className="@container mt-3 rounded-2xl border border-[var(--border-muted)] bg-white">
         <table className="w-full text-left text-sm">
           <thead className="bg-[var(--warm-gray)] text-xs uppercase tracking-wider text-[var(--text-mid)] [&_th:first-child]:rounded-tl-2xl [&_th:last-child]:rounded-tr-2xl">
             <tr>
@@ -783,10 +784,10 @@ function Personas({ abrir }: { abrir: (id: string) => void }) {
               const s = p.stats!
               return (
                 <tr key={p.id} onClick={() => abrir(p.id)} className="cursor-pointer active:bg-[var(--warm-gray)] hover:bg-[var(--warm-white)]">
-                  <td className="px-3 py-2">
-                    <div className="flex items-center gap-2">
+                  <td className="w-full max-w-0 px-3 py-2">
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                       <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-extrabold ${URG_ESTILO[urgCompita(s)]}`}>{p.nombre[0]}</span>
-                      <span className="min-w-0"><span className="block truncate font-bold">{p.nombre}</span><span className={`block truncate text-xs text-[var(--text-mid)] ${embebido ? '' : 'md:hidden'}`}>{p.zona} · {s.estado}{s.tardias > 0 && <b className="text-[#92400E]"> · {s.tardias} cancelación{s.tardias > 1 ? 'es' : ''} tardía{s.tardias > 1 ? 's' : ''}</b>}</span></span>
+                      <span className="min-w-[8rem] flex-1"><span className="block truncate font-bold">{p.nombre}</span><span className={`block truncate text-xs text-[var(--text-mid)] ${embebido ? '' : '@2xl:hidden'}`}>{p.zona} · {s.estado}{s.tardias > 0 && <b className="text-[#92400E]"> · {s.tardias} cancelación{s.tardias > 1 ? 'es' : ''} tardía{s.tardias > 1 ? 's' : ''}</b>}</span></span>
                       <span className="ml-auto"><ContactoCompita p={p} /></span>
                     </div>
                   </td>

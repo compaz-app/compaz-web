@@ -48,7 +48,7 @@ function EntrarInner() {
           <div className="mt-4 rounded-2xl bg-[var(--warm-gray)] p-4 text-base">
             <b>Usa siempre el correo más reciente.</b> Si pides otro, el anterior deja de servir.
           </div>
-          <ConInfo que="Usar un código" texto="Te deja escribir un código de 8 números que viene en el correo, para cuando abriste el correo en otra app o teléfono."><button onClick={() => setPaso('codigo')} className="mt-4 min-h-14 w-full rounded-2xl border-2 border-[var(--purple)] bg-white text-lg font-extrabold text-[var(--purple)]">¿Abriste el correo en otra app? Usa un código</button></ConInfo>
+          <ConInfo que="Usar un código" texto="Te deja escribir un código de 8 números que viene en el correo, para cuando el enlace no funciona, por ejemplo si se abrió en el navegador del correo y no en el que usas normalmente."><button onClick={() => setPaso('codigo')} className="mt-4 min-h-14 w-full rounded-2xl border-2 border-[var(--purple)] bg-white text-lg font-extrabold text-[var(--purple)]">¿El enlace no funciona? Entra con un código</button></ConInfo>
           <button onClick={() => setPaso('correo')} className="mt-3 min-h-12 w-full text-base font-bold text-[var(--text-mid)]">Me equivoqué de correo</button>
           <button onClick={() => setPaso('ayuda')} className="mt-1 min-h-12 w-full text-base font-bold text-[var(--orange-dark)] underline">¿No te llega el correo? Escríbenos</button>
           <button disabled={espera > 0} onClick={() => setEspera(60)} className="mt-3 min-h-12 w-full rounded-2xl border border-[var(--border-muted)] bg-white text-base font-bold text-[var(--text-mid)] disabled:opacity-60">

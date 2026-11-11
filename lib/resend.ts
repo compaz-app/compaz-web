@@ -179,7 +179,7 @@ export async function sendAccesoEmail(email: string, nombre: string, enlaceAcces
   // Solo dígitos: se muestra tal cual y se escribe en micompaz.com/login si el enlace se abrió en otra app o teléfono
   const bloqueCodigo = codigo && /^\d{6,10}$/.test(codigo)
     ? `<div style="background:#F5F0FF;border-radius:12px;padding:14px 18px;margin:20px 0 0">
-          <p style="color:#4A3B6B;font-size:14px;line-height:1.6;margin:0 0 6px">¿Abriste este correo en otra app o en otro teléfono y el botón no funciona? Escribe este código en micompaz.com/login:</p>
+          <p style="color:#4A3B6B;font-size:14px;line-height:1.6;margin:0 0 6px">¿El botón no funciona? Entra con este código: escríbelo en micompaz.com/login.</p>
           <p style="color:#2D1464;font-size:28px;font-weight:800;letter-spacing:6px;margin:0">${codigo}</p>
         </div>`
     : ''

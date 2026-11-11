@@ -135,7 +135,7 @@ export default function LoginForm({ returnTo = '', error: errorInicial, motivo }
 
               <form onSubmit={entrarConCodigo} style={{ textAlign: 'left', marginBottom: '20px' }}>
                 <label htmlFor="codigo" style={{ display: 'block', color: '#2D1464', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>
-                  ¿Abriste el correo en otra app? Escribe el código
+                  ¿El enlace no funciona? Escribe el código del correo
                 </label>
                 <input
                   id="codigo"
