@@ -17,15 +17,23 @@ export default function SalaDaily({ url, finEpoch, ahoraEpoch, avisoSeg, etiquet
   const [error, setError] = useState('')
 
   useEffect(() => {
-    if (!caja.current) return
+    const el = caja.current
+    if (!el) return
+    let cancelado = false
     let call: DailyCall | null = null
-    try {
-      call = DailyIframe.createFrame(caja.current, { iframeStyle: { width: '100%', height: '100%', border: '0' }, showLeaveButton: true, lang: 'es' })
-      call.on('left-meeting', () => setFuera(true))
-      call.on('error', () => setError('No pudimos conectar la llamada. Cierra esta pestaña y vuelve a abrir el enlace.'))
-      call.join({ url }).catch(() => setError('No pudimos conectar la llamada. Cierra esta pestaña y vuelve a abrir el enlace.'))
-    } catch { setError('Tu navegador no permite abrir la llamada. Prueba con Chrome o Safari actualizado.') }
-    return () => { try { call?.destroy() } catch { /* ya cerrada */ } }
+    ;(async () => {
+      try {
+        // Daily solo admite una llamada por página: si quedó una a medio cerrar (React monta dos veces en desarrollo), se espera a que termine.
+        const previa = DailyIframe.getCallInstance()
+        if (previa) await previa.destroy()
+        if (cancelado) return
+        call = DailyIframe.createFrame(el, { iframeStyle: { width: '100%', height: '100%', border: '0' }, showLeaveButton: true, lang: 'es' })
+        call.on('left-meeting', () => setFuera(true))
+        call.on('error', () => setError('No pudimos conectar la llamada. Cierra esta pestaña y vuelve a abrir el enlace.'))
+        await call.join({ url })
+      } catch { if (!cancelado) setError('No pudimos conectar la llamada. Cierra esta pestaña y vuelve a abrir el enlace.') }
+    })()
+    return () => { cancelado = true; try { call?.destroy() } catch { /* ya cerrada */ } }
   }, [url])
 
   useEffect(() => {
