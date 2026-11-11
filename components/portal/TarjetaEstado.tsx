@@ -1,7 +1,7 @@
 import Boton from '@/components/ui/base/Boton'
 import Tarjeta from '@/components/ui/base/Tarjeta'
 import AccionPortal from '@/components/portal/AccionPortal'
-import type { BotonPortal, TarjetaPortal } from '@/lib/portal-estados'
+import { llevaFotoLlegada, type BotonPortal, type TarjetaPortal } from '@/lib/portal-estados'
 
 // La tarjeta del estado actual del cliente: qué pasa, qué espera de él y un botón principal (a lo sumo uno más). Todo botón lleva su ⓘ.
 // Los destinos que son una RUTA son enlaces; los que son una ACCIÓN (avisar el pago, confirmar el inicio...) ejecutan la llamada real (AccionPortal).
@@ -26,6 +26,11 @@ export default function TarjetaEstado({ tarjeta, compita, visitaId, estado, vist
       )}
       <h2 className="text-2xl font-extrabold leading-tight text-morado-profundo">{tarjeta.titulo}</h2>
       <p className="mt-2 text-lg leading-snug text-morado-claro">{tarjeta.texto}</p>
+      {/* La foto se pide solo al cliente real: el endpoint la sirve únicamente al dueño de la visita, no al equipo en vista previa. */}
+      {estado && !vistaPrevia && llevaFotoLlegada(estado) && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src="/api/visita/llegada-foto" alt="Foto que mandó tu compita al llegar" className="mt-4 max-h-72 w-full rounded-2xl object-cover" />
+      )}
       {(tarjeta.principal || tarjeta.secundario) && (
         <div className="mt-5 grid gap-3">
           {tarjeta.principal && <BotonDelPortal b={tarjeta.principal} principal tono={tarjeta.tono} visitaId={visitaId} estado={estado} vistaPrevia={vistaPrevia} />}

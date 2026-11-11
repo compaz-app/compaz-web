@@ -83,3 +83,7 @@ export function tarjetaDelEstado(c: ContextoPortal): TarjetaPortal {
   return (CATALOGO_PORTAL[c.estado.codigo] ?? CATALOGO_PORTAL.bienvenida)(c)
 }
 export const CODIGOS_CON_TARJETA = CODIGOS_ESTADO
+
+/** Estados cuya tarjeta muestra la foto que el compita mandó al llegar (se sirve desde /api/visita/llegada-foto, solo al dueño de la visita). */
+export const ESTADOS_CON_FOTO_LLEGADA: readonly string[] = ['compita_llego', 'nadie_abre']
+export const llevaFotoLlegada = (estado: string): boolean => ESTADOS_CON_FOTO_LLEGADA.includes(estado)
