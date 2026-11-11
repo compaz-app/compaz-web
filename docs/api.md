@@ -184,6 +184,7 @@ Actualiza campos editables del perfil de una compita. Solo admin.
 | POST | `/api/admin/postulaciones/resolver` | Admin (sesión verificada) | Resuelve una postulación de la bandeja: `{ id, resolucion, nota?, airtableId? }` |
 | GET | `/admin/postulaciones` | Admin | Bandeja de postulaciones que no llegaron a Airtable |
 | GET | `/api/cmc/postulaciones` | `Authorization: Bearer CMC_LECTURA_TOKEN` (sin él o sin `CAPTACION_DESDE`: 503) | Solo lectura para el Apps Script del CMC: postulaciones desde `CAPTACION_DESDE` con formato de Airtable (`{ ok, data: { records, offset } }`, `?offset=` para paginar). Ver `docs/cmc/fuente-supabase.md` |
+| POST | `/api/cmc/compitas` | `Authorization: Bearer CMC_ESCRITURA_TOKEN` (sin él: 503) | Foto horaria de Compitas habilitadas enviada por el Apps Script del CMC. Simula (solo lecturas) salvo `CMC_COMPITAS_MODO=aplicar` y sin `?dryRun=1`. 409 si la foto se rechaza (vacía, incompleta, anómala o freno). Ver `docs/cmc/compitas-desde-cmc.md` |
 
 ## Errores comunes
 

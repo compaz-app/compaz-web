@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { getAdminUser } from '@/lib/auth'
 import { createAdminSupabase } from '@/lib/supabase-server'
-import { verificarCompita, desactivarCompita } from '@/lib/compitas'
+import { verificarCompita, desactivarCompita, CompitaNoPermitidaPorCmc } from '@/lib/compitas'
 import { sendTelegramMessage, TECLADO_SIN_VISITA } from '@/lib/telegram'
 import { sendEmail } from '@/lib/email'
 import { esc } from '@/lib/html'
@@ -20,6 +20,7 @@ export async function POST(req: NextRequest) {
       await desactivarCompita(compita_id)
     }
   } catch (e) {
+    if (e instanceof CompitaNoPermitidaPorCmc) return err(e.message, 409)
     return serverError(e)
   }
 

@@ -25,9 +25,13 @@ create table compitas (
   descripcion       text,
   servicios         text[],                 -- Ej: ['acompañamiento', 'medicamentos', 'cocina']
   youtube_url       text,
-  codigo            text unique,            -- Código de invitación para el compita
+  codigo            text unique,            -- ID Compita del CMC (COM-NNNN); NULL = anterior al CMC o demo
   created_at        timestamptz not null default now()
 );
+-- Integración con el CMC (migración 20261111_cmc_compitas.sql):
+--   cmc_permite boolean (NULL = no gestionada), cmc_estado text, cmc_actualizado_en,
+--   cmc_bienvenida_enviada_en; check codigo ~ '^COM-[0-9]{4,6}$';
+--   tabla cmc_sincronizaciones (registro de fotos aplicadas o rechazadas, con antes/después).
 
 -- El mapa y el marketplace solo muestran compitas activas y verificadas.
 -- Un admin hace verificado=true para que aparezca, estado='inactivo' para ocultarla.

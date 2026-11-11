@@ -21,6 +21,7 @@ export async function latido(nombre: string): Promise<void> {
 const ESPERADOS: Record<string, number> = {
   recordatorios: 5, seguimiento: 5, 'recordatorio-cuestionario': 10, 'cierre-rechazo': 30, 'recordatorio-visita': 30,
   'reintentar-airtable': 15, 'conciliar-airtable': 60,
+  'cmc-compitas': 60, // foto horaria del CMC (solo cuenta desde la primera foto aplicada)
 }
 
 /** Alerta al admin (máx. 1 vez por hora y cron) si un cron dejó de ejecutarse. */

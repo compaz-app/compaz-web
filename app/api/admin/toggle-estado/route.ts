@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import { getAdminUser } from '@/lib/auth'
-import { desactivarCompita, reactivarCompita } from '@/lib/compitas'
+import { desactivarCompita, reactivarCompita, CompitaNoPermitidaPorCmc } from '@/lib/compitas'
 import { ok, err, unauthorized, serverError } from '@/lib/api'
 
 export async function POST(req: NextRequest) {
@@ -17,6 +17,7 @@ export async function POST(req: NextRequest) {
     }
     return ok({ compita_id, estado })
   } catch (e) {
+    if (e instanceof CompitaNoPermitidaPorCmc) return err(e.message, 409)
     return serverError(e)
   }
 }

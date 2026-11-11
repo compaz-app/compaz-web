@@ -4,6 +4,7 @@ import { getAdminUser } from '@/lib/auth'
 import { ok, err, unauthorized, serverError } from '@/lib/api'
 import { sendBienvenidaCompita } from '@/lib/resend'
 import { validarPerfil, emailValido } from '@/lib/validar'
+import { existePerfilCmcConEmail } from '@/lib/compitas'
 
 export async function POST(req: NextRequest) {
   if (!(await getAdminUser())) return unauthorized()
@@ -22,6 +23,8 @@ export async function POST(req: NextRequest) {
   const { nombre, zona, descripcion, servicios, foto_url, youtube_url } = v.datos
   const esDemo = body.es_demo === true
   const apellido = typeof body.apellido === 'string' && body.apellido.trim() ? body.apellido.trim() : null
+
+  if (await existePerfilCmcConEmail(email)) return err('Ya existe un perfil creado desde el CMC con ese correo', 409)
 
   const admin = createAdminSupabase()
   const { data, error } = await admin

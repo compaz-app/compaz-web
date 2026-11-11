@@ -160,6 +160,11 @@ ADMIN_EMAILS=juan@compaz.com,otro@compaz.com
 
 # App URL (para links en Telegram)
 NEXT_PUBLIC_APP_URL=https://micompaz.com
+
+# CMC (Apps Script de la hoja de selección)
+CMC_LECTURA_TOKEN=        # lectura de postulaciones (GET /api/cmc/postulaciones)
+CMC_ESCRITURA_TOKEN=      # foto de Compitas habilitadas (POST /api/cmc/compitas); sin él: 503
+CMC_COMPITAS_MODO=        # «aplicar» para aplicar; cualquier otro valor = solo simular
 ```
 
 ---
@@ -235,3 +240,23 @@ Formulario → /api/waitlist (Turnstile, honeypot, límites: sin cambios)
 **Permisos.** `personas`, `postulaciones` y `eventos` no son accesibles para `anon` ni `authenticated`; el servidor escribe solo a través de funciones. `eventos` no admite cambios ni borrados.
 
 Migración: `supabase/migrations/20261022_captacion.sql`. Pruebas: `tests/18-captacion.test.ts`, `tests/sql/captacion.sql` y `tests/sql/concurrencia.sh` (estas dos, solo en staging o en una base desechable).
+
+---
+
+## 13. Compitas habilitadas en el CMC → dashboard → solicitudes
+
+```
+CMC: Luis o Juan habilitan (Etapa de selección = Habilitado, Activo, Acepta = Sí)
+→ cada hora el Apps Script publica la foto de Habilitados (POST /api/cmc/compitas)
+→ la web crea la Compita por su COM-: INACTIVA y sin verificar, «CMC permite»
+  y le envía UNA bienvenida con los pasos de Telegram
+→ la Compita vincula Telegram (nombre + código por correo) y completa /perfil
+→ Juan pulsa Reactivar y Verificar en el dashboard → aparece en la oferta y recibe solicitudes
+CMC: pausa, suspensión, baja o «Acepta = No»
+→ en la siguiente foto sale de la oferta (inactiva, sin verificar); conserva clientes,
+  visitas y solicitudes; aviso en Atención para revisar cada caso
+CMC: reactivación → recupera el permiso, pero sigue oculta hasta que Juan la verifica
+```
+
+El CMC decide si una Compita **puede** trabajar (`cmc_permite`); la web decide si **ya** recibe solicitudes. Las Compitas anteriores al CMC (sin código) y las demos no cambian. Diseño, reglas, freno de seguridad y despliegue: `docs/cmc/compitas-desde-cmc.md`.
+

@@ -48,6 +48,7 @@ Pendientes de seguridad antes de abrir al público (informes completos en `~/sec
 - `lib/compitas.ts` — lógica de negocio: compitas
 - `lib/solicitudes.ts` — lógica de negocio: solicitudes de entrevista
 - `lib/usuarios.ts` — lógica de negocio: usuarios/clientes
+- `lib/cmc-compitas.ts` — Compitas habilitadas en el CMC → `compitas` (ver `docs/cmc/compitas-desde-cmc.md`)
 - `lib/telegram.ts` — envío de mensajes por Telegram
 - `lib/resend.ts` — envío de emails
 - `lib/daily.ts` — salas de videollamada

@@ -10,6 +10,7 @@ import LogoutButton from '@/components/ui/LogoutButton'
 import { ZONAS_MUNICIPIOS as ZONAS } from '@/lib/venezuela'
 import RegistrarPago from '@/components/admin/RegistrarPago'
 import DemoTab from './DemoTab'
+import EstadoCmcCompita from '@/components/admin/EstadoCmcCompita'
 
 type VisitaConRelaciones = Visita & { compita: Compita; usuario: Usuario }
 type UsuarioConCompita = Usuario & { compita: { nombre: string; zona: string; verificado: boolean } | null }
@@ -205,6 +206,9 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
     })
     if (res.ok) {
       setCompitas((prev) => prev.map((c) => c.id === compitaId ? { ...c, estado: nuevoEstado as 'activo' | 'inactivo' } : c))
+    } else {
+      const j = await res.json().catch(() => null) as { error?: string } | null
+      alert(j?.error ?? 'No se pudo cambiar el estado')
     }
   }
 
@@ -404,6 +408,9 @@ export default function AdminDashboard({ visitasActivas: inicial, visitasPreVisi
     if (res.ok) {
       // El servidor también ajusta el estado: verificar activa a la compita; quitar la verificación la desactiva
       setCompitas((prev) => prev.map((c) => c.id === compitaId ? { ...c, verificado: !actual, estado: !actual ? 'activo' : 'inactivo' } : c))
+    } else {
+      const j = await res.json().catch(() => null) as { error?: string } | null
+      alert(j?.error ?? 'No se pudo cambiar la verificación')
     }
   }
 
@@ -1724,8 +1731,12 @@ function CompitaCard({ c, onToggleVerificado, onToggleEstado, onVerPerfil, onTog
           {c.telegram_chat_id ? '✓ Telegram activo' : '✗ Telegram no vinculado'}
         </span>
       </div>
+      <EstadoCmcCompita c={c} />
     </div>
   )
+
+  // El CMC no permite activarla: se ocultan Verificar y Reactivar (el servidor también lo impide)
+  const bloqueadaPorCmc = c.cmc_permite === false
 
   const botonesAccion = (
     <div style={esPanel
@@ -1736,13 +1747,13 @@ function CompitaCard({ c, onToggleVerificado, onToggleEstado, onVerPerfil, onTog
         style={{ ...btnBase, background: 'white', color: '#7C3AED', borderColor: '#8B5CF6', gridColumn: esPanel ? '1 / -1' : undefined }}>
         ✏️ Ver perfil
       </button>
-      {!isBloqueada && !isDesactivada && (
+      {!isBloqueada && !isDesactivada && !(bloqueadaPorCmc && !c.verificado) && (
         <button onClick={() => onToggleVerificado(c.id, c.verificado)}
           style={{ ...btnBase, background: isVerificadaAny ? '#F0FDF4' : '#2D1464', color: isVerificadaAny ? '#15803d' : 'white', borderColor: isVerificadaAny ? '#22c55e' : '#2D1464' }}>
           {isVerificadaAny ? '✓ Verificado — Quitar' : '✓ Verificar'}
         </button>
       )}
-      {!isBloqueada && (
+      {!isBloqueada && !(bloqueadaPorCmc && isDesactivada) && (
         <button onClick={() => onToggleEstado(c.id, c.estado)}
           style={{ ...btnBase, background: 'white', color: isDesactivada ? '#22c55e' : '#6B5C90', borderColor: isDesactivada ? '#22c55e' : '#D1C8E0' }}>
           {isDesactivada ? 'Reactivar' : 'Desactivar'}
