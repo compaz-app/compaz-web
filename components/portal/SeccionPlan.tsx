@@ -1,4 +1,5 @@
 import PlanesPago from '@/components/ui/PlanesPago'
+import EliminarCuenta from '@/components/portal/EliminarCuenta'
 import Tarjeta from '@/components/ui/base/Tarjeta'
 import type { DatosPortal } from '@/lib/portal-datos'
 
@@ -34,6 +35,7 @@ export default function SeccionPlan({ d, vistaPrevia }: { d: DatosPortal; vistaP
         )}
       </section>
       {!vistaPrevia && <PlanesPago pendiente={d.pendientePago as never} />}
+      {!vistaPrevia && <EliminarCuenta restantes={d.cupo?.restantes ?? 0} vence={d.cupo?.vence ?? null} />}
     </div>
   )
 }

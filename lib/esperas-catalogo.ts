@@ -19,6 +19,7 @@ export async function catalogoEsperas(): Promise<FilaLimite[]> {
     acceso_correo: 'Un enlace por minuto y correo',
     reconexion_llamada: 'Una reconexión cada 2 minutos',
     ayuda_cliente: 'Un aviso por hora por cliente',
+    eliminar_cuenta_enlace: 'Un enlace cada 10 minutos por cliente',
     chat_limite: '10 mensajes por hora y 50 por día por conexión',
     postulacion_conexion: '50 postulaciones por hora por conexión',
     postulacion_correo: 'Una por correo',

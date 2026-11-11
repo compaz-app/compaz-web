@@ -6,6 +6,7 @@ import { cronAutorizado } from '@/lib/cron'
 import { ok, err } from '@/lib/api'
 import { getAjuste } from '@/lib/ajustes'
 import { borrarFotosVencidas } from '@/lib/fotos-privadas'
+import { borrarCuentasVencidas } from '@/lib/cuenta-eliminar'
 import { sincronizarAdmins } from '@/lib/admins'
 
 export async function POST(req: NextRequest) {
@@ -42,6 +43,9 @@ export async function POST(req: NextRequest) {
   // Fotos privadas cuyo plazo venció: se borran de verdad (archivo y marca) y queda un evento.
   const fotos = await borrarFotosVencidas()
   if (fotos.fallos > 0) fallos.push('fotos privadas')
+  // Cuentas cuyo plazo de 7 días se cumplió: se vacían sus datos personales (pagos y visitas quedan anonimizados).
+  const cuentas = await borrarCuentasVencidas()
+  if (cuentas.fallos > 0) fallos.push('borrado de cuentas')
   // La lista de administradores de la base (tiempo real) se mantiene igual a ADMIN_EMAILS.
   const admins = await sincronizarAdmins()
   if (!admins.ok) { console.error('[limpieza] administradores:', admins.error); fallos.push('lista de administradores') }

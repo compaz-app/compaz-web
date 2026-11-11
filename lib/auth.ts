@@ -67,7 +67,8 @@ export async function getClienteActivo() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
   if (isAdminEmail(user.email ?? '')) return user
-  const { data } = await createAdminSupabase().from('usuarios').select('plan').eq('id', user.id).maybeSingle()
-  if (!data || data.plan === 'bloqueado') return null
+  const { data } = await createAdminSupabase().from('usuarios').select('plan, eliminacion_programada_en, eliminada_en').eq('id', user.id).maybeSingle()
+  // Cuenta desactivada a la espera del borrado (o ya borrada): sin acceso hasta que entre de nuevo y la reactive.
+  if (!data || data.plan === 'bloqueado' || data.eliminacion_programada_en || data.eliminada_en) return null
   return user
 }
