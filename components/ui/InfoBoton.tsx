@@ -23,7 +23,7 @@ export default function InfoBoton({ que, texto }: { /** Nombre corto del botón 
   return (
     <span ref={raiz} style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
       <button type="button" aria-label={/^(Por qué|Qué es|Qué son)/.test(que) ? que : `Qué hace: ${que}`} aria-expanded={abierto} aria-controls={abierto ? id : undefined} onClick={() => setAbierto((v) => !v)}
-        style={{ width: '32px', height: '32px', padding: 0, border: 'none', background: 'transparent', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+        style={{ width: '44px', height: '44px', margin: '-6px', padding: 0, border: 'none', background: 'transparent', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
         <span aria-hidden style={{ width: '20px', height: '20px', borderRadius: '50%', border: `1.5px solid ${colors.textoSutil}`, color: colors.textoSutil, fontSize: '12px', fontWeight: 800, fontStyle: 'italic', fontFamily: 'Georgia, serif', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1, background: abierto ? colors.amarilloClaro : 'transparent' }}>i</span>
       </button>
       {abierto && (
