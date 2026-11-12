@@ -996,7 +996,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       {/* Actualiza la página cuando cambia el estado de la visita */}
       {usuario && <VisitaWatcher usuarioId={targetUid} visitaActivaId={visitaActiva?.id ?? null} compitaNombre={visitaActiva?.compita?.nombre} />}
       {/* Refresca cada 15 s para mostrar cambios en llamadas y solicitudes */}
-      <AutoRefresh intervaloSeg={15} />
+      <AutoRefresh intervaloSeg={15} rapido={!!visitaActiva} reposoSeg={60} />
     </div>
   )
 }

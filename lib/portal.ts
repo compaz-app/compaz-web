@@ -2,7 +2,8 @@
 // El portal NUEVO reemplaza al viejo (/dashboard) por etapas: mientras el ajuste `portal_nuevo` esté en 0 solo el equipo lo ve, en vista previa
 // de un cliente. Con el ajuste en 1, los clientes lo ven y el viejo deja de usarse.
 
-import { cargarFoto, decidirEstado, PASOS_PORTAL, type EstadoCliente } from '@/lib/estado-cliente'
+import { cargarFoto, decidirEstado, PASOS_PORTAL, type EstadoCliente, type CodigoEstado } from '@/lib/estado-cliente'
+import { SITUACION } from '@/lib/panel-caso-tipos'
 import { tarjetaDelEstado, nombreVisible, type TarjetaPortal } from '@/lib/portal-estados'
 import { qRol } from '@/lib/links'
 
@@ -22,6 +23,15 @@ export interface PortalCliente {
   /** Nombre a mostrar del compita (corto antes de pagar) y su inicial, si hay uno en juego. */
   compita: string | null
   pagado: boolean
+}
+
+/**
+ * ¿Hace falta refrescar rápido el portal? Solo si hay algo que puede cambiar en cualquier momento: una visita o una sala en marcha, o una respuesta
+ * que depende del compita. En cualquier otro momento (por ejemplo, mirando su plan) basta con un refresco lento: cada refresco cuesta una carga completa
+ * de la página en el servidor.
+ */
+export function refrescoRapido(estado: { codigo: CodigoEstado; visitaId?: string; sala?: string }): boolean {
+  return !!estado.visitaId || !!estado.sala || SITUACION[estado.codigo].espera === 'compita'
 }
 
 export async function cargarPortal(clienteId: string, ahora: Date = new Date()): Promise<PortalCliente> {

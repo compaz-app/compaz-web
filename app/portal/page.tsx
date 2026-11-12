@@ -3,7 +3,7 @@
 import { redirect } from 'next/navigation'
 import { requireAuth, getClienteActivo, isAdminEmail } from '@/lib/auth'
 import { clienteVePortalNuevo } from '@/lib/portal-activacion'
-import { accesoPortal, cargarPortal } from '@/lib/portal'
+import { accesoPortal, cargarPortal, refrescoRapido } from '@/lib/portal'
 import Pasos from '@/components/ui/base/Pasos'
 import Aviso from '@/components/ui/base/Aviso'
 import TarjetaEstado from '@/components/portal/TarjetaEstado'
@@ -58,7 +58,7 @@ export default async function PortalPage({ searchParams }: { searchParams: Promi
       {datos && pestana === 'familiar' && <SeccionFamiliar d={datos} vistaPrevia={esAdmin} />}
       {datos && pestana === 'plan' && <SeccionPlan d={datos} vistaPrevia={esAdmin} />}
       {!esAdmin && <VisitaWatcher usuarioId={uid} visitaActivaId={portal.estado.visitaId ?? null} compitaNombre={portal.compita ?? undefined} />}
-      {!esAdmin && <AutoRefresh intervaloSeg={15} />}
+      {!esAdmin && <AutoRefresh intervaloSeg={15} rapido={refrescoRapido(portal.estado)} reposoSeg={90} />}
     </main>
   )
 }

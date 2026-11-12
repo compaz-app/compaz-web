@@ -89,3 +89,39 @@ describe('eliminar cuenta: se anonimiza solo si la persona pidió borrar sus dat
     assert.equal((await eliminarCompita(del('/api/admin/eliminar-compita', { compita_id: c.id }))).status, 409)
   })
 })
+
+import { refrescoRapido } from '@/lib/portal'
+import { cargarFotos, cargarFoto, decidirEstado } from '@/lib/estado-cliente'
+
+describe('E-01 y E-02: menos consultas y menos recargas', () => {
+  test('el portal solo refresca rápido cuando algo puede cambiar de verdad', () => {
+    assert.equal(refrescoRapido({ codigo: 'visita_en_curso', visitaId: 'v1' }), true)
+    assert.equal(refrescoRapido({ codigo: 'solicitud_recibida' }), true)      // espera al compita
+    assert.equal(refrescoRapido({ codigo: 'agendar_otra' }), false)           // mirando su plan: refresco lento
+    assert.equal(refrescoRapido({ codigo: 'bienvenida' }), false)
+  })
+  test('AutoRefresh no refresca en pestañas ocultas y se pone al día al volver', async () => {
+    const f = (await import('node:fs')).readFileSync('components/ui/AutoRefresh.tsx', 'utf8')
+    assert.match(f, /visibilityState === 'visible'/); assert.match(f, /visibilitychange/); assert.match(f, /rapido/)
+  })
+  test('la foto de varios clientes es igual a la de cada uno por separado', async () => {
+    const lucia = mkCompita({ nombre: 'Lucía' })
+    const a = mkCliente({ email: 'a1@mail.test', nombre: 'Ana', compita_id: lucia.id }); const b = mkCliente({ email: 'b1@mail.test', nombre: 'Beto' }); const c = mkCliente({ email: 'c1@mail.test', nombre: 'Cira' })
+    db.seed('solicitudes', { cliente_id: b.id, compita_id: lucia.id, estado: 'pendiente', tipo: 'entrevista', created_at: new Date().toISOString() })
+    db.seed('visitas', { usuario_id: a.id, compita_id: lucia.id, estado: 'programada', created_at: new Date().toISOString() })
+    db.seed('pagos_plan', { usuario_id: a.id, tipo: 'plan', plan: 'quincenal', visitas: 2, monto_usd: 75, estado: 'activo', inicio: new Date().toISOString(), vence: new Date(Date.now() + 5e9).toISOString() })
+    const ahora = new Date()
+    const lote = await cargarFotos([a.id, b.id, c.id], ahora)
+    for (const id of [a.id, b.id, c.id]) {
+      const solo = await cargarFoto(id, ahora)
+      assert.deepEqual(lote.get(id), solo, id)
+      assert.equal(decidirEstado(lote.get(id)!).codigo, decidirEstado(solo).codigo)
+    }
+    assert.equal(lote.get(a.id)!.cupo!.restantes, 1); // 2 del plan menos la visita ya agendada; assert.equal(lote.get(b.id)!.solicitudes.length, 1); assert.equal(lote.get(c.id)!.solicitudes.length, 0)
+  })
+  test('más clientes que una tanda se cargan todos', async () => {
+    const ids = Array.from({ length: 40 }, (_, i) => mkCliente({ email: `m${i}@mail.test`, nombre: `M${i}` }).id)
+    const lote = await cargarFotos(ids)
+    assert.equal(lote.size, 40); assert.ok(ids.every((id) => lote.get(id)!.nombre.startsWith('M')))
+  })
+})

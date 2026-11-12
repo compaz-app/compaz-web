@@ -1,15 +1,14 @@
 // Datos de Seguimiento (servidor). La etapa sale del MISMO motor que el portal del cliente (cargarFoto + decidirEstado): así lo que ve el
-// equipo nunca contradice lo que ve la familia. Cuesta varias consultas por cliente, por eso se limita a los 150 más recientes y se
-// procesan de 25 en 25. Si algún día hay cientos de clientes activos, hay que pasar a una consulta por lotes.
+// equipo nunca contradice lo que ve la familia. Se limita a los 150 clientes más recientes y se carga por tandas de 15 con consultas por
+// lotes (cargarFotos): unas 12 consultas por tanda, no por cliente.
 import { createAdminSupabase } from '@/lib/supabase-server'
-import { cargarFoto, decidirEstado, pasoDe, type FotoCliente } from '@/lib/estado-cliente'
+import { cargarFotos, decidirEstado, pasoDe, type FotoCliente } from '@/lib/estado-cliente'
 import { getAjustes } from '@/lib/ajustes'
 import { etapaDePaso, umbralesDeAjustes, urgenciaDe, type FilaSeguimiento } from '@/lib/panel-seguimiento-tipos'
 import { SITUACION } from '@/lib/panel-caso-tipos'
 import { conCacheCorto } from '@/lib/cache-corto'
 
 export const MAX_CLIENTES_SEGUIMIENTO = 150
-const LOTE = 25
 export const CACHE_SEGUIMIENTO_MS = 30_000
 
 /** Cuándo pasó lo último con este cliente (solicitud, visita o cancelación); si no hay nada, desde que se registró (el registro solo cuenta de respaldo: siempre es anterior a lo demás). */
@@ -30,26 +29,25 @@ async function calcularSeguimiento(ahora: Date): Promise<FilaSeguimiento[]> {
   const clientes = (data ?? []).filter((u) => !u.eliminada_en && u.plan !== 'bloqueado').slice(0, MAX_CLIENTES_SEGUIMIENTO)
   const filas: FilaSeguimiento[] = []
   const umbrales = umbralesDeAjustes(await getAjustes())
-  for (let i = 0; i < clientes.length; i += LOTE) {
-    const lote = await Promise.all(clientes.slice(i, i + LOTE).map(async (u) => {
-      try {
-        const foto = await cargarFoto(String(u.id), ahora)
-        const estado = decidirEstado(foto)
-        // Quien aún no pidió nada no está "en una etapa": no hay nada que seguirle todavía.
-        if (estado.codigo === 'bienvenida') return null
-        const ultimo = ultimoMovimiento(foto, String(u.created_at))
-        const etapa = etapaDePaso(pasoDe(estado.codigo))
-        const horas = Math.max(0, Math.round((ahora.getTime() - new Date(ultimo).getTime()) / 3_600_000))
-        const sol = [...foto.solicitudes].sort((a, b) => b.creadaEn.localeCompare(a.creadaEn))[0]
-        const compitaId = foto.compitaAsignado?.id ?? sol?.compitaId ?? null
-        const compita = foto.compitaAsignado?.nombre ?? sol?.compitaNombre ?? null
-        return { id: String(u.id), nombre: foto.nombre, compitaId, compita, etapa, horas, urgencia: urgenciaDe(etapa, horas, umbrales), ultimo, espera: SITUACION[estado.codigo].espera } satisfies FilaSeguimiento
-      } catch (e) {
-        console.error('[seguimiento] no se pudo calcular un cliente:', e instanceof Error ? e.message : e)
-        return null
-      }
-    }))
-    for (const f of lote) if (f) filas.push(f)
+  // Una cantidad fija de consultas por cada 15 clientes (cargarFotos), no unas 12 por cliente.
+  const fotos = await cargarFotos(clientes.map((u) => String(u.id)), ahora)
+  for (const u of clientes) {
+    try {
+      const foto = fotos.get(String(u.id))
+      if (!foto) continue
+      const estado = decidirEstado(foto)
+      // Quien aún no pidió nada no está "en una etapa": no hay nada que seguirle todavía.
+      if (estado.codigo === 'bienvenida') continue
+      const ultimo = ultimoMovimiento(foto, String(u.created_at))
+      const etapa = etapaDePaso(pasoDe(estado.codigo))
+      const horas = Math.max(0, Math.round((ahora.getTime() - new Date(ultimo).getTime()) / 3_600_000))
+      const sol = [...foto.solicitudes].sort((a, b) => b.creadaEn.localeCompare(a.creadaEn))[0]
+      const compitaId = foto.compitaAsignado?.id ?? sol?.compitaId ?? null
+      const compita = foto.compitaAsignado?.nombre ?? sol?.compitaNombre ?? null
+      filas.push({ id: String(u.id), nombre: foto.nombre, compitaId, compita, etapa, horas, urgencia: urgenciaDe(etapa, horas, umbrales), ultimo, espera: SITUACION[estado.codigo].espera } satisfies FilaSeguimiento)
+    } catch (e) {
+      console.error('[seguimiento] no se pudo calcular un cliente:', e instanceof Error ? e.message : e)
+    }
   }
   return filas
 }

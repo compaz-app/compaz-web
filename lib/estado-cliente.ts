@@ -9,9 +9,8 @@
 // REGLA: nunca queda "sin estado". Si la foto no encaja en nada, cae en 'bienvenida' (elegir un compita), que siempre tiene una acción útil.
 
 import { createAdminSupabase } from '@/lib/supabase-server'
-import { cupoDelPlan } from '@/lib/visitas'
+import { cuposDelPlan } from '@/lib/visitas'
 import { fichaCompleta } from '@/lib/ficha'
-import { personaPausada } from '@/lib/pausas'
 
 /** Los pasos de la barra de progreso del portal, en orden. */
 export const PASOS_PORTAL = ['Elegir', 'Entrevista', 'Decidir', 'Pagar', 'Ficha', 'Visitas'] as const
@@ -199,55 +198,104 @@ export function decidirEstado(f: FotoCliente): EstadoCliente {
 }
 
 // ── La carga (única parte que toca la base) ────────────────────────────────────────────────────────────────────
-export async function cargarFoto(clienteId: string, ahora: Date = new Date()): Promise<FotoCliente> {
+/** Cuántos clientes se cargan por tanda: con 15 por tanda las consultas con `in(...)` no pasan del tope de filas de la base (1000). */
+export const CLIENTES_POR_TANDA = 15
+
+type Fila = Record<string, unknown>
+function agrupar<T extends Fila>(filas: T[] | null | undefined, clave: string): Map<string, T[]> {
+  const m = new Map<string, T[]>()
+  for (const f of filas ?? []) { const k = String(f[clave]); const l = m.get(k); if (l) l.push(f); else m.set(k, [f]) }
+  return m
+}
+
+/**
+ * La foto de VARIOS clientes con una cantidad fija de consultas (unas 12 por tanda de hasta 15 clientes), en vez de unas 12 por cliente.
+ * Es la única implementación: cargarFoto de uno solo la usa con un lote de uno, así el portal, el caso y Seguimiento dicen siempre lo mismo.
+ */
+export async function cargarFotos(clienteIds: string[], ahora: Date = new Date()): Promise<Map<string, FotoCliente>> {
+  const salida = new Map<string, FotoCliente>()
+  for (let i = 0; i < clienteIds.length; i += CLIENTES_POR_TANDA) {
+    for (const [id, foto] of await cargarTanda(clienteIds.slice(i, i + CLIENTES_POR_TANDA), ahora)) salida.set(id, foto)
+  }
+  return salida
+}
+
+async function cargarTanda(ids: string[], ahora: Date): Promise<Map<string, FotoCliente>> {
+  const salida = new Map<string, FotoCliente>()
+  if (ids.length === 0) return salida
   const admin = createAdminSupabase()
   const hace30 = new Date(ahora.getTime() - 30 * 24 * HORA).toISOString()
-  const [{ data: u }, { data: sols }, { data: vis }, { data: canc }, { data: pago }, cupo] = await Promise.all([
-    admin.from('usuarios').select('*, compita:compitas(id, nombre)').eq('id', clienteId).maybeSingle(),
-    admin.from('solicitudes').select('id, estado, tipo, compita_id, slot_confirmado, slots_propuestos, seguimiento_enviado, token_respuesta, confirmacion_cliente, created_at, compitas(nombre)').eq('cliente_id', clienteId).gte('created_at', hace30).order('created_at', { ascending: false }),
-    admin.from('visitas').select('id, estado, fecha_programada, hora_inicio_programada, llegada_en, sin_acceso_en, fin, created_at, cita_propuesta_fecha, cita_propuesta_inicio, compita:compitas(nombre)').eq('usuario_id', clienteId).in('estado', ['pre_visita', 'programada', 'confirmando_inicio', 'en_curso', 'terminada']).order('created_at', { ascending: false }).limit(20),
-    admin.from('cancelaciones').select('visita_id, cancelado_por, justificada_por, creado_en').eq('usuario_id', clienteId).gte('creado_en', new Date(ahora.getTime() - AVISO_CANCELACION_H * HORA).toISOString()),
-    admin.from('solicitudes_pago').select('id').eq('usuario_id', clienteId).eq('estado', 'pendiente').maybeSingle(),
-    cupoDelPlan(clienteId).catch(() => null),
+  const [usR, solR, visR, cancR, pagoR, pausasR, cupos] = await Promise.all([
+    admin.from('usuarios').select('*, compita:compitas(id, nombre)').in('id', ids),
+    admin.from('solicitudes').select('id, cliente_id, estado, tipo, compita_id, slot_confirmado, slots_propuestos, seguimiento_enviado, token_respuesta, confirmacion_cliente, created_at, compitas(nombre)').in('cliente_id', ids).gte('created_at', hace30).order('created_at', { ascending: false }),
+    admin.from('visitas').select('id, usuario_id, estado, fecha_programada, hora_inicio_programada, llegada_en, sin_acceso_en, fin, created_at, cita_propuesta_fecha, cita_propuesta_inicio, compita:compitas(nombre)').in('usuario_id', ids).in('estado', ['pre_visita', 'programada', 'confirmando_inicio', 'en_curso', 'terminada']).order('created_at', { ascending: false }).limit(1000),
+    admin.from('cancelaciones').select('usuario_id, visita_id, cancelado_por, justificada_por, creado_en').in('usuario_id', ids).gte('creado_en', new Date(ahora.getTime() - AVISO_CANCELACION_H * HORA).toISOString()),
+    admin.from('solicitudes_pago').select('id, usuario_id').in('usuario_id', ids).eq('estado', 'pendiente'),
+    admin.from('pausas_contacto').select('persona_id').eq('rol', 'cliente').eq('activa', true).in('persona_id', ids),
+    cuposDelPlan(ids).catch(() => new Map<string, never>()),
   ])
-  const solRows = (sols ?? []) as unknown as { id: string; estado: string; tipo: string | null; compita_id: string; slot_confirmado: string | null; slots_propuestos: string[] | null; seguimiento_enviado: boolean | null; token_respuesta: string | null; confirmacion_cliente: boolean | null; created_at: string; compitas: { nombre: string } | null }[]
-  const ids = solRows.map((s) => s.id)
-  const [{ data: reservas }, { data: avisos }, { data: motivos }] = ids.length
-    ? await Promise.all([
-      admin.from('reservas_horario').select('solicitud_id, estado, creada_en').in('solicitud_id', ids).order('creada_en', { ascending: false }),
-      admin.from('avisos').select('entidad_id').eq('plantilla', 'solicitud_nueva').eq('estado', 'enviado').in('entidad_id', ids),
-      admin.from('eventos').select('entidad_id').eq('tipo', 'motivo_no_contratar').in('entidad_id', ids),
-    ])
-    : [{ data: [] }, { data: [] }, { data: [] }]
+  const solRows = (solR.data ?? []) as unknown as (Fila & { id: string; cliente_id: string; estado: string; tipo: string | null; compita_id: string; slot_confirmado: string | null; slots_propuestos: string[] | null; seguimiento_enviado: boolean | null; token_respuesta: string | null; confirmacion_cliente: boolean | null; created_at: string; compitas: { nombre: string } | null })[]
+  const solIds = solRows.map((x) => x.id)
+  const pagoPorUsuario = new Map<string, string>(); for (const p of (pagoR.data ?? []) as { id: string; usuario_id: string }[]) if (!pagoPorUsuario.has(p.usuario_id)) pagoPorUsuario.set(p.usuario_id, p.id)
+  const pagoIds = [...pagoPorUsuario.values()]
+  const [{ data: reservas }, { data: avisos }, { data: motivos }, { data: insistencias }] = await Promise.all([
+    solIds.length ? admin.from('reservas_horario').select('solicitud_id, estado, creada_en').in('solicitud_id', solIds).order('creada_en', { ascending: false }) : Promise.resolve({ data: [] }),
+    solIds.length ? admin.from('avisos').select('entidad_id').eq('plantilla', 'solicitud_nueva').eq('estado', 'enviado').in('entidad_id', solIds) : Promise.resolve({ data: [] }),
+    solIds.length ? admin.from('eventos').select('entidad_id').eq('tipo', 'motivo_no_contratar').in('entidad_id', solIds) : Promise.resolve({ data: [] }),
+    pagoIds.length ? admin.from('eventos').select('entidad_id').eq('entidad', 'pago').eq('tipo', 'pago_insistido').in('entidad_id', pagoIds) : Promise.resolve({ data: [] }),
+  ])
   const reservaDe = new Map<string, string>(); for (const r of (reservas ?? []) as { solicitud_id: string; estado: string }[]) if (!reservaDe.has(r.solicitud_id)) reservaDe.set(r.solicitud_id, r.estado)
   const entregados = new Set(((avisos ?? []) as { entidad_id: string }[]).map((a) => a.entidad_id))
   const conMotivo = new Set(((motivos ?? []) as { entidad_id: string }[]).map((m) => m.entidad_id))
-  let insistido = false
-  if (pago) { const { count } = await admin.from('eventos').select('id', { count: 'exact', head: true }).eq('entidad', 'pago').eq('entidad_id', (pago as { id: string }).id).eq('tipo', 'pago_insistido'); insistido = (count ?? 0) > 0 }
-  const usuario = u as ({ compita: { id: string; nombre: string } | null } & Record<string, unknown>) | null
+  const insistidos = new Set(((insistencias ?? []) as { entidad_id: string }[]).map((e) => e.entidad_id))
+  const pausadas = new Set(((pausasR.data ?? []) as { persona_id: string }[]).map((x) => x.persona_id))
+  const usuarios = new Map(((usR.data ?? []) as unknown as (Fila & { id: string })[]).map((u) => [u.id, u]))
+  const solPorCliente = agrupar(solRows, 'cliente_id')
+  const visPorCliente = agrupar((visR.data ?? []) as unknown as Fila[], 'usuario_id')
+  const cancPorCliente = agrupar((cancR.data ?? []) as unknown as Fila[], 'usuario_id')
 
-  return {
-    ahora,
-    pausada: await personaPausada('cliente', clienteId),
-    fichaCompleta: usuario ? fichaCompleta(usuario as never) : false,
-    zonaHoraria: (usuario?.zona_horaria as string | null | undefined) ?? null,
-    nombre: String(usuario?.nombre ?? ''),
-    compitaAsignado: usuario?.compita ?? null,
-    solicitudes: solRows.map((s) => ({
-      id: s.id, estado: s.estado, tipo: s.tipo, compitaId: s.compita_id, compitaNombre: s.compitas?.nombre ?? '', slotConfirmado: s.slot_confirmado,
-      slotsPropuestos: (s.slots_propuestos ?? []).length, seguimientoEnviado: !!s.seguimiento_enviado, tokenRespuesta: !!s.token_respuesta, token: s.token_respuesta,
-      clienteDijoNo: s.confirmacion_cliente === false, motivoRegistrado: conMotivo.has(s.id), avisoEntregado: entregados.has(s.id),
-      reserva: (reservaDe.get(s.id) as SolicitudFoto['reserva']) ?? null, creadaEn: s.created_at,
-    })),
-    pagoPendiente: pago ? { id: (pago as { id: string }).id, insistido } : null,
-    cupo: cupo ? { restantes: cupo.restantes } : null,
-    visitas: ((vis ?? []) as unknown as { id: string; estado: string; fecha_programada: string | null; hora_inicio_programada: string | null; llegada_en: string | null; sin_acceso_en: string | null; fin: string | null; created_at: string; cita_propuesta_fecha: string | null; cita_propuesta_inicio: string | null; compita: { nombre: string } | null }[]).map((v) => ({
-      citaPropuesta: v.cita_propuesta_fecha && v.cita_propuesta_inicio ? { fecha: v.cita_propuesta_fecha, inicio: v.cita_propuesta_inicio } : null,
-      id: v.id, estado: v.estado, compitaNombre: v.compita?.nombre ?? '', fechaProgramada: v.fecha_programada, horaInicio: v.hora_inicio_programada,
-      llegadaEn: v.llegada_en, sinAccesoEn: v.sin_acceso_en, fin: v.fin, creadaEn: v.created_at,
-    })),
-    cancelaciones: ((canc ?? []) as { visita_id: string | null; cancelado_por: CancelacionFoto['por']; justificada_por: string | null; creado_en: string }[]).map((c) => ({ visitaId: c.visita_id, por: c.cancelado_por, justificadaPor: c.justificada_por, creadaEn: c.creado_en })),
+  for (const clienteId of ids) {
+    const usuario = (usuarios.get(clienteId) ?? null) as ({ compita: { id: string; nombre: string } | null } & Record<string, unknown>) | null
+    const pagoId = pagoPorUsuario.get(clienteId)
+    const cupo = cupos.get(clienteId) ?? null
+    salida.set(clienteId, {
+      ahora,
+      pausada: pausadas.has(clienteId),
+      fichaCompleta: usuario ? fichaCompleta(usuario as never) : false,
+      zonaHoraria: (usuario?.zona_horaria as string | null | undefined) ?? null,
+      nombre: String(usuario?.nombre ?? ''),
+      compitaAsignado: usuario?.compita ?? null,
+      solicitudes: (solPorCliente.get(clienteId) ?? []).map((x) => {
+        const sr = x as unknown as (typeof solRows)[number]
+        return {
+          id: sr.id, estado: sr.estado, tipo: sr.tipo, compitaId: sr.compita_id, compitaNombre: sr.compitas?.nombre ?? '', slotConfirmado: sr.slot_confirmado,
+          slotsPropuestos: (sr.slots_propuestos ?? []).length, seguimientoEnviado: !!sr.seguimiento_enviado, tokenRespuesta: !!sr.token_respuesta, token: sr.token_respuesta,
+          clienteDijoNo: sr.confirmacion_cliente === false, motivoRegistrado: conMotivo.has(sr.id), avisoEntregado: entregados.has(sr.id),
+          reserva: (reservaDe.get(sr.id) as SolicitudFoto['reserva']) ?? null, creadaEn: sr.created_at,
+        }
+      }),
+      pagoPendiente: pagoId ? { id: pagoId, insistido: insistidos.has(pagoId) } : null,
+      cupo: cupo ? { restantes: cupo.restantes } : null,
+      // Las 20 visitas más recientes de CADA cliente (la consulta ya viene ordenada de la más reciente a la más antigua).
+      visitas: (visPorCliente.get(clienteId) ?? []).slice(0, 20).map((x) => {
+        const v = x as unknown as { id: string; estado: string; fecha_programada: string | null; hora_inicio_programada: string | null; llegada_en: string | null; sin_acceso_en: string | null; fin: string | null; created_at: string; cita_propuesta_fecha: string | null; cita_propuesta_inicio: string | null; compita: { nombre: string } | null }
+        return {
+          citaPropuesta: v.cita_propuesta_fecha && v.cita_propuesta_inicio ? { fecha: v.cita_propuesta_fecha, inicio: v.cita_propuesta_inicio } : null,
+          id: v.id, estado: v.estado, compitaNombre: v.compita?.nombre ?? '', fechaProgramada: v.fecha_programada, horaInicio: v.hora_inicio_programada,
+          llegadaEn: v.llegada_en, sinAccesoEn: v.sin_acceso_en, fin: v.fin, creadaEn: v.created_at,
+        }
+      }),
+      cancelaciones: (cancPorCliente.get(clienteId) ?? []).map((x) => {
+        const c = x as unknown as { visita_id: string | null; cancelado_por: CancelacionFoto['por']; justificada_por: string | null; creado_en: string }
+        return { visitaId: c.visita_id, por: c.cancelado_por, justificadaPor: c.justificada_por, creadaEn: c.creado_en }
+      }),
+    })
   }
+  return salida
+}
+
+export async function cargarFoto(clienteId: string, ahora: Date = new Date()): Promise<FotoCliente> {
+  return (await cargarFotos([clienteId], ahora)).get(clienteId) as FotoCliente
 }
 
 /** Atajo: la foto de la base y la decisión. */
