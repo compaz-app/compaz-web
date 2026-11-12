@@ -9,7 +9,7 @@ import { createAdminSupabase } from '@/lib/supabase-server'
 import { usuarioVerificado } from '@/lib/auth'
 import { actorDePagina, puede } from '@/lib/permisos'
 
-export type RolLlamada = 'cliente' | 'compita' | 'admin'
+export type RolLlamada = 'cliente' | 'compita' | 'admin' | 'supervisor'
 export type AccesoLlamada = { ok: true; rol: RolLlamada } | { ok: false }
 
 /** Ruta firmada de la llamada para un rol (cliente o compita): /llamada/<sala>?r=<rol>&s=<firma>. */
@@ -33,7 +33,9 @@ export async function autorizarLlamada(sala: string, firmado: { rol: string | nu
   if ((firmado.rol === 'cliente' || firmado.rol === 'compita') && llamadaFirmaValida(sala, firmado.rol, firmado.s)) return { ok: true, rol: firmado.rol }
   try {
     const actor = await actorDePagina()
-    if (actor && (actor.rol === 'admin' || puede(actor, 'atender'))) return { ok: true, rol: 'admin' }
+    // El administrador entra como dueño de la reunión; el colaborador que atiende entra como supervisor (puede ver y hablar, no expulsar a nadie).
+    if (actor && actor.rol === 'admin') return { ok: true, rol: 'admin' }
+    if (actor && puede(actor, 'atender')) return { ok: true, rol: 'supervisor' }
     const { data: { user } } = await usuarioVerificado()
     if (user?.id && await clienteDeLaSala(user.id, sala)) return { ok: true, rol: 'cliente' }
   } catch (e) { console.error('[llamada] no se pudo comprobar el acceso:', e) }

@@ -54,8 +54,9 @@ export async function proxy(request: NextRequest) {
       // para que tras entrar llegue justo ahí (antes caía en un login que olvidaba el destino y entraba en un ciclo).
       if (!user) return NextResponse.redirect(urlPublica(`/login?returnTo=${encodeURIComponent(pathname + request.nextUrl.search)}`, request))
       if (isAdminEmail(user.email ?? '')) return response
-      const { data: fila } = await supabase.from('usuarios').select('plan').eq('id', user.id).maybeSingle()
-      if (fila?.plan === 'bloqueado') {
+      const { data: fila } = await supabase.from('usuarios').select('plan, eliminada_en').eq('id', user.id).maybeSingle()
+      // Una cuenta bloqueada o eliminada se expulsa en cada navegación (la eliminada también queda cerrada en el sistema de cuentas, esto es la primera barrera).
+      if (fila?.plan === 'bloqueado' || fila?.eliminada_en) {
         await supabase.auth.signOut()
         const salida = NextResponse.redirect(urlPublica('/login?error=bloqueado', request))
         response.cookies.getAll().forEach((c) => salida.cookies.set(c))

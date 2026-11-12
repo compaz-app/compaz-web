@@ -62,6 +62,11 @@ export async function cuposDelPlan(ids: string[]): Promise<Map<string, CupoPlan 
     supabase.from('cancelaciones').select('usuario_id, visita_creada_en').in('usuario_id', ids).eq('cuenta_como_usada', true).eq('justificada', false),
     supabase.from('usuarios').select('id, plan_contratado, plan_inicio').in('id', ids),
   ])
+  // Un lote que llega al tope de filas de la base puede venir cortado: se calcula cliente por cliente (M6).
+  if (ids.length > 1 && [pagosR.data, visitasR.data, consumidasR.data].some((d) => ((d ?? []) as unknown[]).length >= 1000)) {
+    for (const id of ids) for (const [k, v] of await cuposDelPlan([id])) salida.set(k, v)
+    return salida
+  }
   if (pagosR.error) console.error('[cupoDelPlan] tabla de pagos no disponible (¿migración pendiente?):', pagosR.error.message)
   if (consumidasR.error) console.error('[cancelaciones] consumidas:', consumidasR.error.message)
   const porUsuario = <T extends { usuario_id: string }>(filas: T[] | null | undefined) => {

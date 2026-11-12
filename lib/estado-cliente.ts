@@ -200,6 +200,8 @@ export function decidirEstado(f: FotoCliente): EstadoCliente {
 // ── La carga (única parte que toca la base) ────────────────────────────────────────────────────────────────────
 /** Cuántos clientes se cargan por tanda: con 15 por tanda las consultas con `in(...)` no pasan del tope de filas de la base (1000). */
 export const CLIENTES_POR_TANDA = 15
+/** Tope de filas de una consulta de la base. Si una consulta por lote lo alcanza, puede haber filas cortadas: se repite cliente por cliente. */
+export const TOPE_FILAS_BASE = 1000
 
 type Fila = Record<string, unknown>
 function agrupar<T extends Fila>(filas: T[] | null | undefined, clave: string): Map<string, T[]> {
@@ -228,12 +230,17 @@ async function cargarTanda(ids: string[], ahora: Date): Promise<Map<string, Foto
   const [usR, solR, visR, cancR, pagoR, pausasR, cupos] = await Promise.all([
     admin.from('usuarios').select('*, compita:compitas(id, nombre)').in('id', ids),
     admin.from('solicitudes').select('id, cliente_id, estado, tipo, compita_id, slot_confirmado, slots_propuestos, seguimiento_enviado, token_respuesta, confirmacion_cliente, created_at, compitas(nombre)').in('cliente_id', ids).gte('created_at', hace30).order('created_at', { ascending: false }),
-    admin.from('visitas').select('id, usuario_id, estado, fecha_programada, hora_inicio_programada, llegada_en, sin_acceso_en, fin, created_at, cita_propuesta_fecha, cita_propuesta_inicio, compita:compitas(nombre)').in('usuario_id', ids).in('estado', ['pre_visita', 'programada', 'confirmando_inicio', 'en_curso', 'terminada']).order('created_at', { ascending: false }).limit(1000),
+    admin.from('visitas').select('id, usuario_id, estado, fecha_programada, hora_inicio_programada, llegada_en, sin_acceso_en, fin, created_at, cita_propuesta_fecha, cita_propuesta_inicio, compita:compitas(nombre)').in('usuario_id', ids).in('estado', ['pre_visita', 'programada', 'confirmando_inicio', 'en_curso', 'terminada']).order('created_at', { ascending: false }).limit(ids.length === 1 ? 20 : TOPE_FILAS_BASE),
     admin.from('cancelaciones').select('usuario_id, visita_id, cancelado_por, justificada_por, creado_en').in('usuario_id', ids).gte('creado_en', new Date(ahora.getTime() - AVISO_CANCELACION_H * HORA).toISOString()),
     admin.from('solicitudes_pago').select('id, usuario_id').in('usuario_id', ids).eq('estado', 'pendiente'),
     admin.from('pausas_contacto').select('persona_id').eq('rol', 'cliente').eq('activa', true).in('persona_id', ids),
     cuposDelPlan(ids).catch(() => new Map<string, never>()),
   ])
+  // Si la consulta de visitas llegó al tope, las filas pueden estar cortadas (un cliente con muchas visitas): se carga cliente por cliente (M6).
+  if (ids.length > 1 && ((visR.data ?? []) as unknown[]).length >= TOPE_FILAS_BASE) {
+    for (const id of ids) for (const [k, v] of await cargarTanda([id], ahora)) salida.set(k, v)
+    return salida
+  }
   const solRows = (solR.data ?? []) as unknown as (Fila & { id: string; cliente_id: string; estado: string; tipo: string | null; compita_id: string; slot_confirmado: string | null; slots_propuestos: string[] | null; seguimiento_enviado: boolean | null; token_respuesta: string | null; confirmacion_cliente: boolean | null; created_at: string; compitas: { nombre: string } | null })[]
   const solIds = solRows.map((x) => x.id)
   const pagoPorUsuario = new Map<string, string>(); for (const p of (pagoR.data ?? []) as { id: string; usuario_id: string }[]) if (!pagoPorUsuario.has(p.usuario_id)) pagoPorUsuario.set(p.usuario_id, p.id)

@@ -47,7 +47,7 @@ export async function resolverFlag(flagId: string, correo: string): Promise<Res>
   const { error } = await admin.from('admin_flags').update({ resuelto: true, resuelto_at: new Date().toISOString() }).eq('id', flagId)
   if (error) return mal(500, 'No se pudo resolver la tarea')
   // Queda anotado QUIÉN resolvió qué (el equipo se reparte la bandeja y esto evita duplicar trabajo).
-  if (previa && !(previa as { resuelto: boolean }).resuelto) await alertaAdmin('actividad', `Tarea resuelta por ${correo}: ${String((previa as { entidad_nombre: string }).entidad_nombre ?? '')}`)
+  if (previa && !(previa as { resuelto: boolean }).resuelto) await alertaAdmin('actividad', `Tarea resuelta por ${correo}: ${String((previa as { entidad_nombre: string }).entidad_nombre ?? '')}`, { categoria: 'tarea_resuelta' })
   return bien(null)
 }
 
@@ -166,7 +166,7 @@ export async function avisarCompitaVerificada(compitaId: string): Promise<'teleg
   if (c.telegram_chat_id) {
     try {
       await sendTelegramMessage(c.telegram_chat_id,
-        `✅ <b>¡Tu cuenta fue verificada, ${esc(c.nombre)}!</b>\n\nYa apareces ante las familias. Cuando una quiera conocerte, te llegará aquí un mensaje con los horarios para elegir.`, TECLADO_SIN_VISITA)
+        `✅ <b>¡Tu cuenta fue verificada, ${esc(c.nombre)}!</b>\n\nYa apareces ante las familias. Cuando una quiera conocerte, te llegará aquí un mensaje con los horarios para elegir. Si quieres mejorar tu perfil, escribe /perfil. Para ver todo lo que puedes hacer, escribe /menu.`, TECLADO_SIN_VISITA)
       return 'telegram'
     } catch (e) { console.error('[verificar] Telegram a la compita falló:', e) }
   }
@@ -177,8 +177,8 @@ export async function avisarCompitaVerificada(compitaId: string): Promise<'teleg
         to: c.email, subject: 'Tu perfil en Compaz fue verificado',
         html: `<div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px">
           <h2 style="color:#2D1464;font-size:22px">¡Tu perfil fue verificado, ${esc(c.nombre.split(' ')[0])}!</h2>
-          <p style="color:#4A3B6B;font-size:16px;line-height:1.6">Para aparecer ante las familias y recibir solicitudes, falta que conectes Telegram: abre el bot y pulsa <strong>Iniciar</strong>.</p>
-          ${bot ? `<a href="https://t.me/${encodeURIComponent(bot)}" style="display:inline-block;background:#FF6B2B;color:white;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:15px">Abrir el bot de Telegram →</a>` : ''}
+          <p style="color:#4A3B6B;font-size:16px;line-height:1.6">Para aparecer ante las familias y recibir solicitudes, falta que conectes Telegram: abre el bot, pulsa <strong>Iniciar</strong>, escribe tu nombre tal como lo registraste y confirma el código que te llegará a este correo.</p>
+          ${bot ? `<a href="https://t.me/${encodeURIComponent(bot)}" style="display:inline-block;background:#FF6B2B;color:white;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:16px;margin-top:8px">Abrir el bot de Telegram →</a>` : ''}
           <p style="color:#9990A8;font-size:13px;margin-top:28px">Compaz, <em>Cerca aunque estés lejos</em></p></div>`,
       })
       return 'correo'

@@ -108,8 +108,20 @@ const POR_CLAVE = new Map<string, DefAjuste>(CATALOGO.map((d) => [d.clave, d]))
  */
 export function soloAdministrador(clave: string): boolean {
   const d = defAjuste(clave)
-  return !!d && (d.tipo === 'texto' || d.grupo === 'Precios' || clave.endsWith('_retencion_dias'))
+  return !!d && (d.tipo === 'texto' || d.grupo === 'Precios' || clave.endsWith('_retencion_dias') || RESERVADOS.has(clave))
 }
+
+/**
+ * Además de lo anterior: lo que mueve dinero, apaga protecciones, silencia las urgencias, cambia el costo de las llamadas o enciende cosas para TODOS los
+ * clientes. Un colaborador con "editar ajustes" cambia el resto (recordatorios, semáforo, plazos de coordinación).
+ */
+const RESERVADOS = new Set([
+  'portal_nuevo', 'llegada_foto_obligatoria',                                   // cambian lo que ven o deben hacer todos
+  'detecciones_umbral', 'detecciones_ventana_dias', 'canc_revision', 'canc_pausa', 'canc_ventana_dias', // deciden cuándo una cuenta se pausa
+  'timbre_max_hora',                                                            // silenciar las urgencias
+  'pago_escalada_horas', 'pago_insistencia_min', 'cancelacion_gratis_horas', 'compita_aviso_minimo_horas', // dinero y cancelaciones
+  'llamada_corte_min', 'llamada_aviso_min', 'llamada_visita_min',               // costo de las videollamadas
+])
 
 export function defAjuste(clave: string): DefAjuste | undefined {
   return POR_CLAVE.get(clave)

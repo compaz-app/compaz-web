@@ -48,14 +48,32 @@ export async function vigilarLatidos(): Promise<string[]> {
 
 /**
  * Ventana de espera por clave: la primera vez (o pasada la ventana) deja pasar y anota el momento; antes de que pase la ventana dice cuándo fue la
- * última vez. Es el límite de frecuencia de las rutas que mandan mensajes a terceros.
+ * última vez. Es el límite de frecuencia de las rutas que mandan mensajes a terceros. ES ATÓMICA: con veinte peticiones a la vez solo una gana, porque
+ *  1. la primera vez la clave se inserta (es única: solo un insert tiene éxito) y
+ *  2. pasada la ventana, solo gana quien consigue "renovar" la fila con una actualización condicional (updated_at más viejo que el límite).
+ * Si la base falla, la petición NO pasa (falla cerrado): es mejor frenar un envío que dejar de limitarlos.
  */
 export async function reclamarVentana(clave: string, ventanaMs: number): Promise<{ ok: true } | { ok: false; desde: string }> {
   const admin = createAdminSupabase()
+  const ahora = new Date()
+  const { error } = await admin.from('telegram_estados').insert({ chat_id: clave, registro_pendiente: false, updated_at: ahora.toISOString() })
+  if (!error) return { ok: true }
+  const limite = new Date(ahora.getTime() - ventanaMs).toISOString()
+  const { data: renovada } = await admin.from('telegram_estados').update({ updated_at: ahora.toISOString() }).eq('chat_id', clave).lt('updated_at', limite).select('chat_id')
+  if (((renovada ?? []) as unknown[]).length > 0) return { ok: true }
   const { data: previo } = await admin.from('telegram_estados').select('updated_at').eq('chat_id', clave).maybeSingle()
-  if (previo && Date.now() - new Date(previo.updated_at as string).getTime() < ventanaMs) return { ok: false, desde: previo.updated_at as string }
-  await admin.from('telegram_estados').upsert({ chat_id: clave, registro_pendiente: false, updated_at: new Date().toISOString() }, { onConflict: 'chat_id' })
-  return { ok: true }
+  return { ok: false, desde: (previo?.updated_at as string | undefined) ?? ahora.toISOString() }
+}
+
+/** ¿Hay una ventana vigente para esta clave? Solo mira (no reclama): sirve para "anotar una vez cada tanto" sin saltarse la anotación si falló. */
+export async function ventanaVigente(clave: string, ventanaMs: number): Promise<boolean> {
+  const { data } = await createAdminSupabase().from('telegram_estados').select('updated_at').eq('chat_id', clave).maybeSingle()
+  return !!data && Date.now() - new Date(data.updated_at as string).getTime() < ventanaMs
+}
+
+/** Marca "ahora" en una clave de ventana (después de haber hecho de verdad lo que la ventana protege). */
+export async function marcarVentana(clave: string): Promise<void> {
+  await createAdminSupabase().from('telegram_estados').upsert({ chat_id: clave, registro_pendiente: false, updated_at: new Date().toISOString() }, { onConflict: 'chat_id' })
 }
 
 /** Clave de idempotencia de una sola vez (true si es la primera vez que se reclama). */

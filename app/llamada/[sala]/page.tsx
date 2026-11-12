@@ -13,7 +13,8 @@ const Mensaje = ({ texto }: { texto: string }) => <main className="grid min-h-dv
 export default async function LlamadaPage({ params, searchParams }: { params: Promise<{ sala: string }>; searchParams: Promise<{ r?: string; s?: string }> }) {
   const { sala: salaCruda } = await params
   const { r, s } = await searchParams
-  const sala = decodeURIComponent(salaCruda)
+  let sala: string
+  try { sala = decodeURIComponent(salaCruda) } catch { return <Mensaje texto="Esta llamada ya terminó o el enlace no es válido. Si la necesitas otra vez, pide un enlace nuevo." /> } // un % mal formado no debe dar un error 500
   // Mismo mensaje para "no existe" y "no tienes acceso": no se revela qué salas hay.
   const acceso = await autorizarLlamada(sala, { rol: r ?? null, s: s ?? null })
   const info = acceso.ok ? await infoDeSala(sala) : null

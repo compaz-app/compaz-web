@@ -15,6 +15,7 @@ import AutoRefresh from '@/components/ui/AutoRefresh'
 import VisitaWatcher from '@/components/ui/VisitaWatcher'
 import { cargarDatosPortal } from '@/lib/portal-datos'
 import { registrarAcceso } from '@/lib/alertas-admin'
+import { ventanaVigente, marcarVentana } from '@/lib/cron'
 import { esPestana } from '@/lib/portal-secciones'
 
 export const dynamic = 'force-dynamic'
@@ -36,8 +37,11 @@ export default async function PortalPage({ searchParams }: { searchParams: Promi
   const portal = await cargarPortal(uid)
   // Ver el portal de otro cliente es un acceso a sus datos: queda anotado ANTES de mostrarlo y, si no se puede anotar, no se muestra.
   if (esAdmin && preview) {
-    const anotado = await registrarAcceso(`${session.user.email} abrió la vista previa del portal de ${portal.nombre || 'un cliente'}`, { categoria: 'acceso_contacto', entidad: { tipo: 'cliente', id: preview, nombre: portal.nombre || 'Cliente' } })
+    const clavePrev = `preview_acceso:${session.user.id}:${preview}`
+    // Anotar cada cambio de pestaña llenaría el registro: se anota una vez cada 30 minutos por persona y cliente, y la ventana solo se marca si la anotación salió bien.
+    const anotado = (await ventanaVigente(clavePrev, 30 * 60_000)) || await registrarAcceso(`${session.user.email} abrió la vista previa del portal de ${portal.nombre || 'un cliente'}`, { categoria: 'acceso_contacto', entidad: { tipo: 'cliente', id: preview, nombre: portal.nombre || 'Cliente' } })
     if (!anotado) redirect('/panel')
+    await marcarVentana(clavePrev)
   }
   const datos = pestana === 'inicio' ? null : await cargarDatosPortal(uid)
   return (

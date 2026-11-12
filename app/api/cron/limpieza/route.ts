@@ -28,6 +28,7 @@ export async function POST(req: NextRequest) {
     ['actividad_admin', admin.from('actividad_admin').delete().lt('creado_en', hace90d).is('categoria', null)],
     ['actividad_admin (otras categorías)', admin.from('actividad_admin').delete().lt('creado_en', hace90d).not('categoria', 'in', `(${CATEGORIAS_ACCESO.join(',')})`)],
     ['accesos a datos sensibles', admin.from('actividad_admin').delete().lt('creado_en', haceAccesos).in('categoria', [...CATEGORIAS_ACCESO])],
+    ['ventanas y bloqueos de pago, llamadas, enlaces, errores y vistas previas', admin.from('telegram_estados').delete().or('chat_id.like.pago_lock:%,chat_id.like.llamada_aviso:%,chat_id.like.enlace_llamada:%,chat_id.like.error_srv%,chat_id.like.preview_acceso:%').lt('updated_at', hace1d)],
     ['timbre colapsado', admin.from('telegram_estados').delete().like('chat_id', 'timbre_colapsado:%').lt('updated_at', hace1d)],
     ['onboarding_tokens', admin.from('onboarding_tokens').delete().or(`usado.eq.true,expires_at.lt.${ahora}`)],
     ['compita_edit_tokens', admin.from('compita_edit_tokens').delete().lt('expires_at', ahora)],

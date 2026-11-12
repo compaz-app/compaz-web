@@ -1,6 +1,6 @@
 /* eslint-disable */
 // Auditoría: D-01 (pagos), S-04 (accesos fallan cerrado), S-05 (línea de tiempo sin accesos) y S-06 (ajustes reservados y lote todo o nada).
-import { db, limpiar, session, req, mkCliente, mkCompita } from './harness'
+import { db, net, limpiar, session, req, mkCliente, mkCompita } from './harness'
 import { beforeEach, test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import { registrarPago, anularPago } from '@/lib/pagos'
@@ -85,7 +85,8 @@ describe('S-06: precios, retención y textos solo los cambia el administrador', 
   const llamar = (cambios: any) => ajustesPatch(req('/api/admin/ajustes', { method: 'PATCH', json: { cambios } }))
   test('qué se reserva', () => {
     for (const k of ['precio_hora', 'precio_plan_quincenal', 'avisos_retencion_dias', 'accesos_retencion_dias', 'recordatorio_chat_contactos']) assert.equal(soloAdministrador(k), true, k)
-    for (const k of ['recordatorio_cliente_max', 'llamada_corte_min']) assert.equal(soloAdministrador(k), false, k)
+    for (const k of ['portal_nuevo', 'detecciones_umbral', 'canc_pausa', 'timbre_max_hora', 'pago_escalada_horas', 'cancelacion_gratis_horas', 'llamada_corte_min', 'llegada_foto_obligatoria']) assert.equal(soloAdministrador(k), true, k)
+    for (const k of ['recordatorio_cliente_max', 'semaforo_pago_rojo', 'recordatorio_cliente_horas']) assert.equal(soloAdministrador(k), false, k)
   })
   test('un colaborador con editar ajustes cambia lo demás pero recibe 403 en lo reservado, y no se guarda nada', async () => {
     await invitarColaborador('edi@compaz.test', 'Edi', { ajustes_editar: true }, 'admin@compaz.test'); session.user = { id: 'e', email: 'edi@compaz.test' } as any
@@ -219,14 +220,122 @@ describe('O-02: los errores del servidor se anotan y no se filtran al cliente', 
     const e = new Error('falló algo\n  at archivo.ts:10')
     await reportarError(e, 'prueba'); await reportarError(e, 'prueba')
     const filas = db.rows('actividad_admin').filter((a: any) => a.categoria === 'error_servidor' && /falló algo/.test(a.resumen))
-    assert.equal(filas.length, 1); assert.match(filas[0].resumen, /Error del servidor en prueba: Error: falló algo at archivo\.ts:10/)
+    assert.equal(filas.length, 1); assert.match(filas[0].resumen, /Error del servidor en prueba: Error: falló algo at archivo\.ts:#/) // los números se ocultan
     await reportarError(new Error('otro distinto'))
-    assert.equal(db.rows('actividad_admin').filter((a: any) => a.categoria === 'error_servidor' && /otro distinto/.test(a.resumen)).length, 1)
+    assert.equal(db.rows('actividad_admin').filter((a: any) => a.categoria === 'error_servidor' && /otro distinto/.test(a.resumen)).length, 0) // tope global: otro error distinto dentro de los 30 s no genera otra alerta
   })
   test('reportar un error nunca lanza, aunque falle el registro', async () => {
     db.fail['actividad_admin:insert'] = 5
     await assert.doesNotReject(() => reportarError(new Error('x')))
     db.fail['actividad_admin:insert'] = 0
     assert.equal(resumenDeError('texto').length > 0, true)
+  })
+})
+
+describe('revisión: ventanas atómicas y candados que vencen', () => {
+  test('con 20 peticiones a la vez solo una pasa la ventana', async () => {
+    const { reclamarVentana } = await import('@/lib/cron')
+    const r = await Promise.all(Array.from({ length: 20 }, () => reclamarVentana('prueba_ventana', 60_000)))
+    assert.equal(r.filter((x) => x.ok).length, 1)
+  })
+  test('pasada la ventana vuelve a dejar pasar, también con peticiones simultáneas', async () => {
+    const { reclamarVentana } = await import('@/lib/cron')
+    await reclamarVentana('v2', 1000)
+    db.rows('telegram_estados').find((e: any) => e.chat_id === 'v2')!.updated_at = new Date(Date.now() - 5000).toISOString()
+    const r = await Promise.all(Array.from({ length: 10 }, () => reclamarVentana('v2', 1000)))
+    assert.equal(r.filter((x) => x.ok).length, 1)
+  })
+  test('un candado de pago colgado vence solo a los 60 segundos', async () => {
+    const c = mkCliente({ email: 'l@mail.test', nombre: 'Lia' })
+    db.seed('telegram_estados', { chat_id: `pago_lock:${c.id}`, registro_pendiente: false, updated_at: new Date().toISOString() })
+    const r = await pago(c.id, { referencia: 'L1' }); assert.equal(r.ok, false); assert.match((r as any).error, /Ya se está registrando/)
+    db.rows('telegram_estados').find((e: any) => e.chat_id === `pago_lock:${c.id}`)!.updated_at = new Date(Date.now() - 61_000).toISOString()
+    assert.equal((await pago(c.id, { referencia: 'L2' })).ok, true)
+  })
+  test('la limpieza diaria borra las claves de ventana viejas', () => {
+    assert.match(leer('app/api/cron/limpieza/route.ts', 'utf8'), /pago_lock:%[\s\S]*llamada_aviso:%[\s\S]*enlace_llamada:%[\s\S]*error_srv%/)
+  })
+})
+
+import { eliminarCompitaPorEquipo } from '@/lib/cuenta-eliminar'
+import { cuposDelPlan } from '@/lib/visitas'
+import { cargarFotos, cargarFoto } from '@/lib/estado-cliente'
+import { resolverFlag, avisarCompitaVerificada } from '@/lib/acciones-equipo'
+import { anularPago as anularPagoLib } from '@/lib/pagos'
+import { pedirPase, autorizarLlamada } from '@/lib/llamada-acceso'
+
+describe('revisión posterior: M3, M4, M6, M7 y los bajos', () => {
+  test('M3: eliminar un compita cierra sus solicitudes abiertas, libera sus reservas y avisa a la familia', async () => {
+    const lucia = mkCompita({ nombre: 'Lucía', telegram_chat_id: '7777' }); const cli = mkCliente({ email: 'n@mail.test', nombre: 'Nora' })
+    const sol = db.seed('solicitudes', { cliente_id: cli.id, compita_id: lucia.id, estado: 'aceptada', created_at: new Date().toISOString() })
+    db.seed('reservas_horario', { solicitud_id: sol.id, cliente_id: cli.id, estado: 'reservada' })
+    const { emailsA } = await import('./harness')
+    assert.equal((await eliminarCompitaPorEquipo(lucia.id, 'admin@compaz.test')).ok, true)
+    assert.equal(db.rows('solicitudes').find((x: any) => x.id === sol.id)!.estado, 'rechazada')
+    assert.equal(db.rows('reservas_horario')[0].estado, 'liberada')
+    assert.ok(emailsA('n@mail.test').length >= 1)
+  })
+  test('M4: anonimizar borra el texto de los reportes y reseñas, y comprueba errores (si falla, no se da por cerrada)', async () => {
+    const lucia = mkCompita({ nombre: 'Lucía' }); const cli = mkCliente({ email: 'o2@mail.test', nombre: 'Omar Ruiz', compita_id: lucia.id })
+    const v = db.seed('visitas', { usuario_id: cli.id, compita_id: lucia.id, estado: 'terminada', direccion: 'X' })
+    db.seed('reportes_visita', { visita_id: v.id, novedad: 'se mareó al caminar', resumen_ia: 'Omar tuvo mareo' })
+    db.seed('resenas', { visita_id: v.id, compita_id: lucia.id, cliente_id: cli.id, texto: 'Excelente con Omar', estrellas: 5 })
+    db.fail['reportes_visita:update'] = 1
+    assert.equal((await eliminarClientePorEquipo(cli.id, 'admin@compaz.test', { borrarDatos: true })).ok, false) // falló un paso: no queda como cerrada
+    assert.equal(db.rows('usuarios').find((u: any) => u.id === cli.id)!.eliminada_en ?? null, null)
+    assert.equal((await eliminarClientePorEquipo(cli.id, 'admin@compaz.test', { borrarDatos: true })).ok, true) // reintento: ahora sí
+    const t = JSON.stringify([db.rows('reportes_visita'), db.rows('resenas')]); assert.doesNotMatch(t, /mareó|Omar|Excelente/)
+  })
+  test('M4: una cuenta cerrada sin borrar datos se puede anonimizar después', async () => {
+    const c = mkCliente({ email: 'p@mail.test', nombre: 'Paz Mora', telefono: '+58 412 5' })
+    assert.equal((await eliminarClientePorEquipo(c.id, 'admin@compaz.test')).ok, true)
+    assert.equal((await eliminarClientePorEquipo(c.id, 'admin@compaz.test')).ok, false)                       // sin pedido: ya estaba eliminada
+    assert.equal((await eliminarClientePorEquipo(c.id, 'admin@compaz.test', { borrarDatos: true })).ok, true) // la persona lo pidió después
+    const u = db.rows('usuarios').find((x: any) => x.id === c.id)!; assert.equal(u.nombre, 'Cuenta eliminada'); assert.equal(u.telefono, null)
+  })
+  test('M4: con borrar datos un compita pierde también zona, servicios y horarios', async () => {
+    const m = mkCompita({ nombre: 'Marta', zona: 'Chacao', servicios: ['paseos'], horarios_disponibles: [{ dia: 'lunes', inicio: '09:00', fin: '12:00' }] })
+    assert.equal((await eliminarCompitaPorEquipo(m.id, 'admin@compaz.test', { borrarDatos: true })).ok, true)
+    const r = db.rows('compitas').find((x: any) => x.id === m.id)!; assert.equal(r.zona, null); assert.deepEqual(r.servicios, []); assert.deepEqual(r.horarios_disponibles, [])
+  })
+  test('M6: un lote que llega al tope de filas se repite cliente por cliente', async () => {
+    const a = mkCliente({ email: 'q1@mail.test', nombre: 'Q1' }); const b = mkCliente({ email: 'q2@mail.test', nombre: 'Q2' })
+    for (let i = 0; i < 1000; i++) db.seed('visitas', { usuario_id: a.id, compita_id: null, estado: 'terminada', created_at: new Date(Date.now() - i * 1000).toISOString() })
+    db.seed('pagos_plan', { usuario_id: b.id, tipo: 'plan', plan: 'quincenal', visitas: 2, monto_usd: 75, estado: 'activo', inicio: new Date().toISOString(), vence: new Date(Date.now() + 5e9).toISOString() })
+    const ahora = new Date(); const lote = await cargarFotos([a.id, b.id], ahora); const solo = await cargarFoto(b.id, ahora)
+    assert.deepEqual(lote.get(b.id), solo)                       // b no queda sin datos porque a llene el tope
+    assert.equal(lote.get(a.id)!.visitas.length, 20)
+    const cupos = await cuposDelPlan([a.id, b.id]); assert.equal(cupos.get(b.id)!.restantes, 2)
+  })
+  test('B1 y B2: el aviso de verificación conserva sus pasos y resolver una tarea conserva su categoría', async () => {
+    const m = mkCompita({ nombre: 'Rosa Gil', telegram_chat_id: null, email: 'rosa@mail.test', estado: 'activo', verificado: true })
+    const { emailsA } = await import('./harness')
+    assert.equal(await avisarCompitaVerificada(m.id), 'correo')
+    assert.match(JSON.stringify(emailsA('rosa@mail.test')), /escribe tu nombre tal como lo registraste y confirma el código/)
+    const f = db.seed('admin_flags', { entidad_tipo: 'cliente', entidad_id: 'x', entidad_nombre: 'Ana', nota: 'n', resuelto: false })
+    assert.equal((await resolverFlag(f.id, 'luis@compaz.test')).ok, true)
+    assert.ok(db.rows('actividad_admin').some((a: any) => a.categoria === 'tarea_resuelta' && /luis@compaz\.test/.test(a.resumen)))
+  })
+  test('B3: el mismo comprobante no puede estar en dos clientes y la anulación deja el rol', async () => {
+    const a = mkCliente({ email: 'r1@mail.test', nombre: 'R1' }); const b = mkCliente({ email: 'r2@mail.test', nombre: 'R2' })
+    const p = await pago(a.id, { referencia: 'ZELLE-777' }) as any; assert.equal(p.ok, true)
+    const r = await pago(b.id, { referencia: ' zelle-777 ' }); assert.equal(r.ok, false); assert.match((r as any).error, /otro cliente/)
+    assert.equal((await anularPagoLib(p.pago.id, 'se equivocó de cliente', { correo: 'luis@compaz.test', rol: 'colaborador' })).ok, true)
+    assert.equal(db.rows('eventos').find((e: any) => e.tipo === 'pago_anulado')!.datos.rol, 'colaborador')
+    assert.equal((await pago(b.id, { referencia: 'ZELLE-777' })).ok, true) // anulado el primero, ya se puede registrar donde corresponde
+  })
+  test('B4: la vista previa del portal anota una vez por ventana', () => {
+    const f = leer('app/portal/page.tsx', 'utf8'); assert.match(f, /ventanaVigente\(clavePrev/); assert.match(f, /marcarVentana\(clavePrev\)/)
+  })
+  test('B5: solo el administrador es dueño de la reunión; el colaborador entra como supervisor; una dirección con % roto no da error', async () => {
+    const fin = Math.floor(Date.now() / 1000) + 600
+    await pedirPase('cmp-abcdef12-0123456789abcdef', 'supervisor', fin); assert.equal(net.pases.at(-1).is_owner, false)
+    await pedirPase('cmp-abcdef12-0123456789abcdef', 'admin', fin); assert.equal(net.pases.at(-1).is_owner, true)
+    await invitarColaborador('sup@compaz.test', 'Sup', { atender: true }, 'admin@compaz.test'); session.user = { id: 's1', email: 'sup@compaz.test' } as any
+    assert.deepEqual(await autorizarLlamada('cmp-abcdef12-0123456789abcdef', { rol: null, s: null }), { ok: true, rol: 'supervisor' })
+    assert.match(leer('app/llamada/[sala]/page.tsx', 'utf8'), /try \{ sala = decodeURIComponent/)
+  })
+  test('M7: antes de cerrar la cuenta se vuelve a mirar si hay una visita en vivo', () => {
+    const f = leer('lib/cuenta-eliminar.ts', 'utf8'); assert.match(f, /const visitasCanceladas = await cancelarAbiertas[\s\S]*?if \(await visitaEnVivo\(u\.id\)\) return \{ ok: false, motivo: 'visita_en_vivo' \}[\s\S]*?cerrarCuentaCliente/)
   })
 })
