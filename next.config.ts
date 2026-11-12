@@ -1,5 +1,10 @@
 import type { NextConfig } from "next";
 
+// La dirección de Supabase (conexiones del navegador y tiempo real) sale de NEXT_PUBLIC_SUPABASE_URL, no se escribe a mano: así cambiar de proyecto
+// de Supabase (o volver atrás) es solo cambiar la variable. tests/88-csp-supabase.test.ts vigila que no vuelva a quedar una dirección fija.
+const SUPABASE_ORIGEN = (() => { try { return new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").origin } catch { return "" } })()
+const SUPABASE_CONEXIONES = SUPABASE_ORIGEN ? `${SUPABASE_ORIGEN} ${SUPABASE_ORIGEN.replace(/^https:/, "wss:")}` : ""
+
 // Headers de seguridad definidos aquí como fuente de verdad única.
 // Con @netlify/plugin-nextjs, los [[headers]] de netlify.toml se aplican
 // a TODAS las respuestas (incluidas páginas dinámicas), así que duplicarlos
@@ -25,7 +30,7 @@ const securityHeaders = [
       "font-src 'self' https://fonts.gstatic.com; " +
       "img-src 'self' data: https:; " +
       "frame-src https://challenges.cloudflare.com https://www.youtube.com https://*.daily.co; " +
-      "connect-src 'self' https://www.facebook.com https://challenges.cloudflare.com https://www.google-analytics.com https://analytics.google.com https://www.clarity.ms https://*.clarity.ms https://qrhkzlzblaknzsxqfney.supabase.co wss://qrhkzlzblaknzsxqfney.supabase.co wss://realtime.supabase.co https://api.daily.co https://*.daily.co wss://*.daily.co; " +
+      `connect-src 'self' https://www.facebook.com https://challenges.cloudflare.com https://www.google-analytics.com https://analytics.google.com https://www.clarity.ms https://*.clarity.ms ${SUPABASE_CONEXIONES} wss://realtime.supabase.co https://api.daily.co https://*.daily.co wss://*.daily.co; ` +
       "frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'",
   },
 ];

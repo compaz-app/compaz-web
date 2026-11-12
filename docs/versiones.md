@@ -4,6 +4,11 @@ La versión vigente está en `lib/version.ts` y se ve en el panel (menú lateral
 
 Reglas: mayor = cambio grande o lanzamiento; menor = función nueva; parche = arreglo. La etapa `beta` sale cuando el sistema corre una o dos semanas con uso real sin sorpresas.
 
+## 1.1.1-beta.1 (2026-11-12)
+Preparación de la migración de Supabase a Virginia.
+1. La dirección de Supabase en la política de seguridad del navegador (CSP) ya no está escrita a mano: sale de `NEXT_PUBLIC_SUPABASE_URL`. Cambiar de proyecto (o volver atrás) es solo cambiar la variable.
+2. Scripts de migración (`scripts/migracion/`) y plan (`docs/migracion-supabase-virginia.md`).
+
 ## 1.1.0-beta.1 (2026-11-12)
 Integración del CMC de Luis con el panel nuevo, en un solo sistema.
 1. La ficha del compita muestra su estado en el CMC: ID COM-, si el CMC lo permite, último cambio y lo que le falta para recibir solicitudes.
