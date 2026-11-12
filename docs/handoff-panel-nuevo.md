@@ -81,3 +81,5 @@ Están en `CLAUDE.md` (léelo) y en la memoria. Las que más se rompen:
 **D-01, S-04, S-05 y S-06 hechos (2026-11-12):** los pagos no se duplican (bloqueo por cliente, misma referencia y pago idéntico en 2 minutos; sin migración) y anular exige motivo, deja evento y alerta (tarea si lo hace un colaborador); el acceso a contacto, chat y vista previa del portal se anota con `registrarAcceso` y NO se entrega si no quedó anotado; la línea de tiempo oculta los accesos a quien no tiene `telefonos`; precios, retención y textos solo los cambia el administrador y un lote de ajustes que falla a mitad se deshace.
 
 **Resto de la auditoría (2026-11-12):** ver la sección 8 de `docs/auditoria-2026-11-11.md` (estado de cada hallazgo). Lo que queda en manos del dueño: aplicar `20261113_indices_panel.sql`, comprobar "Confirm email" en Supabase (S-15), proyecto Supabase de pruebas y copias de seguridad (O-01), elegir un servicio de errores (O-02) y decidir cuándo pasar Personas y Seguimiento a paginación en la base (S-10).
+
+**Pendiente futuro:** demo para inversionistas (entorno aparte, solo lectura, datos ficticios): ver `docs/demo-inversionistas.md`.
