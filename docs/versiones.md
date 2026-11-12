@@ -4,6 +4,11 @@ La versión vigente está en `lib/version.ts` y se ve en el panel (menú lateral
 
 Reglas: mayor = cambio grande o lanzamiento; menor = función nueva; parche = arreglo. La etapa `beta` sale cuando el sistema corre una o dos semanas con uso real sin sorpresas.
 
+## 1.1.1-beta.1 (2026-11-12)
+Velocidad del panel.
+1. El proxy de /panel y /admin ya no consulta a Supabase Auth en cada pantalla (solo renueva la sesión): una comprobación de red menos por pantalla. La página sigue verificando al usuario.
+2. Más, Estado, Velocidad: botón para el administrador que mide, desde el servidor, cuánto tarda en hablar con la base y dice si el servidor está lejos de ella.
+
 ## 1.1.0-beta.1 (2026-11-12)
 Integración del CMC de Luis con el panel nuevo, en un solo sistema.
 1. La ficha del compita muestra su estado en el CMC: ID COM-, si el CMC lo permite, último cambio y lo que le falta para recibir solicitudes.

@@ -3,6 +3,7 @@ import InfoBoton from '@/components/ui/InfoBoton'
 import { PuntoUrgencia } from '@/components/panel/Personas'
 import AutoRefresh from '@/components/ui/AutoRefresh'
 import BotonReintentar from '@/components/panel/mas/BotonReintentar'
+import MedirVelocidad from '@/components/panel/mas/MedirVelocidad'
 import { cuandoLinea } from '@/lib/panel-personas-tipos'
 import type { EstadoSistema } from '@/lib/panel-estado'
 
@@ -14,7 +15,7 @@ const NOMBRE_PROCESO: Record<string, string> = {
 const hace = (iso: string, ahora: number) => { const m = Math.max(0, Math.round((ahora - new Date(iso).getTime()) / 60_000)); return m < 1 ? 'hace menos de 1 min' : m < 60 ? `hace ${m} min` : m < 1440 ? `hace ${Math.round(m / 60)} h` : `hace ${Math.round(m / 1440)} d` }
 
 // Estado del sistema: solo lo que se puede saber de la base de datos (procesos automáticos y avisos). No hace llamadas de prueba a Telegram, correo ni videollamadas.
-export default function Estado({ e, ahora, puedeReintentar }: { e: EstadoSistema; ahora: number; puedeReintentar: boolean }) {
+export default function Estado({ e, ahora, puedeReintentar, esAdmin = false }: { e: EstadoSistema; ahora: number; puedeReintentar: boolean; esAdmin?: boolean }) {
   const fila = 'flex items-center gap-3 px-3 py-2 text-sm'
   return (
     <section className="max-w-3xl space-y-4">
@@ -69,6 +70,12 @@ export default function Estado({ e, ahora, puedeReintentar }: { e: EstadoSistema
         )}
       </div>
       <p className="text-xs text-texto-sutil">Telegram, correo y videollamadas no se prueban desde aquí. Si fallan, lo verás arriba como avisos fallidos.</p>
+      {esAdmin && (
+        <div>
+          <div className="flex items-center gap-1"><TituloSeccion>Velocidad</TituloSeccion><InfoBoton que="Qué es Velocidad" texto="Mide cuánto tarda el servidor en consultar la base de datos. Si el panel se siente lento, aquí se ve si es por la distancia entre ambos. Solo la ve el administrador." /></div>
+          <div className="mt-2"><MedirVelocidad /></div>
+        </div>
+      )}
     </section>
   )
 }

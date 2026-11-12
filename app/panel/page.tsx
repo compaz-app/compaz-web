@@ -153,7 +153,7 @@ export default async function PanelPage({ searchParams }: { searchParams: Promis
         vista = <Cobertura filas={await cargarCobertura()} />
       } else if (subMas.id === 'estado') {
         const ahora = Date.now()
-        vista = <Estado e={await estadoDelSistema(ahora, comoActor)} ahora={ahora} puedeReintentar={actor.permisos.atender === true} />
+        vista = <Estado e={await estadoDelSistema(ahora, comoActor)} ahora={ahora} puedeReintentar={actor.permisos.atender === true} esAdmin={actor.rol === 'admin'} />
       } else {
         vista = <Aviso tamano="compacto" tono="info">Esa herramienta no existe. Elige una del menú de Más.</Aviso>
       }

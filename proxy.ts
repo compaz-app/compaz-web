@@ -68,9 +68,12 @@ export async function proxy(request: NextRequest) {
     return response
   }
 
-  const { data: { user } } = await supabase.auth.getUser()
+  // Panel y administración: aquí solo se renueva la sesión (si el token venció, getSession lo renueva y deja las cookies nuevas) y se manda al login a quien
+  // no tiene ninguna. NO decide acceso: la página y cada ruta de /api/admin vuelven a verificar al usuario contra Supabase (usuarioVerificado). Así la
+  // pantalla hace UNA comprobación de red en vez de dos (cada una cuesta un viaje a Supabase Auth).
+  const { data: { session } } = await supabase.auth.getSession()
 
-  if (!user) return NextResponse.redirect(urlPublica(`/login?returnTo=${encodeURIComponent(pathname + request.nextUrl.search)}`, request))
+  if (!session) return NextResponse.redirect(urlPublica(`/login?returnTo=${encodeURIComponent(pathname + request.nextUrl.search)}`, request))
   // Un colaborador no es administrador raíz pero puede entrar con permisos: cada página de /admin decide
   // con la guardia (actorDePagina / requireAdmin) y redirige si no corresponde. Aquí solo exigimos sesión.
 
