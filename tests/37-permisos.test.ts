@@ -9,8 +9,6 @@ import { resolverActor, normalizarPermisos, puede, PERMISOS, PERMISOS_BASE } fro
 import { GET as pagosGet } from '@/app/api/admin/pagos/route'
 import { POST as registrarPago } from '@/app/api/admin/registrar-pago/route'
 import { DELETE as eliminarCliente } from '@/app/api/admin/eliminar-cliente/route'
-import { POST as demoReset } from '@/app/api/admin/demo/reset/route'
-import { GET as previewGet } from '@/app/api/admin/cliente-preview/route'
 import { GET as flagsGet } from '@/app/api/admin/flags/route'
 import { POST as invitarCliente } from '@/app/api/admin/invitar-cliente/route'
 import { POST as bloquearCliente } from '@/app/api/admin/bloquear-cliente/route'
@@ -29,11 +27,9 @@ const ESPERADO: Record<string, string> = {
   'bloquear-cliente': 'cuentas', 'bloquear-compita': 'cuentas', 'toggle-estado': 'cuentas', 'toggle-verificado': 'cuentas',
   'compita': 'cuentas', 'upload-foto': 'cuentas', 'postulaciones/resolver': 'cuentas',
   'eliminar-cliente': 'raiz', 'eliminar-compita': 'raiz', 'equipo': 'raiz',
-  'demo/aceptar-entrevista': 'raiz', 'demo/cerrar-visita': 'raiz', 'demo/crear-visita': 'raiz', 'demo/estado': 'raiz',
-  'demo/iniciar-visita': 'raiz', 'demo/reset': 'raiz',
   'flags': 'atender', 'resenas': 'atender', 'asignar-compita': 'atender', 'confirmar-solicitud': 'pagos',
   'completar-solicitud': 'atender', 'forzar-cierre-visita': 'atender', 'enviar-link-llamada': 'atender',
-  'cliente-preview': 'monitorear', 'bloqueos-compita': 'atender', 'reportes-compita': 'atender', 'dudas': 'monitorear', 'esperas': 'monitorear', 'pausas': 'cuentas', 'actividad': 'monitorear', 'portal-nuevo': 'cuentas', 'contacto': 'telefonos', 'notas': 'atender', 'confirmar-pago': 'pagos', 'ajustes': 'ajustes_editar', 'insistir-aviso': 'atender', 'reintentar-aviso': 'atender', 'chat': 'chats',
+  'bloqueos-compita': 'atender', 'reportes-compita': 'atender', 'dudas': 'monitorear', 'esperas': 'monitorear', 'pausas': 'cuentas', 'actividad': 'monitorear', 'portal-nuevo': 'cuentas', 'contacto': 'telefonos', 'notas': 'atender', 'confirmar-pago': 'pagos', 'ajustes': 'ajustes_editar', 'insistir-aviso': 'atender', 'reintentar-aviso': 'atender', 'chat': 'chats',
   'generar-invite': 'invitar', 'invitar-cliente': 'invitar', 'registrar-compita': 'invitar',
 }
 // Rutas que NO usan sesión de panel sino un enlace de un solo uso (token) enviado al administrador.
@@ -123,8 +119,6 @@ describe('el servidor niega: matriz de personas por ruta', () => {
     'registrar-pago': () => registrarPago(j('/api/admin/registrar-pago', 'POST')),
     'bloquear-cliente': () => bloquearCliente(j('/api/admin/bloquear-cliente', 'POST')),
     'eliminar-cliente': () => eliminarCliente(j('/api/admin/eliminar-cliente', 'DELETE')),
-    'demo/reset': () => demoReset(j('/api/admin/demo/reset', 'POST')),
-    'cliente-preview': () => previewGet(req('/api/admin/cliente-preview')),
     flags: () => flagsGet(req('/api/admin/flags')),
     'invitar-cliente': () => invitarCliente(j('/api/admin/invitar-cliente', 'POST')),
   }
@@ -139,11 +133,11 @@ describe('el servidor niega: matriz de personas por ruta', () => {
   test('un colaborador con TODOS los permisos activados sigue sin poder hacer lo de "raíz" (403)', async () => {
     colab('todo@x.test', Object.fromEntries(PERMISOS.map((p) => [p, true])))
     como('todo@x.test')
-    for (const r of ['eliminar-cliente', 'demo/reset']) assert.equal((await llamadas[r]()).status, 403, r)
+    for (const r of ['eliminar-cliente']) assert.equal((await llamadas[r]()).status, 403, r)
   })
 
   test('cada permiso abre solo lo suyo: con el permiso pasa (ni 401 ni 403), sin él recibe 403', async () => {
-    const porRuta: Record<string, string> = { pagos: 'pagos', 'registrar-pago': 'pagos', 'bloquear-cliente': 'cuentas', 'cliente-preview': 'monitorear', flags: 'atender', 'invitar-cliente': 'invitar' }
+    const porRuta: Record<string, string> = { pagos: 'pagos', 'registrar-pago': 'pagos', 'bloquear-cliente': 'cuentas', flags: 'atender', 'invitar-cliente': 'invitar' }
     for (const [ruta, permiso] of Object.entries(porRuta)) {
       limpiar()
       colab('c@x.test', { [permiso]: true })

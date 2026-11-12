@@ -27,6 +27,8 @@ export interface FichaPersona {
   /** Hay contacto guardado (el valor NO viaja: se pide aparte, con motivo). */ contacto: { correo: boolean; telefono: boolean }
   linea: EventoLinea[]
   /** Notas internas del equipo, la más nueva primero. */ notas: NotaPersona[]
+  /** Estado de la cuenta, para los botones de la ficha. */ cuenta?: { bloqueado: boolean; verificado?: boolean; activo?: boolean; portalNuevo?: boolean | null }
+  /** Cliente: compitas a los que se le puede asignar (verificados y activos). */ asignables?: { id: string; nombre: string }[]
   /** Solo compitas. */ canc?: { total: number; tardias: number; cuentanContra: number; nivel: 'normal' | 'revision' | 'pausa' }
 }
 

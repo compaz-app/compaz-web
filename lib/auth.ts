@@ -26,7 +26,9 @@ export async function requireAuth() {
   // Construir un objeto session-like para compatibilidad
   const { data: { session } } = await supabase.auth.getSession()
   if (!session) redirect('/login')
-  return session
+  // El usuario es el VERIFICADO por Supabase (getUser), no el que viene en la cookie: quien decide acceso con session.user no puede ser engañado
+  // editando la cookie.
+  return { ...session, user }
 }
 
 export async function requireAdmin() {

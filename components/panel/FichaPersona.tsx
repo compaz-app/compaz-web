@@ -7,13 +7,14 @@ import { EncabezadoLateral, TituloBloque } from '@/components/panel/ui'
 import Aviso from '@/components/ui/base/Aviso'
 import InfoBoton from '@/components/ui/InfoBoton'
 import MotivoDialog from '@/components/panel/MotivoDialog'
+import CuentaPersona from '@/components/panel/CuentaPersona'
 import { INFO_CONTACTO, MAX_NOTA, cuandoLinea, digitosWhatsapp, type CanalContacto, type FichaPersona as Ficha, type NotaPersona } from '@/lib/panel-personas-tipos'
 
 const TEXTO_CANAL: Record<CanalContacto, string> = { correo: 'Correo', telefono: 'Teléfono', whatsapp: 'WhatsApp' }
 
 // Ficha de una persona (cliente o compita) como panel lateral. Se abre con ?persona= y se cierra volviendo a la lista.
 // Los datos de contacto no vienen con la ficha: se piden uno a uno, con motivo si no eres administrador, y quedan en Actividad.
-export default function FichaPersona({ ficha, cerrarHref, pideMotivo, puedeContacto, puedeNotas, chatHref }: { ficha: Ficha; cerrarHref: string; pideMotivo: boolean; puedeContacto: boolean; puedeNotas: boolean; chatHref: string | null }) {
+export default function FichaPersona({ ficha, cerrarHref, pideMotivo, puedeContacto, puedeNotas, puedeCuentas, chatHref }: { ficha: Ficha; cerrarHref: string; pideMotivo: boolean; puedeContacto: boolean; puedeNotas: boolean; puedeCuentas: boolean; chatHref: string | null }) {
   const router = useRouter()
   const [valores, setValores] = useState<Partial<Record<CanalContacto, string>>>({})
   const [pidiendo, setPidiendo] = useState<CanalContacto | null>(null)
@@ -74,6 +75,8 @@ export default function FichaPersona({ ficha, cerrarHref, pideMotivo, puedeConta
             {ficha.canc.total} cancelación{ficha.canc.total > 1 ? 'es' : ''} en 30 días, {ficha.canc.cuentanContra} tardía{ficha.canc.cuentanContra === 1 ? '' : 's'} sin justificar{ficha.canc.nivel === 'pausa' ? '. Sus solicitudes nuevas están en pausa.' : ficha.canc.nivel === 'revision' ? '. En revisión.' : '.'}
           </Aviso>
         )}
+
+        <CuentaPersona ficha={ficha} puedeCuentas={puedeCuentas} puedeAtender={puedeNotas} />
 
         {puedeContacto && canales.length > 0 && (
           <section className="space-y-2">

@@ -28,6 +28,7 @@ import Estado from '@/components/panel/mas/Estado'
 import Resenas from '@/components/panel/mas/Resenas'
 import Pagos from '@/components/panel/mas/Pagos'
 import Postulaciones from '@/components/panel/mas/Postulaciones'
+import Invitar from '@/components/panel/mas/Invitar'
 import { listarPostulaciones, pendientesDeAirtable } from '@/lib/panel-postulaciones'
 import { consultarPostulaciones } from '@/lib/panel-postulaciones-tipos'
 import Avisos from '@/components/panel/mas/Avisos'
@@ -130,6 +131,8 @@ export default async function PanelPage({ searchParams }: { searchParams: Promis
         vista = <Manual retencion={retencion} actor={actor} q={un('man_q').trim().slice(0, 100)} sec={un('man_sec')} abierta={un('man_abierta')} enlace={enlace} como={comoColaborador} paramsForm={base} />
       } else if (subMas.id === 'resenas') {
         vista = <Resenas filas={await listarResenas(comoActor)} ver={un('res_ver') === 'publicadas' ? 'publicadas' : 'pendientes'} enlace={enlace} puedeActuar={actor.permisos.atender === true} />
+      } else if (subMas.id === 'invitar') {
+        vista = <Invitar />
       } else if (subMas.id === 'postulaciones') {
         vista = <Postulaciones q={consultarPostulaciones(await listarPostulaciones(), un('po_tipo'), un('po_clasif'), un('po_pag'))} pend={await pendientesDeAirtable()} enlace={enlace} />
       } else if (subMas.id === 'pagos') {
@@ -181,7 +184,7 @@ export default async function PanelPage({ searchParams }: { searchParams: Promis
           chatHref={actor.permisos.chats === true && caso.compitaId ? enlace({ chat: `${caso.id}:${caso.compitaId}` }) : null} />
       )}
       {datosFicha && (
-        <FichaPersona ficha={datosFicha} cerrarHref={enlace({ persona: null })} pideMotivo={actor.rol !== 'admin'} puedeContacto={actor.permisos.telefonos === true} puedeNotas={actor.permisos.atender === true}
+        <FichaPersona ficha={datosFicha} cerrarHref={enlace({ persona: null })} pideMotivo={actor.rol !== 'admin'} puedeContacto={actor.permisos.telefonos === true} puedeNotas={actor.permisos.atender === true} puedeCuentas={actor.permisos.cuentas === true}
           chatHref={actor.permisos.chats === true && datosFicha.tipo === 'cliente' && datosFicha.compitaId ? enlace({ persona: null, chat: `${datosFicha.id}:${datosFicha.compitaId}` }) : null} />
       )}
       {chat && <VerChat key={`${chat.clienteId}:${chat.compitaId}`} clienteId={chat.clienteId} compitaId={chat.compitaId} cerrarHref={enlace({ chat: null })} pideMotivo={actor.rol !== 'admin'}

@@ -1,7 +1,7 @@
 // Más: las herramientas que no son del día a día (lógica PURA). Qué hay, quién lo ve y cuáles ya están construidas en el panel nuevo.
 import type { ActorVista } from '@/lib/panel-secciones'
 
-export type SubMas = 'resenas' | 'postulaciones' | 'pagos' | 'avisos' | 'cobertura' | 'umbrales' | 'equipo' | 'ajustes' | 'actividad' | 'limites' | 'manual' | 'registro' | 'estado'
+export type SubMas = 'resenas' | 'invitar' | 'postulaciones' | 'pagos' | 'avisos' | 'cobertura' | 'umbrales' | 'equipo' | 'ajustes' | 'actividad' | 'limites' | 'manual' | 'registro' | 'estado'
 
 export interface DefMas {
   id: SubMas; icono: string; texto: string; descripcion: string
@@ -17,6 +17,7 @@ const soloAdmin = (a: ActorVista) => a.rol === 'admin'
 
 export const HUB: DefMas[] = [
   { id: 'resenas', icono: '⭐', texto: 'Reseñas por aprobar', descripcion: 'Aprueba u oculta lo que el cliente escribe antes de que se vea en el perfil del compita.', visible: con('atender'), listo: true },
+  { id: 'invitar', icono: '✉️', texto: 'Invitar', descripcion: 'Suma a un cliente por correo o genera un enlace de registro para un compita.', visible: con('invitar'), listo: true },
   { id: 'postulaciones', icono: '📥', texto: 'Postulaciones y origen (CMC)', descripcion: 'Quién se postuló, desde qué página o campaña llegó y si calificó.', visible: soloAdmin, listo: true },
   { id: 'pagos', icono: '💵', texto: 'Pagos', descripcion: 'Pagos registrados, con la opción de anular uno si hubo un error.', visible: con('pagos'), listo: true },
   { id: 'avisos', icono: '📨', texto: 'Avisos enviados', descripcion: 'Qué se le mandó a cada persona, por qué canal y si llegó. Aquí se reintentan los fallidos.', visible: con('monitorear'), listo: true },

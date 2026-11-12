@@ -22,7 +22,7 @@ export const SECCIONES: { id: SeccionManual; titulo: string; descripcion: string
 ]
 
 /** Las pantallas del panel. Cada una debe tener al menos una entrada del manual (lo comprueba una prueba). */
-export const PANTALLAS_PANEL = ['bandeja', 'seguimiento', 'personas', 'visitas', 'resenas', 'postulaciones', 'pagos', 'avisos', 'cobertura', 'umbrales', 'equipo', 'ajustes', 'actividad', 'limites', 'registro', 'estado', 'manual'] as const
+export const PANTALLAS_PANEL = ['bandeja', 'seguimiento', 'personas', 'visitas', 'resenas', 'invitar', 'postulaciones', 'pagos', 'avisos', 'cobertura', 'umbrales', 'equipo', 'ajustes', 'actividad', 'limites', 'registro', 'estado', 'manual'] as const
 export type PantallaPanel = (typeof PANTALLAS_PANEL)[number]
 
 export interface EntradaManual {
@@ -350,18 +350,19 @@ export const ENTRADAS: EntradaManual[] = [
       'Elige la acción. Bloquear a un cliente le impide entrar; bloquear a un compita lo saca del listado y le desvincula Telegram.',
       'La acción queda anotada con tu nombre.',
     ],
-    despues: 'Eliminar una cuenta por completo (con sus fotos y datos) solo lo puede hacer un administrador.',
+    despues: 'Eliminar una cuenta por completo todavía no tiene botón en el panel nuevo: se está definiendo cómo hacerlo sin perder lo que la ley o las visitas pasadas exigen guardar. Bloquear ya impide todo uso.',
     permiso: 'cuentas', pantalla: 'personas', busca: ['bloqueo', 'suspender', 'eliminar'],
   },
   {
     id: 'cta-invitar', seccion: 'cuentas', titulo: '¿Cómo invito a un cliente o registro a un compita?',
     paraQue: 'Para sumar personas sin que tengan que registrarse solas.',
     pasos: [
-      'Abre la herramienta de invitar y escribe el correo.',
-      'La persona recibe un enlace para entrar sin contraseña.',
+      'Abre Más, Invitar.',
+      'Para un cliente: escribe su nombre y correo y toca "Enviar invitación". Recibe un correo con su enlace para entrar, sin contraseña.',
+      'Para un compita: toca "Generar enlace", cópialo y mándaselo. Lleva al formulario de registro y vale 7 días.',
     ],
-    despues: 'Los postulantes que llegan por la página se ven en Más, Postulaciones y origen, con la campaña desde la que llegaron.',
-    permiso: 'invitar', pantalla: 'postulaciones', busca: ['invitacion', 'registro', 'postulacion', 'reclutar'],
+    despues: 'Si el cliente ya estaba registrado no se le reinvita: que pida un enlace nuevo en la página de entrada. Los postulantes que llegan por la página se ven en Más, Postulaciones y origen, con la campaña desde la que llegaron.',
+    permiso: 'invitar', pantalla: 'invitar', busca: ['invitacion', 'registro', 'postulacion', 'reclutar'],
   },
   {
     id: 'cta-postulaciones', seccion: 'cuentas', titulo: '¿Cómo veo de dónde llegan las postulaciones y resuelvo las que no llegaron a Airtable?',

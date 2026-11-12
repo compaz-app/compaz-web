@@ -105,9 +105,10 @@ export async function fichaDePersona(actor: Actor, tipo: TipoPersona, id: string
     const { data: c } = await db.from('compitas').select('*').eq('id', id).maybeSingle()
     if (!c || c.es_demo) return null
     const [linea, canc, notas] = await Promise.all([lineaDe(actor, 'compita', id), resumenCancelacionesCompita(id), listarNotas(actor, 'compita', id)])
-    return { tipo, id, nombre: [c.nombre, c.apellido].filter(Boolean).join(' '), zona: String(c.zona ?? ''), contacto: { correo: !!c.email, telefono: !!c.telefono }, linea, notas, canc }
+    return { tipo, id, nombre: [c.nombre, c.apellido].filter(Boolean).join(' '), zona: String(c.zona ?? ''), contacto: { correo: !!c.email, telefono: !!c.telefono }, linea, notas, canc,
+      cuenta: { bloqueado: c.estado === 'bloqueado', verificado: !!c.verificado, activo: c.estado === 'activo' } }
   }
-  const { data: u } = await db.from('usuarios').select('id, nombre, zona, email, telefono, compita_id, eliminada_en').eq('id', id).maybeSingle()
+  const { data: u } = await db.from('usuarios').select('id, nombre, zona, email, telefono, compita_id, eliminada_en, plan, portal_nuevo').eq('id', id).maybeSingle()
   if (!u || u.eliminada_en) return null
   const [linea, foto, compita, notas] = await Promise.all([
     lineaDe(actor, 'cliente', id), cargarFoto(id),
@@ -115,10 +116,15 @@ export async function fichaDePersona(actor: Actor, tipo: TipoPersona, id: string
     listarNotas(actor, 'cliente', id),
   ])
   const estado = decidirEstado(foto)
+  // Solo quien puede asignar necesita la lista de compitas (no viaja a los demás).
+  const asignables = puede(actor, 'atender')
+    ? ((await db.from('compitas').select('id, nombre, apellido, es_demo').eq('estado', 'activo').eq('verificado', true).order('nombre').limit(200)).data ?? []).filter((x) => !x.es_demo).map((x) => ({ id: String(x.id), nombre: [x.nombre, x.apellido].filter(Boolean).join(' ') }))
+    : undefined
   return {
     tipo, id, nombre: String(u.nombre ?? ''), zona: String(u.zona ?? ''), etapa: PASOS_PORTAL[estado.paso],
     compita: compita.data ? [compita.data.nombre, compita.data.apellido].filter(Boolean).join(' ') : null, compitaId: u.compita_id ? String(u.compita_id) : null,
     contacto: { correo: !!u.email, telefono: !!u.telefono }, linea, notas,
+    cuenta: { bloqueado: u.plan === 'bloqueado', portalNuevo: (u.portal_nuevo as boolean | null) ?? null }, asignables,
   }
 }
 
