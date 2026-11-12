@@ -46,3 +46,6 @@ next-env.d.ts
 
 # Respaldos manuales de la base (scripts/respaldo.sh): nunca se suben
 respaldos/
+recuerdo-sistema-viejo/
+.env.migracion
+scripts/migracion/.env.migracion
