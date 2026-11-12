@@ -14,7 +14,7 @@ import SeccionPlan from '@/components/portal/SeccionPlan'
 import AutoRefresh from '@/components/ui/AutoRefresh'
 import VisitaWatcher from '@/components/ui/VisitaWatcher'
 import { cargarDatosPortal } from '@/lib/portal-datos'
-import { alertaAdmin } from '@/lib/alertas-admin'
+import { registrarAcceso } from '@/lib/alertas-admin'
 import { esPestana } from '@/lib/portal-secciones'
 
 export const dynamic = 'force-dynamic'
@@ -36,7 +36,7 @@ export default async function PortalPage({ searchParams }: { searchParams: Promi
   const portal = await cargarPortal(uid)
   // Ver el portal de otro cliente es un acceso a sus datos: queda anotado ANTES de mostrarlo y, si no se puede anotar, no se muestra.
   if (esAdmin && preview) {
-    const anotado = await alertaAdmin('actividad', `${session.user.email} abrió la vista previa del portal de ${portal.nombre || 'un cliente'}`, { categoria: 'acceso_contacto', entidad: { tipo: 'cliente', id: preview, nombre: portal.nombre || 'Cliente' } })
+    const anotado = await registrarAcceso(`${session.user.email} abrió la vista previa del portal de ${portal.nombre || 'un cliente'}`, { categoria: 'acceso_contacto', entidad: { tipo: 'cliente', id: preview, nombre: portal.nombre || 'Cliente' } })
     if (!anotado) redirect('/panel')
   }
   const datos = pestana === 'inicio' ? null : await cargarDatosPortal(uid)

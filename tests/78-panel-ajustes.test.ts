@@ -63,7 +63,7 @@ describe('la ruta', () => {
     await invitarColaborador('ver@compaz.test', 'Ver', { ajustes_ver: true, monitorear: true }, 'admin@compaz.test'); session.user = { id: 'u', email: 'ver@compaz.test' } as any
     assert.equal((await llamar({ recordatorio_cliente_max: 4 })).status, 403)
     await invitarColaborador('edi@compaz.test', 'Edi', { ajustes_editar: true }, 'admin@compaz.test'); session.user = { id: 'e', email: 'edi@compaz.test' } as any
-    assert.equal((await llamar({})).status, 400); assert.equal((await llamar({ no_existe: 1 })).status, 400); assert.equal((await llamar({ precio_hora: 'abc' })).status, 400)
+    assert.equal((await llamar({})).status, 400); assert.equal((await llamar({ no_existe: 1 })).status, 400); assert.equal((await llamar({ recordatorio_cliente_max: 'abc' })).status, 400)
     assert.equal((await llamar({ recordatorio_cliente_max: 4 })).status, 200); assert.ok(db.rows('actividad_admin').some((x: any) => x.categoria === 'ajustes_cambiados' && /edi@compaz\.test/.test(x.resumen)))
   })
   
@@ -117,7 +117,7 @@ describe('ningún ajuste promete lo que el sistema no hace', () => {
     for (const a of no) { const r = await llamar({ [a.clave]: a.min ?? 5 }); assert.equal(r.status, 400, a.clave); assert.match((await r.json()).error, /no está conectado/, a.clave) }
     assert.equal(db.rows('ajustes_historial').length, 0); assert.equal((await llamar({ recordatorio_cliente_max: 4, [no[0].clave]: 5 })).status, 400); limpiarCacheAjustes(); assert.equal((await getAjustes()).recordatorio_cliente_max, ajustesPorDefecto().recordatorio_cliente_max)
   })
-  test('la pantalla los marca y los deja en solo lectura', () => { const f = readFileSync('components/panel/mas/AjustesForm.tsx', 'utf8'); assert.match(f, /Aún no conectado/); assert.match(f, /disabled=\{!puedeEditar \|\| !f\.conectado\}/) })
+  test('la pantalla los marca y los deja en solo lectura', () => { const f = readFileSync('components/panel/mas/AjustesForm.tsx', 'utf8'); assert.match(f, /Aún no conectado/); assert.match(f, /disabled=\{!puedeEditar \|\| !f\.conectado \|\| \(f\.soloAdmin && !esAdmin\)\}/) })
 })
 
 describe('guardias de código', () => {

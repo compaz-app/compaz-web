@@ -101,6 +101,16 @@ export type Ajustes = Record<ClaveAjuste, ValorAjuste>
 
 const POR_CLAVE = new Map<string, DefAjuste>(CATALOGO.map((d) => [d.clave, d]))
 
+/**
+ * Ajustes que SOLO cambia el administrador (S-06): lo que un colaborador con "editar ajustes" no debería poder tocar solo, porque mueve dinero o privacidad
+ * o es un texto libre que ven todos los clientes y compitas (un teléfono falso dentro de una advertencia antifraude, por ejemplo).
+ * Son los precios, los plazos de retención de datos y todo texto.
+ */
+export function soloAdministrador(clave: string): boolean {
+  const d = defAjuste(clave)
+  return !!d && (d.tipo === 'texto' || d.grupo === 'Precios' || clave.endsWith('_retencion_dias'))
+}
+
 export function defAjuste(clave: string): DefAjuste | undefined {
   return POR_CLAVE.get(clave)
 }
@@ -245,7 +255,19 @@ export async function setAjustes(p: { cambios: Record<string, unknown>; actor: s
   for (const c of claves) {
     if (actuales[c as ClaveAjuste] === (propuestos as Record<string, ValorAjuste>)[c]) continue
     const { error } = await createAdminSupabase().rpc('guardar_ajuste', { p_clave: c, p_valor: (propuestos as Record<string, ValorAjuste>)[c], p_anterior: actuales[c as ClaveAjuste], p_actor: p.actor })
-    if (error) { console.error('[ajustes] guardar varios:', error.message); limpiarCacheAjustes(); return { ok: false, error: `No se pudo guardar "${defAjuste(c)?.etiqueta ?? c}". Lo anterior ya guardado se conserva; revisa y vuelve a intentar.`, codigo: 'base', clave: c } }
+    if (error) {
+      console.error('[ajustes] guardar varios:', error.message)
+      // Todo o nada (S-06): lo que ya se había guardado en este lote se deshace, dejando en el historial tanto el cambio como su reversión.
+      let deshecho = true
+      for (const hecho of cambiados) {
+        const { error: eR } = await createAdminSupabase().rpc('guardar_ajuste', { p_clave: hecho, p_valor: actuales[hecho as ClaveAjuste], p_anterior: (propuestos as Record<string, ValorAjuste>)[hecho], p_actor: `${p.actor} (se deshizo: falló otro cambio del lote)` })
+        if (eR) { deshecho = false; console.error('[ajustes] no se pudo deshacer', hecho, eR.message) }
+      }
+      limpiarCacheAjustes()
+      return { ok: false, error: deshecho
+        ? `No se pudo guardar "${defAjuste(c)?.etiqueta ?? c}". No se guardó nada: lo que ya se había aplicado se deshizo. Inténtalo otra vez.`
+        : `No se pudo guardar "${defAjuste(c)?.etiqueta ?? c}" y no se pudo deshacer todo lo anterior. Revisa los valores y el historial antes de volver a guardar.`, codigo: 'base', clave: c }
+    }
     cambiados.push(c)
   }
   limpiarCacheAjustes()

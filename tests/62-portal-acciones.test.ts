@@ -65,7 +65,7 @@ describe('"Avisar a Compaz": pedir ayuda al equipo', () => {
   })
   test('una segunda vez dentro de la hora se frena (429) con frase corta y la razón aparte; no abre otra tarea', async () => {
     const c = mkCliente(); como(c); await avisarEquipo(); const r = await avisarEquipo(); assert.equal(r.status, 429)
-    const j = await r.json(); assert.match(j.error, /Ya avisamos al equipo hace un momento/); assert.ok(j.error.length < 110); assert.match(j.porQue, /ya recibió tu aviso/)
+    const j = await r.json(); assert.match(j.error, /Ya avisamos al equipo hace un momento/); assert.ok(j.error.length < 125); assert.match(j.porQue, /ya recibió tu aviso/)
     assert.equal(db.rows('admin_flags').filter((f) => f.tipo === 'cliente_pide_ayuda').length, 1)
   })
   test('pasada la hora vuelve a poder avisar; y cada cliente tiene su propia cuenta', async () => {

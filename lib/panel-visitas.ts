@@ -1,6 +1,6 @@
 // Datos de Visitas del panel (servidor). Una consulta con los nombres unidos; el resto se clasifica en memoria con lógica pura.
 import { createAdminSupabase } from '@/lib/supabase-server'
-import type { Actor } from '@/lib/permisos'
+import { puede, type Actor } from '@/lib/permisos'
 import { recortarTexto } from '@/lib/panel-datos'
 import { clasificarVisita, type FilaVisita, type VisitaCruda } from '@/lib/panel-visitas-tipos'
 
@@ -29,13 +29,14 @@ export async function detalleDeVisita(actor: Actor, id: string, ahora: number = 
   const fila = clasificarVisita({ ...v, cliente: v.usuario?.nombre ?? 'Sin nombre', compita: [v.compita?.nombre, v.compita?.apellido].filter(Boolean).join(' ') || 'Sin nombre', zona: v.compita?.zona ?? '' }, ahora)
   const [canc, act] = await Promise.all([
     db.from('cancelaciones').select('cancelado_por, tardia, justificada, creado_en').eq('visita_id', id).order('creado_en', { ascending: false }).limit(10),
-    db.from('actividad_admin').select('resumen, creado_en').eq('entidad_id', id).order('creado_en', { ascending: false }).limit(15),
+    db.from('actividad_admin').select('resumen, creado_en, categoria').eq('entidad_id', id).order('creado_en', { ascending: false }).limit(30),
   ])
   const ev: { cuando: string; texto: string }[] = []
   const put = (cuando: unknown, texto: string) => { if (typeof cuando === 'string' && cuando) ev.push({ cuando, texto }) }
   put(v.created_at, 'Se agendó la visita'); put(v.llegada_en, 'El compita llegó'); put(v.sin_acceso_en, 'Nadie abrió la puerta'); put(v.inicio, 'La visita empezó')
   put(v.salida_seguridad_en, 'El compita salió por seguridad'); put(v.fin, 'La visita terminó')
   for (const c of canc.data ?? []) put(c.creado_en, `Cancelación por ${c.cancelado_por === 'cliente' ? 'el cliente' : c.cancelado_por === 'compita' ? 'el compita' : 'el equipo'}${c.tardia ? ', con poco aviso' : ''}${c.justificada ? ' (justificada)' : ''}`)
-  for (const a of act.data ?? []) put(a.creado_en, recortarTexto(actor, String(a.resumen)))
+  // Los accesos a datos sensibles son del Registro de accesos: solo los ve quien tiene el permiso de ver contactos (S-05).
+  for (const a of (act.data ?? []).filter((x) => puede(actor, 'telefonos') || !String(x.categoria ?? '').startsWith('acceso_')).slice(0, 15)) put(a.creado_en, recortarTexto(actor, String(a.resumen)))
   return { fila, linea: ev.sort((a, b) => b.cuando.localeCompare(a.cuando)) }
 }

@@ -140,7 +140,7 @@ export default async function PanelPage({ searchParams }: { searchParams: Promis
       } else if (subMas.id === 'avisos') {
         vista = <Avisos filas={await listarAvisos()} ver={un('av_ver') === 'fallidos' ? 'fallidos' : 'todos'} pagina={un('av_pag')} enlace={enlace} puedeReintentar={actor.permisos.atender === true} />
       } else if (subMas.id === 'ajustes' || subMas.id === 'umbrales') {
-        vista = <Ajustes d={await datosDeAjustes()} puedeEditar={actor.permisos.ajustes_editar === true} semaforo={subMas.id === 'umbrales'} />
+        vista = <Ajustes d={await datosDeAjustes()} puedeEditar={actor.permisos.ajustes_editar === true} esAdmin={actor.rol === 'admin'} semaforo={subMas.id === 'umbrales'} />
       } else if (subMas.id === 'equipo') {
         vista = <Equipo d={await datosDeEquipo()} />
       } else if (subMas.id === 'cobertura') {

@@ -418,7 +418,7 @@ export const ENTRADAS: EntradaManual[] = [
       'Cámbialo. Puedes cambiar varios a la vez. Si algo no tiene sentido (por ejemplo, un plan más caro que las horas sueltas), el sistema te lo avisa y pide confirmación.',
       'Toca "Guardar y aplicar". Se guarda todo o nada: si un valor no sirve, no se guarda ningún cambio.',
     ],
-    despues: 'El cambio rige desde ese momento en todo el sistema y queda anotado quién lo hizo y cuándo (abajo, en Cambios recientes). Lo que ya se pagó no cambia. Los ajustes marcados "Aún no conectado" se ven pero no se pueden cambiar, porque el sistema todavía no los lee. Sin el permiso de cambiar ajustes, los campos se ven pero no se pueden editar.',
+    despues: 'El cambio rige desde ese momento en todo el sistema y queda anotado quién lo hizo y cuándo (abajo, en Cambios recientes). Lo que ya se pagó no cambia. Los ajustes marcados "Aún no conectado" se ven pero no se pueden cambiar, porque el sistema todavía no los lee. Los precios, los plazos de retención de datos y todos los textos solo los cambia el administrador (a un colaborador le salen bloqueados, marcados "Solo administrador"). Sin el permiso de cambiar ajustes, los campos se ven pero no se pueden editar. Si algo falla a mitad de guardar varios cambios, se deshace todo lo aplicado.',
     permiso: 'ajustes_editar', pantalla: 'ajustes', busca: ['precios', 'plazos', 'topes', 'configuracion'],
   },
   {

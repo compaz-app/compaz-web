@@ -10,7 +10,7 @@ export type EntidadEvento = 'solicitud' | 'visita' | 'pago' | 'cliente' | 'compi
 export type TipoEvento =
   | 'solicitud_creada' | 'solicitud_aceptada' | 'solicitud_rechazada' | 'horario_confirmado'
   | 'entrevista_entro' | 'entrevista_terminada' | 'decision_contratar'
-  | 'pago_solicitado' | 'pago_confirmado'
+  | 'pago_solicitado' | 'pago_confirmado' | 'pago_anulado'
   | 'visita_programada' | 'visita_iniciada' | 'visita_confirmada' | 'visita_terminada'
   | 'calificacion' | 'reporte_enviado' | 'emergencia'
   | 'etapa_cambiada' | 'ayuda_tocada' | 'ayuda_humano' | 'aviso_fallido'

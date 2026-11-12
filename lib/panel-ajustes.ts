@@ -1,6 +1,6 @@
 // Datos de la pantalla de Ajustes (servidor): cada ajuste con su valor vigente y el historial de cambios.
 import { createAdminSupabase } from '@/lib/supabase-server'
-import { CATALOGO, defAjuste, getAjustes } from '@/lib/ajustes'
+import { CATALOGO, defAjuste, getAjustes, soloAdministrador } from '@/lib/ajustes'
 import type { FilaAjuste } from '@/lib/panel-mas-tipos'
 
 export interface CambioAjuste { clave: string; etiqueta: string; anterior: string; nuevo: string; por: string; cuando: string }
@@ -24,7 +24,7 @@ export async function datosDeAjustes(): Promise<DatosAjustes> {
   return {
     ajustes: CATALOGO.map((d) => ({
       clave: d.clave, explica: d.explica, conectado: !('conectado' in d && d.conectado === false), grupo: d.grupo, etiqueta: d.etiqueta, tipo: d.tipo, valor: valores[d.clave], defecto: d.defecto, unidad: ('unidad' in d ? d.unidad : null) ?? null,
-      min: ('min' in d ? d.min : null) ?? null, max: ('max' in d ? d.max : null) ?? null, usa: [...d.usa], propuesto: 'propuesto' in d ? d.propuesto === true : false,
+      min: ('min' in d ? d.min : null) ?? null, max: ('max' in d ? d.max : null) ?? null, usa: [...d.usa], propuesto: 'propuesto' in d ? d.propuesto === true : false, soloAdmin: soloAdministrador(d.clave),
     })),
     historial: (h.data ?? []).map((x) => {
       const d = defAjuste(String(x.clave)); const u = d && 'unidad' in d ? (d.unidad ?? null) : null

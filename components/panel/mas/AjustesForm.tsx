@@ -21,7 +21,7 @@ function malo(f: FilaAjuste, v: string): string | null {
  * La lista de ajustes por grupo. Los cambios se juntan y se guardan TODOS a la vez con "Guardar y aplicar" (el servidor valida el conjunto y,
  * si algo no cuadra, no guarda nada). Con solo el permiso de ver, los campos quedan en solo lectura.
  */
-export default function AjustesForm({ filas, puedeEditar }: { filas: FilaAjuste[]; puedeEditar: boolean }) {
+export default function AjustesForm({ filas, puedeEditar, esAdmin }: { filas: FilaAjuste[]; puedeEditar: boolean; esAdmin: boolean }) {
   const router = useRouter()
   const inicial = useMemo(() => Object.fromEntries(filas.map((f) => [f.clave, texto(f.valor)])), [filas])
   const [v, setV] = useState<Record<string, string>>(inicial)
@@ -66,16 +66,16 @@ export default function AjustesForm({ filas, puedeEditar }: { filas: FilaAjuste[
               return (
                 <li key={f.clave} className={`px-3 py-2.5 ${cambiado ? 'bg-amarillo-claro/40' : ''}`}>
                   <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
-                    <label htmlFor={`aj-${f.clave}`} className="flex min-w-48 flex-1 items-center gap-1 text-sm">{f.etiqueta}{!f.conectado && <Rol>Aún no conectado</Rol>}{f.propuesto && <Rol>Propuesta</Rol>}
+                    <label htmlFor={`aj-${f.clave}`} className="flex min-w-48 flex-1 items-center gap-1 text-sm">{f.etiqueta}{!f.conectado && <Rol>Aún no conectado</Rol>}{f.propuesto && <Rol>Propuesta</Rol>}{f.soloAdmin && !esAdmin && <Rol>Solo administrador</Rol>}
                       <InfoBoton que={`Qué es: ${f.etiqueta}`} texto={`${f.conectado ? '' : 'AÚN NO CONECTADO: el sistema todavía no lee este ajuste, así que cambiarlo no tiene efecto hoy. Lo que sigue es lo que hará cuando se conecte. '}${f.explica} Se usa en: ${f.usa.join(', ')}. Valor de fábrica: ${f.unidad === '$' ? '$' : ''}${f.tipo === 'texto' ? 'el texto original' : f.defecto}${f.unidad && f.unidad !== '$' ? ` ${f.unidad}` : ''}.${f.propuesto ? ' Es una cifra propuesta que el dueño aún no ha confirmado.' : ''}`} /></label>
                     {f.tipo === 'numero' && (
                       <span className="flex items-center gap-1">{f.unidad === '$' && <b className="text-sm">$</b>}
-                        <input id={`aj-${f.clave}`} inputMode="decimal" value={v[f.clave]} disabled={!puedeEditar || !f.conectado} onChange={(e) => { setAcepta(false); setV((o) => ({ ...o, [f.clave]: e.target.value })) }}
+                        <input id={`aj-${f.clave}`} inputMode="decimal" value={v[f.clave]} disabled={!puedeEditar || !f.conectado || (f.soloAdmin && !esAdmin)} onChange={(e) => { setAcepta(false); setV((o) => ({ ...o, [f.clave]: e.target.value })) }}
                           className="min-h-10 w-24 rounded-lg border border-borde bg-blanco px-2 text-right text-sm font-bold disabled:bg-fondo-claro" />
                         {f.unidad && f.unidad !== '$' && <span className="text-sm text-texto-medio">{f.unidad}</span>}</span>
                     )}
                   </div>
-                  {f.tipo === 'texto' && <textarea id={`aj-${f.clave}`} value={v[f.clave]} disabled={!puedeEditar || !f.conectado} onChange={(e) => { setAcepta(false); setV((o) => ({ ...o, [f.clave]: e.target.value })) }} className="mt-2 min-h-24 w-full rounded-lg border border-borde p-2 text-sm disabled:bg-fondo-claro" />}
+                  {f.tipo === 'texto' && <textarea id={`aj-${f.clave}`} value={v[f.clave]} disabled={!puedeEditar || !f.conectado || (f.soloAdmin && !esAdmin)} onChange={(e) => { setAcepta(false); setV((o) => ({ ...o, [f.clave]: e.target.value })) }} className="mt-2 min-h-24 w-full rounded-lg border border-borde p-2 text-sm disabled:bg-fondo-claro" />}
                   {err && <p className="mt-1 text-xs font-bold text-rojo-oscuro">{err}</p>}
                 </li>
               )

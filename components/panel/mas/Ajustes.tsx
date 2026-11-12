@@ -9,7 +9,7 @@ const INFO_AJUSTES = 'Aquí se cambian precios, plazos, topes y textos, y el cam
 const INFO_SEMAFORO = 'El punto de color de Seguimiento depende de cuántas horas lleva un cliente sin movimiento en su etapa: pasa a amarillo y luego a rojo. Aquí defines esas horas para cada etapa. El rojo siempre debe llegar después del amarillo. Rige desde ahora en Seguimiento y en el detalle de cada caso.'
 
 // Ajustes (y, con `semaforo`, Ajustes del semáforo): la misma pantalla con los grupos que corresponden a cada herramienta.
-export default function Ajustes({ d, puedeEditar, semaforo }: { d: DatosAjustes; puedeEditar: boolean; semaforo: boolean }) {
+export default function Ajustes({ d, puedeEditar, esAdmin, semaforo }: { d: DatosAjustes; puedeEditar: boolean; esAdmin: boolean; semaforo: boolean }) {
   const filas = d.ajustes.filter((a) => esDelSemaforo(a) === semaforo)
   const claves = new Set(filas.map((f) => f.clave))
   const historial = d.historial.filter((h) => claves.has(h.clave))
@@ -18,7 +18,7 @@ export default function Ajustes({ d, puedeEditar, semaforo }: { d: DatosAjustes;
   return (
     <section className="max-w-3xl space-y-5">
       <p className="flex items-center gap-1 text-sm text-texto-medio">{semaforo ? 'Cuántas horas son normales en cada etapa antes de pasar a amarillo y a rojo.' : 'Precios, plazos, topes y textos del sistema.'}<InfoBoton que="Cómo funcionan los ajustes" texto={semaforo ? INFO_SEMAFORO : INFO_AJUSTES} /></p>
-      <AjustesForm key={firma} filas={filas} puedeEditar={puedeEditar} />
+      <AjustesForm key={firma} filas={filas} puedeEditar={puedeEditar} esAdmin={esAdmin} />
       <div className="space-y-2">
         <div className="flex items-center gap-1"><TituloSeccion>Cambios recientes</TituloSeccion><InfoBoton que="Qué es esto" texto="Cada ajuste que se cambia queda aquí con el valor anterior, el nuevo, quién lo hizo y cuándo. Es de solo inserción: nadie puede editarlo ni borrarlo." /></div>
         <ul className={CLASE_LISTA}>

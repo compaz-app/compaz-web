@@ -4,7 +4,7 @@ import { createAdminSupabase } from '@/lib/supabase-server'
 import type { Actor } from '@/lib/permisos'
 import { puede } from '@/lib/permisos'
 import { recortarTexto } from '@/lib/panel-datos'
-import { alertaAdmin } from '@/lib/alertas-admin'
+import { registrarAcceso } from '@/lib/alertas-admin'
 import { SIN_MOTIVO_ADMIN, motivoValido, type MensajePanel } from '@/lib/panel-personas-tipos'
 
 export type ResultadoChat = { ok: true; cliente: string; compita: string; mensajes: MensajePanel[] } | { ok: false; error: string; status: number }
@@ -26,7 +26,7 @@ export async function verChat(actor: Actor, p: { clienteId: string; compitaId: s
   const cliente = String(cli.data.nombre ?? ''), compita = [cmp.data.nombre, cmp.data.apellido].filter(Boolean).join(' ')
   const ids = (vis.data ?? []).map((v) => String(v.id))
 
-  const anotado = await alertaAdmin('actividad', `${actor.correo} abrió el chat entre ${cliente} y ${compita}. Motivo: ${motivo}`, { categoria: 'acceso_chat', entidad: { tipo: 'cliente', id: p.clienteId, nombre: cliente } })
+  const anotado = await registrarAcceso(`${actor.correo} abrió el chat entre ${cliente} y ${compita}. Motivo: ${motivo}`, { categoria: 'acceso_chat', entidad: { tipo: 'cliente', id: p.clienteId, nombre: cliente } })
   if (!anotado) return { ok: false, error: 'No se pudo anotar el acceso, así que no se muestra el chat. Inténtalo otra vez.', status: 503 }
 
   let mensajes: MensajePanel[] = []

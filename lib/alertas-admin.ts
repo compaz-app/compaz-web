@@ -66,6 +66,25 @@ export async function alertaAdmin(nivel: NivelAlerta, textoHtml: string, opc: Op
   }
 }
 
+/**
+ * Anota un ACCESO a datos sensibles (contacto, chat, vista previa del portal) en el registro oficial y dice si quedó anotado. A diferencia de
+ * alertaAdmin, NO tiene respaldo por Telegram: si el registro falla devuelve false y quien llama NO entrega el dato (S-04). El texto se guarda tal
+ * cual (es texto plano, no HTML), así un motivo con "<" o "&" no se mutila.
+ */
+export async function registrarAcceso(resumen: string, opc: { categoria: 'acceso_contacto' | 'acceso_chat'; entidad: { tipo: 'visita' | 'compita' | 'cliente'; id: string; nombre?: string } }): Promise<boolean> {
+  try {
+    const { error } = await createAdminSupabase().from('actividad_admin').insert({
+      nivel: 'actividad', resumen: resumen.slice(0, 1200), categoria: opc.categoria,
+      entidad_tipo: opc.entidad.tipo, entidad_id: opc.entidad.id, entidad_nombre: opc.entidad.nombre ?? null,
+    })
+    if (error) { console.error('[acceso] no se pudo anotar el acceso:', error.message); return false }
+    return true
+  } catch (e) {
+    console.error('[acceso] error anotando el acceso:', e instanceof Error ? e.message : e)
+    return false
+  }
+}
+
 /** Abre una tarea en la bandeja, sin duplicar una igual que siga abierta. */
 async function abrirTarea(plano: string, nivel: NivelAlerta, opc: OpcionesAlerta): Promise<void> {
   const admin = createAdminSupabase()

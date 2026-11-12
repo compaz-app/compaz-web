@@ -23,7 +23,7 @@ const terminarActiva = (cli: any) => { const v = db.rows('visitas').find((x) => 
 const mundoCon = (paquetes: Array<{ inicioDias: number; venceDias: number; visitas: number; tipo?: string; plan?: string }>, visitasHaceDias: number[] = []) => {
   const lucia = mkCompita({ telegram_chat_id: '5000', nombre: 'Lucía' })
   const carlos = mkCliente({ email: 'carlos@mail.test', nombre: 'Carlos', compita_id: lucia.id })
-  paquetes.forEach((p) => db.seed('pagos_plan', { usuario_id: carlos.id, tipo: p.tipo ?? 'plan', plan: p.plan ?? 'quincenal', visitas: p.visitas, monto_usd: 75, metodo: 'zelle', inicio: iso(p.inicioDias), vence: iso(p.venceDias) }))
+  paquetes.forEach((p) => db.seed('pagos_plan', { usuario_id: carlos.id, tipo: p.tipo ?? 'plan', plan: p.plan ?? 'quincenal', visitas: p.visitas, monto_usd: 75, metodo: 'zelle', created_at: iso(p.inicioDias), inicio: iso(p.inicioDias), vence: iso(p.venceDias) }))
   visitasHaceDias.forEach((d) => db.seed('visitas', { usuario_id: carlos.id, compita_id: lucia.id, estado: 'terminada', created_at: iso(-d), fin: iso(-d) }))
   return { lucia, carlos }
 }
@@ -162,7 +162,7 @@ describe('Registrar pago (panel admin)', () => {
     assert.equal(db.rows('pagos_plan').length, 0, 'ningún pago incorrecto queda guardado')
     assert.match((await (await pagar(carlos, { plan: 'quincenal', monto_usd: 74 })).json()).error, /exactamente \$75/)
     assert.equal((await (await pagar(carlos, { plan: 'quincenal', monto_usd: 75 })).json()).data.pago.monto_usd, 75)
-    assert.equal((await (await pagar(carlos, { plan: 'quincenal' })).json()).data.pago.monto_usd, 75)
+    assert.equal((await (await pagar(carlos, { plan: 'quincenal', referencia: 'otro-pago' })).json()).data.pago.monto_usd, 75)
     assert.equal((await (await pagar(carlos, { tipo: 'extra', horas: 3 })).json()).data.pago.monto_usd, 66) // 3 horas a 22 dólares
     assert.equal((await (await pagar(carlos, { tipo: 'extra', horas: 1 })).json()).data.pago.monto_usd, 22) // desde 1 hora, sin mínimo de 2
     assert.equal((await (await pagar(carlos, { plan: 'carta' })).json()).data.pago.monto_usd, 22) // A la carta: 1 hora

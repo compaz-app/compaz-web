@@ -6,7 +6,7 @@ import type { Actor } from '@/lib/permisos'
 import { puede } from '@/lib/permisos'
 import { esCuentaEliminada } from '@/lib/cuenta-eliminar'
 import { recortarTexto } from '@/lib/panel-datos'
-import { alertaAdmin } from '@/lib/alertas-admin'
+import { registrarAcceso } from '@/lib/alertas-admin'
 import { compitasEnPausa, resumenCancelacionesCompita } from '@/lib/cancelaciones'
 import { compitasPausadosPorContacto } from '@/lib/pausas'
 import { listarNotas } from '@/lib/panel-notas'
@@ -75,6 +75,8 @@ export async function listarClientes(): Promise<FilaCliente[]> {
 }
 
 /** Línea de tiempo: lo que pasó con esta persona (visitas, solicitudes, cancelaciones y actividad del equipo), lo más nuevo primero. */
+const esDeAcceso = (categoria: unknown) => typeof categoria === 'string' && categoria.startsWith('acceso_')
+
 export async function lineaDe(actor: Actor, tipo: TipoPersona, id: string): Promise<EventoLinea[]> {
   const db = createAdminSupabase()
   const col = tipo === 'compita' ? 'compita_id' : 'usuario_id'
@@ -83,7 +85,7 @@ export async function lineaDe(actor: Actor, tipo: TipoPersona, id: string): Prom
     db.from('visitas').select('estado, created_at, fin').eq(tipo === 'compita' ? 'compita_id' : 'usuario_id', id).order('created_at', { ascending: false }).limit(20),
     db.from('solicitudes').select('estado, created_at, respondido_at').eq(colSol, id).order('created_at', { ascending: false }).limit(20),
     db.from('cancelaciones').select('cancelado_por, tardia, justificada, creado_en').eq(col, id).order('creado_en', { ascending: false }).limit(20),
-    db.from('actividad_admin').select('resumen, creado_en').eq('entidad_id', id).order('creado_en', { ascending: false }).limit(20),
+    db.from('actividad_admin').select('resumen, creado_en, categoria').eq('entidad_id', id).order('creado_en', { ascending: false }).limit(40),
   ])
   const ev: EventoLinea[] = []
   for (const v of vis.data ?? []) {
@@ -95,7 +97,8 @@ export async function lineaDe(actor: Actor, tipo: TipoPersona, id: string): Prom
     if (s.respondido_at) ev.push({ cuando: String(s.respondido_at), texto: s.estado === 'rechazada' ? 'La solicitud fue rechazada' : 'La solicitud fue respondida' })
   }
   for (const c of canc.data ?? []) ev.push({ cuando: String(c.creado_en), texto: `Cancelación por ${c.cancelado_por === 'cliente' ? 'el cliente' : c.cancelado_por === 'compita' ? 'el compita' : 'el equipo'}${c.tardia ? ', con poco aviso' : ''}${c.justificada ? ' (justificada)' : ''}` })
-  for (const a of act.data ?? []) ev.push({ cuando: String(a.creado_en), texto: recortarTexto(actor, String(a.resumen)) })
+  // "X abrió el teléfono de Y" es del Registro de accesos: solo lo ve quien tiene el permiso de ver contactos (S-05).
+  for (const a of (act.data ?? []).filter((x) => puede(actor, 'telefonos') || !esDeAcceso(x.categoria)).slice(0, 20)) ev.push({ cuando: String(a.creado_en), texto: recortarTexto(actor, String(a.resumen)) })
   return ev.sort((a, b) => b.cuando.localeCompare(a.cuando)).slice(0, 30)
 }
 
@@ -166,7 +169,7 @@ export async function revelarContacto(actor: Actor, p: { tipo: TipoContacto; id:
   }
   if (!valor) return { ok: false, error: `No hay ${ETIQUETA_CANAL[p.canal]} guardado de ${nombre || 'esta persona'}`, status: 404 }
 
-  const anotado = await alertaAdmin('actividad', `${actor.correo} abrió ${ETIQUETA_CANAL[p.canal]} de ${nombre}. Motivo: ${motivo}`, { categoria: 'acceso_contacto', entidad: { tipo: p.tipo === 'compita' ? 'compita' : p.tipo === 'visita' ? 'visita' : 'cliente', id: p.id, nombre } })
+  const anotado = await registrarAcceso(`${actor.correo} abrió ${ETIQUETA_CANAL[p.canal]} de ${nombre}. Motivo: ${motivo}`, { categoria: 'acceso_contacto', entidad: { tipo: p.tipo === 'compita' ? 'compita' : p.tipo === 'visita' ? 'visita' : 'cliente', id: p.id, nombre } })
   if (!anotado) return { ok: false, error: 'No se pudo anotar el acceso, así que no se muestra el dato. Inténtalo otra vez.', status: 503 }
   return detalle === undefined ? { ok: true, valor } : { ok: true, valor, detalle }
 }

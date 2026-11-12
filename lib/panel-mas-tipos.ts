@@ -101,4 +101,4 @@ export function coberturaPorEstado(compitas: { zona: string; activo: boolean }[]
 }
 
 /** Un ajuste con su valor vigente, listo para la pantalla de Ajustes. */
-export interface FilaAjuste { clave: string; explica: string; /** false = el sistema aún no lo lee: no se puede cambiar. */ conectado: boolean; grupo: string; etiqueta: string; tipo: 'numero' | 'texto'; valor: number | string; defecto: number | string; unidad: string | null; min: number | null; max: number | null; usa: string[]; propuesto: boolean }
+export interface FilaAjuste { clave: string; explica: string; /** false = el sistema aún no lo lee: no se puede cambiar. */ conectado: boolean; grupo: string; etiqueta: string; tipo: 'numero' | 'texto'; valor: number | string; defecto: number | string; unidad: string | null; min: number | null; max: number | null; usa: string[]; propuesto: boolean; /** Solo el administrador lo cambia. */ soloAdmin: boolean }
