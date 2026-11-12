@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { ZONAS_MUNICIPIOS as ZONAS } from '@/lib/venezuela'
+import { OpcionesProximamenteCompita } from '@/components/ui/Proximamente'
 
 // ── Servicios ─────────────────────────────────────────────────────────────────
 
@@ -300,6 +301,8 @@ export default function EditarPerfil({ token, inicial }: Props) {
           ))}
         </div>
       </div>
+
+      <OpcionesProximamenteCompita />
 
       {/* Foto */}
       <div>

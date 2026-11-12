@@ -1,5 +1,8 @@
 import Link from 'next/link'
-import { Encabezado } from '@/components/panel/ui'
+import { Encabezado, TituloSeccion } from '@/components/panel/ui'
+import InfoBoton from '@/components/ui/InfoBoton'
+import { TarjetasProximamente } from '@/components/ui/Proximamente'
+import { INFO_PROXIMAMENTE } from '@/lib/servicios-proximos'
 import { hubVisible } from '@/lib/panel-mas-tipos'
 import type { ActorVista } from '@/lib/panel-secciones'
 
@@ -21,6 +24,10 @@ export default function Hub({ actor, enlace }: { actor: ActorVista; enlace: Enla
           </li>
         ))}
       </ul>
+      <div className="space-y-2 pt-2">
+        <div className="flex items-center gap-1"><TituloSeccion>Próximamente</TituloSeccion><InfoBoton que="Qué es esto" texto={INFO_PROXIMAMENTE} /></div>
+        <TarjetasProximamente grande={false} ids={['voluntariado', 'mascotas']} />
+      </div>
     </section>
   )
 }

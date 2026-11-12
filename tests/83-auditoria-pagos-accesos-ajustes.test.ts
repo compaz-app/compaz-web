@@ -417,3 +417,33 @@ describe('onboarding: corregir los datos (el correo mal escrito) antes de conect
     assert.equal((await corregirCompita(req('/api/onboarding/corregir', { json: { edit_token: 'inventado', ...datos() } }))).status, 410)
   })
 })
+
+import { SERVICIOS_PROXIMOS, ETIQUETA_PROXIMAMENTE } from '@/lib/servicios-proximos'
+
+describe('líneas de servicio futuras: se muestran como "Próximamente" y nada de eso está activo', () => {
+  test('el catálogo tiene voluntariado, mascotas y donar horas, cada uno con su explicación', () => {
+    assert.deepEqual(SERVICIOS_PROXIMOS.map((s) => s.id), ['voluntariado', 'mascotas', 'donar_horas'])
+    for (const s of SERVICIOS_PROXIMOS) { assert.ok(s.titulo && s.corto && s.descripcion.length > 40, s.id) }
+    assert.equal(ETIQUETA_PROXIMAMENTE, 'Próximamente')
+    assert.match(SERVICIOS_PROXIMOS.find((s) => s.id === 'voluntariado')!.descripcion, /no cobra ni paga nada/)       // Compaz es solo el puente
+    assert.match(SERVICIOS_PROXIMOS.find((s) => s.id === 'mascotas')!.paraCompitas!, /preguntas adicionales/)          // verificación aparte
+  })
+  test('están colocados donde irán: página principal, portal, pago, registro y perfil del compita y panel', () => {
+    const esta = (f: string, re: RegExp) => assert.match(leer(f, 'utf8'), re, f)
+    esta('app/page.tsx', /<SeccionProximamente \/>/)
+    esta('app/portal/page.tsx', /TarjetasProximamente grande=\{false\} ids=\{\['voluntariado', 'mascotas'\]\}/)
+    esta('components/portal/SeccionPlan.tsx', /ids=\{\['donar_horas'\]\}/)
+    esta('app/pago/page.tsx', /donar_horas/)
+    esta('app/onboarding/page.tsx', /<OpcionesProximamenteCompita \/>/)
+    esta('app/compita/perfil/EditarPerfil.tsx', /<OpcionesProximamenteCompita \/>/)
+    esta('components/panel/mas/Hub.tsx', /TarjetasProximamente/)
+  })
+  test('no hay nada activo: sin enlaces, sin botones y con las casillas deshabilitadas', () => {
+    const c = leer('components/ui/Proximamente.tsx', 'utf8'), sec = leer('components/SeccionProximamente.tsx', 'utf8')
+    assert.doesNotMatch(c + sec, /<a |<Link|href=|<button|onClick|router\./)
+    assert.match(c, /type="checkbox" disabled/)
+  })
+  test('ninguna ruta, tabla ni ajuste de estas líneas existe todavía', () => {
+    for (const ruta of ['app/voluntariado', 'app/mascotas', 'app/api/voluntariado', 'app/api/mascotas']) assert.throws(() => statSync(ruta), ruta)
+  })
+})

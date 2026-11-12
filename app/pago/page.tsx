@@ -4,6 +4,8 @@ import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { PLANES as CFG, PLANES_IDS, VIGENCIA_CREDITOS_DIAS, HORAS_MINIMAS_EXTRA, etiquetaHoras, TEXTO_REEMBOLSO, type PlanId } from '@/lib/planes'
 import { usePrecios } from '@/components/ui/usePrecios'
+import { TarjetaProximamente } from '@/components/ui/Proximamente'
+import { SERVICIOS_PROXIMOS } from '@/lib/servicios-proximos'
 import type { Precios } from '@/lib/precios'
 
 // ── Planes (precios y visitas vienen de lib/planes.ts, única fuente) ─────────
@@ -259,6 +261,8 @@ function PagoContent() {
           </p>
           <p style={{ color: '#6B5C90', fontSize: '12px', margin: 0, lineHeight: 1.5 }}>{TEXTO_REEMBOLSO}</p>
         </div>
+
+        <div style={{ marginBottom: '12px' }}><TarjetaProximamente s={SERVICIOS_PROXIMOS.find((x) => x.id === 'donar_horas')!} grande={false} /></div>
 
         {/* Garantía */}
         <div style={{ background: '#F0FDF4', border: '1.5px solid #86EFAC', borderRadius: '12px', padding: '14px 16px', marginBottom: '12px' }}>

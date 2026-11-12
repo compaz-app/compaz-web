@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { ZONAS_MUNICIPIOS as ZONAS } from '@/lib/venezuela'
 import { colors } from '@/lib/design'
+import { OpcionesProximamenteCompita } from '@/components/ui/Proximamente'
 
 // ── Servicios ─────────────────────────────────────────────────────────────────
 
@@ -552,6 +553,8 @@ function OnboardingForm() {
               placeholder="Soy licenciada en educación, toco guitarra y hablo inglés básico…"
             />
           </div>
+
+          <OpcionesProximamenteCompita />
 
           {/* Foto */}
           <div>
