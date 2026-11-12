@@ -5,7 +5,6 @@ import ChatWidget from "@/components/ChatWidget";
 import DashboardMockup from "@/components/DashboardMockup";
 import SelectorEstadoCiudad from "@/components/ui/SelectorEstadoCiudad";
 import WaveDivider from "@/components/ui/WaveDivider";
-import SeccionProximamente from "@/components/SeccionProximamente";
 import { VE_PREFIJOS } from "@/lib/venezuela";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import {
@@ -1085,7 +1084,6 @@ export default function Home() {
         <Hero onSelectRol={setRolElegido} />
         <SeccionConfianza />
         <QueHaceUnCompa />
-        <SeccionProximamente />
         <WaveDivider from="#FDFAF6" to="#2D1464" shape={2} />
         <ComoFunciona />
         <DashboardMockup />

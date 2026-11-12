@@ -428,9 +428,9 @@ describe('líneas de servicio futuras: se muestran como "Próximamente" y nada d
     assert.match(SERVICIOS_PROXIMOS.find((s) => s.id === 'voluntariado')!.descripcion, /no cobra ni paga nada/)       // Compaz es solo el puente
     assert.match(SERVICIOS_PROXIMOS.find((s) => s.id === 'mascotas')!.paraCompitas!, /preguntas adicionales/)          // verificación aparte
   })
-  test('están colocados donde irán: página principal, portal, pago, registro y perfil del compita y panel', () => {
+  test('están colocados donde irán: portal, pago, registro y perfil del compita y panel', () => {
     const esta = (f: string, re: RegExp) => assert.match(leer(f, 'utf8'), re, f)
-    esta('app/page.tsx', /<SeccionProximamente \/>/)
+    assert.doesNotMatch(leer('app/page.tsx', 'utf8'), /SeccionProximamente/, 'la página principal no lleva Próximamente (decidido 2026-11-12)')
     esta('app/portal/page.tsx', /TarjetasProximamente grande=\{false\} ids=\{\['voluntariado', 'mascotas'\]\}/)
     esta('components/portal/SeccionPlan.tsx', /ids=\{\['donar_horas'\]\}/)
     esta('app/pago/page.tsx', /donar_horas/)
@@ -439,8 +439,8 @@ describe('líneas de servicio futuras: se muestran como "Próximamente" y nada d
     esta('components/panel/mas/Hub.tsx', /TarjetasProximamente/)
   })
   test('no hay nada activo: sin enlaces, sin botones y con las casillas deshabilitadas', () => {
-    const c = leer('components/ui/Proximamente.tsx', 'utf8'), sec = leer('components/SeccionProximamente.tsx', 'utf8')
-    assert.doesNotMatch(c + sec, /<a |<Link|href=|<button|onClick|router\./)
+    const c = leer('components/ui/Proximamente.tsx', 'utf8')
+    assert.doesNotMatch(c, /<a |<Link|href=|<button|onClick|router\./)
     assert.match(c, /type="checkbox" disabled/)
   })
   test('ninguna ruta, tabla ni ajuste de estas líneas existe todavía', () => {
