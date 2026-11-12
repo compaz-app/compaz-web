@@ -46,9 +46,10 @@ import { catalogoEsperas } from '@/lib/esperas-catalogo'
 import { estadoDelSistema } from '@/lib/panel-estado'
 import { retencionDelSistema } from '@/lib/retencion'
 import { getAjustes } from '@/lib/ajustes'
-import { Selector, TablaClientes, TablaCompitas } from '@/components/panel/Personas'
+import { Selector } from '@/components/panel/Personas'
+import PersonasInteractivo from '@/components/panel/PersonasInteractivo'
 import { fichaDePersona, listarClientes, listarCompitas, LIMITE as LIMITE_PERSONAS } from '@/lib/panel-personas'
-import { consultarClientes, consultarCompitas, DESCRIPCION_PERSONAS, INFO_PERSONAS, leerChatUrl, leerPersonaUrl } from '@/lib/panel-personas-tipos'
+import { DESCRIPCION_PERSONAS, INFO_PERSONAS, leerChatUrl, leerPersonaUrl } from '@/lib/panel-personas-tipos'
 import { Encabezado } from '@/components/panel/ui'
 import { listarSeguimiento } from '@/lib/panel-seguimiento'
 import { consultarSeguimiento, umbralesDeAjustes } from '@/lib/panel-seguimiento-tipos'
@@ -112,17 +113,17 @@ async function ContenidoPanel({ sp, actual, actor, comoActor, comoColaborador }:
     const tareas = await cargarBandeja(comoActor)
     cuerpo = <div className="space-y-3"><AvisoTope cargadas={tareas.length} tope={TOPE_BANDEJA} que="las tareas" /><Suspense><Bandeja tareas={tareas} puedeAtender={actor.permisos.atender === true} pideMotivo={actor.rol !== 'admin'} /></Suspense></div>
   } else if (actual === 'personas') {
-    const baseForm: Record<string, string> = comoColaborador ? { como: 'colaborador' } : {}
     const lista = un('lista') === 'clientes' ? 'clientes' : 'compitas'
+    // La lista llega completa una vez; ordenar, filtrar, buscar y paginar se resuelve en el navegador (PersonasInteractivo), sin pedirle nada al servidor.
+    const qsInicial = new URLSearchParams(Object.entries(sp).filter((e): e is [string, string] => typeof e[1] === 'string')).toString()
     if (lista === 'compitas') {
       const todas = await listarCompitas()
       avisoTope = <AvisoTope cargadas={todas.length} tope={LIMITE_PERSONAS} que="los compitas" />
-      const c = consultarCompitas(todas, { q: un('q'), vista: un('vista'), orden: un('orden'), dir: un('dir'), pag: un('pag'), estado: un('estado') })
-      cuerpo = <TablaCompitas enlace={enlace} params={baseForm} d={{ fila: c.fila, total: c.total, paginas: c.paginas, pag: c.pag, conteos: c.conteos, vista: c.vista.id, orden: un('orden'), dir: un('dir') === 'desc' ? 'desc' : 'asc', q: un('q'), enTotal: todas.length, estados: c.estados, estado: c.estado }} />
+      cuerpo = <PersonasInteractivo lista="compitas" compitas={todas} qsInicial={qsInicial} />
     } else {
       const todos = await listarClientes()
       avisoTope = <AvisoTope cargadas={todos.length} tope={LIMITE_PERSONAS} que="los clientes" />
-      cuerpo = <TablaClientes enlace={enlace} params={baseForm} d={{ ...consultarClientes(todos, un('q'), un('pag'), un('estado')), q: un('q'), enTotal: todos.length }} />
+      cuerpo = <PersonasInteractivo lista="clientes" clientes={todos} qsInicial={qsInicial} />
     }
     cuerpo = <div className="space-y-3"><Encabezado titulo="Personas" descripcion={DESCRIPCION_PERSONAS} info={INFO_PERSONAS} infoQue="Para qué sirve Personas" /><Selector lista={lista} enlace={enlace} />{avisoTope}{cuerpo}</div>
   } else if (actual === 'seguimiento') {

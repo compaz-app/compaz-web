@@ -45,7 +45,14 @@ function FiltroEstado({ estados, estado, enlace }: { estados: Estados; estado: s
   )
 }
 
-function Buscador({ q, lista, params }: { q: string; lista: string; params: Record<string, string> }) {
+function Buscador({ q, lista, params, alBuscar }: { q: string; lista: string; params: Record<string, string>; /** Si se da, la búsqueda se resuelve en el navegador, letra por letra, sin pedirle nada al servidor. */ alBuscar?: (q: string) => void }) {
+  if (alBuscar) {
+    return (
+      <form role="search" onSubmit={(e) => e.preventDefault()} className="flex items-center gap-2">
+        <input name="q" defaultValue={q} onChange={(e) => alBuscar(e.target.value)} placeholder="Buscar por nombre o zona" aria-label="Buscar personas" autoComplete="off" className="min-h-10 w-full rounded-xl border border-borde bg-blanco px-3 text-sm sm:w-72" />
+      </form>
+    )
+  }
   return (
     <form action="/panel" method="get" role="search" className="flex items-center gap-2">
       {Object.entries({ ...params, sec: 'personas', lista }).map(([k, v]) => <input key={k} type="hidden" name={k} value={v} />)}
@@ -67,7 +74,7 @@ export function Selector({ lista, enlace }: { lista: 'compitas' | 'clientes'; en
   return <div className="flex w-fit gap-1 rounded-xl border border-borde bg-blanco p-1">{t('compitas', 'Compitas')}{t('clientes', 'Clientes')}</div>
 }
 
-export function TablaCompitas({ d, enlace, params }: { d: DatosCompitas; enlace: Enlace; params: Record<string, string> }) {
+export function TablaCompitas({ d, enlace, params, alBuscar }: { d: DatosCompitas; enlace: Enlace; params: Record<string, string>; alBuscar?: (q: string) => void }) {
   const textoVistas = VISTAS_COMPITA.filter((v) => v.ayuda).map((v) => `${v.t}: ${v.ayuda}`).join(' ')
   const textoColumnas = COLUMNAS_COMPITA.filter((c) => c.ayuda).map((c) => `${c.t}: ${c.ayuda}`).join(' ')
   return (
@@ -80,7 +87,7 @@ export function TablaCompitas({ d, enlace, params }: { d: DatosCompitas; enlace:
         ))}
       </Filtros>
       <div className="flex flex-wrap items-center gap-2">
-        <Buscador q={d.q} lista="compitas" params={{ ...params, ...(d.vista !== 'todas' ? { vista: d.vista } : {}), ...(d.estado ? { estado: d.estado } : {}) }} />
+        <Buscador alBuscar={alBuscar} q={d.q} lista="compitas" params={{ ...params, ...(d.vista !== 'todas' ? { vista: d.vista } : {}), ...(d.estado ? { estado: d.estado } : {}) }} />
         <FiltroEstado estados={d.estados} estado={d.estado} enlace={enlace} />
       </div>
 
@@ -135,14 +142,14 @@ export function TablaCompitas({ d, enlace, params }: { d: DatosCompitas; enlace:
   )
 }
 
-export function TablaClientes({ d, enlace, params }: { d: DatosClientes; enlace: Enlace; params: Record<string, string> }) {
+export function TablaClientes({ d, enlace, params, alBuscar }: { d: DatosClientes; enlace: Enlace; params: Record<string, string>; alBuscar?: (q: string) => void }) {
   const alta = (iso: string) => new Intl.DateTimeFormat('es-VE', { timeZone: 'America/Caracas', day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(iso))
   return (
     <section className="max-w-3xl space-y-3">
       <h2 className="sr-only">Clientes</h2>
       <p className="text-sm text-texto-medio">{d.enTotal} {d.enTotal === 1 ? 'cliente' : 'clientes'} en total. Toca uno para ver su ficha y en qué paso está.</p>
       <div className="flex flex-wrap items-center gap-2">
-        <Buscador q={d.q} lista="clientes" params={{ ...params, ...(d.estado ? { estado: d.estado } : {}) }} />
+        <Buscador alBuscar={alBuscar} q={d.q} lista="clientes" params={{ ...params, ...(d.estado ? { estado: d.estado } : {}) }} />
         <FiltroEstado estados={d.estados} estado={d.estado} enlace={enlace} />
       </div>
       <ul className={CLASE_LISTA}>
