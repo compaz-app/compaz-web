@@ -10,6 +10,7 @@ import { sendTelegramMessage } from '@/lib/telegram'
 import { sendEmail, SITE_URL } from '@/lib/email'
 import { esc } from '@/lib/html'
 import { qRol, rolValido } from '@/lib/links'
+import { enlaceDeLlamada } from '@/lib/llamada-acceso'
 import { ok, err, notFound, serverError, errEspera } from '@/lib/api'
 
 export async function POST(req: NextRequest) {
@@ -77,5 +78,6 @@ export async function POST(req: NextRequest) {
     }
   } catch (e) { console.error('Aviso reconexión falló:', e) }
 
-  return ok({ room_url: roomUrl })
+  // La sala es privada: quien pidió la reconexión recibe SU enlace firmado (la otra parte recibe el suyo por correo o Telegram desde /sala).
+  return ok({ llamada_href: enlaceDeLlamada(roomUrl, quien === 'compita' ? 'compita' : 'cliente') })
 }

@@ -23,7 +23,8 @@ export type TgMsg = { chat: string; text: string; markup?: any }
 export const net = {
   tg: [] as TgMsg[],
   emails: [] as { to: any; subject: string; html: string }[],
-  rooms: [] as { name: string; url: string; props: any }[],
+  rooms: [] as { name: string; url: string; props: any; privacy?: string }[],
+  pases: [] as any[],
   /** chat ids a los que Telegram "falla" (devuelve 502) */
   tgFailFor: new Set<string>(),
   tgFailAll: false,
@@ -31,7 +32,7 @@ export const net = {
   dailyFail: false,
   fotosDescargadas: 0,
   reset() {
-    this.tg = []; this.emails = []; this.rooms = []; this.tgFailFor.clear(); this.tgFailAll = false
+    this.tg = []; this.emails = []; this.rooms = []; this.pases = []; this.tgFailFor.clear(); this.tgFailAll = false
     this.resendFail = false; this.dailyFail = false; this.fotosDescargadas = 0
   },
 }
@@ -81,12 +82,16 @@ globalThis.fetch = (async (input: any, init?: any) => {
     if ((net as any).dailyWebhookFail) return new Response('rechazado', { status: 400 })
     const b = JSON.parse(init.body); const h = { uuid: randomUUID(), ...b }; lista.push(h); return json(h)
   }
+  if (url.startsWith('https://api.daily.co/v1/meeting-tokens')) {
+    const b = JSON.parse(init.body); net.pases.push(b.properties)
+    return json({ token: 'pase-' + randomUUID() })
+  }
   if (url.startsWith('https://api.daily.co/v1/rooms')) {
     if (net.dailyFail) return new Response('daily caído', { status: 500 })
     if (init?.method === 'POST') {
       const b = JSON.parse(init.body)
       const room = { id: randomUUID(), name: b.name, url: `https://compaz.daily.co/${b.name}`, created_at: new Date().toISOString() }
-      net.rooms.push({ name: b.name, url: room.url, props: b.properties })
+      net.rooms.push({ name: b.name, url: room.url, props: b.properties, privacy: b.privacy })
       return json(room)
     }
     return json({ config: { exp: 0 } })

@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto'
 import type { DailyRoom } from '@/types'
 import { minutosCorteLlamada, minutosLlamadaVisita } from '@/lib/llamada'
 
@@ -19,7 +20,7 @@ export async function getOrCreateDailyRoom(visitId: string, existingRoom?: strin
   }
 
   // Crear sala nueva
-  const name = `cmp-${visitId.slice(0, 8)}-${Date.now()}`
+  const name = `cmp-${visitId.slice(0, 8)}-${randomBytes(8).toString('hex')}`
   const res = await fetch(`${DAILY_API}/rooms`, {
     method: 'POST',
     headers: {
@@ -28,6 +29,7 @@ export async function getOrCreateDailyRoom(visitId: string, existingRoom?: strin
     },
     body: JSON.stringify({
       name,
+      privacy: 'private', // sin pase de reunión no se entra, ni con el enlace
       properties: {
         enable_chat: false,
         enable_screenshare: false,
@@ -58,7 +60,7 @@ export async function createDailyRoom(visitId: string): Promise<DailyRoom> {
  * la controla la página /sala, para que un desfase de reloj o de zona nunca deje la sala "no disponible".
  */
 export async function createEntrevistaRoom(solicitudId: string, slotConfirmado: Date): Promise<DailyRoom> {
-  const name = `ent-${solicitudId.slice(0, 8)}-${Date.now()}`
+  const name = `ent-${solicitudId.slice(0, 8)}-${randomBytes(8).toString('hex')}`
   const corte = await minutosCorteLlamada()
   const exp = Math.floor(slotConfirmado.getTime() / 1000) + corte * 60
 
@@ -70,6 +72,7 @@ export async function createEntrevistaRoom(solicitudId: string, slotConfirmado: 
     },
     body: JSON.stringify({
       name,
+      privacy: 'private', // sin pase de reunión no se entra, ni con el enlace
       properties: {
         enable_chat: false,
         enable_screenshare: false,

@@ -1,4 +1,5 @@
 import { minutosCorteLlamada } from '@/lib/llamada'
+import { rutaLlamada } from '@/lib/llamada-ruta'
 // POST /api/cron/recordatorios — Netlify Scheduled Function cada 5 min
 // Busca llamadas en la próxima hora, crea la sala Daily y envía el link a cliente, compita y admin.
 import { NextRequest } from 'next/server'
@@ -100,7 +101,7 @@ export async function POST(req: NextRequest) {
         `<b>Compita:</b> ${esc(solicitud.compita_nombre)}${compitaAvisada ? '' : ' ⚠️ NO se pudo avisar por Telegram'}`,
         `<b>Hora:</b> ${esc(slotLabel)}`, ``,
         `⏱️ Llamada de 20 min. Únete como supervisor:`,
-        `<a href="${roomUrl}">Entrar a la sala →</a>`,
+        `<a href="${SITE_URL}${rutaLlamada(roomUrl)}">Entrar a la sala →</a>`,
       ].join('\n'))
       enviados++
     } catch (e) {

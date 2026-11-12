@@ -97,3 +97,55 @@ describe('aviso de fin dentro de la sala', () => {
     assert.equal(await infoDeSala('otra-sala'), null)
   })
 })
+
+import { enlaceDeLlamada, autorizarLlamada, pedirPase } from '@/lib/llamada-acceso'
+import { firmaLlamada } from '@/lib/links'
+import { session } from './harness'
+
+describe('salas privadas y pase por participante (S-03)', () => {
+  test('las salas se crean privadas y con un nombre que no se puede adivinar', async () => {
+    await getOrCreateDailyRoom('abcdef123456'); await createEntrevistaRoom('abcdef123456', new Date(Date.now() + 3600_000))
+    const [v, e] = net.rooms.slice(-2)
+    assert.equal(v.privacy, 'private'); assert.equal(e.privacy, 'private')
+    assert.match(v.name, /^cmp-abcdef12-[0-9a-f]{16}$/); assert.match(e.name, /^ent-abcdef12-[0-9a-f]{16}$/)
+    assert.notEqual(v.name, (await (async () => { await getOrCreateDailyRoom('abcdef123456'); return net.rooms.at(-1)!.name })()))
+  })
+
+  test('el enlace firmado deja entrar a su rol y a nadie más', async () => {
+    const sala = 'cmp-abcdef12-0123456789abcdef'
+    const h = enlaceDeLlamada(`https://compaz.daily.co/${sala}`, 'compita')
+    assert.match(h, new RegExp(`^/llamada/${sala}\\?r=compita&s=[0-9a-f]{24}$`))
+    const s = firmaLlamada(sala, 'compita')
+    assert.deepEqual(await autorizarLlamada(sala, { rol: 'compita', s }), { ok: true, rol: 'compita' })
+    assert.deepEqual(await autorizarLlamada(sala, { rol: 'cliente', s }), { ok: false })            // la firma del compita no vale para el cliente
+    assert.deepEqual(await autorizarLlamada(sala, { rol: 'compita', s: 'x'.repeat(24) }), { ok: false })
+    assert.deepEqual(await autorizarLlamada('cmp-otrasala-0123456789abcdef', { rol: 'compita', s }), { ok: false }) // ni para otra sala
+    assert.deepEqual(await autorizarLlamada(sala, { rol: null, s: null }), { ok: false })
+  })
+
+  test('sin sesión ni firma no hay acceso; el administrador y el cliente de la visita sí entran', async () => {
+    const sala = 'cmp-abcdef12-0123456789abcdef'
+    session.user = null
+    assert.deepEqual(await autorizarLlamada(sala, { rol: null, s: null }), { ok: false })
+    const lucia = mkCompita({ nombre: 'Lucía' }); const cli = mkCliente({ email: 'z@mail.test', nombre: 'Zoe', compita_id: lucia.id }); const otro = mkCliente({ email: 'o@mail.test', nombre: 'Otro' })
+    db.seed('visitas', { usuario_id: cli.id, compita_id: lucia.id, estado: 'en_curso', room_url: `https://compaz.daily.co/${sala}` })
+    session.user = { id: cli.id, email: cli.email }
+    assert.deepEqual(await autorizarLlamada(sala, { rol: null, s: null }), { ok: true, rol: 'cliente' })
+    session.user = { id: otro.id, email: otro.email }
+    assert.deepEqual(await autorizarLlamada(sala, { rol: null, s: null }), { ok: false }) // otro cliente no entra a una visita ajena
+    session.user = { id: 'adm', email: 'admin@compaz.test' }
+    assert.deepEqual(await autorizarLlamada(sala, { rol: null, s: null }), { ok: true, rol: 'admin' })
+  })
+
+  test('el pase vence con la sala, expulsa al vencer y solo el administrador es dueño', async () => {
+    const fin = Math.floor(Date.now() / 1000) + 600
+    assert.match((await pedirPase('cmp-abcdef12-0123456789abcdef', 'compita', fin))!, /^pase-/)
+    await pedirPase('cmp-abcdef12-0123456789abcdef', 'admin', fin)
+    const [p1, p2] = net.pases.slice(-2)
+    assert.equal(p1.exp, fin); assert.equal(p1.eject_at_token_exp, true); assert.equal(p1.is_owner, false); assert.equal(p2.is_owner, true)
+  })
+
+  test('el nombre de la sala solo se acepta con la forma de Compaz', async () => {
+    assert.deepEqual(await autorizarLlamada('../etc', { rol: 'compita', s: firmaLlamada('../etc', 'compita') }), { ok: false })
+  })
+})

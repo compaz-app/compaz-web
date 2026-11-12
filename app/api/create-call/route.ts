@@ -6,7 +6,7 @@ import { sendTelegramMessage, avisarAdmin } from '@/lib/telegram'
 import { alertaAdmin } from '@/lib/alertas-admin'
 import { esc } from '@/lib/html'
 import { SITE_URL } from '@/lib/email'
-import { rutaLlamada } from '@/lib/llamada-ruta'
+import { enlaceDeLlamada } from '@/lib/llamada-acceso'
 import { minutosLlamadaVisita } from '@/lib/llamada'
 import { ok, err, unauthorized, serverError } from '@/lib/api'
 import type { Visita, Compita, Usuario } from '@/types'
@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
 
   if (visita.compita.telegram_chat_id) {
     const tipo = soloAudio ? '📞 El cliente quiere hacer una llamada de voz' : '📹 El cliente quiere hacer una videollamada'
-    try { await sendTelegramMessage(visita.compita.telegram_chat_id, `${tipo}. Dura ${minutos} min.\n\nEntra aquí: ${SITE_URL}${rutaLlamada(room.url)}`) }
+    try { await sendTelegramMessage(visita.compita.telegram_chat_id, `${tipo}. Dura ${minutos} min.\n\nEntra aquí: ${SITE_URL}${enlaceDeLlamada(room.url, 'compita')}`) }
     catch (e) { console.error('Error Telegram create-call:', e) }
   }
 

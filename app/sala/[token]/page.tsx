@@ -4,6 +4,7 @@ import SalaEntrevista from './SalaEntrevista'
 import { firmaRol, rolValido } from '@/lib/links'
 import { formatSlotVE } from '@/lib/format'
 import { minutosCorteLlamada } from '@/lib/llamada'
+import { enlaceDeLlamada } from '@/lib/llamada-acceso'
 
 export default async function SalaPage({
   params,
@@ -46,7 +47,7 @@ export default async function SalaPage({
     <SalaEntrevista
       token={token}
       quien={quien}
-      roomUrl={solicitud.room_url}
+      llamadaHref={enlaceDeLlamada(solicitud.room_url, quien)}
       compitaNombre={compitaRow?.nombre ?? solicitud.compita_nombre ?? 'Compita'}
       clienteNombre={clienteRow?.nombre ?? 'Cliente'}
       slotLabel={formatSlotVE(solicitud.slot_confirmado)}

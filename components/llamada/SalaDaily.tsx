@@ -9,7 +9,7 @@ const mmss = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, 
  * La sala de Daily dentro de una página de Compaz, con el aviso de fin: cuando faltan `avisoSeg` segundos para que la sala se cierre sola
  * aparece una franja con la cuenta atrás. Los segundos se cuentan contra el reloj del servidor (`ahoraEpoch`), no el del aparato.
  */
-export default function SalaDaily({ url, finEpoch, ahoraEpoch, avisoSeg, etiquetaFin, alto }: { alto?: number; url: string; finEpoch: number | null; ahoraEpoch: number; avisoSeg: number; etiquetaFin: string }) {
+export default function SalaDaily({ url, token, finEpoch, ahoraEpoch, avisoSeg, etiquetaFin, alto }: { alto?: number; url: string; /** Pase de Daily para entrar a la sala privada. */ token: string; finEpoch: number | null; ahoraEpoch: number; avisoSeg: number; etiquetaFin: string }) {
   const caja = useRef<HTMLDivElement>(null)
   const desfase = useRef(ahoraEpoch * 1000 - Date.now())
   const [faltan, setFaltan] = useState<number | null>(null)
@@ -30,7 +30,7 @@ export default function SalaDaily({ url, finEpoch, ahoraEpoch, avisoSeg, etiquet
         call = DailyIframe.createFrame(el, { iframeStyle: { width: '100%', height: '100%', border: '0' }, showLeaveButton: true, lang: 'es' })
         call.on('left-meeting', () => setFuera(true))
         call.on('error', () => setError('No pudimos conectar la llamada. Cierra esta pestaña y vuelve a abrir el enlace.'))
-        await call.join({ url })
+        await call.join({ url, token })
       } catch { if (!cancelado) setError('No pudimos conectar la llamada. Cierra esta pestaña y vuelve a abrir el enlace.') }
     })()
     return () => { cancelado = true; try { call?.destroy() } catch { /* ya cerrada */ } }

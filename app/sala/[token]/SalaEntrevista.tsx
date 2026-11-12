@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { rutaLlamada } from '@/lib/llamada-ruta'
 
 type Paso = 'antes' | 'en_llamada' | 'terminado' | 'problema_tecnico' | 'reconectando' | 'resultado'
 type Resultado = 'contratar' | 'reagendar' | 'no_contratar'
@@ -10,7 +9,8 @@ type Resultado = 'contratar' | 'reagendar' | 'no_contratar'
 interface Props {
   token: string
   quien: 'cliente' | 'compita'
-  roomUrl: string
+  /** Enlace firmado de la llamada para esta persona (la sala es privada). */
+  llamadaHref: string
   compitaNombre: string
   clienteNombre: string
   slotLabel: string
@@ -19,7 +19,7 @@ interface Props {
   sig: string // firma del rol (evita que cliente y compita se suplanten)
 }
 
-export default function SalaEntrevista({ token, quien, roomUrl, compitaNombre, clienteNombre, slotLabel, slotIso, corteMin, sig }: Props) {
+export default function SalaEntrevista({ token, quien, llamadaHref, compitaNombre, clienteNombre, slotLabel, slotIso, corteMin, sig }: Props) {
   const [paso, setPaso] = useState<Paso>('antes')
   const [resultado, setResultado] = useState<Resultado | null>(null)
   const [cargando, setCargando] = useState(false)
@@ -45,7 +45,7 @@ export default function SalaEntrevista({ token, quien, roomUrl, compitaNombre, c
     ? `${Math.floor(faltanSeg / 3600)} h ${Math.floor((faltanSeg % 3600) / 60)} min`
     : `${Math.floor(faltanSeg / 60)}:${String(faltanSeg % 60).padStart(2, '0')}`
 
-  const urlActual = rutaLlamada(nuevaRoomUrl ?? roomUrl)
+  const urlActual = nuevaRoomUrl ?? llamadaHref
   const rolQs = `quien=${quien}&s=${sig}`
 
   // Polling: cuando el Daily webhook ya procesó la llamada, avanzar automáticamente
@@ -89,11 +89,11 @@ export default function SalaEntrevista({ token, quien, roomUrl, compitaNombre, c
     try {
       const res = await fetch(`/api/solicitud/reconectar-llamada?token=${token}&${rolQs}`, { method: 'POST' })
       const data = await res.json()
-      const url = data.data?.room_url
+      const url = data.data?.llamada_href
       if (url) {
         setNuevaRoomUrl(url)
         setPaso('reconectando')
-        window.open(rutaLlamada(url), '_blank', 'noopener,noreferrer')
+        window.open(url, '_blank', 'noopener,noreferrer')
       } else {
         alert('No pudimos crear la sala. Intenta de nuevo o escríbenos a hola@micompaz.com.')
       }
@@ -159,11 +159,11 @@ export default function SalaEntrevista({ token, quien, roomUrl, compitaNombre, c
     try {
       const res = await fetch(`/api/solicitud/reconectar-llamada?token=${token}&${rolQs}`, { method: 'POST' })
       const data = await res.json()
-      const url = data.data?.room_url
+      const url = data.data?.llamada_href
       if (url) {
         setNuevaRoomUrl(url)
         setPaso('reconectando')
-        window.open(rutaLlamada(url), '_blank', 'noopener,noreferrer')
+        window.open(url, '_blank', 'noopener,noreferrer')
       } else {
         alert('No pudimos crear la sala. Intenta de nuevo o escríbenos a hola@micompaz.com.')
       }

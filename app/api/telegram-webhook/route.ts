@@ -22,7 +22,7 @@ import {
 } from '@/lib/telegram'
 import { generarTokenPerfil } from '@/lib/compita-tokens'
 import { getOrCreateDailyRoom } from '@/lib/daily'
-import { rutaLlamada } from '@/lib/llamada-ruta'
+import { enlaceDeLlamada } from '@/lib/llamada-acceso'
 import { minutosLlamadaVisita } from '@/lib/llamada'
 import { sendVisitaInicio, sendVisitaResumen, sendResumenConReporte, sendCodigoTelegram } from '@/lib/resend'
 import { responderSolicitud, getSolicitudPorToken, getSolicitudPorId, aceptarSolicitudDirecta } from '@/lib/solicitudes'
@@ -867,7 +867,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
     await supabase.from('visitas').update({ room_url: roomUrl, llamada_solicitada_at: new Date().toISOString() }).eq('id', visitaLlamada.id)
     const minutosLlamada = await minutosLlamadaVisita()
 
-    const roomUrlEs = `${SITE_URL_PUBLICA}${rutaLlamada(roomUrl)}`
+    const roomUrlEs = `${SITE_URL_PUBLICA}${enlaceDeLlamada(roomUrl, 'compita')}`
     await sendTelegramMessage(
       chatId,
       `📹 <b>Enlace de videollamada</b>\n\nAbre este enlace para llamar al cliente (dura ${minutosLlamada} min):\n${roomUrlEs}`,

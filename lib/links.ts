@@ -33,6 +33,16 @@ export function qRol(token: string, rol: Rol): string {
   return `quien=${rol}&s=${firmaRol(token, rol)}`
 }
 
+/** Firma del enlace de una llamada: ata la sala a un rol. Sin ella (o sin sesión autorizada) no se entrega el pase de Daily. */
+export function firmaLlamada(sala: string, rol: Rol): string {
+  return firmar(`llamada:${sala}:${rol}`)
+}
+
+export function llamadaFirmaValida(sala: string, rol: Rol, sig: string | null): boolean {
+  if (!sig) return false
+  try { return iguales(sig, firmaLlamada(sala, rol)) } catch { return false }
+}
+
 export function firmaFoto(mensajeId: string, expSeg: number): string {
   return firmar(`foto:${mensajeId}:${expSeg}`)
 }
