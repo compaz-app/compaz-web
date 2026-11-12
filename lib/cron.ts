@@ -24,6 +24,7 @@ export const ESPERADOS: Record<string, number> = {
   'reintentar-airtable': 15, 'conciliar-airtable': 60,
   // Los que antes nadie vigilaba (S-09). Minutos entre ejecuciones; se alerta pasado el triple.
   limpieza: 1440, 'recordatorio-pago': 1440, 'recordatorio-primera-visita': 1440, 'aviso-inicio-visita': 15, 'noshow-alerta': 15, 'churn-alerta': 10080,
+  'cmc-compitas': 60, // foto horaria del CMC (solo cuenta desde la primera foto aplicada)
 }
 
 /** Alerta al admin (máx. 1 vez por hora y cron) si un cron dejó de ejecutarse. */

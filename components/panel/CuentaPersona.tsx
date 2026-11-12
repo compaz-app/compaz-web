@@ -8,6 +8,7 @@ import { TituloBloque } from '@/components/panel/ui'
 import AccionCuenta from '@/components/panel/AccionCuenta'
 import DialogoPanel from '@/components/panel/DialogoPanel'
 import FormCompita from '@/components/panel/FormCompita'
+import { cmcPermiteActivar } from '@/lib/cmc-estado'
 import type { FichaPersona } from '@/lib/panel-personas-tipos'
 
 // Acciones sobre la cuenta, en la ficha. Cada ruta de /api/admin vuelve a comprobar el permiso en el servidor; aquí solo se muestra lo que esta
@@ -43,14 +44,14 @@ export default function CuentaPersona({ ficha, puedeCuentas, puedeAtender, puede
             {ficha.perfil && <EditarPerfil id={ficha.id} nombre={nombre} perfil={ficha.perfil} />}
             {!c.bloqueado && (
               <>
-                <AccionCuenta texto={c.verificado ? 'Quitar verificación' : 'Verificar'} url="/api/admin/toggle-verificado" cuerpo={{ compita_id: ficha.id, verificado: !c.verificado }}
+                {(c.verificado || cmcPermiteActivar(ficha.cmc)) && <AccionCuenta texto={c.verificado ? 'Quitar verificación' : 'Verificar'} url="/api/admin/toggle-verificado" cuerpo={{ compita_id: ficha.id, verificado: !c.verificado }}
                   titulo={c.verificado ? `Quitar la verificación de ${nombre}` : `Verificar a ${nombre}`}
                   mensaje={c.verificado ? 'Deja de aparecer como verificado y no recibirá solicitudes nuevas.' : 'Aparecerá como verificado y podrá recibir solicitudes. Hazlo solo tras revisar su entrevista y antecedentes.'}
-                  info="Marca si el compita pasó la verificación. Solo un compita verificado y activo recibe solicitudes." />
-                <AccionCuenta texto={c.activo ? 'Desactivar' : 'Activar'} url="/api/admin/toggle-estado" cuerpo={{ compita_id: ficha.id, estado: c.activo ? 'inactivo' : 'activo' }}
+                  info="Marca si el compita pasó la verificación. Solo un compita verificado y activo recibe solicitudes." />}
+                {(c.activo || cmcPermiteActivar(ficha.cmc)) && <AccionCuenta texto={c.activo ? 'Desactivar' : 'Activar'} url="/api/admin/toggle-estado" cuerpo={{ compita_id: ficha.id, estado: c.activo ? 'inactivo' : 'activo' }}
                   titulo={c.activo ? `Desactivar a ${nombre}` : `Activar a ${nombre}`}
                   mensaje={c.activo ? 'Deja de recibir solicitudes nuevas. Lo que ya tiene en curso sigue.' : 'Vuelve a recibir solicitudes nuevas.'}
-                  info="Pausa o reanuda la llegada de solicitudes nuevas a este compita." />
+                  info="Pausa o reanuda la llegada de solicitudes nuevas a este compita." />}
               </>
             )}
           </>

@@ -8,6 +8,7 @@ import Aviso from '@/components/ui/base/Aviso'
 import InfoBoton from '@/components/ui/InfoBoton'
 import MotivoDialog from '@/components/panel/MotivoDialog'
 import CuentaPersona from '@/components/panel/CuentaPersona'
+import EstadoCmc from '@/components/panel/EstadoCmc'
 import { INFO_CONTACTO, MAX_NOTA, cuandoLinea, digitosWhatsapp, type CanalContacto, type FichaPersona as Ficha, type NotaPersona } from '@/lib/panel-personas-tipos'
 
 const TEXTO_CANAL: Record<CanalContacto, string> = { correo: 'Correo', telefono: 'Teléfono', whatsapp: 'WhatsApp' }
@@ -75,6 +76,8 @@ export default function FichaPersona({ ficha, cerrarHref, pideMotivo, puedeConta
             {ficha.canc.total} cancelación{ficha.canc.total > 1 ? 'es' : ''} en 30 días, {ficha.canc.cuentanContra} tardía{ficha.canc.cuentanContra === 1 ? '' : 's'} sin justificar{ficha.canc.nivel === 'pausa' ? '. Sus solicitudes nuevas están en pausa.' : ficha.canc.nivel === 'revision' ? '. En revisión.' : '.'}
           </Aviso>
         )}
+
+        {ficha.cmc && <EstadoCmc cmc={ficha.cmc} />}
 
         <CuentaPersona ficha={ficha} puedeCuentas={puedeCuentas} puedeAtender={puedeNotas} puedeEliminar={puedeEliminar} />
 

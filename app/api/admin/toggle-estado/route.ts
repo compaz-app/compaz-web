@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import { requierePermiso } from '@/lib/permisos'
-import { desactivarCompita, reactivarCompita } from '@/lib/compitas'
+import { desactivarCompita, reactivarCompita, CompitaNoPermitidaPorCmc } from '@/lib/compitas'
 import { ok, err, serverError } from '@/lib/api'
 import { anotarAccion } from '@/lib/acciones-equipo'
 
@@ -19,6 +19,7 @@ export async function POST(req: NextRequest) {
     await anotarAccion(g.actor.correo, estado === 'inactivo' ? 'desactivó a un compita' : 'activó a un compita', { tipo: 'compita', id: compita_id })
     return ok({ compita_id, estado })
   } catch (e) {
+    if (e instanceof CompitaNoPermitidaPorCmc) return err(e.message, 409)
     return serverError(e)
   }
 }

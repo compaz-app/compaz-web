@@ -19,7 +19,7 @@ import { parBloqueado } from '@/lib/bloqueos-compita'
 import { personaPausada } from '@/lib/pausas'
 import { validarSolicitudNueva, mensajeDeSolicitud, type SolicitudNueva } from '@/lib/validar-solicitud'
 
-const MENSAJES_NEGOCIO = ['Límite de', 'Ya tienes una solicitud']
+const MENSAJES_NEGOCIO = ['Límite de', 'Ya tienes una solicitud', 'Este compita no está disponible']
 
 const MAX_SOLICITUDES_DIA = 5
 
@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
   const admin = createAdminSupabase()
   const [{ data: cliente }, { data: compita }] = await Promise.all([
     admin.from('usuarios').select('nombre, email, plan').eq('id', user.id).single(),
-    admin.from('compitas').select('nombre, email, telegram_chat_id, estado, verificado').eq('id', compita_id).single(),
+    admin.from('compitas').select('nombre, email, telegram_chat_id, estado, verificado, cmc_permite').eq('id', compita_id).single(),
   ])
 
   if (!compita) return err('Compita no encontrada', 404)
@@ -94,7 +94,8 @@ export async function POST(req: NextRequest) {
   if ((cliente as { plan: string | null }).plan === 'bloqueado') {
     return err('Tu cuenta ha sido suspendida. Escríbenos a hola@micompaz.com para más información.', 403)
   }
-  if ((compita as { estado: string; verificado: boolean }).estado !== 'activo' || !(compita as { estado: string; verificado: boolean }).verificado) {
+  const disp = compita as { estado: string; verificado: boolean; cmc_permite: boolean | null }
+  if (disp.estado !== 'activo' || !disp.verificado || disp.cmc_permite === false) {
     return err('Este compita no está disponible', 400)
   }
   // Pausado por cancelaciones tardías sin justificar: no recibe solicitudes nuevas hasta que el equipo lo resuelva.

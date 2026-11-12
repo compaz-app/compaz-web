@@ -166,6 +166,7 @@ export const ENTRADAS: EntradaManual[] = [
       'Busca por nombre o zona, o filtra por Estado: el desplegable solo lista los estados donde hay gente. Toca un título de columna para ordenar. Rojo y amarillo piden atención; gris es nuevo o en pausa.',
       '"Con familias" es un compita activo que ya atiende al menos una familia; no hay un tope de cupo. "Respuesta" es el porcentaje de solicitudes respondidas en 30 días, y "Sin actividad" el tiempo desde su última respuesta o visita.',
       'Toca a la persona para abrir su ficha: paso o estado, cancelaciones, línea de tiempo y notas internas.',
+      'Si el compita viene del CMC (el Centro de Mando de selección), la ficha muestra su ID COM-, si el CMC lo permite y lo que le falta para recibir solicitudes. Lo que dice el CMC no se cambia desde aquí: si no lo permite, no se puede verificar ni activar hasta que el CMC lo habilite.',
       'Para ver un correo o teléfono, toca el botón en Contacto. Si no eres administrador te pide un motivo, y queda anotado en Actividad con tu nombre.',
       'Las notas internas las ve solo el equipo. Cada una guarda quién la escribió y cuándo, y no se puede editar ni borrar.',
     ],

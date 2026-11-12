@@ -22,7 +22,7 @@ const REL: Record<string, Record<string, string>> = {
 const REL_INVERSA: Record<string, Record<string, string>> = {}
 
 const DEFAULTS: Record<string, () => Row> = {
-  compitas: () => ({ id: randomUUID(), estado: 'activo', verificado: false, visitas_realizadas: 0, total_ratings: 0, rating_promedio: null, telegram_chat_id: null, email: null, foto_url: null, youtube_url: null, servicios: [], horarios_disponibles: [], created_at: nowIso() }),
+  compitas: () => ({ id: randomUUID(), codigo: null, es_demo: false, cmc_permite: null, cmc_estado: null, cmc_actualizado_en: null, cmc_bienvenida_enviada_en: null, estado: 'activo', verificado: false, visitas_realizadas: 0, total_ratings: 0, rating_promedio: null, telegram_chat_id: null, email: null, foto_url: null, youtube_url: null, servicios: [], horarios_disponibles: [], created_at: nowIso() }),
   usuarios: () => ({ plan: null, plan_contratado: null, plan_inicio: null, compita_id: null, familiar_nombre: null, familiar_edad: null, familiar_condicion: null, familiar_notas: null, zona: null, created_at: nowIso() }),
   visitas: () => ({ id: randomUUID(), estado: 'programada', fecha_programada: null, hora_inicio_programada: null, hora_fin_programada: null, inicio: null, fin: null, room_url: null, rating_cliente: null, comentario_cliente: null, created_at: nowIso() }),
   mensajes: () => ({ id: randomUUID(), tipo: 'texto', created_at: nowIso() }),
@@ -52,6 +52,7 @@ const DEFAULTS: Record<string, () => Row> = {
   cancelaciones: () => ({ id: randomUUID(), horas_de_aviso: null, tardia: false, motivo: null, justificada: false, justificada_por: null, justificada_en: null, visita_id: null, solicitud_id: null, cuenta_como_usada: false, visita_creada_en: null, creado_en: nowIso() }),
   fotos_privadas: () => ({ id: randomUUID(), visita_id: null, solicitud_id: null, usuario_id: null, borrada_en: null, creado_en: nowIso() }),
   avisos: () => ({ id: randomUUID(), estado: 'pendiente', intentos: 0, variables: {}, error: null, accion_en: null, plazo_accion_hasta: null, ultimo_intento_en: null, respaldo_de: null, entidad: null, entidad_id: null, paso: null, programado_para: nowIso(), creado_en: nowIso() }),
+  cmc_sincronizaciones: () => ({ id: randomUUID(), recibida_en: nowIso(), motivo: null, resumen: {}, cambios: [] }),
   postulaciones: () => ({ id: randomUUID(), clasificacion: 'nueva', resolucion: null, airtable_id: null, airtable_estado: 'pendiente', utm_source: null, utm_medium: null, utm_campaign: null, recibida_en: nowIso() }),
 }
 
@@ -110,6 +111,7 @@ export class FakeDB {
     if (PK[t] && others.some((r) => r[PK[t]] === row[PK[t]])) return dupError(`${t}_pkey`)
     if (t !== 'telegram_estados' && row.id && others.some((r) => r.id === row.id)) return dupError(`${t}_pkey`)
     if (t === 'compitas' && row.telegram_chat_id && others.some((r) => r.telegram_chat_id === row.telegram_chat_id)) return dupError('compitas_telegram_chat_id_key')
+    if (t === 'compitas' && row.codigo && others.some((r) => r.codigo === row.codigo)) return dupError('compitas_codigo_key')
     if (t === 'usuarios' && row.email && others.some((r) => r.email === row.email)) return dupError('usuarios_email_key')
     // Índices de la migración 20261009
     if (t === 'visitas' && ['confirmando_inicio', 'en_curso'].includes(row.estado) && others.some((r) => r.compita_id === row.compita_id && ['confirmando_inicio', 'en_curso'].includes(r.estado))) return dupError('visitas_una_en_curso_por_compita')
@@ -244,6 +246,8 @@ class Query {
     const conds = splitTop(expr).map((c) => {
       const n = c.match(/^(\w+)\.not\.(\w+)\.(.*)$/) // col.not.op.valor → negación (como PostgREST)
       if (n) { const p = predicate(n[1], n[2], parseVal(n[2], n[3])); return (r: Row) => !p(r) }
+      const neg = c.match(/^(\w+)\.not\.(\w+)\.(.*)$/)
+      if (neg) { const p = predicate(neg[1], neg[2], parseVal(neg[2], neg[3])); return (r: Row) => !p(r) }
       const m = c.match(/^(\w+)\.(\w+)\.(.*)$/)
       if (!m) throw new Error(`or() no soportado: ${c}`)
       return predicate(m[1], m[2], parseVal(m[2], m[3]))

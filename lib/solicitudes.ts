@@ -9,6 +9,7 @@ import type { Solicitud, SolicitudEstado } from '@/types'
 export type { Solicitud, SolicitudEstado }
 
 const MAX_SOLICITUDES_ACTIVAS = 3
+export const COMPITA_NO_DISPONIBLE = 'Este compita no está disponible'
 const DIAS_EXPIRACION = 30
 
 // ── Helpers de mapping ────────────────────────────────────────────────────────
@@ -135,6 +136,14 @@ export interface CrearSolicitudInput {
  */
 export async function crearSolicitud(input: CrearSolicitudInput): Promise<Solicitud> {
   const supabase = createAdminSupabase()
+
+  // Autorización en el backend: solo Compitas activas, verificadas y con permiso del CMC
+  // (cmc_permite NULL = Compita anterior al CMC). Cubre cualquier ruta que cree solicitudes.
+  const { data: compita } = await supabase
+    .from('compitas').select('estado, verificado, cmc_permite').eq('id', input.compita_id).maybeSingle()
+  if (!compita || compita.estado !== 'activo' || !compita.verificado || compita.cmc_permite === false) {
+    throw new Error(COMPITA_NO_DISPONIBLE)
+  }
 
   const activas = await getSolicitudesCliente(input.cliente_id)
   const pendientes = activas.filter((s) => s.estado === 'pendiente')

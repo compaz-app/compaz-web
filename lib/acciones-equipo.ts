@@ -11,6 +11,7 @@ import { revisarCorreo, validarPerfil } from '@/lib/validar'
 import { normalizarTelefono } from '@/lib/captacion'
 import { recortarTexto } from '@/lib/panel-datos'
 import { asignarCompita } from '@/lib/usuarios'
+import { existePerfilCmcConEmail } from '@/lib/compitas'
 import type { Actor } from '@/lib/permisos'
 import type { Visita, Compita, Usuario } from '@/types'
 
@@ -147,6 +148,8 @@ export async function registrarCompitaManual(body: Record<string, unknown>, acto
   if (!v.ok) return mal(400, v.error)
   const { nombre, zona, descripcion, servicios, foto_url, youtube_url } = v.datos
   const apellido = typeof body.apellido === 'string' && body.apellido.trim() ? body.apellido.trim() : null
+  // Una compita habilitada en el CMC ya tiene perfil: no se crea otro con el mismo correo.
+  if (await existePerfilCmcConEmail(email)) return mal(409, 'Ya existe un perfil creado desde el CMC con ese correo')
   const { data, error } = await createAdminSupabase().from('compitas').insert({
     nombre, apellido, zona, descripcion, servicios, email, telefono, foto_url: foto_url ?? null, youtube_url: youtube_url ?? null,
     horarios_disponibles: [], estado: 'inactivo', verificado: false, visitas_realizadas: 0, es_demo: body.es_demo === true,

@@ -185,7 +185,7 @@ describe('resto de la auditoría: S-07, S-09, S-11, S-12, E-05, E-06, A-03, A-04
   })
   test('S-09: la vigilancia cubre los procesos que faltaban', () => {
     for (const k of ['limpieza', 'recordatorio-pago', 'recordatorio-primera-visita', 'aviso-inicio-visita', 'noshow-alerta', 'churn-alerta']) assert.ok(ESPERADOS[k] > 0, k)
-    for (const k of Object.keys(ESPERADOS)) assert.match(leer(`app/api/cron/${k}/route.ts`, 'utf8'), new RegExp(`latido\\('${k}'\\)`), `${k} debe marcar su latido`)
+    for (const k of Object.keys(ESPERADOS)) assert.match(leer(k === 'cmc-compitas' ? 'app/api/cmc/compitas/route.ts' : `app/api/cron/${k}/route.ts`, 'utf8'), new RegExp(`latido\\('${k}'\\)`), `${k} debe marcar su latido`)
   })
   test('S-11/S-12/E-05/E-06/A-03/A-04/I-02: configuración', async () => {
     const cfg = leer('next.config.ts', 'utf8'); assert.doesNotMatch(cfg, /api\.airtable\.com|api\.telegram\.org/)

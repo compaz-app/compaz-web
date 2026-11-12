@@ -78,6 +78,7 @@ Código: `lib/permisos.ts`, `lib/equipo.ts`, `lib/admins.ts`. Toda ruta nueva de
 - `lib/compitas.ts` — lógica de negocio: compitas
 - `lib/solicitudes.ts` — lógica de negocio: solicitudes de entrevista
 - `lib/usuarios.ts` — lógica de negocio: usuarios/clientes
+- `lib/cmc-compitas.ts` — Compitas habilitadas en el CMC → `compitas` (ver `docs/cmc/compitas-desde-cmc.md`)
 - `lib/telegram.ts` — envío de mensajes por Telegram
 - `lib/resend.ts` — envío de emails
 - `lib/daily.ts` — salas de videollamada

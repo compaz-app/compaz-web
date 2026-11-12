@@ -1,3 +1,5 @@
+import type { EstadoCmc } from '@/lib/cmc-estado'
+
 // Personas del panel nuevo: lógica PURA (sin base de datos) que comparten el servidor y la pantalla.
 // Compitas: tabla con estado, calificación, respuesta y cancelaciones. Clientes: lista simple. Ficha: línea de tiempo y contacto con motivo.
 
@@ -27,6 +29,7 @@ export interface FichaPersona {
   /** Hay contacto guardado (el valor NO viaja: se pide aparte, con motivo). */ contacto: { correo: boolean; telefono: boolean }
   linea: EventoLinea[]
   /** Notas internas del equipo, la más nueva primero. */ notas: NotaPersona[]
+  /** Compita: estado en el CMC (null si es anterior al CMC o no aplica). */ cmc?: EstadoCmc | null
   /** Estado de la cuenta, para los botones de la ficha. */ cuenta?: { bloqueado: boolean; verificado?: boolean; activo?: boolean; portalNuevo?: boolean | null }
   /** Compita: su perfil público, para corregirlo (solo viaja a quien tiene el permiso de cuentas). */ perfil?: { zona: string; descripcion: string; servicios: string[]; youtube: string; fotoUrl: string | null }
   /** Cliente: compitas a los que se le puede asignar (verificados y activos). */ asignables?: { id: string; nombre: string }[]

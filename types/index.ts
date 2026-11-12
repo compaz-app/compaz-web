@@ -45,6 +45,10 @@ export interface Compita {
   rating_promedio: number | null
   total_ratings: number
   es_demo: boolean
+  // Integración con el CMC (NULL = Compita anterior al CMC o demo; ver lib/cmc-compitas.ts)
+  cmc_permite?: boolean | null
+  cmc_estado?: string | null
+  cmc_actualizado_en?: string | null
   // Stats calculados en runtime (no en BD)
   tasa_aceptacion?: number | null
   total_solicitudes?: number

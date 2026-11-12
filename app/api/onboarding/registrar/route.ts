@@ -8,6 +8,7 @@ import { avisarAdmin } from '@/lib/telegram'
 import { alertaAdmin } from '@/lib/alertas-admin'
 import { normalizarTelefono } from '@/lib/captacion'
 import { generarTokenPerfil } from '@/lib/compita-tokens'
+import { existePerfilCmcConEmail } from '@/lib/compitas'
 
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null)
@@ -38,6 +39,11 @@ export async function POST(req: NextRequest) {
   }
   const { nombre, zona, descripcion, servicios, foto_url, youtube_url, horarios_disponibles } = v.datos
   const habil = typeof habilidades === 'string' ? habilidades.trim().slice(0, 500) : ''
+
+  // Una Compita habilitada en el CMC ya tiene perfil: no crear otro (se comprueba antes de gastar el token)
+  if (await existePerfilCmcConEmail(email)) {
+    return err('Ya tienes un perfil en Compaz. Revisa tu correo: ahí están los pasos para conectar Telegram.', 409)
+  }
 
   const admin = createAdminSupabase()
 

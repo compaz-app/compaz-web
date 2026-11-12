@@ -3,6 +3,8 @@
 
 import { createAdminSupabase } from '@/lib/supabase-server'
 import type { Actor } from '@/lib/permisos'
+import { estadoCmc } from '@/lib/cmc-estado'
+import type { Compita } from '@/types'
 import { puede } from '@/lib/permisos'
 import { esCuentaEliminada } from '@/lib/cuenta-eliminar'
 import { recortarTexto } from '@/lib/panel-datos'
@@ -109,7 +111,7 @@ export async function fichaDePersona(actor: Actor, tipo: TipoPersona, id: string
     const { data: c } = await db.from('compitas').select('*').eq('id', id).maybeSingle()
     if (!c || c.es_demo) return null
     const [linea, canc, notas] = await Promise.all([lineaDe(actor, 'compita', id), resumenCancelacionesCompita(id), listarNotas(actor, 'compita', id)])
-    return { tipo, id, nombre: [c.nombre, c.apellido].filter(Boolean).join(' '), zona: String(c.zona ?? ''), contacto: { correo: !!c.email, telefono: !!c.telefono }, linea, notas, canc,
+    return { tipo, id, nombre: [c.nombre, c.apellido].filter(Boolean).join(' '), zona: String(c.zona ?? ''), contacto: { correo: !!c.email, telefono: !!c.telefono }, linea, notas, canc, cmc: estadoCmc(c as unknown as Compita),
       // Una cuenta eliminada se ve (por el historial) pero ya no tiene acciones.
       perfil: puede(actor, 'cuentas') && !esCuentaEliminada(c.nombre) ? { zona: String(c.zona ?? ''), descripcion: String(c.descripcion ?? ''), servicios: Array.isArray(c.servicios) ? c.servicios.map(String) : [], youtube: String(c.youtube_url ?? ''), fotoUrl: c.foto_url ? String(c.foto_url) : null } : undefined,
       cuenta: esCuentaEliminada(c.nombre) ? undefined : { bloqueado: c.estado === 'bloqueado', verificado: !!c.verificado, activo: c.estado === 'activo' } }
