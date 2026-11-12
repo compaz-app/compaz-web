@@ -26,7 +26,7 @@ const ESPERADO: Record<string, string> = {
   'anular-pago': 'pagos', 'pagos': 'pagos', 'registrar-pago': 'pagos',
   'bloquear-cliente': 'cuentas', 'bloquear-compita': 'cuentas', 'toggle-estado': 'cuentas', 'toggle-verificado': 'cuentas',
   'compita': 'cuentas', 'upload-foto': 'cuentas', 'postulaciones/resolver': 'cuentas',
-  'eliminar-cliente': 'raiz', 'eliminar-compita': 'raiz', 'equipo': 'raiz',
+  'latencia': 'raiz', 'eliminar-cliente': 'raiz', 'eliminar-compita': 'raiz', 'equipo': 'raiz',
   'flags': 'atender', 'resenas': 'atender', 'asignar-compita': 'atender', 'confirmar-solicitud': 'pagos',
   'completar-solicitud': 'atender', 'forzar-cierre-visita': 'atender', 'enviar-link-llamada': 'atender',
   'bloqueos-compita': 'atender', 'reportes-compita': 'atender', 'dudas': 'monitorear', 'esperas': 'monitorear', 'pausas': 'cuentas', 'actividad': 'monitorear', 'portal-nuevo': 'cuentas', 'contacto': 'telefonos', 'notas': 'atender', 'confirmar-pago': 'pagos', 'ajustes': 'ajustes_editar', 'insistir-aviso': 'atender', 'reintentar-aviso': 'atender', 'chat': 'chats',

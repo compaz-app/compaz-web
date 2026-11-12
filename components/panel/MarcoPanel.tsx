@@ -9,19 +9,19 @@ export default function MarcoPanel({ actor, actual, comoColaborador, puedeElegir
 }) {
   const secciones = seccionesVisibles(actor)
   const lateral = (s: (typeof secciones)[number]) => (
-    <Link key={s.id} href={hrefSeccion(s.id, comoColaborador)} aria-current={actual === s.id ? 'page' : undefined}
+    <Link prefetch={false} key={s.id} href={hrefSeccion(s.id, comoColaborador)} aria-current={actual === s.id ? 'page' : undefined}
       className={`flex min-h-12 items-center gap-3 rounded-xl px-3 text-base ${actual === s.id ? 'bg-morado-medio font-extrabold text-blanco' : 'font-bold text-morado-claro hover:bg-fondo-claro'}`}>
       <span>{s.texto}</span>
     </Link>
   )
   const inferior = (s: (typeof secciones)[number]) => (
-    <Link key={s.id} href={hrefSeccion(s.id, comoColaborador)} aria-current={actual === s.id ? 'page' : undefined}
+    <Link prefetch={false} key={s.id} href={hrefSeccion(s.id, comoColaborador)} aria-current={actual === s.id ? 'page' : undefined}
       className={`flex min-h-16 flex-col items-center justify-center text-xs ${actual === s.id ? 'font-extrabold text-naranja-oscuro' : 'font-bold text-morado-claro'}`}>
       <span>{s.texto}</span>
     </Link>
   )
   const vista = (como: boolean, texto: string) => (
-    <Link href={hrefSeccion(actual, como)} aria-pressed={comoColaborador === como}
+    <Link prefetch={false} href={hrefSeccion(actual, como)} aria-pressed={comoColaborador === como}
       className={`flex min-h-10 flex-1 items-center justify-center rounded-lg px-2 text-sm ${comoColaborador === como ? 'bg-morado-medio font-extrabold text-blanco' : 'font-bold text-morado-claro hover:bg-fondo-claro'}`}>{texto}</Link>
   )
   return (

@@ -27,12 +27,12 @@ export default function Actividad({ d, enlace, pre, acceso = false, paramsForm, 
       {!acceso && (
         <div className="flex flex-wrap items-center gap-1.5">
           <InfoBoton que="Filtrar por tipo" texto="Urgentes: lo que hubo que atender ya. Tareas: lo que alguien debía hacer. Informativo: lo que solo pasó. No cambia ni resuelve nada." />
-          {NIVELES_ACTIVIDAD.map(([v, t]) => <Link key={v} href={enlace({ [`${pre}_nivel`]: v || null, [`${pre}_pag`]: null })} aria-pressed={d.nivel === v} className={clasesChip(d.nivel === v)}>{t}</Link>)}
+          {NIVELES_ACTIVIDAD.map(([v, t]) => <Link prefetch={false} key={v} href={enlace({ [`${pre}_nivel`]: v || null, [`${pre}_pag`]: null })} aria-pressed={d.nivel === v} className={clasesChip(d.nivel === v)}>{t}</Link>)}
         </div>
       )}
       <div className="flex flex-wrap items-center gap-1.5">
         <InfoBoton que="Filtrar por días" texto={`Cuánto tiempo atrás mirar. Se conserva ${plazo}.`} />
-        {(acceso ? DIAS_REGISTRO : DIAS_ACTIVIDAD).map(([v, t]) => <Link key={v} href={enlace({ [`${pre}_dias`]: v, [`${pre}_pag`]: null })} aria-pressed={String(d.dias) === v} className={clasesChip(String(d.dias) === v)}>{t}</Link>)}
+        {(acceso ? DIAS_REGISTRO : DIAS_ACTIVIDAD).map(([v, t]) => <Link prefetch={false} key={v} href={enlace({ [`${pre}_dias`]: v, [`${pre}_pag`]: null })} aria-pressed={String(d.dias) === v} className={clasesChip(String(d.dias) === v)}>{t}</Link>)}
       </div>
       <form action="/panel" method="get" role="search" className="flex items-center gap-2">
         {Object.entries(paramsForm).map(([k, v]) => <input key={k} type="hidden" name={k} value={v} />)}

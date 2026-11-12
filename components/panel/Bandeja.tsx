@@ -69,7 +69,7 @@ export default function Bandeja({ tareas, puedeAtender, pideMotivo }: { tareas: 
                   const nombre = t.entidad_id === 'sistema' ? 'Sistema' : t.entidad_nombre || 'Sin nombre'
                   const ir = t.entidad_id === 'sistema' ? null : hrefPersona(t.entidad_tipo, t.entidad_id, como)
                   return ir
-                    ? <Link href={ir} aria-label={`Abrir la ficha de ${nombre}`} className="font-extrabold text-texto-oscuro underline-offset-2 [overflow-wrap:anywhere] hover:underline">{nombre}</Link>
+                    ? <Link prefetch={false} href={ir} aria-label={`Abrir la ficha de ${nombre}`} className="font-extrabold text-texto-oscuro underline-offset-2 [overflow-wrap:anywhere] hover:underline">{nombre}</Link>
                     : <span className="font-extrabold text-texto-oscuro [overflow-wrap:anywhere]">{nombre}</span>
                 })()}
                 <Rol>{t.entidad_id === 'sistema' ? 'Sistema' : NOMBRE_ENTIDAD[t.entidad_tipo]}</Rol>

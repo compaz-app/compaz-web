@@ -15,7 +15,7 @@ export default function DetalleVisita({ d, ahora, cerrarHref, fichaClienteHref, 
   return (
     <div className="fixed inset-0 z-40 flex justify-end bg-negro/30">
       <CerrarConEscape href={cerrarHref} />
-      <Link href={cerrarHref} replace scroll={false} aria-label="Cerrar el detalle de la visita" className="absolute inset-0 cursor-default" />
+      <Link prefetch={false} href={cerrarHref} replace scroll={false} aria-label="Cerrar el detalle de la visita" className="absolute inset-0 cursor-default" />
       <aside role="dialog" aria-label={`Visita de ${v.cliente} con ${v.compita}`} className="relative h-full w-full max-w-md space-y-5 overflow-y-auto bg-blanco p-5 shadow-2xl">
         <EncabezadoLateral etiqueta="Visita" titulo={<>{v.cliente}<span className="font-bold text-texto-medio"> con {v.compita}</span></>} detalle={`${etiquetaVisita(v.ts, ahora)}${v.zona ? ` · ${v.zona}` : ''}`} cerrarHref={cerrarHref} />
         <section className="space-y-2 rounded-xl border border-borde p-3">

@@ -15,7 +15,7 @@ export default function Limites({ filas, quien, enlace }: { filas: FilaLimite[];
     <section className="max-w-3xl space-y-3">
       <div className="flex flex-wrap items-center gap-1.5">
         <InfoBoton que="Qué son los límites y esperas" texto="Cosas que el sistema frena a propósito: plazos entre envíos, máximos y límites de seguridad. Cuando alguien se topa con una, el mensaje que ve le explica lo mismo que lees aquí. Los chips filtran por quién se topa con ella; no cambian ninguna regla." />
-        {FILTROS.map(([v, t]) => <Link key={v} href={enlace({ lim: v || null })} aria-pressed={quien === v} className={clasesChip(quien === v)}>{t}</Link>)}
+        {FILTROS.map(([v, t]) => <Link prefetch={false} key={v} href={enlace({ lim: v || null })} aria-pressed={quien === v} className={clasesChip(quien === v)}>{t}</Link>)}
       </div>
       <ul className={CLASE_LISTA}>
         {lista.map((f) => (

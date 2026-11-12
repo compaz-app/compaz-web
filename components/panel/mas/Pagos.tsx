@@ -17,8 +17,8 @@ export default function Pagos({ filas, ver, pagina, enlace }: { filas: FilaPago[
     <section className="max-w-3xl space-y-3">
       <div className="flex flex-wrap items-center gap-1.5">
         <InfoBoton que="Qué es esta pantalla" texto="Los pagos registrados, el más reciente primero. Anular un pago libera las visitas que no se cobraron y recalcula el cupo del cliente; úsalo solo si hubo un error. Para confirmar un pago nuevo, usa el botón de la Bandeja." />
-        <Link href={enlace({ pag_ver: null, pag_pag: null })} aria-pressed={ver === 'activos'} className={clasesChip(ver === 'activos')}>Activos <span className="ml-1 opacity-70">{act.length}</span></Link>
-        <Link href={enlace({ pag_ver: 'anulados', pag_pag: null })} aria-pressed={ver === 'anulados'} className={clasesChip(ver === 'anulados')}>Anulados <span className="ml-1 opacity-70">{anu.length}</span></Link>
+        <Link prefetch={false} href={enlace({ pag_ver: null, pag_pag: null })} aria-pressed={ver === 'activos'} className={clasesChip(ver === 'activos')}>Activos <span className="ml-1 opacity-70">{act.length}</span></Link>
+        <Link prefetch={false} href={enlace({ pag_ver: 'anulados', pag_pag: null })} aria-pressed={ver === 'anulados'} className={clasesChip(ver === 'anulados')}>Anulados <span className="ml-1 opacity-70">{anu.length}</span></Link>
       </div>
       <ul className={CLASE_LISTA}>
         {lista.slice(p.desde, p.hasta).map((g) => (
