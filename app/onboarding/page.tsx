@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { ZONAS_MUNICIPIOS as ZONAS } from '@/lib/venezuela'
+import { colors } from '@/lib/design'
+import { OpcionesProximamenteCompita, SeccionCuidadorMascotas } from '@/components/ui/Proximamente'
 
 // ── Servicios ─────────────────────────────────────────────────────────────────
 
@@ -123,6 +125,9 @@ function OnboardingForm() {
   const preview = searchParams.get('preview') === '1'
 
   const [step, setStep] = useState<'form' | 'telegram'>('form')
+  // Enlace de un solo uso para corregir los datos tras registrarse (si el correo estaba mal, el código del bot no llegaría).
+  const [editToken, setEditToken] = useState<string | null>(null)
+  const [corrigiendo, setCorrigiendo] = useState(false)
   const [tokenValido, setTokenValido] = useState<boolean | null>(null)
   const [loading, setLoading] = useState(false)
   const [errorForm, setErrorForm] = useState<string | null>(null)
@@ -135,6 +140,7 @@ function OnboardingForm() {
   const [form, setForm] = useState({
     nombre: '',
     email: '',
+    telefono: '',
     descripcion: '',
     servicios: [] as string[],
     habilidades: '',
@@ -258,6 +264,7 @@ function OnboardingForm() {
     const faltantes: string[] = []
     if (!form.nombre) faltantes.push('nombre completo')
     if (!form.email) faltantes.push('correo electrónico')
+    if (!form.telefono.trim()) faltantes.push('teléfono de WhatsApp')
     if (zonas.length === 0) faltantes.push('zona de cobertura')
     if (!form.descripcion) faltantes.push('descripción')
     if (form.servicios.length === 0) faltantes.push('al menos un servicio')
@@ -283,14 +290,17 @@ function OnboardingForm() {
         if (uploadData.url) foto_url = uploadData.url
       }
 
-      const res = await fetch('/api/onboarding/registrar', {
+      const res = await fetch(corrigiendo ? '/api/onboarding/corregir' : '/api/onboarding/registrar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nombre: form.nombre, email: form.email, descripcion: form.descripcion, servicios: form.servicios, habilidades: form.habilidades, youtube_url: form.youtube_url, zona, foto_url, token, horarios_disponibles: horarios }),
+        body: JSON.stringify({ nombre: form.nombre, email: form.email, telefono: form.telefono, descripcion: form.descripcion, servicios: form.servicios, habilidades: form.habilidades, youtube_url: form.youtube_url, zona, foto_url, token, horarios_disponibles: horarios, ...(corrigiendo ? { edit_token: editToken } : {}) }),
       })
 
       if (res.ok) {
         try { localStorage.removeItem(BORRADOR_KEY) } catch { /* ignorar */ }
+        const d = await res.json().catch(() => null) as { data?: { edit_token?: string | null } } | null
+        setEditToken(d?.data?.edit_token ?? null)
+        setCorrigiendo(false)
         setStep('telegram')
       } else {
         const d = await res.json()
@@ -326,9 +336,15 @@ function OnboardingForm() {
           <p style={{ color: '#6B5C90', marginTop: '8px', marginBottom: '16px', lineHeight: '1.7' }}>
             Tu perfil fue creado exitosamente. Falta un paso importante:
           </p>
+          {editToken && (
+            <p style={{ color: colors.textoMedio, fontSize: '14px', lineHeight: '1.6', margin: '0 0 16px' }}>
+              ¿Te equivocaste en algún dato, por ejemplo el correo? El código de acceso llega a tu correo, así que debe estar bien escrito.{' '}
+              <button type="button" onClick={() => { setCorrigiendo(true); setStep('form') }} style={{ background: 'none', border: 'none', padding: 0, color: colors.naranjaOscuro, fontWeight: 700, textDecoration: 'underline', cursor: 'pointer', fontSize: '14px' }}>Corregir mis datos</button>
+            </p>
+          )}
           <div style={{ background: '#FFF3E8', border: '2px solid #FF6B2B', borderRadius: '14px', padding: '16px 20px', marginBottom: '24px' }}>
             <p style={{ color: '#C84B0E', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif', fontSize: '15px', margin: '0 0 6px' }}>
-              ⚠️ Tu perfil no aparece para los clientes todavía
+              Tu perfil no aparece para los clientes todavía
             </p>
             <p style={{ color: '#7A3A0A', fontSize: '14px', lineHeight: '1.6', margin: 0 }}>
               Para que los clientes puedan encontrarte y contactarte, debes conectar Telegram. Sin eso, tu perfil permanece invisible en el sistema.
@@ -354,7 +370,7 @@ function OnboardingForm() {
 
           <div style={{ ...s.infoBox, marginBottom: '24px' }}>
             <p style={{ fontWeight: 700, color: '#1A0A3C', marginBottom: '16px', fontFamily: 'Bricolage Grotesque, sans-serif', fontSize: '15px' }}>Paso 2 — Abre el bot de Compaz</p>
-            <ol style={{ paddingLeft: '20px', color: '#4A3B6B', lineHeight: '1', margin: 0 }}>
+            <ol style={{ paddingLeft: '20px', color: '#4A3B6B', lineHeight: '1.6', margin: 0 }}>
               <li style={{ marginBottom: '14px' }}>
                 <strong>Toca el botón naranja de abajo.</strong> Te abrirá directamente el chat del bot dentro de Telegram.
               </li>
@@ -369,7 +385,7 @@ function OnboardingForm() {
               </li>
             </ol>
             <div style={{ marginTop: '16px', padding: '14px 16px', background: '#FFF3CD', borderLeft: '4px solid #FF6B2B', borderRadius: '8px' }}>
-              <p style={{ fontSize: '13px', fontWeight: 700, color: '#1A0A3C', margin: '0 0 4px 0' }}>🚨 Alerta de fraude</p>
+              <p style={{ fontSize: '13px', fontWeight: 700, color: '#1A0A3C', margin: '0 0 4px 0' }}>Alerta de fraude</p>
               <p style={{ fontSize: '13px', color: '#1A0A3C', margin: 0 }}>El código llega únicamente por correo. Compaz nunca te llamará por teléfono. No compartas este código con nadie.</p>
             </div>
           </div>
@@ -393,7 +409,6 @@ function OnboardingForm() {
         </p>
         {tieneBorrador && (
           <div style={{ background: '#EDE8FF', border: '2px solid rgba(45,20,100,0.2)', borderRadius: '12px', padding: '10px 16px', marginBottom: '32px', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: '#2D1464', fontWeight: 600 }}>
-            <span style={{ fontSize: '16px' }}>💾</span>
             Continuamos donde lo dejaste — tus datos están guardados en este dispositivo.
           </div>
         )}
@@ -411,6 +426,13 @@ function OnboardingForm() {
             <label style={s.label}>Correo electrónico *</label>
             <input required type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} style={s.input} placeholder="tu@correo.com" />
             <p style={s.hint}>Lo usaremos para enviarte el código de verificación al activar tu cuenta en Telegram.</p>
+          </div>
+
+          {/* Teléfono */}
+          <div>
+            <label style={s.label}>Teléfono de WhatsApp *</label>
+            <input required type="tel" inputMode="tel" autoComplete="tel" maxLength={30} value={form.telefono} onChange={(e) => setForm({ ...form, telefono: e.target.value })} style={s.input} placeholder="0412 123 4567" />
+            <p style={s.hint}>Solo lo ve el equipo de Compaz, para escribirte si hace falta. Nunca se le muestra a las familias.</p>
           </div>
 
           {/* Zonas — múltiples */}
@@ -531,6 +553,9 @@ function OnboardingForm() {
             />
           </div>
 
+          <OpcionesProximamenteCompita />
+          <SeccionCuidadorMascotas />
+
           {/* Foto */}
           <div>
             <label style={s.label}>Foto de perfil</label>
@@ -542,7 +567,7 @@ function OnboardingForm() {
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src="/images/ejemplo-foto-perfil.webp" alt="Ejemplo foto buena" style={{ width: '100%', maxHeight: '160px', objectFit: 'contain', display: 'block', background: '#f5f5f5' }} />
                 <div style={{ padding: '8px 10px' }}>
-                  <p style={{ fontSize: '11px', color: '#2E7D32', fontWeight: 700, margin: '0 0 2px' }}>✅ Así sí</p>
+                  <p style={{ fontSize: '11px', color: '#2E7D32', fontWeight: 700, margin: '0 0 2px' }}>Así sí</p>
                   <p style={{ fontSize: '11px', color: '#4A3B6B', margin: 0, lineHeight: '1.4' }}>Rostro centrado, fondo claro, buena luz</p>
                 </div>
               </div>
@@ -550,7 +575,7 @@ function OnboardingForm() {
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src="/images/ejemplo-foto-perfil.webp" alt="Ejemplo foto mala" style={{ width: '100%', maxHeight: '160px', objectFit: 'contain', display: 'block', background: '#111', filter: 'brightness(0.25) contrast(0.8)' }} />
                 <div style={{ padding: '8px 10px' }}>
-                  <p style={{ fontSize: '11px', color: '#C62828', fontWeight: 700, margin: '0 0 2px' }}>❌ Así no</p>
+                  <p style={{ fontSize: '11px', color: '#C62828', fontWeight: 700, margin: '0 0 2px' }}>Así no</p>
                   <p style={{ fontSize: '11px', color: '#4A3B6B', margin: 0, lineHeight: '1.4' }}>Oscura, cara sin ver, fondo desordenado</p>
                 </div>
               </div>
@@ -644,7 +669,7 @@ function OnboardingForm() {
             )}
             {horarioError && (
               <p style={{ marginTop: '8px', color: '#B91C1C', fontSize: '13px', background: '#FEF2F2', border: '1px solid #FCA5A5', borderRadius: '8px', padding: '8px 12px', lineHeight: '1.5' }}>
-                ⚠️ {horarioError}
+                {horarioError}
               </p>
             )}
           </div>
@@ -661,21 +686,19 @@ function OnboardingForm() {
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src="/images/ejemplo-video.webp" alt="Ejemplo video vertical" style={{ width: '100%', maxHeight: '200px', objectFit: 'contain', display: 'block', background: '#f0ece8' }} />
                 <div style={{ padding: '8px 10px' }}>
-                  <p style={{ fontSize: '11px', color: '#2E7D32', fontWeight: 700, margin: '0 0 2px' }}>✅ Así sí — vertical, buena luz</p>
+                  <p style={{ fontSize: '11px', color: '#2E7D32', fontWeight: 700, margin: '0 0 2px' }}>Así sí — vertical, buena luz</p>
                   <p style={{ fontSize: '11px', color: '#4A3B6B', margin: 0, lineHeight: '1.4' }}>Teléfono parado, cara visible, fondo simple</p>
                 </div>
               </div>
               <div style={{ flex: 1, background: '#F8F8F8', border: '2px solid #FFCDD2', borderRadius: '12px', overflow: 'hidden' as const }}>
                 <div style={{ height: '160px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#222' }}>
                   <div style={{ width: '140px', height: '80px', background: '#444', borderRadius: '6px', border: '2px solid #666', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' as const }}>
-                    <span style={{ fontSize: '28px' }}>😊</span>
                     <div style={{ position: 'absolute' as const, top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <span style={{ color: 'white', fontSize: '24px' }}>❌</span>
                     </div>
                   </div>
                 </div>
                 <div style={{ padding: '8px 10px' }}>
-                  <p style={{ fontSize: '11px', color: '#C62828', fontWeight: 700, margin: '0 0 2px' }}>❌ Así no — horizontal</p>
+                  <p style={{ fontSize: '11px', color: '#C62828', fontWeight: 700, margin: '0 0 2px' }}>Así no — horizontal</p>
                   <p style={{ fontSize: '11px', color: '#4A3B6B', margin: 0, lineHeight: '1.4' }}>Sale con barras negras arriba y abajo</p>
                 </div>
               </div>
@@ -753,7 +776,7 @@ function OnboardingForm() {
         <div style={{ maxWidth: '640px', margin: '0 auto' }}>
           {errorForm && (
             <p style={{ color: '#B91C1C', fontSize: '13px', fontWeight: 600, marginBottom: '8px', textAlign: 'center' as const }}>
-              ⚠️ {errorForm}
+              {errorForm}
             </p>
           )}
           <button
@@ -766,7 +789,7 @@ function OnboardingForm() {
               cursor: (loading || form.servicios.length === 0 || zonas.length === 0) ? 'not-allowed' : 'pointer',
             }}
           >
-            {loading ? 'Registrando…' : 'Crear mi perfil → paso 2 de 2'}
+            {loading ? (corrigiendo ? 'Guardando…' : 'Registrando…') : corrigiendo ? 'Guardar los cambios → volver al paso 2' : 'Crear mi perfil → paso 2 de 2'}
           </button>
         </div>
       </div>

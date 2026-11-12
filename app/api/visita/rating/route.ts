@@ -27,7 +27,7 @@ const MENSAJES: Record<number, string> = {
   2: 'Gracias por contarnos. Tu opinión nos ayuda a mejorar el servicio.',
   3: 'Gracias por tu calificación.',
   4: 'Nos alegra saber que estuvo bien. ¡Hasta la próxima!',
-  5: '¡Nos alegra mucho saberlo! Tu compita está haciendo un gran trabajo. 💙',
+  5: '¡Nos alegra mucho saberlo! Tu compita está haciendo un gran trabajo.',
 }
 
 export async function POST(req: NextRequest) {

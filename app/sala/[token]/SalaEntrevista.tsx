@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { textoDuracionLlamada } from '@/lib/llamada-ruta'
 
 type Paso = 'antes' | 'en_llamada' | 'terminado' | 'problema_tecnico' | 'reconectando' | 'resultado'
 type Resultado = 'contratar' | 'reagendar' | 'no_contratar'
@@ -9,15 +10,17 @@ type Resultado = 'contratar' | 'reagendar' | 'no_contratar'
 interface Props {
   token: string
   quien: 'cliente' | 'compita'
-  roomUrl: string
+  /** Enlace firmado de la llamada para esta persona (la sala es privada). */
+  llamadaHref: string
   compitaNombre: string
   clienteNombre: string
   slotLabel: string
   slotIso: string // instante UTC de la llamada
+  corteMin: number // minutos tras los que la sala se cierra sola
   sig: string // firma del rol (evita que cliente y compita se suplanten)
 }
 
-export default function SalaEntrevista({ token, quien, roomUrl, compitaNombre, clienteNombre, slotLabel, slotIso, sig }: Props) {
+export default function SalaEntrevista({ token, quien, llamadaHref, compitaNombre, clienteNombre, slotLabel, slotIso, corteMin, sig }: Props) {
   const [paso, setPaso] = useState<Paso>('antes')
   const [resultado, setResultado] = useState<Resultado | null>(null)
   const [cargando, setCargando] = useState(false)
@@ -43,7 +46,7 @@ export default function SalaEntrevista({ token, quien, roomUrl, compitaNombre, c
     ? `${Math.floor(faltanSeg / 3600)} h ${Math.floor((faltanSeg % 3600) / 60)} min`
     : `${Math.floor(faltanSeg / 60)}:${String(faltanSeg % 60).padStart(2, '0')}`
 
-  const urlActual = nuevaRoomUrl ?? roomUrl
+  const urlActual = nuevaRoomUrl ?? llamadaHref
   const rolQs = `quien=${quien}&s=${sig}`
 
   // Polling: cuando el Daily webhook ya procesó la llamada, avanzar automáticamente
@@ -87,7 +90,7 @@ export default function SalaEntrevista({ token, quien, roomUrl, compitaNombre, c
     try {
       const res = await fetch(`/api/solicitud/reconectar-llamada?token=${token}&${rolQs}`, { method: 'POST' })
       const data = await res.json()
-      const url = data.data?.room_url
+      const url = data.data?.llamada_href
       if (url) {
         setNuevaRoomUrl(url)
         setPaso('reconectando')
@@ -157,7 +160,7 @@ export default function SalaEntrevista({ token, quien, roomUrl, compitaNombre, c
     try {
       const res = await fetch(`/api/solicitud/reconectar-llamada?token=${token}&${rolQs}`, { method: 'POST' })
       const data = await res.json()
-      const url = data.data?.room_url
+      const url = data.data?.llamada_href
       if (url) {
         setNuevaRoomUrl(url)
         setPaso('reconectando')
@@ -185,13 +188,12 @@ export default function SalaEntrevista({ token, quien, roomUrl, compitaNombre, c
         {/* ── Antes de entrar ── */}
         {paso === 'antes' && (
           <>
-            <div style={{ fontSize: '48px', marginBottom: '16px' }}>📞</div>
             <h2 style={{ color: '#1A0A3C', fontWeight: 800, fontSize: '22px', marginBottom: '8px' }}>
               Tu llamada con {nombreCorto}
             </h2>
             <p style={{ color: '#4A3B6B', fontSize: '15px', lineHeight: 1.6, marginBottom: '8px' }}>{slotLabel}</p>
             <p style={{ color: '#C84B0E', background: '#FFF3E8', border: '2px solid #FF6B2B', borderRadius: '12px', padding: '12px', fontSize: '13px', margin: '16px 0' }}>
-              ⏱️ La llamada dura 20 minutos. La sala se cierra automáticamente a los 23 min.
+              {textoDuracionLlamada(corteMin)}
             </p>
             {salaAbierta ? (
               <button onClick={() => abrirSala()} style={btnPrimario}>Entrar a la llamada →</button>
@@ -209,7 +211,6 @@ export default function SalaEntrevista({ token, quien, roomUrl, compitaNombre, c
         {/* ── En llamada ── */}
         {paso === 'en_llamada' && (
           <>
-            <div style={{ fontSize: '48px', marginBottom: '16px' }}>🟢</div>
             <h2 style={{ color: '#1A0A3C', fontWeight: 800, fontSize: '22px', marginBottom: '12px' }}>Llamada en curso</h2>
             <p style={{ color: '#4A3B6B', fontSize: '15px', lineHeight: 1.6, marginBottom: '24px' }}>
               La sala se abrió en una nueva pestaña. Cuando termines la llamada, regresa aquí y toca el botón de abajo.
@@ -218,11 +219,11 @@ export default function SalaEntrevista({ token, quien, roomUrl, compitaNombre, c
             {quien === 'compita' && (
               <button onClick={reconectarCompita} disabled={cargando}
                 style={{ background: '#6B5C90', color: 'white', border: 'none', borderRadius: '9999px', padding: '14px 24px', fontWeight: 700, fontSize: '15px', cursor: cargando ? 'not-allowed' : 'pointer', opacity: cargando ? 0.7 : 1, width: '100%', marginBottom: '12px' }}>
-                {cargando ? 'Creando nueva sala…' : '⚡ La llamada se cayó — reconectar'}
+                {cargando ? 'Creando nueva sala…' : 'La llamada se cayó — reconectar'}
               </button>
             )}
             <button onClick={terminarLlamada} disabled={cargando} style={{ background: '#1A0A3C', color: 'white', border: 'none', borderRadius: '9999px', padding: '16px 32px', fontWeight: 800, fontSize: '16px', cursor: cargando ? 'not-allowed' : 'pointer', opacity: cargando ? 0.7 : 1, width: '100%' }}>
-              {cargando ? 'Registrando…' : '✅ Terminé la llamada'}
+              {cargando ? 'Registrando…' : 'Terminé la llamada'}
             </button>
           </>
         )}
@@ -230,21 +231,20 @@ export default function SalaEntrevista({ token, quien, roomUrl, compitaNombre, c
         {/* ── Cliente elige qué hacer ── */}
         {paso === 'terminado' && quien === 'cliente' && (
           <>
-            <div style={{ fontSize: '48px', marginBottom: '16px' }}>🤔</div>
             <h2 style={{ color: '#1A0A3C', fontWeight: 800, fontSize: '22px', marginBottom: '12px' }}>¿Qué decides sobre {nombreCorto}?</h2>
             <p style={{ color: '#4A3B6B', fontSize: '15px', lineHeight: 1.6, marginBottom: '24px' }}>Cuéntanos cómo te fue para poder ayudarte mejor.</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <button onClick={() => confirmarResultado('contratar')} disabled={cargando}
                 style={{ background: '#22C55E', color: 'white', border: 'none', borderRadius: '9999px', padding: '16px 24px', fontWeight: 800, fontSize: '16px', cursor: cargando ? 'not-allowed' : 'pointer', opacity: cargando ? 0.7 : 1 }}>
-                ✅ Sí, quiero contratar a {nombreCorto}
+                Sí, quiero contratar a {nombreCorto}
               </button>
               <button onClick={() => setPaso('problema_tecnico')} disabled={cargando}
                 style={{ background: '#6B5C90', color: 'white', border: 'none', borderRadius: '9999px', padding: '14px 24px', fontWeight: 700, fontSize: '15px', cursor: cargando ? 'not-allowed' : 'pointer', opacity: cargando ? 0.7 : 1 }}>
-                🔧 La llamada se cortó
+                La llamada se cortó
               </button>
               <button onClick={() => confirmarResultado('no_contratar')} disabled={cargando}
                 style={{ background: '#E8E0D4', color: '#1A0A3C', border: 'none', borderRadius: '9999px', padding: '14px 24px', fontWeight: 700, fontSize: '15px', cursor: cargando ? 'not-allowed' : 'pointer', opacity: cargando ? 0.7 : 1 }}>
-                ❌ No es lo que busco — ver otros perfiles
+                No es lo que busco — ver otros perfiles
               </button>
             </div>
           </>
@@ -253,7 +253,6 @@ export default function SalaEntrevista({ token, quien, roomUrl, compitaNombre, c
         {/* ── La llamada se cortó — ¿reconectar o reagendar? ── */}
         {paso === 'problema_tecnico' && (
           <>
-            <div style={{ fontSize: '48px', marginBottom: '16px' }}>⚡</div>
             <h2 style={{ color: '#1A0A3C', fontWeight: 800, fontSize: '22px', marginBottom: '12px' }}>La llamada se cortó</h2>
             <p style={{ color: '#4A3B6B', fontSize: '15px', lineHeight: 1.6, marginBottom: '24px' }}>
               ¿Fue un problema técnico y quieres reconectarte ahora, o prefieres reagendar para otro día?
@@ -261,11 +260,11 @@ export default function SalaEntrevista({ token, quien, roomUrl, compitaNombre, c
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <button onClick={reconectarAhora} disabled={cargando}
                 style={{ background: '#FF6B2B', color: 'white', border: 'none', borderRadius: '9999px', padding: '16px 24px', fontWeight: 800, fontSize: '16px', cursor: cargando ? 'not-allowed' : 'pointer', opacity: cargando ? 0.7 : 1 }}>
-                {cargando ? 'Creando nueva sala…' : '🔁 Reconectarme ahora'}
+                {cargando ? 'Creando nueva sala…' : 'Reconectarme ahora'}
               </button>
               <button onClick={() => confirmarResultado('reagendar')} disabled={cargando}
                 style={{ background: '#E8E0D4', color: '#1A0A3C', border: 'none', borderRadius: '9999px', padding: '14px 24px', fontWeight: 700, fontSize: '15px', cursor: cargando ? 'not-allowed' : 'pointer', opacity: cargando ? 0.7 : 1 }}>
-                📅 Reagendar para otro día
+                Reagendar para otro día
               </button>
             </div>
           </>
@@ -274,14 +273,13 @@ export default function SalaEntrevista({ token, quien, roomUrl, compitaNombre, c
         {/* ── Reconectando ── */}
         {paso === 'reconectando' && (
           <>
-            <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔁</div>
             <h2 style={{ color: '#1A0A3C', fontWeight: 800, fontSize: '22px', marginBottom: '12px' }}>Nueva sala lista</h2>
             <p style={{ color: '#4A3B6B', fontSize: '15px', lineHeight: 1.6, marginBottom: '24px' }}>
               Se abrió en una nueva pestaña. También le avisamos a {nombreCorto} {quien === 'compita' ? 'por email' : 'por Telegram'} con el nuevo link.
             </p>
             <button onClick={() => abrirSala(nuevaRoomUrl ?? undefined)} style={btnSecundario}>Abrir la sala de nuevo</button>
             <button onClick={terminarLlamada} disabled={cargando} style={{ background: '#1A0A3C', color: 'white', border: 'none', borderRadius: '9999px', padding: '16px 32px', fontWeight: 800, fontSize: '16px', cursor: cargando ? 'not-allowed' : 'pointer', opacity: cargando ? 0.7 : 1, width: '100%' }}>
-              {cargando ? 'Registrando…' : '✅ Terminé la llamada'}
+              {cargando ? 'Registrando…' : 'Terminé la llamada'}
             </button>
           </>
         )}
@@ -291,7 +289,6 @@ export default function SalaEntrevista({ token, quien, roomUrl, compitaNombre, c
           <>
             {resultado === 'contratar' ? (
               <>
-                <div style={{ fontSize: '48px', marginBottom: '16px' }}>🎉</div>
                 <h2 style={{ color: '#1A0A3C', fontWeight: 800, fontSize: '22px', marginBottom: '12px' }}>¡Genial!</h2>
                 <p style={{ color: '#4A3B6B', fontSize: '15px', lineHeight: 1.6 }}>
                   El equipo de Compaz se pondrá en contacto contigo para coordinar los detalles con <strong>{compitaNombre}</strong>.
@@ -299,7 +296,6 @@ export default function SalaEntrevista({ token, quien, roomUrl, compitaNombre, c
               </>
             ) : (
               <>
-                <div style={{ fontSize: '48px', marginBottom: '16px' }}>👋</div>
                 <h2 style={{ color: '#1A0A3C', fontWeight: 800, fontSize: '22px', marginBottom: '12px' }}>¡Gracias!</h2>
                 <p style={{ color: '#4A3B6B', fontSize: '15px', lineHeight: 1.6 }}>
                   {quien === 'compita'

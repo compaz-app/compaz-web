@@ -6,7 +6,7 @@ import { getSolicitudPorToken } from '@/lib/solicitudes'
 import { sendTelegramMessage, makeInlineKeyboard } from '@/lib/telegram'
 import { generarTokenPerfil } from '@/lib/compita-tokens'
 import { SITE_URL } from '@/lib/email'
-import { rolValido } from '@/lib/links'
+import { rolValido, qRol } from '@/lib/links'
 import { pagina, puertaConfirmacion } from '@/lib/confirm'
 
 function leer(req: NextRequest) {
@@ -90,5 +90,7 @@ async function ejecutar(p: NonNullable<ReturnType<typeof leer>>) {
     }
   }
 
+  // Si el cliente acaba de decir que no, primero se le pregunta (opcional) por qué.
+  if (cambiada) return NextResponse.redirect(`${SITE_URL}/api/solicitud/motivo?token=${encodeURIComponent(token)}&${qRol(token, 'cliente')}`, 303)
   return pagina('Gracias por tu tiempo', 'Entendemos. Cuando estés listo, puedes explorar otros compitas disponibles.', 200, { texto: 'Ver otros compitas →', href: `${SITE_URL}/compitas` })
 }

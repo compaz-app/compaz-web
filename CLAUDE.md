@@ -6,8 +6,10 @@ Toda página o sección con tabs, filtros, selecciones o pasos multi-nivel debe 
 ## 2. Diseño responsive (obligatorio)
 Todo componente y página debe funcionar correctamente en mobile (≥375px) y desktop (≥1024px). Nunca diseñar solo para uno. Usar `flexWrap`, breakpoints con `@media`, o lógica condicional cuando la diferencia entre mobile y desktop sea significativa.
 
-## 3. Design tokens (obligatorio)
-Todos los colores, tipografías y espaciados deben venir de `lib/design.ts`. Nunca hardcodear `#1A0A3C`, `#FF6B2B`, etc. directamente en componentes. Importar `colors`, `spacing`, `radius`, `zIndex` de ese módulo.
+## 3. Design tokens y estilos (obligatorio, unificado 2026-11-10)
+UNA sola fuente de colores: `lib/design.ts`. De ahí se genera `app/tokens.generated.css` (`npm run tokens`), que Tailwind 4 convierte en clases (`bg-naranja`, `text-morado-profundo`, `border-borde`...) y en variables CSS; los estilos en línea usan `colors.naranja`. Nunca escribir `#1A0A3C`, `#FF6B2B`, etc. en una pantalla. Si falta un color, se agrega a `lib/design.ts` con su razón de diseño (y se regenera), no se escribe suelto.
+Pantallas NUEVAS: se construyen con Tailwind y los componentes base de `components/ui/base/` (`Boton`, `Tarjeta`, `Aviso`, `Pasos`; toda acción lleva su ⓘ en la prop `info`). Se revisan en `/guia-visual` (solo en desarrollo) a 375, 768 y 1280 px.
+Pantallas VIEJAS: se migran cuando se reemplazan (no antes). `tests/56-estilos.test.ts` es un trinquete: ningún archivo puede tener más colores sueltos que su línea base (`tests/estilos-base.json`), los archivos nuevos no traen ninguno, y al migrar una pantalla hay que bajar su línea base (`UPDATE_ESTILOS=1 node tests/run.mjs 56`). Los correos y mensajes de Telegram (`lib/resend.ts`, `lib/plantillas-aviso.ts`) quedan fuera porque no admiten variables CSS.
 
 ## 4. Capa de negocio separada (obligatorio)
 Toda query a Supabase va en `lib/compitas.ts`, `lib/solicitudes.ts`, `lib/usuarios.ts` o el módulo correspondiente — nunca directamente en una API route o componente. Las API routes solo orquestan: autentican, llaman la función de lib/, y retornan con los helpers de `lib/api.ts`.
@@ -38,6 +40,34 @@ Pendientes de seguridad antes de abrir al público (informes completos en `~/sec
 6. Limpiar datos de prueba: filas de `pagos_plan` con referencia "pago simulado", solicitudes de prueba y grabaciones de Clarity.
 7. Tercera pasada de la auditoría sobre lo que run-2 dejó sin cubrir (rutas admin cliente-preview, flags, invitar-cliente, toggle-estado, toggle-verificado; setup-webhook, setup-daily-webhook, auth/callback, login; perfil familiar y fechas de visita; cron y funciones Netlify restantes; componentes del dashboard).
 
+8. TEXTO LEGAL PROVISIONAL (2026-11-09): los términos que acepta el cliente en la ficha (`lib/terminos.ts`, versión `provisional-1`) NO son un texto legal revisado: los escribió el sistema con las reglas decididas. La pantalla lo avisa ("Texto provisional, pendiente de revisión legal"). Antes de abrir al público: reemplazarlos por el texto aprobado, cambiar `TERMINOS_VERSION` (al quitar el prefijo "provisional" el aviso desaparece solo) y actualizar `/privacidad`. Recordárselo al usuario.
+
+Datos y respaldo antes de abrir al público (decidido 2026-11-03, no olvidar):
+1. Hoy todos los datos de la base de Supabase (clientes y compitas) son de prueba y se pueden borrar sin problema (confirmado por el usuario, 2026-11-03). No hay copias de seguridad configuradas y no hace falta guardar nada de lo actual. Se decidió dejarlo para antes del lanzamiento.
+2. Antes de que entre el primer cliente real que pague: activar copias de seguridad automáticas en Supabase (confirmar plan y retención) y probar una restauración.
+3. Antes de lanzar: separar la base de desarrollo de la de producción. Hoy local y producción comparten la misma base.
+4. Mientras tanto, toda migración solo AGREGA tablas o columnas, nunca cambia ni borra lo existente (para poder volver al código viejo).
+5. Cuando se registren los primeros compitas reales, repetir la pregunta de qué datos hay que respaldar.
+
+## 6b. El sistema se explica solo (obligatorio, decidido 2026-11-10)
+Cuando el sistema frena algo (plazo entre envíos, máximo de intentos, límite diario, alerta que no se repite) debe decir qué pasó, por qué existe la regla y cuándo o cómo seguir. Nunca "espera un momento" a secas. Toda restricción nueva se agrega al `CATALOGO` de `lib/esperas.ts` (con su razón) y todo mensaje de espera se arma con `explicarEspera`; la prueba de guardia de `tests/55-esperas.test.ts` falla si una ruta responde 429 sin usarlo. El panel lista todas las reglas en Más, "Límites y esperas" (`GET /api/admin/esperas`). Además, si un mensaje promete algo ("avisamos al equipo"), el sistema debe hacerlo de verdad.
+**Poco texto a la vista (decidido 2026-11-10):** lo visible es UNA línea corta (qué pasó y cuándo seguir: `resumen`); la razón (`porQue`) y cualquier explicación larga van detrás de un ⓘ (`components/ui/InfoBoton.tsx`), no en párrafos. Las rutas con 429 responden con `errEspera` (`error` corto + `porQue`) y las pantallas muestran el ⓘ. En Telegram, que no tiene ⓘ, la razón va en un bloque desplegable (`esperaTelegram`, `<blockquote expandable>`). Los párrafos de introducción de una pantalla también se esconden tras un ⓘ.
+
+## 6c. El manual del equipo no se queda atrás (obligatorio, 2026-11-10)
+Toda pantalla nueva del panel, todo permiso nuevo y toda regla de espera nueva debe quedar explicada en el manual (`lib/manual.ts`, Más, Manual). Permisos y límites se arman solos desde sus catálogos; las pantallas se agregan a `PANTALLAS_PANEL` con su entrada escrita. `tests/60-manual.test.ts` falla si una pantalla o un permiso queda sin explicar, y también si un plazo del manual ya no coincide con Ajustes (si cambias un valor por defecto, actualiza el texto del manual).
+
+## 6d. Emojis solo en Telegram (decidido 2026-11-12)
+Los emojis se usan ÚNICAMENTE en los mensajes y botones de Telegram y en las estrellas ⭐ de la calificación de 1 a 5. En la web, el portal, el panel y los correos NO hay emojis: se usa texto o iconos de línea (SVG, como `Icono` en `components/ui/Proximamente.tsx` o `IconoPersona`). Se permiten símbolos de texto como flechas, ©, ⓘ, ★ y ✓. La landing (`app/page.tsx`) queda fuera por ahora: no se toca. `tests/84-sin-emojis.test.ts` lo vigila.
+
+## 6e. Versión del sistema (decidido 2026-11-12)
+La versión vive en `lib/version.ts` (una sola fuente) y se ve en el panel. Al cerrar un cambio relevante se sube (mayor: lanzamiento o cambio grande; menor: función nueva; parche: arreglo), se actualiza `package.json` y se anota arriba en `docs/versiones.md`. `tests/85-version.test.ts` falla si no coinciden. Hoy: 1.0.0-beta.1; sale de beta tras una o dos semanas de uso real sin sorpresas.
+
+## 7. Cómo agregar o quitar a alguien del panel (recordar siempre)
+Hay dos tipos de persona y cada uno tiene su ruta:
+1. **Administrador (acceso total):** se agrega o quita SOLO en la variable `ADMIN_EMAILS` de Netlify (correos separados por coma, y también en `.env.local` para pruebas locales). Después hay que volver a desplegar para que el servidor la lea. La lista de la base (`admin_emails`, que usa el tiempo real) se copia sola en la limpieza diaria de las 3 am; para verla al instante, llamar a `POST /api/cron/limpieza` con la cabecera `x-cron-secret`. Nunca editar la tabla `admin_emails` a mano: la siguiente limpieza la deja igual a `ADMIN_EMAILS`.
+2. **Colaborador (acceso limitado):** lo gestiona un administrador por `/api/admin/equipo` (GET lista, POST invita con sus permisos, PATCH cambia permisos o desactiva). Cada permiso se activa o apaga por separado y todo queda en `equipo_historial`. Un colaborador nunca puede dar permisos, ni a sí mismo. La pantalla está en el panel: Más, Equipo y permisos (/panel?sec=mas&mas=equipo).
+Código: `lib/permisos.ts`, `lib/equipo.ts`, `lib/admins.ts`. Toda ruta nueva de `/api/admin` debe llamar a `requierePermiso('...')` y registrarse en `tests/37-permisos.test.ts` (si no, la suite falla).
+
 ---
 
 ## Arquitectura de referencia
@@ -48,6 +78,7 @@ Pendientes de seguridad antes de abrir al público (informes completos en `~/sec
 - `lib/compitas.ts` — lógica de negocio: compitas
 - `lib/solicitudes.ts` — lógica de negocio: solicitudes de entrevista
 - `lib/usuarios.ts` — lógica de negocio: usuarios/clientes
+- `lib/cmc-compitas.ts` — Compitas habilitadas en el CMC → `compitas` (ver `docs/cmc/compitas-desde-cmc.md`)
 - `lib/telegram.ts` — envío de mensajes por Telegram
 - `lib/resend.ts` — envío de emails
 - `lib/daily.ts` — salas de videollamada

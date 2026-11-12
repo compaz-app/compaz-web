@@ -1,7 +1,10 @@
 import { requireAuth, getUsuario, getClienteActivo } from '@/lib/auth'
+import { compitasBloqueadosPara } from '@/lib/bloqueos-compita'
+import { compitasPausadosPorContacto } from '@/lib/pausas'
 import { redirect } from 'next/navigation'
 import CompitasMarketplace from './CompitasMarketplace'
 import { createAdminSupabase } from '@/lib/supabase-server'
+import { compitasEnPausa } from '@/lib/cancelaciones'
 import type { Compita } from '@/types'
 import { Suspense } from 'react'
 
@@ -19,8 +22,14 @@ export default async function CompitasPage() {
     .not('telegram_chat_id', 'is', null)
     .order('visitas_realizadas', { ascending: false }) as { data: Compita[] | null }
 
+  // Un compita en pausa por cancelaciones tardías no se ofrece: así el cliente no elige a alguien que no puede recibirlo.
+  const enPausa = await compitasEnPausa((compitasRaw ?? []).map((c) => c.id))
+  const pausadosContacto = await compitasPausadosPorContacto((compitasRaw ?? []).map((c) => c.id))
+  const noVuelven = usuario ? await compitasBloqueadosPara(usuario.id) : new Set<string>()
+  const visibles = (compitasRaw ?? []).filter((c) => !enPausa.has(c.id) && !noVuelven.has(c.id) && !pausadosContacto.has(c.id))
+
   // Calcular tasa de aceptación por compita
-  const compitaIds = (compitasRaw ?? []).map((c) => c.id)
+  const compitaIds = visibles.map((c) => c.id)
   const { data: statsRaw } = compitaIds.length > 0
     ? await supabase
         .from('solicitudes')
@@ -41,7 +50,7 @@ export default async function CompitasPage() {
     statsMap.set(row.compita_id, entry)
   }
 
-  const compitas: Compita[] = (compitasRaw ?? []).map((c) => {
+  const compitas: Compita[] = visibles.map((c) => {
     const s = statsMap.get(c.id)
     const total = (s?.aceptadas ?? 0) + (s?.rechazadas ?? 0)
     return {
@@ -60,7 +69,7 @@ export default async function CompitasPage() {
       compitas={compitas ?? []}
       usuarioNombre={usuario?.nombre ?? ''}
       usuarioEmail={usuario?.email ?? ''}
-backHref={esAdmin ? '/admin?tab=accesos' : '/dashboard'}
+backHref={esAdmin ? '/panel?sec=personas' : '/dashboard'}
       backLabel={esAdmin ? '← Panel admin' : '← Mi portal'}
     />
     </Suspense>

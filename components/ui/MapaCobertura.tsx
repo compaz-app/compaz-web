@@ -486,7 +486,6 @@ export default function MapaCobertura({ onEstadoSelect, onMunicipioSelect, hideT
           style={{ width: '100%', padding: '16px 20px', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{ fontSize: '20px' }}>🗺️</span>
             <div style={{ textAlign: 'left' }}>
               <div style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '15px', color: '#1A0A3C' }}>Mapa de cobertura</div>
               <div style={{ fontSize: '12px', color: '#6B5C90', marginTop: '2px' }}>

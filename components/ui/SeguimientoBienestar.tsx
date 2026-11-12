@@ -8,11 +8,11 @@ type Props = {
   compitaNombre: string
 }
 
-const INDICADORES: { key: keyof Pick<ReporteVisita, 'animo' | 'fisico' | 'participacion' | 'entorno'>; label: string; emoji: string }[] = [
-  { key: 'animo', label: 'Ánimo', emoji: '😊' },
-  { key: 'fisico', label: 'Condición física', emoji: '💪' },
-  { key: 'participacion', label: 'Participación', emoji: '🤝' },
-  { key: 'entorno', label: 'Ambiente y entorno', emoji: '🏠' },
+const INDICADORES: { key: keyof Pick<ReporteVisita, 'animo' | 'fisico' | 'participacion' | 'entorno'>; label: string }[] = [
+  { key: 'animo', label: 'Ánimo', },
+  { key: 'fisico', label: 'Condición física', },
+  { key: 'participacion', label: 'Participación', },
+  { key: 'entorno', label: 'Ambiente y entorno', },
 ]
 
 const ESCALA: Record<number, { label: string; color: string }> = {
@@ -78,7 +78,7 @@ export default function SeguimientoBienestar({ reportes, compitaNombre }: Props)
     <div style={{ background: 'white', border: '2px solid #E8E0D4', borderRadius: '16px', padding: '24px', marginBottom: '24px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '8px' }}>
         <h3 style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '16px', color: '#1A0A3C', margin: 0 }}>
-          📊 Seguimiento de bienestar
+          Seguimiento de bienestar
         </h3>
         {sinDatos && (
           <button
@@ -107,7 +107,7 @@ export default function SeguimientoBienestar({ reportes, compitaNombre }: Props)
         <>
           {/* Indicadores con último valor */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px', marginBottom: '20px' }}>
-            {INDICADORES.map(({ key, label, emoji }) => {
+            {INDICADORES.map(({ key, label }) => {
               const valores = mostrandoDatos.map((r) => r[key] as number | null)
               const ultimo = valores[valores.length - 1]
               const penultimo = valores.length >= 2 ? valores[valores.length - 2] : null
@@ -116,7 +116,6 @@ export default function SeguimientoBienestar({ reportes, compitaNombre }: Props)
               return (
                 <div key={key} style={{ background: '#FDFAF6', border: '1.5px solid #E8E0D4', borderRadius: '12px', padding: '14px' }}>
                   <div style={{ fontSize: '13px', color: '#6B5C90', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span>{emoji}</span>
                     <span style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700 }}>{label}</span>
                   </div>
                   {ultimo !== null ? (

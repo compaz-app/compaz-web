@@ -3,6 +3,7 @@ import { createAdminSupabase } from '@/lib/supabase-server'
 import { getClienteActivo } from '@/lib/auth'
 import { sendTelegramMessage } from '@/lib/telegram'
 import { detectarContacto, moderarMensaje } from '@/lib/chat-moderacion'
+import { personaPausada } from '@/lib/pausas'
 import type { Visita, Compita, Usuario } from '@/types'
 
 export async function POST(req: NextRequest) {
@@ -40,6 +41,10 @@ export async function POST(req: NextRequest) {
   if (!visita) {
     return NextResponse.json({ error: 'No hay visita activa' }, { status: 400 })
   }
+
+  // Cuenta en pausa por compartir contactos: no escribe. Si el pausado es el compita, el chat simplemente no está disponible (sin dar detalles).
+  if (await personaPausada('cliente', user.id)) return NextResponse.json({ error: 'Tu cuenta está en pausa: por ahora no puedes escribir en el chat. El equipo se comunica contigo por correo.' }, { status: 403 })
+  if (await personaPausada('compita', visita.compita_id)) return NextResponse.json({ error: 'El chat no está disponible por ahora. El equipo te escribe si hace falta.' }, { status: 403 })
 
   // Detectar datos de contacto antes de guardar
   const { detectado, textoCensurado } = detectarContacto(contenido)

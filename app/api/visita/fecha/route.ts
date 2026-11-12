@@ -1,15 +1,16 @@
+import { personaPausada } from '@/lib/pausas'
 import { NextRequest } from 'next/server'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { getClienteActivo } from '@/lib/auth'
 import { ok, err, unauthorized, notFound } from '@/lib/api'
-import { sendTelegramMessage, TECLADO_INICIO } from '@/lib/telegram'
-import { reclamarUnaVez } from '@/lib/cron'
-import { sendEmail, SITE_URL } from '@/lib/email'
 import { esc } from '@/lib/html'
-import { hoyVE, horaVE, formatFechaVE } from '@/lib/format'
+import { hoyVE, horaVE } from '@/lib/format'
+import { alertaAdmin } from '@/lib/alertas-admin'
+import { proponerCita } from '@/lib/citas'
 
 // PUT /api/visita/fecha
-// Guarda fecha + horario acordado Y confirma coordinación en un solo paso: pre_visita → programada.
+// El cliente elige fecha y horario: queda PROPUESTA hasta que el compita la confirme (pre_visita → programada). Nunca se programa sin que el
+// compita se entere: Telegram es requisito para trabajar en Compaz.
 // Valida que el compita no tenga otra visita programada que se solape con el horario.
 export async function PUT(req: NextRequest) {
   const user = await getClienteActivo()
@@ -41,6 +42,7 @@ export async function PUT(req: NextRequest) {
 
   if (!visita) return notFound()
   if (visita.usuario_id !== user.id) return err('Sin acceso', 403)
+  if (await personaPausada('cliente', user.id)) return err('Tu cuenta está en pausa: por ahora no puedes agendar visitas. El equipo se comunica contigo por correo.', 403)
   if (!['pre_visita', 'programada'].includes(visita.estado)) return err('Estado de visita inválido')
 
   // Verificar solapamiento: buscar visitas del mismo compita en la misma fecha
@@ -65,89 +67,12 @@ export async function PUT(req: NextRequest) {
     return err(`El compita ya tiene otra visita programada en ese horario. Por favor coordinen un horario diferente.`)
   }
 
-  const { error } = await admin
-    .from('visitas')
-    .update({ fecha_programada, hora_inicio_programada: horaInicioN, hora_fin_programada: horaFinN, estado: 'programada' })
-    .eq('id', visita_id)
-
-  if (error) {
-    console.error('[visita/fecha] error:', error)
-    return err('No pudimos guardar la fecha. Intenta de nuevo.', 500)
-  }
-
-  const fechaFormateada = formatFechaVE(fecha_programada, true)
-  const horarioLabel = `${horaInicioN} – ${horaFinN}`
-
-  const [{ data: compita }, { data: cliente }] = await Promise.all([
-    admin.from('compitas').select('telegram_chat_id, nombre').eq('id', visita.compita_id).single(),
-    admin.from('usuarios').select('nombre, email').eq('id', visita.usuario_id).single(),
-  ])
-
-  // Si la visita es hoy en menos de 30 min, el cron no llegará a tiempo — avisar ahora mismo.
-  const minutosParaInicio = fecha_programada === hoyVE()
-    ? (horaInicioN.split(':').map(Number).reduce((h, m) => h * 60 + m) - horaVE().split(':').map(Number).reduce((h, m) => h * 60 + m))
-    : Infinity
-  const esInminente = minutosParaInicio <= 30 && minutosParaInicio >= 0
-
-  if (compita?.telegram_chat_id) {
-    try {
-      const mensajeConfirmacion = esInminente
-        ? [
-            `⚡ <b>¡Visita agendada para ahora!</b>`,
-            ``,
-            `${esc(cliente?.nombre ?? 'El cliente')} registró el horario:`,
-            ``,
-            `📅 <b>${esc(fechaFormateada)}</b>`,
-            `🕐 <b>${esc(horarioLabel)}</b>`,
-            ``,
-            `La visita empieza pronto. Cuando llegues, toca el botón ▶️ de tu teclado.`,
-          ].join('\n')
-        : [
-            `✅ <b>¡Visita confirmada!</b>`,
-            ``,
-            `${esc(cliente?.nombre ?? 'El cliente')} registró el horario de la visita:`,
-            ``,
-            `📅 <b>${esc(fechaFormateada)}</b>`,
-            `🕐 <b>${esc(horarioLabel)}</b>`,
-            ``,
-            `Recibirás un recordatorio antes de la visita. Si necesitas reagendar, escríbenos.`,
-          ].join('\n')
-
-      await sendTelegramMessage(compita.telegram_chat_id, mensajeConfirmacion, TECLADO_INICIO)
-
-      // Marcar el flag del cron para que no duplique el aviso si la visita es inminente
-      if (esInminente) await reclamarUnaVez(`aviso_inicio:${visita_id}`).catch(() => null)
-    } catch (e) { console.error('Telegram fecha/confirmar compita:', e) }
-  }
-
-  if (cliente?.email) {
-    try {
-      await sendEmail({
-        to: cliente.email,
-        subject: `✅ Visita confirmada: ${fechaFormateada}`,
-        html: `
-          <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px">
-            <h2 style="color:#2D1464;font-size:22px;margin-bottom:12px">✅ Visita confirmada</h2>
-            <p style="color:#4A3B6B;font-size:15px;line-height:1.6">
-              La visita de <strong>${esc(compita?.nombre ?? 'tu compita')}</strong> con tu familiar está agendada.
-            </p>
-            <div style="background:#F5F0FF;border:2px solid #7C4DFF;border-radius:12px;padding:16px 20px;margin:20px 0;text-align:center">
-              <p style="color:#6B5C90;font-size:13px;margin:0 0 4px">Fecha y horario</p>
-              <p style="color:#2D1464;font-size:18px;font-weight:800;margin:0 0 4px;text-transform:capitalize">${esc(fechaFormateada)}</p>
-              <p style="color:#2D1464;font-size:16px;font-weight:700;margin:0">${esc(horarioLabel)}</p>
-            </div>
-            <p style="color:#4A3B6B;font-size:14px;line-height:1.6">
-              Te enviaremos un recordatorio el día anterior. Si necesitas cambiar la fecha puedes reagendar desde tu dashboard.
-            </p>
-            <a href="${SITE_URL}/dashboard" style="display:inline-block;background:#FF6B2B;color:white;padding:12px 24px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:14px;margin-top:8px">
-              Ver en el dashboard →
-            </a>
-            <p style="color:#9990A8;font-size:13px;margin-top:32px">Compaz — <em>Cerca aunque estés lejos</em></p>
-          </div>
-        `,
-      })
-    } catch (e) { console.error('Email confirmar visita cliente:', e) }
-  }
-
-  return ok({ fecha_programada, hora_inicio_programada: hora_inicio, hora_fin_programada: hora_fin, estado: 'programada' })
+  // Confirmación del compita (siempre): el cliente PROPONE y la visita no queda programada hasta que el compita confirme (ver lib/citas.ts).
+  const r = await proponerCita({ visitaId: visita_id, usuarioId: visita.usuario_id, compitaId: visita.compita_id, fecha: fecha_programada, inicio: horaInicioN, fin: horaFinN })
+  if (r === 'pendiente') return ok({ estado: 'pendiente_confirmacion', fecha_programada, hora_inicio_programada: horaInicioN, hora_fin_programada: horaFinN })
+  // Telegram es requisito para trabajar en Compaz: si no se pudo avisarle (bot bloqueado, vínculo perdido), la visita NO se agenda a ciegas.
+  // El cliente puede reintentar y el equipo recibe la tarea para arreglar el vínculo del compita.
+  await alertaAdmin('tarea', `📅 <b>No se pudo avisar al compita de una cita</b>\n\nEl cliente eligió ${esc(fecha_programada)}, ${esc(horaInicioN)}, pero Telegram no entregó el aviso al compita (bot bloqueado o vínculo perdido). La visita NO se agendó. Revisa y arregla el vínculo de Telegram de este compita.`, { categoria: 'cita_sin_telegram', clave: `cita_sin_telegram:${visita.compita_id}`, entidad: { tipo: 'compita', id: visita.compita_id } })
+  return err('No pudimos avisarle a tu compita. Intenta de nuevo en unos minutos; el equipo ya fue avisado para ayudarte.', 502)
 }
+

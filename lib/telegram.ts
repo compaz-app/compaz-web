@@ -5,7 +5,7 @@ const TELEGRAM_API = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOK
 type ReplyKeyboard = { keyboard: { text: string }[][]; resize_keyboard: boolean; one_time_keyboard?: boolean }
 type RemoveKeyboard = { remove_keyboard: true }
 type InlineButton = { text: string; url?: string; callback_data?: string }
-type InlineKeyboard = { inline_keyboard: InlineButton[][] }
+export type InlineKeyboard = { inline_keyboard: InlineButton[][] }
 
 export async function sendTelegramMessage(
   chatId: string,
@@ -71,8 +71,11 @@ export const INLINE_INICIAR_O_REAGENDAR = makeInlineKeyboard([
 
 // Teclados reutilizables
 // Sin visita: solo Menú
+/** Respuesta a una nota de voz, audio o videomensaje: el cliente no los recibe, y callar haría creer que sí llegaron. */
+export const TEXTO_NOTA_DE_VOZ = '🎤 Las notas de voz no están activas: el cliente no las recibe. Escribe tu mensaje en texto o manda una foto. Gracias por entender 🙏'
+
 export const TECLADO_SIN_VISITA = {
-  keyboard: [[{ text: '📋 Menú' }]],
+  keyboard: [[{ text: '❓ ¿Qué me toca?' }, { text: '🙋 Tengo una duda' }], [{ text: '🚨 Emergencia' }, { text: '📋 Menú' }]],
   resize_keyboard: true,
 } satisfies ReplyKeyboard
 
@@ -80,6 +83,8 @@ export const TECLADO_SIN_VISITA = {
 export const TECLADO_INICIO = {
   keyboard: [
     [{ text: '▶️ Iniciar visita' }, { text: '🔴 Terminar visita' }],
+    [{ text: '❓ ¿Qué me toca?' }, { text: '🙋 Tengo una duda' }],
+    [{ text: '🛡️ No me siento seguro' }],
     [{ text: '🚨 Emergencia' }, { text: '📋 Menú' }],
   ],
   resize_keyboard: true,
@@ -89,6 +94,8 @@ export const TECLADO_INICIO = {
 export const TECLADO_DURANTE_VISITA = {
   keyboard: [
     [{ text: '🔴 Terminar visita' }, { text: '📹 Llamar al cliente' }],
+    [{ text: '❓ ¿Qué me toca?' }, { text: '🙋 Tengo una duda' }],
+    [{ text: '🛡️ No me siento seguro' }],
     [{ text: '🚨 Emergencia' }, { text: '📋 Menú' }],
   ],
   resize_keyboard: true,
@@ -148,11 +155,11 @@ export function validateTelegramWebhook(secretHeader: string | null): boolean {
 }
 
 /** Envía al admin y devuelve si realmente se entregó. Nunca lanza. */
-export async function avisarAdmin(text: string): Promise<boolean> {
+export async function avisarAdmin(text: string, replyMarkup?: InlineKeyboard): Promise<boolean> {
   const adminChat = process.env.TELEGRAM_ADMIN_CHAT_ID
   if (!adminChat) return false
   try {
-    await sendTelegramMessage(adminChat, text)
+    await sendTelegramMessage(adminChat, text, replyMarkup)
     return true
   } catch (e) {
     console.error('avisarAdmin falló:', e)

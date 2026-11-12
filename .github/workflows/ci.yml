@@ -1,0 +1,35 @@
+# Compaz · Verificación en cada cambio (auditoría O-01).
+# Antes solo corría la validación de captación; ni los tipos, ni las pruebas, ni la compilación se comprobaban solos. Ahora cada pull request y cada
+# subida a la rama principal ejecutan: tipos (tsc), pruebas (node:test con la base de pruebas falsa) y la compilación de producción.
+# No despliega nada, no usa producción y no necesita secretos: las variables de abajo son de relleno para que la compilación no falle.
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Tipos
+        run: npx tsc --noEmit
+      - name: Pruebas
+        run: node tests/run.mjs
+      - name: Compilación de producción
+        run: npx next build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://ejemplo.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: clave-de-relleno
+          SUPABASE_SERVICE_ROLE_KEY: clave-de-relleno
+          NEXT_PUBLIC_SITE_URL: https://ejemplo.test
+          LINK_SECRET: secreto-de-relleno

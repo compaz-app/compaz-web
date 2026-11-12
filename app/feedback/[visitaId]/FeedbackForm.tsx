@@ -22,7 +22,7 @@ export default function FeedbackForm({ visitaId, compitaNombre, estrellas, yaCom
     2: 'Gracias por contarnos. Tu opinión nos ayuda a mejorar el servicio.',
     3: 'Gracias por tu calificación.',
     4: '¡Nos alegra saber que estuvo bien!',
-    5: '¡Nos alegra mucho saberlo! Tu compita está haciendo un gran trabajo. 💙',
+    5: '¡Nos alegra mucho saberlo! Tu compita está haciendo un gran trabajo.',
   }
 
   async function enviar(e: React.FormEvent) {
@@ -109,7 +109,6 @@ export default function FeedbackForm({ visitaId, compitaNombre, estrellas, yaCom
           {/* Reseña pública */}
           <div style={{ background: '#F5F0FF', border: '2px solid #D4C9E8', borderRadius: '16px', padding: '20px', marginBottom: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-              <span style={{ fontSize: '18px' }}>🌐</span>
               <span style={{ color: '#2D1464', fontWeight: 800, fontSize: '14px', fontFamily: 'Bricolage Grotesque, sans-serif' }}>
                 Reseña pública
               </span>
@@ -134,7 +133,6 @@ export default function FeedbackForm({ visitaId, compitaNombre, estrellas, yaCom
           {/* Nota interna */}
           <div style={{ background: '#FFFBEB', border: '2px solid #FCD34D', borderRadius: '16px', padding: '20px', marginBottom: '20px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-              <span style={{ fontSize: '18px' }}>🔒</span>
               <span style={{ color: '#92400E', fontWeight: 800, fontSize: '14px', fontFamily: 'Bricolage Grotesque, sans-serif' }}>
                 Nota privada para Compaz
               </span>

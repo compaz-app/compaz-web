@@ -2,6 +2,7 @@
 import { getClienteActivo } from '@/lib/auth'
 import { crearSiguienteVisita } from '@/lib/visitas'
 import { sendTelegramMessage, avisarAdmin } from '@/lib/telegram'
+import { alertaAdmin } from '@/lib/alertas-admin'
 import { esc } from '@/lib/html'
 import { ok, err, unauthorized } from '@/lib/api'
 import { reclamarUnaVez } from '@/lib/cron'
@@ -15,7 +16,7 @@ export async function POST() {
     if (r.motivo === 'limite_plan') {
       // Oportunidad comercial — alertar al admin solo una vez cada 24h por usuario
       if (await reclamarUnaVez(`limite_plan:${user.id}`)) {
-        await avisarAdmin(`📈 <b>Plan agotado</b>\n\n<b>${esc(r.clienteNombre)}</b> intentó agendar otra visita con <b>${esc(r.compitaNombre)}</b>, pero ya usó las ${r.cupo.limite} de su plan <b>${esc(r.cupo.planNombre)}</b>. Contáctalo para renovar o ampliar.`)
+        await alertaAdmin('tarea', `📈 <b>Plan agotado</b>\n\n<b>${esc(r.clienteNombre)}</b> intentó agendar otra visita con <b>${esc(r.compitaNombre)}</b>, pero ya usó las ${r.cupo.limite} de su plan <b>${esc(r.cupo.planNombre)}</b>. Contáctalo para renovar o ampliar.`)
       }
     }
     return err(r.mensaje, r.motivo === 'error' ? 500 : 409)
@@ -32,7 +33,7 @@ export async function POST() {
       notificada = true
     } catch (e) { console.error('[visita/nueva] Telegram compita:', e) }
   }
-  await avisarAdmin(
+  await alertaAdmin('actividad', 
     `🔁 <b>Nueva visita agendada</b>\n\n<b>Cliente:</b> ${esc(r.clienteNombre)}\n<b>Compita:</b> ${esc(r.compitaNombre)}\n<b>Visita número:</b> ${r.numero}${r.cupo ? ` (${r.cupo.usadas} de ${r.cupo.limite} del plan ${esc(r.cupo.planNombre)})` : ''}${notificada ? '' : '\n\n⚠️ La compita NO pudo ser notificada. Contáctala.'}`,
   )
 

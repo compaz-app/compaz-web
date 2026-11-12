@@ -9,7 +9,6 @@ export default function DashboardError({ error, reset }: { error: Error; reset: 
   return (
     <div style={{ minHeight: '100vh', background: '#FDFAF6', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
       <div style={{ background: 'white', border: '2px solid #fca5a5', borderRadius: '24px', padding: '40px 32px', maxWidth: '520px', width: '100%', textAlign: 'center' }}>
-        <div style={{ fontSize: '40px', marginBottom: '16px' }}>⚠️</div>
         <h2 style={{ color: '#1A0A3C', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '20px', marginBottom: '12px' }}>
           Error al cargar tu portal
         </h2>

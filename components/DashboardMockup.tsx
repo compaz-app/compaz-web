@@ -388,7 +388,7 @@ function AlertCard() {
               fontSize: 12,
             }}
           >
-            🏠
+           
           </div>
           <span style={{ fontSize: 10, fontWeight: 700, color: "#B45309", fontFamily: "Inter, sans-serif" }}>
             Observaciones del hogar
@@ -521,7 +521,7 @@ function NoteCard() {
       }}
     >
       <div style={{ fontSize: 9.5, fontWeight: 700, color: "#1A0A3C", fontFamily: "Inter, sans-serif", marginBottom: 5 }}>
-        Nota de Ana · 4 de julio · ⏱ 1h 52min
+        Nota de Ana · 4 de julio · 1h 52min
       </div>
       <p
         style={{

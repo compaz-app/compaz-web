@@ -46,7 +46,7 @@ test('al bloquear: se marca la cuenta y también se bloquea en Supabase Auth; al
 test('un bloqueado NO recibe enlace de acceso (respuesta idéntica, sin correo)', async () => {
   const { carlos } = mundo(); await bloquearA(carlos)
   const r = await solicitarAcceso(req('/api/auth/solicitar-acceso', { json: { email: 'carlos@mail.test' }, headers: { 'x-nf-client-connection-ip': '8.8.8.8' } }))
-  assert.equal(r.status, 200); assert.deepEqual((await r.json()).data, { enviado: true })
+  assert.equal(r.status, 200); assert.deepEqual((await r.json()).data, { enviado: true, espera: 60 })
   assert.equal(emailsA('carlos@mail.test').length, 0); assert.equal(otps.size, 0)
 })
 
@@ -89,6 +89,7 @@ test('desbloquear le devuelve el acceso', async () => {
 test('un cliente ELIMINADO también queda fuera de inmediato y no puede pedir un enlace nuevo', async () => {
   const { carlos } = mundo(); como(carlos)
   assert.equal((await misSolicitudes()).status, 200)
+  db.rows('visitas').forEach((v) => { v.estado = 'terminada' }) // sin visita en curso: con una en vivo no se puede eliminar
   admin(); assert.equal((await eliminar(req('/api/admin/eliminar-cliente', { method: 'DELETE', json: { usuario_id: carlos.id } }))).status, 200)
   como(carlos)
   assert.equal((await misSolicitudes()).status, 401); assert.equal((await nueva()).status, 401)

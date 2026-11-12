@@ -1,6 +1,6 @@
 /* eslint-disable */
 // Recorrido de la compita de punta a punta, buscando callejones sin salida.
-import { db, net, session, limpiar, req, tgText, ultimoTg, tgPara, emailsA, cron, hoyVEstr, mkCliente, mkVisita } from './harness'
+import { db, net, session, limpiar, req, tgText, ultimoTg, tgPara, emailsA, cron, hoyVEstr, mkCliente, mkVisita, confirmarLlegada } from './harness'
 import { beforeEach, test } from 'node:test'
 import assert from 'node:assert/strict'
 import { POST as generarInvite } from '@/app/api/admin/generar-invite/route'
@@ -17,15 +17,15 @@ async function registrarCompita(email: string | null = 'rosa@mail.test') {
   admin()
   const token = (await (await (generarInvite as any)()).json()).data.token
   session.user = null
-  await registrar(req('/api/onboarding/registrar', { json: { token, nombre: 'Rosa Díaz', email, zona: 'Zulia', descripcion: 'Cuidadora', servicios: ['Compañía'] } }))
+  await registrar(req('/api/onboarding/registrar', { json: { token, nombre: 'Rosa Díaz', email, telefono: '0412 123 4567', zona: 'Zulia', descripcion: 'Cuidadora', servicios: ['Compañía'] } }))
   return db.rows('compitas').at(-1)!
 }
 
-test('el correo de bienvenida no repite comandos y avisa que habrá una revisión', async () => {
+test('el correo de bienvenida no repite comandos ni promete una revisión que no se hace', async () => {
   await registrarCompita()
   const html = emailsA('rosa@mail.test')[0].html
   assert.equal((html.match(/>\/menu</g) ?? []).length, 1)
-  assert.match(html, /revisa y verifica tu perfil/)
+  assert.doesNotMatch(html, /revisa y verifica tu perfil/, 'se quitó a propósito (29-oct): no promete una revisión')
 })
 
 test('SIN CALLEJÓN: registrada → vincula Telegram → "en revisión" → el admin verifica → ELLA RECIBE EL AVISO y ya puede operar', async () => {
@@ -44,7 +44,7 @@ test('SIN CALLEJÓN: registrada → vincula Telegram → "en revisión" → el a
   // ya puede operar: con una visita programada para hoy, inicia sin el aviso de "en revisión"
   const cli = mkCliente({ email: 'cli@mail.test', compita_id: rosa.id })
   const v = mkVisita(cli, rosa, { estado: 'programada', fecha_programada: hoyVEstr(), hora_inicio_programada: '10:00', hora_fin_programada: '12:00' })
-  await webhook(tgText(7000, '▶️ Iniciar visita')); await webhook(tgText(7000, '✅ Sí, iniciar'))
+  await webhook(tgText(7000, '▶️ Iniciar visita')); await webhook(tgText(7000, '✅ Sí, iniciar')); await confirmarLlegada()
   assert.equal(v.estado, 'en_curso')
 })
 

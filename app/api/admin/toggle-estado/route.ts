@@ -1,10 +1,11 @@
 import { NextRequest } from 'next/server'
-import { getAdminUser } from '@/lib/auth'
-import { desactivarCompita, reactivarCompita } from '@/lib/compitas'
-import { ok, err, unauthorized, serverError } from '@/lib/api'
+import { requierePermiso } from '@/lib/permisos'
+import { desactivarCompita, reactivarCompita, CompitaNoPermitidaPorCmc } from '@/lib/compitas'
+import { ok, err, serverError } from '@/lib/api'
+import { anotarAccion } from '@/lib/acciones-equipo'
 
 export async function POST(req: NextRequest) {
-  if (!(await getAdminUser())) return unauthorized()
+  const g = await requierePermiso('cuentas'); if (!g.ok) return g.res
 
   const { compita_id, estado } = (await req.json().catch(() => ({})) as { compita_id: string; estado: string })
   if (!compita_id || !['activo', 'inactivo'].includes(estado)) return err('Parámetros inválidos')
@@ -15,8 +16,10 @@ export async function POST(req: NextRequest) {
     } else {
       await reactivarCompita(compita_id)
     }
+    await anotarAccion(g.actor.correo, estado === 'inactivo' ? 'desactivó a un compita' : 'activó a un compita', { tipo: 'compita', id: compita_id })
     return ok({ compita_id, estado })
   } catch (e) {
+    if (e instanceof CompitaNoPermitidaPorCmc) return err(e.message, 409)
     return serverError(e)
   }
 }

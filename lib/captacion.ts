@@ -21,6 +21,7 @@ import {
   type CamposAirtable, type RegistroAirtable,
 } from '@/lib/airtable'
 import { avisarAdmin } from '@/lib/telegram'
+import { alertaAdmin } from '@/lib/alertas-admin'
 import { reclamarUnaVez } from '@/lib/cron'
 import { hoyVE } from '@/lib/format'
 import { SITE_URL } from '@/lib/email'
@@ -389,17 +390,17 @@ export async function resolverPostulacion(
 export async function avisarBandeja(): Promise<number> {
   const pendientes = await postulacionesPorResolver(500)
   if (pendientes.length === 0) return 0
-  const enlace = `${SITE_URL}/admin/postulaciones`
+  const enlace = `${SITE_URL}/panel?sec=mas&mas=postulaciones`
 
   const nuevas: PostulacionPorResolver[] = []
   for (const p of pendientes) if (await reclamarUnaVez(`alerta_post:${p.id}`)) nuevas.push(p)
   if (nuevas.length > 0) {
-    await avisarAdmin(
+    await alertaAdmin('tarea', 
       `⚠️ <b>${nuevas.length} postulación(es) no llegaron a Airtable</b>\n\n` +
       `Están guardadas en Supabase pero el CMC no las ve. Resuélvelas en la bandeja:\n${enlace}`,
     )
   } else if (await reclamarUnaVez(`alerta_bandeja:${hoyVE()}`)) {
-    await avisarAdmin(`🔔 <b>Bandeja de postulaciones</b>\n\nSiguen ${pendientes.length} sin resolver.\n${enlace}`)
+    await alertaAdmin('actividad', `🔔 <b>Bandeja de postulaciones</b>\n\nSiguen ${pendientes.length} sin resolver.\n${enlace}`)
   }
   return pendientes.length
 }

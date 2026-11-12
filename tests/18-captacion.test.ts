@@ -7,7 +7,7 @@
 //     suficiente para encadenar ruta → cron → conciliación → bandeja.
 // La lógica SQL real (identidad, repeticiones, reservas, huella, permisos) se prueba
 // contra PostgreSQL en tests/sql/captacion.sql, y la concurrencia en tests/sql/concurrencia.sh.
-import { db, net, limpiar, req, cron, tgPara, session } from './harness'
+import { db, net, limpiar, req, cron, tgPara, session, avisosAdmin } from './harness'
 import { beforeEach, afterEach, test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import { randomUUID } from 'crypto'
@@ -158,7 +158,7 @@ function postulacion(extra: Record<string, any> = {}) {
     },
   })
 }
-const avisos = (texto: string) => tgPara('999').filter((m) => m.text.includes(texto)).length
+const avisos = (texto: string) => avisosAdmin().filter((m) => m.text.includes(texto)).length
 const correrCron = async () => (await (await reintentar(cron('reintentar-airtable'))).json()).data
 
 // ── Funciones puras ────────────────────────────────────────────────────────────

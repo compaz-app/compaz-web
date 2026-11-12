@@ -26,6 +26,8 @@ export interface Compita {
   nombre: string
   apellido: string | null
   email: string | null
+  /** WhatsApp en formato +código de país. Solo lo lee el panel con el permiso de teléfonos. */
+  telefono?: string | null
   telegram_chat_id: string | null
   zona: string
   estado: ZonaEstado
@@ -43,6 +45,10 @@ export interface Compita {
   rating_promedio: number | null
   total_ratings: number
   es_demo: boolean
+  // Integración con el CMC (NULL = Compita anterior al CMC o demo; ver lib/cmc-compitas.ts)
+  cmc_permite?: boolean | null
+  cmc_estado?: string | null
+  cmc_actualizado_en?: string | null
   // Stats calculados en runtime (no en BD)
   tasa_aceptacion?: number | null
   total_solicitudes?: number
@@ -63,6 +69,13 @@ export interface Usuario {
   familiar_condicion: string | null
   familiar_notas: string | null
   telefono: string | null
+  pais?: string | null
+  parentesco?: string | null
+  lugar_privado?: boolean | null
+  ficha_personas?: string | null
+  ficha_sin_nadie?: boolean | null
+  terminos_version?: string | null
+  terminos_aceptados_en?: string | null
   created_at: string
   compita?: Compita
 }
@@ -118,6 +131,10 @@ export interface TelegramMessage {
   text?: string
   photo?: TelegramPhotoSize[]
   caption?: string
+  /** Notas de voz, audios y videomensajes: el bot no los retransmite (solo texto y fotos). */
+  voice?: { file_id: string; duration?: number }
+  audio?: { file_id: string; duration?: number }
+  video_note?: { file_id: string; duration?: number }
   reply_to_message?: { message_id: number }
 }
 
@@ -173,8 +190,8 @@ export interface Solicitud {
   seguimiento2_enviado: boolean
   // Confirmación post-llamada (¿ocurrió la llamada?)
   confirmacion_llamada_enviada: boolean
-  confirmacion_cliente: boolean | null   // null=sin respuesta, true=✅, false=❌
-  confirmacion_compita: boolean | null   // null=sin respuesta, true=✅, false=❌
+  confirmacion_cliente: boolean | null   // null=sin respuesta, true=, false=
+  confirmacion_compita: boolean | null   // null=sin respuesta, true=, false=
   reagendado_slots: string[]             // slots propuestos en reagendado
   mensaje_compita_reagendar?: string | null  // mensaje libre del compita al sugerir nuevos horarios
   created_at: string

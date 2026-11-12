@@ -1,5 +1,5 @@
 /* eslint-disable */
-import { db, net, limpiar, req, cron, tgPara, emailsA, ahoraMas, firmaDaily, mkCompita, mkCliente, mkSolicitud } from './harness'
+import { db, net, limpiar, req, cron, tgPara, emailsA, ahoraMas, firmaDaily, mkCompita, mkCliente, mkSolicitud, avisosAdmin } from './harness'
 import { beforeEach, test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import { qRol, firmaRol, tokenRating } from '@/lib/links'
@@ -79,13 +79,13 @@ describe('Webhook de Daily (fin de llamada)', () => {
     mundo()
     await dailyWebhook(eventoDaily(0))
     assert.equal(net.emails.length, 0)
-    assert.ok(tgPara(999).some((m) => m.text.includes('sin participantes')))
+    assert.ok(avisosAdmin().some((m) => m.text.includes('sin participantes')))
   })
 
   test('Resend caído en el webhook: el admin es avisado de que debe reenviar', async () => {
     mundo(); net.resendFail = true
     await dailyWebhook(eventoDaily(900))
-    assert.ok(tgPara(999).some((m) => m.text.includes('No se pudo enviar el correo post-llamada')))
+    assert.ok(avisosAdmin().some((m) => m.text.includes('No se pudo enviar el correo post-llamada')))
   })
 
   test('evento de otra sala (no "ent-") o de otro tipo se ignora', async () => {
@@ -146,7 +146,7 @@ describe('Enlaces de correo/Telegram: GET no cambia estado (escáneres), POST s�
     const r = await confPost(req(url('confirmacion-llamada', t, 'cliente', '&respuesta=no'), { method: 'POST' }))
     assert.equal(r.status, 303)
     assert.match(r.headers.get('location')!, new RegExp(`/reagendar/${t}`))
-    assert.ok(tgPara(999).some((m) => m.text.includes('Llamada no ocurrió')))
+    assert.ok(avisosAdmin().some((m) => m.text.includes('Llamada no ocurrió')))
     const rc = await confPost(req(url('confirmacion-llamada', t, 'compita', '&respuesta=si'), { method: 'POST' }))
     const html = await rc.text()
     assert.ok(!html.includes('<img src=x'), 'la página no refleja HTML del nombre')

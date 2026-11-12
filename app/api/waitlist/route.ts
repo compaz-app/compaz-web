@@ -1,6 +1,8 @@
+import { explicarEspera } from "@/lib/esperas";
 import { NextRequest, NextResponse } from "next/server";
 import { registrarPostulacion, claveIdempotencia, fuenteValida, destinoPostulaciones } from "@/lib/captacion";
 import { avisarAdmin } from "@/lib/telegram";
+import { alertaAdmin } from '@/lib/alertas-admin'
 
 // ── Dominios permitidos (CORS) ────────────────────────────────────────────────
 const ALLOWED_ORIGINS = [
@@ -144,7 +146,7 @@ export async function POST(req: NextRequest) {
   // 1. Rate limiting
   if (isRateLimited(ip)) {
     return NextResponse.json(
-      { error: "Demasiados intentos. Intenta de nuevo más tarde." },
+      { error: explicarEspera("postulacion_conexion").resumen, porQue: explicarEspera("postulacion_conexion").porQue },
       { status: 429, headers }
     );
   }
@@ -203,7 +205,7 @@ export async function POST(req: NextRequest) {
   const emailKey = email.toLowerCase();
   if (isEmailRateLimited(emailKey)) {
     return NextResponse.json(
-      { error: "Ya recibimos una postulación con este correo. Revisa tu WhatsApp y tu correo." },
+      { error: explicarEspera("postulacion_correo").resumen, porQue: explicarEspera("postulacion_correo").porQue },
       { status: 429, headers }
     );
   }
@@ -277,7 +279,7 @@ export async function POST(req: NextRequest) {
   registrarEnvioEmail(emailKey);
   if (respaldo && Date.now() - ultimoAvisoRespaldo > 15 * 60_000) {
     ultimoAvisoRespaldo = Date.now();
-    await avisarAdmin("⚠️ <b>Supabase no respondió en /api/waitlist</b>\n\nAl menos una postulación se guardó solo en Airtable. La conciliación horaria la importará a Supabase.").catch(() => false);
+    await alertaAdmin('urgente', "⚠️ <b>Supabase no respondió en /api/waitlist</b>\n\nAl menos una postulación se guardó solo en Airtable. La conciliación horaria la importará a Supabase.").catch(() => false);
   }
   return NextResponse.json({ ok: true }, { headers });
 }

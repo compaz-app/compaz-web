@@ -1,14 +1,25 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { ZONAS_MUNICIPIOS } from '@/lib/venezuela'
+import { PARENTESCOS } from '@/lib/ficha-opciones'
 
 export default function PrimerAccesoModal() {
   const router = useRouter()
   const [cargando, setCargando] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [terminos, setTerminos] = useState<{ provisional: boolean; consentimiento: string; puntos: string[] } | null>(null)
+  const [acepto, setAcepto] = useState(false)
+  const [lugarPrivado, setLugarPrivado] = useState<boolean | null>(null)
+  const [sinNadie, setSinNadie] = useState(false)
+  const [personas, setPersonas] = useState('')
+  useEffect(() => {
+    fetch('/api/usuario/ficha').then((r) => r.json()).then((d) => { if (d.ok) setTerminos(d.data) }).catch(() => {})
+  }, [])
   const [form, setForm] = useState({
+    pais: '',
+    parentesco: '',
     telefono: '',
     familiar_nombre: '',
     familiar_edad: '',
@@ -28,13 +39,21 @@ export default function PrimerAccesoModal() {
       setError('El nombre del familiar es obligatorio.')
       return
     }
+    if (!acepto) { setError('Para continuar tienes que aceptar los términos.'); return }
+    if (lugarPrivado === null) { setError('Dinos si estará en una casa u otro lugar privado.'); return }
     setCargando(true)
     setError(null)
     try {
-      const res = await fetch('/api/usuario/familiar', {
+      const res = await fetch('/api/usuario/ficha', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          acepto,
+          pais: form.pais,
+          parentesco: form.parentesco,
+          lugar_privado: lugarPrivado,
+          ficha_sin_nadie: lugarPrivado ? sinNadie : null,
+          ficha_personas: lugarPrivado && !sinNadie ? personas : null,
           telefono: form.telefono,
           familiar_nombre: form.familiar_nombre,
           familiar_edad: form.familiar_edad ? Number(form.familiar_edad) : null,
@@ -79,6 +98,19 @@ export default function PrimerAccesoModal() {
             </Field>
           </Section>
 
+          <Section title="Tus datos">
+            <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: '#991B1B', lineHeight: 1.5 }}>Estos datos solo se escriben aquí. Compaz nunca te los pedirá por teléfono ni por mensaje.</p>
+            <Field label="País donde vives" required>
+              <input type="text" value={form.pais} onChange={(e) => set('pais', e.target.value)} maxLength={60} required style={inputStyle} />
+            </Field>
+            <Field label="¿Qué eres de tu familiar?" required>
+              <select value={form.parentesco} onChange={(e) => set('parentesco', e.target.value)} required style={inputStyle}>
+                <option value="">Elige una opción…</option>
+                {PARENTESCOS.map((p) => <option key={p} value={p}>{p}</option>)}
+              </select>
+            </Field>
+          </Section>
+
           <Section title="Zona donde está tu familiar">
             <Field label="Estado" required>
               <select
@@ -111,7 +143,6 @@ export default function PrimerAccesoModal() {
 
           <Section title="Sobre TU FAMILIAR">
             <div style={{ background: '#FFF3E8', border: '2px solid #FFD0B5', borderRadius: '12px', padding: '12px 16px', display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-              <span style={{ fontSize: '20px', flexShrink: 0 }}>👴</span>
               <p style={{ margin: 0, fontSize: '13px', lineHeight: 1.6, color: '#7C3A00' }}>
                 Lo que sigue es sobre <strong>TU FAMILIAR</strong> — la persona que recibirá el cuidado.<br />
                 <strong>No pongas tus propios datos aquí.</strong>
@@ -161,13 +192,60 @@ export default function PrimerAccesoModal() {
             </Field>
           </Section>
 
+          <Section title="Dónde será la visita">
+            <Field label="¿Estará en una casa u otro lugar privado?" required>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                {[true, false].map((v) => (
+                  <button key={String(v)} type="button" onClick={() => setLugarPrivado(v)} aria-pressed={lugarPrivado === v}
+                    style={{ flex: 1, minHeight: '44px', borderRadius: '9999px', fontWeight: 700, cursor: 'pointer', border: '2px solid #E8E0D4', background: lugarPrivado === v ? '#2D1464' : 'white', color: lugarPrivado === v ? 'white' : '#1A0A3C' }}>
+                    {v ? 'Sí' : 'No'}
+                  </button>
+                ))}
+              </div>
+            </Field>
+            {lugarPrivado && (
+              <>
+                <p style={{ margin: 0, fontSize: '13px', lineHeight: 1.6, color: '#4A3B6B' }}>
+                  <strong>Obligatorio.</strong> Como la visita es en un lugar privado y el compita estará adentro con tu familiar, necesita saber con quién se va a encontrar. Es por su seguridad.
+                </p>
+                {!sinNadie && (
+                  <Field label="Nombre de cada persona que estará" required>
+                    <input type="text" value={personas} onChange={(e) => setPersonas(e.target.value)} maxLength={300} style={inputStyle} />
+                  </Field>
+                )}
+                <button type="button" onClick={() => setSinNadie((s) => !s)} aria-pressed={sinNadie}
+                  style={{ minHeight: '44px', borderRadius: '12px', fontWeight: 700, cursor: 'pointer', border: '2px solid #E8E0D4', background: sinNadie ? '#2D1464' : 'white', color: sinNadie ? 'white' : '#1A0A3C', padding: '0 14px' }}>
+                  No habrá nadie más, solo mi familiar
+                </button>
+              </>
+            )}
+          </Section>
+
+          <Section title="Términos">
+            {terminos && (
+              <>
+                {terminos.provisional && (
+                  <p role="note" style={{ margin: 0, fontSize: '12px', fontWeight: 700, color: '#92400E', background: '#FEF3C7', borderRadius: '8px', padding: '6px 10px' }}>Texto provisional, pendiente de revisión legal.</p>
+                )}
+                <details style={{ background: '#F5F0E8', borderRadius: '12px', padding: '12px 14px', fontSize: '13px', color: '#4A3B6B' }}>
+                  <summary style={{ cursor: 'pointer', fontWeight: 700 }}>Leer los términos</summary>
+                  <ol style={{ margin: '8px 0 0', paddingLeft: '18px', lineHeight: 1.6 }}>{terminos.puntos.map((p) => <li key={p}>{p}</li>)}</ol>
+                </details>
+                <label style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', fontSize: '14px', lineHeight: 1.5, color: '#1A0A3C', cursor: 'pointer' }}>
+                  <input type="checkbox" checked={acepto} onChange={(e) => setAcepto(e.target.checked)} style={{ width: '22px', height: '22px', flexShrink: 0, marginTop: '2px' }} />
+                  <span>{terminos.consentimiento}</span>
+                </label>
+              </>
+            )}
+          </Section>
+
           {error && (
             <p style={{ color: '#DC2626', fontSize: '13px', marginTop: '8px', marginBottom: '4px' }}>{error}</p>
           )}
 
           <button
             type="submit"
-            disabled={cargando}
+            disabled={cargando || !acepto}
             style={{ marginTop: '24px', width: '100%', background: '#FF6B2B', color: 'white', border: 'none', borderRadius: '9999px', padding: '16px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 900, fontSize: '16px', cursor: cargando ? 'not-allowed' : 'pointer', opacity: cargando ? 0.7 : 1 }}
           >
             {cargando ? 'Guardando…' : 'Continuar →'}

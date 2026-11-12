@@ -5,7 +5,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { sendEmail, SITE_URL } from '@/lib/email'
 import { avisarAdmin } from '@/lib/telegram'
+import { alertaAdmin } from '@/lib/alertas-admin'
 import { esc } from '@/lib/html'
+import { preciosVigentes } from '@/lib/precios'
 import { PLANES, CICLO_PAGO_DIAS, TEXTO_REEMBOLSO, type PlanId } from '@/lib/planes'
 import { cupoDelPlan } from '@/lib/visitas'
 import { cronAutorizado, latido, reclamarUnaVez } from '@/lib/cron'
@@ -26,6 +28,7 @@ export async function POST(req: NextRequest) {
     }
   if (error) console.error('[recordatorio-pago] consulta falló:', error)
 
+  const precios = await preciosVigentes()
   const avisados: string[] = []
   for (const p of pagos ?? []) {
     // ¿Ya renovó? (hay un pago de plan más reciente que este)
@@ -45,7 +48,7 @@ export async function POST(req: NextRequest) {
         html: `
           <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px">
             <h2 style="color:#2D1464;font-size:22px">Ya pasó un mes de tu plan</h2>
-            <p style="color:#4A3B6B;font-size:16px;line-height:1.6">Hola, ${esc(p.usuarios.nombre.split(' ')[0])}. Para seguir agendando visitas, toca renovar tu plan <strong>${esc(plan.nombre)}</strong> ($${plan.precioUsd}).</p>
+            <p style="color:#4A3B6B;font-size:16px;line-height:1.6">Hola, ${esc(p.usuarios.nombre.split(' ')[0])}. Para seguir agendando visitas, toca renovar tu plan <strong>${esc(plan.nombre)}</strong> ($${precios.planes[p.plan as PlanId]}).</p>
             <p style="color:#4A3B6B;font-size:15px;line-height:1.6">Puedes pagar por <strong>Zelle</strong> o transferencia: escríbenos a <a href="mailto:hola@micompaz.com" style="color:#FF6B2B">hola@micompaz.com</a> y te enviamos los datos.</p>
             ${cupo && cupo.restantes > 0 ? `<p style="color:#4A3B6B;font-size:15px;line-height:1.6">Buenas noticias: todavía te quedan <strong>${cupo.restantes} ${cupo.restantes === 1 ? 'visita' : 'visitas'}</strong> sin usar, y se suman a las del nuevo mes.</p>` : ''}
             <a href="${SITE_URL}/dashboard" style="display:inline-block;background:#FF6B2B;color:white;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:15px;margin-top:8px">Ir a mi portal →</a>
@@ -60,7 +63,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (avisados.length > 0) {
-    await avisarAdmin(`💳 <b>Renovaciones pendientes (${avisados.length})</b>\n\nSe avisó a: ${avisados.map(esc).join(', ')}.\n\nCuando paguen por Zelle o transferencia, regístralo en el panel: Clientes, Pagos y plan.`)
+    await alertaAdmin('actividad', `💳 <b>Renovaciones pendientes (${avisados.length})</b>\n\nSe avisó a: ${avisados.map(esc).join(', ')}.\n\nCuando paguen por Zelle o transferencia, regístralo en el panel: Clientes, Pagos y plan.`)
   }
 
   await latido('recordatorio-pago')

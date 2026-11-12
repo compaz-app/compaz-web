@@ -16,7 +16,7 @@ const entrar = async (u: URL) => { session.user = null; const r = await confPost
 
 test('un correo desconocido recibe la MISMA respuesta y no se crea nada (no revela quién existe)', async () => {
   const r = await pedir('intruso@mail.test')
-  assert.equal(r.status, 200); assert.deepEqual((await r.json()).data, { enviado: true })
+  assert.equal(r.status, 200); assert.deepEqual((await r.json()).data, { enviado: true, espera: 60 })
   assert.equal(net.emails.length, 0); assert.equal(otps.size, 0, 'no se generó enlace ni se creó usuario')
 })
 
@@ -24,7 +24,7 @@ test('cliente invitado: recibe un enlace nuevo que lo deja entrar, sin escribir 
   mkCliente({ email: 'carlos@mail.test', nombre: 'Carlos Ruiz' })
   assert.equal((await pedir('Carlos@Mail.test')).status, 200)
   const mail = emailsA('carlos@mail.test')[0]
-  assert.ok(mail.html.includes('vence en 1 hora'))
+  assert.ok(mail.html.includes('vencen en 1 hora'))
   assert.equal(await entrar(enlace('carlos@mail.test')), '/dashboard')
 })
 
@@ -41,7 +41,7 @@ test('INVITACIÓN VENCIDA o sin activar: el cliente pide otro enlace solo y entr
 
 test('el admin también puede pedir su acceso aunque no tenga fila de cliente', async () => {
   await pedir('admin@compaz.test')
-  assert.equal(await entrar(enlace('admin@compaz.test')), '/admin')
+  assert.equal(await entrar(enlace('admin@compaz.test')), '/panel')
 })
 
 test('límites: 1 correo por minuto por dirección y 10 solicitudes por hora por IP', async () => {
@@ -60,7 +60,7 @@ test('validaciones y Resend caído (respuesta genérica, sin filtrar el fallo)',
   assert.equal((await solicitar(req('/api/auth/solicitar-acceso', { json: {} }))).status, 400)
   mkCliente({ email: 'carlos@mail.test' }); net.resendFail = true
   const r = await pedir('carlos@mail.test', '5.5.5.5')
-  assert.equal(r.status, 200); assert.deepEqual((await r.json()).data, { enviado: true })
+  assert.equal(r.status, 200); assert.deepEqual((await r.json()).data, { enviado: true, espera: 60 })
 })
 
 test('REDIRECCIÓN: detrás de Netlify se usa la dirección pública, no la interna del despliegue', async () => {

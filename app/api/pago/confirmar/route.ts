@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { getClienteActivo } from '@/lib/auth'
 import { sendTelegramMessage, avisarAdmin, TECLADO_SIN_VISITA } from '@/lib/telegram'
+import { alertaAdmin } from '@/lib/alertas-admin'
 import { sendEmail, SITE_URL } from '@/lib/email'
 import { emailAdminPago } from '@/lib/aviso-pago'
 import { esc } from '@/lib/html'
@@ -43,7 +44,7 @@ export async function POST(req: NextRequest) {
 
   // ── Sin pasarela de pago: no se contrata gratis. Se registra el interés y se avisa al admin. ──
   if (!pagoSimuladoActivo()) {
-    await avisarAdmin([
+    await alertaAdmin('actividad', [
       `💳 <b>Cliente quiere contratar (pago pendiente)</b>`, ``,
       `<b>Cliente:</b> ${esc(clienteNombre)} (${esc(sol.usuarios?.email ?? '')})`,
       `<b>Compita:</b> ${esc(sol.compitas?.nombre ?? '')}`,
@@ -71,7 +72,7 @@ export async function POST(req: NextRequest) {
   const pago = await registrarPago({ usuarioId: sol.cliente_id, tipo: 'plan', plan, metodo: 'otro', referencia: 'pago simulado', registradoPor: 'sistema' })
   if (!pago.ok) {
     console.error('[pago/confirmar] no se pudo registrar el pago:', pago.error)
-    await avisarAdmin(`⚠️ <b>${esc(clienteNombre)}</b> contrató el plan <b>${esc(planInfo.nombre)}</b> pero no se pudo registrar el pago (sin límite de visitas). Ejecuta la migración de pagos y regístralo desde el panel.`)
+    await alertaAdmin('urgente', `⚠️ <b>${esc(clienteNombre)}</b> contrató el plan <b>${esc(planInfo.nombre)}</b> pero no se pudo registrar el pago (sin límite de visitas). Ejecuta la migración de pagos y regístralo desde el panel.`)
   }
 
   // La visita de coordinación: buscar cualquier visita activa del cliente (el constraint es por cliente, no por compita).
@@ -126,10 +127,10 @@ export async function POST(req: NextRequest) {
       )
     } catch (e) {
       console.error('Telegram compita contratado:', e)
-      await avisarAdmin(`⚠️ No se pudo avisar a <b>${esc(sol.compitas.nombre)}</b> que fue contratada por <b>${esc(clienteNombre)}</b>. Contáctala.`)
+      await alertaAdmin('tarea', `⚠️ No se pudo avisar a <b>${esc(sol.compitas.nombre)}</b> que fue contratada por <b>${esc(clienteNombre)}</b>. Contáctala.`)
     }
   } else {
-    await avisarAdmin(`⚠️ <b>${esc(sol.compitas?.nombre ?? 'La compita')}</b> fue contratada por <b>${esc(clienteNombre)}</b> pero no tiene Telegram vinculado.`)
+    await alertaAdmin('tarea', `⚠️ <b>${esc(sol.compitas?.nombre ?? 'La compita')}</b> fue contratada por <b>${esc(clienteNombre)}</b> pero no tiene Telegram vinculado.`)
   }
 
   if (u?.email) {
@@ -140,7 +141,7 @@ export async function POST(req: NextRequest) {
         subject: `¡Contratación confirmada! Coordina tu primera visita`,
         html: `
           <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px">
-            <h2 style="color:#2D1464;font-size:22px;margin-bottom:12px">🎉 ¡Todo listo, ${esc(clienteNombre.split(' ')[0])}!</h2>
+            <h2 style="color:#2D1464;font-size:22px;margin-bottom:12px">¡Todo listo, ${esc(clienteNombre.split(' ')[0])}!</h2>
             <p style="color:#4A3B6B;font-size:15px;line-height:1.6">Acabas de contratar a <strong>${esc(sol.compitas?.nombre ?? 'tu compita')}</strong> con el plan <strong>${esc(planInfo.nombre)}</strong>.</p>
             <p style="color:#4A3B6B;font-size:15px;line-height:1.6">Le enviamos una notificación a ${corto} para que te escriba pronto. También puedes escribirle tú desde el dashboard para coordinar la fecha de la primera visita.</p>
             <div style="background:#F5F0FF;border:2px solid #7C4DFF;border-radius:12px;padding:16px 20px;margin:20px 0">

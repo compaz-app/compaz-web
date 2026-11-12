@@ -1,5 +1,7 @@
 'use client'
 
+import { rutaLlamada } from '@/lib/llamada-ruta'
+
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createBrowserSupabase } from '@/lib/supabase'
@@ -85,7 +87,6 @@ export default function VisitaWatcher({ usuarioId, visitaActivaId, compitaNombre
           animation: 'pulse-ring 0.8s ease-in-out infinite alternate',
           border: '3px solid #22c55e',
         }}>
-          <div style={{ fontSize: '56px', marginBottom: '8px' }}>📹</div>
           <h2 style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '22px', color: '#1A0A3C', margin: '0 0 8px' }}>
             {llamadaEntrante.compita} te llama
           </h2>
@@ -94,7 +95,7 @@ export default function VisitaWatcher({ usuarioId, visitaActivaId, compitaNombre
           </p>
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
             <a
-              href={`${llamadaEntrante.roomUrl}${llamadaEntrante.roomUrl.includes('?') ? '&' : '?'}lang=es`}
+              href={rutaLlamada(llamadaEntrante.roomUrl)}
               target="_blank"
               rel="noreferrer"
               style={{
@@ -103,7 +104,7 @@ export default function VisitaWatcher({ usuarioId, visitaActivaId, compitaNombre
                 fontSize: '16px', textDecoration: 'none', display: 'inline-block',
               }}
             >
-              ✅ Contestar
+              Contestar
             </a>
             <button
               onClick={() => setLlamadaEntrante(null)}

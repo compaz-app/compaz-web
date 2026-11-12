@@ -10,18 +10,25 @@ import PerfilFamiliar from '@/components/ui/PerfilFamiliar'
 import HistorialVisitas from '@/components/ui/HistorialVisitas'
 import FechaProgramada from '@/components/ui/FechaProgramada'
 import PreVisitaActions from '@/components/ui/PreVisitaActions'
+import LugarPersonas from '@/components/ui/LugarPersonas'
+import DireccionVisita from '@/components/ui/DireccionVisita'
+import LlegadaVisita from '@/components/ui/LlegadaVisita'
 import ChatColapsable from '@/components/ui/ChatColapsable'
 import ReagendarButton from '@/components/ui/ReagendarButton'
 import AgendarOtraVisita from '@/components/ui/AgendarOtraVisita'
 import { cupoDelPlan } from '@/lib/visitas'
 import PlanesPago from '@/components/ui/PlanesPago'
+import { rutaLlamada } from '@/lib/llamada-ruta'
 import { solicitudPendiente, instruccionesPago, referenciaDe, type MetodoDirecto } from '@/lib/solicitudes-pago'
 import { qRol, firmaRol } from '@/lib/links'
 import LimpiarParamContratado from '@/components/ui/LimpiarParamContratado'
+import { clienteVePortalNuevo } from '@/lib/portal-activacion'
 import AutoRefresh from '@/components/ui/AutoRefresh'
 import ConfirmarInicioVisita from '@/components/ui/ConfirmarInicioVisita'
 import PrimerAccesoModal from '@/components/ui/PrimerAccesoModal'
+import { fichaCompleta } from '@/lib/ficha'
 import type { Visita, Compita, Mensaje, Usuario, ReporteVisita } from '@/types'
+import IconoPersona from '@/components/ui/IconoPersona'
 
 export const dynamic = 'force-dynamic'
 
@@ -35,8 +42,11 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   // Cliente bloqueado o eliminado: fuera, aunque su sesión siga vigente
   if (!isAdmin && !(await getClienteActivo())) redirect('/login?error=bloqueado')
 
+  // El portal nuevo reemplaza a este por etapas: si a este cliente ya le toca, todos los enlaces viejos a /dashboard lo llevan allí.
+  if (!isAdmin && (await clienteVePortalNuevo(session.user.id))) redirect('/portal')
+
   // Admin sin preview → redirigir al panel
-  if (isAdmin && !previewUid) redirect('/admin')
+  if (isAdmin && !previewUid) redirect('/panel')
 
   // Modo preview: solo admins pueden ver el dashboard de otro usuario
   const targetUid = (previewUid && isAdmin) ? previewUid : session.user.id
@@ -105,7 +115,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     Promise.resolve(
       adminDb
         .from('solicitudes')
-        .select('id, compita_id, estado, slot_confirmado, room_url, created_at, slots_propuestos, token_respuesta, seguimiento_enviado, compitas(nombre, foto_url, zona)')
+        .select('id, compita_id, estado, tipo, slot_confirmado, room_url, created_at, slots_propuestos, token_respuesta, seguimiento_enviado, compitas(nombre, foto_url, zona)')
         .eq('cliente_id', targetUid)
         .gte('created_at', hace30dias)
         .order('created_at', { ascending: false }),
@@ -166,6 +176,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     id: string
     compita_id: string
     estado: string
+    tipo?: string | null
     slot_confirmado: string | null
     room_url: string | null
     created_at: string
@@ -196,6 +207,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     }
     return false
   })
+  // Entrevistas aceptadas por el compita a las que el cliente aún no les eligió hora (formulario nuevo, sin horarios propuestos).
+  const entrevistasSinHora = solicitudes.filter((s) => s.estado === 'aceptada' && s.tipo === 'entrevista' && !s.slot_confirmado && (s.slots_propuestos ?? []).length === 0)
   const solicitudesHistorial = solicitudes.filter((s) => s.estado === 'rechazada' || s.estado === 'completada')
   const todasRechazadas = solicitudes.length > 0
     && solicitudesPendientes.length === 0
@@ -239,13 +252,13 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     <div style={{ minHeight: '100vh', background: '#FDFAF6', fontFamily: 'Inter, sans-serif' }}>
 
       {/* Modal de primer acceso — se muestra hasta que el cliente llene sus datos */}
-      {!previewUid && !usuario?.familiar_nombre && <PrimerAccesoModal />}
+      {!previewUid && !fichaCompleta(usuario) && <PrimerAccesoModal />}
 
       {/* Banner admin preview */}
       {previewUid && isAdmin && (
         <div style={{ background: '#1A0A3C', color: 'white', padding: '8px 24px', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span>Vista admin — {usuario?.nombre ?? previewUid} &lt;{usuario?.email}&gt;</span>
-          <a href="/admin?tab=clientes" style={{ color: '#FF6B2B', fontWeight: 700, textDecoration: 'none', fontFamily: 'Bricolage Grotesque, sans-serif' }}>← Volver al panel</a>
+          <a href="/panel?sec=personas" style={{ color: '#FF6B2B', fontWeight: 700, textDecoration: 'none', fontFamily: 'Bricolage Grotesque, sans-serif' }}>← Volver al panel</a>
         </div>
       )}
 
@@ -276,22 +289,22 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
           // Estado con badge + descripción
           const estado = visitaActiva?.estado === 'en_curso'
-            ? { badge: '🟢 Visita en curso', desc: `${visitaActiva.compita.nombre} está con tu familiar`, badgeBg: '#DCFCE7', badgeColor: '#15803d' }
+            ? { badge: 'Visita en curso', desc: `${visitaActiva.compita.nombre} está con tu familiar`, badgeBg: '#DCFCE7', badgeColor: '#15803d' }
             : visitaActiva?.estado === 'confirmando_inicio'
-            ? { badge: '🔔 Tu compita llegó', desc: 'Confirma su llegada para iniciar la visita', badgeBg: '#DBEAFE', badgeColor: '#1d4ed8' }
+            ? { badge: 'Tu compita llegó', desc: 'Confirma su llegada para iniciar la visita', badgeBg: '#DBEAFE', badgeColor: '#1d4ed8' }
             : visitaPreVisita
-            ? { badge: unreadCount > 0 ? `💬 ${unreadCount} mensaje${unreadCount > 1 ? 's' : ''} nuevo${unreadCount > 1 ? 's' : ''}` : '📋 Coordinando visita', desc: `Coordina la fecha con ${visitaPreVisita.compita.nombre}`, badgeBg: unreadCount > 0 ? '#FEE2E2' : '#DCFCE7', badgeColor: unreadCount > 0 ? '#DC2626' : '#15803d' }
+            ? { badge: unreadCount > 0 ? `${unreadCount} mensaje${unreadCount > 1 ? 's' : ''} nuevo${unreadCount > 1 ? 's' : ''}` : 'Coordinando visita', desc: `Coordina la fecha con ${visitaPreVisita.compita.nombre}`, badgeBg: unreadCount > 0 ? '#FEE2E2' : '#DCFCE7', badgeColor: unreadCount > 0 ? '#DC2626' : '#15803d' }
             : visitaProgramada
-            ? { badge: '🗓️ Visita programada', desc: `${visitaProgramada.compita.nombre} · ${visitaProgramada.fecha_programada ? new Date(visitaProgramada.fecha_programada + 'T00:00:00').toLocaleDateString('es-VE', { weekday: 'long', day: 'numeric', month: 'long' }) : 'fecha por confirmar'}`, badgeBg: '#EDE9FE', badgeColor: '#2D1464' }
+            ? { badge: 'Visita programada', desc: `${visitaProgramada.compita.nombre} · ${visitaProgramada.fecha_programada ? new Date(visitaProgramada.fecha_programada + 'T00:00:00').toLocaleDateString('es-VE', { weekday: 'long', day: 'numeric', month: 'long' }) : 'fecha por confirmar'}`, badgeBg: '#EDE9FE', badgeColor: '#2D1464' }
             : pendientesDecision.length > 0
-            ? { badge: '📞 Llamada completada', desc: 'Decide si quieres contratar', badgeBg: '#FEF3C7', badgeColor: '#92400E' }
+            ? { badge: 'Llamada completada', desc: 'Decide si quieres contratar', badgeBg: '#FEF3C7', badgeColor: '#92400E' }
             : entrevistasConfirmadas.length > 0
-            ? { badge: '📅 Entrevista confirmada', desc: `Con ${entrevistasConfirmadas[0].compitas?.nombre ?? 'tu compita'}`, badgeBg: '#DBEAFE', badgeColor: '#1d4ed8' }
+            ? { badge: 'Entrevista confirmada', desc: `Con ${entrevistasConfirmadas[0].compitas?.nombre ?? 'tu compita'}`, badgeBg: '#DBEAFE', badgeColor: '#1d4ed8' }
             : solicitudesPendientes.length > 0
-            ? { badge: '⏳ Esperando respuesta', desc: `${solicitudesPendientes.length} compita${solicitudesPendientes.length > 1 ? 's' : ''} recibió tu solicitud`, badgeBg: '#FEF3C7', badgeColor: '#92400E' }
+            ? { badge: 'Esperando respuesta', desc: `${solicitudesPendientes.length} compita${solicitudesPendientes.length > 1 ? 's' : ''} recibió tu solicitud`, badgeBg: '#FEF3C7', badgeColor: '#92400E' }
             : compita
-            ? { badge: '✅ Con compita', desc: compita.nombre, badgeBg: '#DCFCE7', badgeColor: '#15803d' }
-            : { badge: '👋 Bienvenido', desc: 'Encuentra a tu compita', badgeBg: '#F5F0FF', badgeColor: '#6B5C90' }
+            ? { badge: 'Con compita', desc: compita.nombre, badgeBg: '#DCFCE7', badgeColor: '#15803d' }
+            : { badge: 'Bienvenido', desc: 'Encuentra a tu compita', badgeBg: '#F5F0FF', badgeColor: '#6B5C90' }
 
           return (
             <div style={{ background: 'white', border: '2px solid #E8E0D4', borderRadius: '20px', padding: '24px', marginBottom: '28px' }}>
@@ -311,7 +324,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                     {/* Cupo del plan */}
                     {cupo && cupo.restantes > 0 && (
                       <span style={{ background: '#F5F0FF', color: '#2D1464', borderRadius: '9999px', padding: '4px 12px', fontSize: '13px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, whiteSpace: 'nowrap' }}>
-                        🎫 {cupo.restantes} visita{cupo.restantes !== 1 ? 's' : ''} disponible{cupo.restantes !== 1 ? 's' : ''}
+                        {cupo.restantes} visita{cupo.restantes !== 1 ? 's' : ''} disponible{cupo.restantes !== 1 ? 's' : ''}
                       </span>
                     )}
                   </div>
@@ -320,7 +333,6 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                   )}
                   {cupo && cupo.restantes === 0 && (
                     <div style={{ marginTop: '12px', background: '#FFF7ED', border: '1.5px solid #FED7AA', borderRadius: '12px', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: '16px', flexShrink: 0 }}>🔄</span>
                       <span style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontSize: '13px', color: '#92400E', flex: 1 }}>
                         <strong>Tu plan se agotó.</strong> Para agendar más visitas, recarga tu plan.
                       </span>
@@ -375,7 +387,6 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               {/* Info de familiar incompleta — aviso */}
               {!esNuevo && !usuario.familiar_nombre && (
                 <div style={{ marginTop: '16px', background: '#FEF3C7', borderRadius: '12px', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <span style={{ fontSize: '16px', flexShrink: 0 }}>⚠️</span>
                   <p style={{ margin: 0, fontSize: '13px', color: '#92400E', lineHeight: 1.4 }}>
                     <strong>Falta información de tu familiar.</strong> Tu compita la necesita para prepararse. <a href="#familiar" style={{ color: '#C84B0E', fontWeight: 700 }}>Completar →</a>
                   </p>
@@ -390,7 +401,6 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           <>
             <LimpiarParamContratado />
             <div style={{ background: '#F0FDF4', border: '2px solid #22c55e', borderRadius: '16px', padding: '20px 24px', marginBottom: '28px', display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
-              <span style={{ fontSize: '28px', flexShrink: 0 }}>🎉</span>
               <div>
                 <p style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '17px', color: '#15803d', margin: '0 0 4px' }}>
                   ¡Contratación confirmada!
@@ -408,6 +418,17 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             Alta visibilidad — si hay una llamada completada sin decisión,
             esta sección aparece primero para no perder la venta.
         ───────────────────────────────────────────── */}
+        {entrevistasSinHora.map((sol) => {
+          const nombre = (sol.compitas as { nombre: string } | null)?.nombre?.split(' ')[0] ?? 'Tu compita'
+          return (
+            <section key={sol.id} style={{ marginBottom: '24px', background: '#FFF7ED', border: '3px solid #FF6B2B', borderRadius: '20px', padding: '20px 24px' }}>
+              <p style={{ margin: '0 0 6px', fontWeight: 800, fontSize: '18px', color: '#2D1464' }}>{nombre} aceptó hablar contigo</p>
+              <p style={{ margin: '0 0 14px', color: '#4A3B6B', fontSize: '15px', lineHeight: 1.5 }}>Elige una de sus horas libres para la videollamada de 20 minutos.</p>
+              <a href={`/solicitar/hora?solicitud=${sol.id}`} style={{ display: 'inline-flex', alignItems: 'center', minHeight: '48px', background: '#FF6B2B', color: 'white', padding: '0 24px', borderRadius: '9999px', fontWeight: 800, textDecoration: 'none' }}>Elegir la hora →</a>
+            </section>
+          )
+        })}
+
         {pendientesDecision.length > 0 && pendientesDecision.map((sol) => {
           const t = sol.token_respuesta!
           const compitaNombre = (sol.compitas as { nombre: string } | null)?.nombre ?? 'tu compita'
@@ -416,7 +437,6 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           return (
             <section key={sol.id} style={{ marginBottom: '32px', background: 'linear-gradient(135deg, #FFF7ED 0%, #FFF3E8 100%)', border: '3px solid #FF6B2B', borderRadius: '20px', padding: '28px 24px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-                <span style={{ fontSize: '28px' }}>📞</span>
                 <div>
                   <h2 style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 900, fontSize: '20px', color: '#1A0A3C', margin: 0 }}>
                     ¿Contratas a {compitaNombre}?
@@ -435,7 +455,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                   href={contratoUrl}
                   style={{ background: '#FF6B2B', color: 'white', borderRadius: '9999px', padding: '14px 28px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 900, fontSize: '17px', textDecoration: 'none', display: 'inline-block', boxShadow: '0 4px 16px rgba(255,107,43,0.4)' }}
                 >
-                  ✅ Sí, quiero contratar a {compitaNombre}
+                  Sí, quiero contratar a {compitaNombre}
                 </a>
                 <a
                   href={noContratoUrl}
@@ -461,7 +481,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           return (
             <section style={{ marginBottom: '32px' }}>
               <h2 style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '13px', color: '#9B8AB8', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 16px' }}>
-                {hayActiva ? '🟠 Llamada en curso' : '📞 Tu próxima entrevista'}
+                {hayActiva ? 'Llamada en curso' : 'Tu próxima entrevista'}
               </h2>
               <div style={{ background: hayActiva ? '#FFF3E8' : 'linear-gradient(135deg, #EFF6FF 0%, #F0FDF4 100%)', border: `2px solid ${hayActiva ? '#FF6B2B' : '#22C55E'}`, borderRadius: '20px', padding: '24px 24px 20px' }}>
                 {hayActiva && (
@@ -494,15 +514,15 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                         {c?.foto_url
                           // eslint-disable-next-line @next/next/no-img-element
                           ? <img src={c.foto_url} alt={c.nombre} style={{ width: '56px', height: '56px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-                          : <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: enCurso ? '#FFE4D6' : '#DCFCE7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '26px', flexShrink: 0 }}>👤</div>
+                          : <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: enCurso ? '#FFE4D6' : '#DCFCE7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '26px', flexShrink: 0 }}><IconoPersona /></div>
                         }
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, color: '#1A0A3C', fontSize: '17px' }}>{c?.nombre ?? '—'}</div>
                           {enCurso
-                            ? <div style={{ color: '#C84B0E', fontSize: '14px', fontWeight: 700, marginTop: '4px' }}>🟠 Llamada en curso ahora</div>
-                            : <div style={{ color: '#166534', fontSize: '14px', fontWeight: 600, marginTop: '4px' }}>📅 {fechaLabel} (hora Venezuela)</div>
+                            ? <div style={{ color: '#C84B0E', fontSize: '14px', fontWeight: 700, marginTop: '4px' }}>Llamada en curso ahora</div>
+                            : <div style={{ color: '#166534', fontSize: '14px', fontWeight: 600, marginTop: '4px' }}>{fechaLabel} (hora Venezuela)</div>
                           }
-                          <div style={{ color: '#6B5C90', fontSize: '12px', marginTop: '4px' }}>⏱️ Llamada de 20 minutos</div>
+                          <div style={{ color: '#6B5C90', fontSize: '12px', marginTop: '4px' }}>Llamada de 20 minutos</div>
                         </div>
                         {salaUrl ? (
                           <a href={salaUrl}
@@ -511,7 +531,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                           </a>
                         ) : (
                           <span style={{ background: '#DCFCE7', color: '#166534', border: '1.5px solid #86EFAC', borderRadius: '9999px', padding: '8px 16px', fontSize: '13px', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                            ✅ Confirmada
+                            Confirmada
                           </span>
                         )}
                       </div>
@@ -556,9 +576,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             )}
             {visitaActiva.estado === 'en_curso' && previewUid && visitaActiva.room_url && (
               <div style={{ marginBottom: '16px' }}>
-                <a href={`${visitaActiva.room_url}${visitaActiva.room_url.includes('?') ? '&' : '?'}lang=es`} target="_blank" rel="noreferrer"
+                <a href={rutaLlamada(visitaActiva.room_url)} target="_blank" rel="noreferrer"
                   style={{ background: '#2D1464', color: 'white', borderRadius: '9999px', padding: '10px 20px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '14px', textDecoration: 'none' }}>
-                  📹 Unirse a la llamada activa
+                  Unirse a la llamada activa
                 </a>
               </div>
             )}
@@ -593,7 +613,6 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               )}
             </div>
             <div style={{ background: '#F0FDF4', border: '2px solid #86EFAC', borderRadius: '16px', padding: '16px 20px', marginBottom: '12px', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-              <span style={{ fontSize: '20px', flexShrink: 0 }}>🗓️</span>
               <div>
                 <p style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, color: '#15803d', fontSize: '15px', margin: '0 0 4px' }}>
                   {esPrimeraVisita ? '¡Contratación confirmada! Coordina la primera visita' : 'Coordina la próxima visita'}
@@ -602,7 +621,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                   Usa este chat para ponerte de acuerdo con <strong>{visitaPreVisita.compita.nombre}</strong> en la fecha y hora de {esPrimeraVisita ? 'la primera visita' : 'la próxima visita'}.
                 </p>
                 <p style={{ color: '#15803d', fontSize: '12px', margin: 0, background: 'rgba(34,197,94,0.1)', borderRadius: '8px', padding: '8px 12px', lineHeight: '1.5' }}>
-                  🛡️ <strong>Mantén la conversación aquí.</strong> Las comunicaciones dentro de Compaz están protegidas y garantizamos el servicio. Acuerdos fuera de la plataforma quedan fuera de nuestra cobertura.
+                  <strong>Mantén la conversación aquí.</strong> Las comunicaciones dentro de Compaz están protegidas y garantizamos el servicio. Acuerdos fuera de la plataforma quedan fuera de nuestra cobertura.
                 </p>
               </div>
             </div>
@@ -615,6 +634,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                 tieneFecha={!!visitaPreVisita.fecha_programada}
               />
             )}
+            {!previewUid && <DireccionVisita />}
+            {!previewUid && <LugarPersonas />}
           </section>
         )}
 
@@ -636,7 +657,6 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               </h2>
               {hayRetraso && (
                 <div style={{ background: '#FEF3C7', border: '2px solid #F59E0B', borderRadius: '16px', padding: '16px 20px', marginBottom: '16px', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-                  <span style={{ fontSize: '20px', flexShrink: 0 }}>⚠️</span>
                   <div>
                     <p style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, color: '#92400E', fontSize: '15px', margin: '0 0 4px' }}>
                       La visita debería haber empezado
@@ -649,11 +669,11 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               )}
               <div style={{ background: hayRetraso ? '#FFFBEB' : '#F5F0FF', border: `2px solid ${hayRetraso ? '#F59E0B' : '#7C4DFF'}`, borderRadius: '16px', padding: '28px', marginBottom: '16px', textAlign: 'center' }}>
                 <p style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '22px', color: '#2D1464', margin: '0 0 6px' }}>
-                  🗓️ {fechaFormateada ? `Tu visita es el ${fechaFormateada}` : 'Visita próximamente'}
+                  {fechaFormateada ? `Tu visita es el ${fechaFormateada}` : 'Visita próximamente'}
                 </p>
                 {visitaProgramada.hora_inicio_programada && visitaProgramada.hora_fin_programada && (
                   <p style={{ color: '#2D1464', fontSize: '17px', fontWeight: 700, margin: '0 0 6px' }}>
-                    🕐 {visitaProgramada.hora_inicio_programada} – {visitaProgramada.hora_fin_programada}
+                    {visitaProgramada.hora_inicio_programada} – {visitaProgramada.hora_fin_programada}
                   </p>
                 )}
                 <p style={{ color: '#6B5C90', fontSize: '15px', margin: 0 }}>
@@ -666,6 +686,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                 compitaNombre={visitaProgramada.compita.nombre}
               />
               <ReagendarButton visitaId={visitaProgramada.id} compitaNombre={visitaProgramada.compita.nombre} />
+              {!previewUid && <LlegadaVisita />}
+              {!previewUid && <DireccionVisita />}
+              {!previewUid && <LugarPersonas />}
             </section>
           )
         })()}
@@ -674,7 +697,6 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         {visitaTerminoHoy && (
           <section style={{ marginBottom: '40px' }}>
             <div style={{ background: '#F0FDF4', border: '2px solid #22c55e', borderRadius: '16px', padding: '28px', display: 'flex', gap: '20px', alignItems: 'center', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: '36px', flexShrink: 0 }}>🎉</span>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <p style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '18px', color: '#15803d', margin: '0 0 4px' }}>
                   La visita de hoy terminó
@@ -705,7 +727,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                 {compita.foto_url
                   // eslint-disable-next-line @next/next/no-img-element
                   ? <img src={compita.foto_url} alt={compita.nombre} style={{ width: '72px', height: '72px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-                  : <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: '#F5F0E8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', flexShrink: 0 }}>👤</div>
+                  : <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: '#F5F0E8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', flexShrink: 0 }}><IconoPersona /></div>
                 }
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '4px' }}>
@@ -729,7 +751,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', borderTop: '1.5px solid #F0EBF8', paddingTop: '16px' }}>
                 {puedeAgendarOtra && (
                   <a href="#agendar" style={{ background: '#FF6B2B', color: 'white', borderRadius: '9999px', padding: '10px 20px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '14px', textDecoration: 'none' }}>
-                    📅 Agendar visita
+                    Agendar visita
                   </a>
                 )}
                 <a href="/compitas" style={{ background: '#F5F0FF', color: '#4A3B6B', borderRadius: '9999px', padding: '10px 20px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '14px', textDecoration: 'none' }}>
@@ -746,7 +768,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                 <div style={{ background: 'white', border: '2px solid #E8E0D4', borderRadius: '16px', padding: '20px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
                     <h3 style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '14px', color: '#1A0A3C', margin: 0 }}>
-                      ⏳ Esperando respuesta
+                      Esperando respuesta
                     </h3>
                     <span style={{ color: '#9B8AB8', fontSize: '12px' }}>{solicitudesPendientes.length}/3 solicitudes</span>
                   </div>
@@ -758,7 +780,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                           {c?.foto_url
                             // eslint-disable-next-line @next/next/no-img-element
                             ? <img src={c.foto_url} alt={c.nombre} style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-                            : <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#F5F0E8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0 }}>👤</div>
+                            : <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#F5F0E8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0 }}><IconoPersona /></div>
                           }
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, color: '#1A0A3C', fontSize: '14px' }}>{c?.nombre ?? '—'}</div>
@@ -795,7 +817,6 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               ) : (
                 /* Máximo de solicitudes alcanzado */
                 <div style={{ background: '#FFFBEB', border: '2px solid #FCD34D', borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
-                  <span style={{ fontSize: '24px', flexShrink: 0, lineHeight: 1 }}>⏳</span>
                   <div>
                     <h3 style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '16px', color: '#1A0A3C', margin: '0 0 6px' }}>
                       Ya tienes 3 solicitudes activas
@@ -827,7 +848,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                             {c?.foto_url
                               // eslint-disable-next-line @next/next/no-img-element
                               ? <img src={c.foto_url} alt={c.nombre} style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-                              : <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#F5F0E8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', flexShrink: 0 }}>👤</div>
+                              : <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#F5F0E8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', flexShrink: 0 }}><IconoPersona /></div>
                             }
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <div style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, color: '#9B8AB8', fontSize: '13px' }}>{c?.nombre ?? '—'}</div>
@@ -836,11 +857,11 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                               {esRechazada && sol.token_respuesta && !previewUid && (
                                 <a href={`${SITE}/reagendar/${sol.token_respuesta}`}
                                   style={{ fontSize: '11px', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif', color: '#FF6B2B', border: '1.5px solid #FF6B2B', borderRadius: '9999px', padding: '2px 9px', textDecoration: 'none' }}>
-                                  🔄 Reagendar
+                                  Reagendar
                                 </a>
                               )}
                               <span style={{ borderRadius: '9999px', padding: '2px 9px', fontSize: '11px', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif', background: esCompletada ? '#DCFCE7' : '#FEF2F2', color: esCompletada ? '#166534' : '#991b1b', border: esCompletada ? '1.5px solid #86EFAC' : '1.5px solid #fca5a5' }}>
-                                {esCompletada ? '✅ Contratado' : mensajeCompita ? '🔄 Propuso otro horario' : '✗ No pudo esta vez'}
+                                {esCompletada ? 'Contratado' : mensajeCompita ? 'Propuso otro horario' : '✗ No pudo esta vez'}
                               </span>
                             </div>
                           </div>
@@ -854,7 +875,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                               </p>
                               {sol.token_respuesta && !previewUid && (
                                 <p style={{ margin: '8px 0 0', fontFamily: 'Inter, sans-serif', fontSize: '12px', color: '#6B5C90' }}>
-                                  ¿Te funciona alguno? Usa el botón <strong>🔄 Reagendar</strong> para agendar con {c?.nombre ?? 'el compita'} en esa nueva fecha.
+                                  ¿Te funciona alguno? Usa el botón <strong>Reagendar</strong> para agendar con {c?.nombre ?? 'el compita'} en esa nueva fecha.
                                 </p>
                               )}
                             </div>
@@ -891,7 +912,6 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         {/* Aviso reseña pendiente de aprobación */}
         {resenasPendientesCount > 0 && (
           <div style={{ background: '#F0FDF4', border: '2px solid #22c55e', borderRadius: '16px', padding: '16px 20px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{ fontSize: '22px' }}>⭐</span>
             <p style={{ margin: 0, color: '#15803d', fontSize: '14px', lineHeight: '1.5' }}>
               <strong>Tu reseña está en revisión.</strong> En cuanto la aprobemos aparecerá en el perfil público de {(() => { const r = resenasPendientes?.[0] as unknown as { compitas?: { nombre: string }[] } | null; return r?.compitas?.[0]?.nombre ?? 'tu compita' })()} . Gracias por tomarte el tiempo.
             </p>
@@ -920,7 +940,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               return (
                 <div style={{ background: 'white', border: '2px solid #E8E0D4', borderRadius: '16px', padding: '24px', marginBottom: '24px' }}>
                   <h3 style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '15px', color: '#1A0A3C', margin: '0 0 14px' }}>
-                    📋 Registro de novedades
+                    Registro de novedades
                   </h3>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     {[...novedades].reverse().map((r) => {
@@ -968,7 +988,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       {/* Actualiza la página cuando cambia el estado de la visita */}
       {usuario && <VisitaWatcher usuarioId={targetUid} visitaActivaId={visitaActiva?.id ?? null} compitaNombre={visitaActiva?.compita?.nombre} />}
       {/* Refresca cada 15 s para mostrar cambios en llamadas y solicitudes */}
-      <AutoRefresh intervaloSeg={15} />
+      <AutoRefresh intervaloSeg={15} rapido={!!visitaActiva} reposoSeg={60} />
     </div>
   )
 }

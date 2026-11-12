@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import LlamadaIncrustada from '@/components/llamada/LlamadaIncrustada'
 
 interface Props {
   visitaId: string
@@ -60,7 +61,7 @@ export default function VideoCall({ compitaNombre, roomUrlInicial }: Props) {
       <div style={{ background: 'white', border: '2px solid #2D1464', borderRadius: '16px', overflow: 'hidden', marginBottom: '24px' }}>
         <div style={{ padding: '12px 20px', borderBottom: '2px solid #E8E0D4', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span style={{ color: '#2D1464', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '14px' }}>
-            📹 Llamada con {compitaNombre}
+            Llamada con {compitaNombre}
           </span>
           <button
             onClick={colgar}
@@ -69,11 +70,7 @@ export default function VideoCall({ compitaNombre, roomUrlInicial }: Props) {
             Colgar
           </button>
         </div>
-        <iframe
-          src={`${roomUrl}${roomUrl.includes('?') ? '&' : '?'}lang=es`}
-          allow="camera; microphone; fullscreen; speaker; display-capture"
-          style={{ width: '100%', height: '480px', border: 'none', display: 'block' }}
-        />
+        <LlamadaIncrustada roomUrl={roomUrl} />
       </div>
     )
   }
@@ -85,14 +82,14 @@ export default function VideoCall({ compitaNombre, roomUrlInicial }: Props) {
         disabled={llamandoVideo || llamandoAudio}
         style={{ background: '#2D1464', color: 'white', border: 'none', borderRadius: '9999px', padding: '10px 20px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '14px', cursor: 'pointer', opacity: (llamandoVideo || llamandoAudio) ? 0.6 : 1 }}
       >
-        {llamandoVideo ? 'Iniciando…' : '📹 Videollamada'}
+        {llamandoVideo ? 'Iniciando…' : 'Videollamada'}
       </button>
       <button
         onClick={() => iniciarLlamada(true)}
         disabled={llamandoVideo || llamandoAudio}
         style={{ background: 'white', color: '#2D1464', border: '2px solid #2D1464', borderRadius: '9999px', padding: '10px 20px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '14px', cursor: 'pointer', opacity: (llamandoVideo || llamandoAudio) ? 0.6 : 1 }}
       >
-        {llamandoAudio ? 'Iniciando…' : '📞 Solo audio'}
+        {llamandoAudio ? 'Iniciando…' : 'Solo audio'}
       </button>
     </div>
   )

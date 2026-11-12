@@ -11,6 +11,8 @@ interface SolicitudInfo {
   compita_nombre: string
   compita_foto: string | null
   estado: string
+  nuevo_flujo?: boolean
+  solicitud_id?: string
 }
 
 function generarSlots(): { diaLabel: string; slots: Slot[] }[] {
@@ -85,6 +87,17 @@ export default function ReagendarPage({ params }: { params: Promise<{ token: str
     })
   }
 
+  // Entrevista agendada con horas libres: se suelta la hora y se elige otra entre las libres del compita.
+  async function cambiarHora() {
+    setEnviando(true); setErrorEnvio('')
+    try {
+      const res = await fetch('/api/solicitud/reagendar-cliente', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }) })
+      const data = await res.json()
+      if (data.ok) window.location.href = `/solicitar/hora?solicitud=${encodeURIComponent(data.data.solicitud_id)}`
+      else setErrorEnvio(data.error ?? 'No pudimos cambiar la hora.')
+    } catch { setErrorEnvio('Error de conexión.') } finally { setEnviando(false) }
+  }
+
   async function enviar() {
     if (slotsElegidos.length === 0) {
       setErrorEnvio('Elige al menos un horario.')
@@ -119,6 +132,19 @@ export default function ReagendarPage({ params }: { params: Promise<{ token: str
     )
   }
 
+  if (info?.nuevo_flujo) {
+    return (
+      <div style={{ minHeight: '100vh', background: '#FDFAF6', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', fontFamily: 'Inter, sans-serif' }}>
+        <div style={{ background: 'white', border: '2px solid #E8E0D4', borderRadius: '24px', padding: '36px 28px', maxWidth: '480px', width: '100%', textAlign: 'center' }}>
+          <h1 style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontSize: '22px', color: '#1A0A3C', margin: '0 0 10px' }}>¿Necesitas cambiar la hora?</h1>
+          <p style={{ color: '#4A3B6B', fontSize: '15px', lineHeight: 1.6, margin: '0 0 20px' }}>Soltamos la hora actual con {info.compita_nombre} y eliges otra de sus horas libres. Le avisamos a {info.compita_nombre}.</p>
+          {errorEnvio && <p role="alert" style={{ color: '#DC2626', fontSize: '14px', fontWeight: 700, margin: '0 0 12px' }}>{errorEnvio}</p>}
+          <button onClick={cambiarHora} disabled={enviando} style={{ width: '100%', minHeight: '52px', background: '#FF6B2B', color: 'white', border: 'none', borderRadius: '9999px', fontWeight: 800, fontSize: '16px', cursor: enviando ? 'not-allowed' : 'pointer', opacity: enviando ? 0.6 : 1 }}>{enviando ? 'Un momento…' : 'Cambiar la hora'}</button>
+        </div>
+      </div>
+    )
+  }
+
   if (error) {
     return (
       <div style={{ minHeight: '100vh', background: '#FDFAF6', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
@@ -134,7 +160,6 @@ export default function ReagendarPage({ params }: { params: Promise<{ token: str
     return (
       <div style={{ minHeight: '100vh', background: '#FDFAF6', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
         <div style={{ background: 'white', border: '2px solid #E8E0D4', borderRadius: '24px', padding: '40px 32px', maxWidth: '480px', width: '100%', textAlign: 'center' }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px' }}>🗓️</div>
           <h2 style={{ color: '#1A0A3C', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '22px', marginBottom: '12px' }}>
             ¡Horarios enviados!
           </h2>
@@ -164,7 +189,7 @@ export default function ReagendarPage({ params }: { params: Promise<{ token: str
             Elige hasta 3 horarios. {info?.compita_nombre} confirmará el que mejor le quede.
           </p>
           <p style={{ color: '#9B8AB8', fontFamily: 'Inter, sans-serif', fontSize: '12px', margin: 0 }}>
-            🕐 Horarios en hora de Venezuela (UTC−4) — ahora son las {new Date().toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Caracas' })} VET
+            Horarios en hora de Venezuela (UTC−4) — ahora son las {new Date().toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Caracas' })} VET
           </p>
         </div>
 
@@ -195,7 +220,7 @@ export default function ReagendarPage({ params }: { params: Promise<{ token: str
                 }}
               >
                 <span style={{ textTransform: 'capitalize' }}>
-                  {tieneElegido ? '✅ ' : ''}{diaLabel}
+                  {diaLabel}
                 </span>
                 <span style={{ color: '#9B8AB8', fontSize: '12px', fontWeight: 400 }}>
                   {abierto ? '▲' : '▼'}

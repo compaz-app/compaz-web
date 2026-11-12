@@ -3,16 +3,25 @@ import { NextRequest } from 'next/server'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { getClienteActivo } from '@/lib/auth'
 import { crearSolicitud } from '@/lib/solicitudes'
-import { sendTelegramMessage, makeInlineKeyboard } from '@/lib/telegram'
-import { sendSolicitudCompita } from '@/lib/resend'
-import { ok, err, unauthorized, serverError } from '@/lib/api'
+import { ok, err, unauthorized, serverError, errEspera } from '@/lib/api'
 
 import { esc } from '@/lib/html'
-import { formatSlotVE, esSlotFuturo } from '@/lib/format'
+import { esSlotFuturo } from '@/lib/format'
 import { avisarAdmin } from '@/lib/telegram'
-import { qRol } from '@/lib/links'
+import { alertaAdmin } from '@/lib/alertas-admin'
+import { detectarContacto, reportarContactoEnTexto } from '@/lib/chat-moderacion'
+import { notificar } from '@/lib/avisos'
+import { registrarEvento } from '@/lib/eventos'
+import { fotoClienteVigente } from '@/lib/fotos-privadas'
+import { compitaEnPausa } from '@/lib/cancelaciones'
+import { explicarEspera } from '@/lib/esperas'
+import { parBloqueado } from '@/lib/bloqueos-compita'
+import { personaPausada } from '@/lib/pausas'
+import { validarSolicitudNueva, mensajeDeSolicitud, type SolicitudNueva } from '@/lib/validar-solicitud'
 
-const MENSAJES_NEGOCIO = ['Límite de', 'Ya tienes una solicitud']
+const MENSAJES_NEGOCIO = ['Límite de', 'Ya tienes una solicitud', 'Este compita no está disponible']
+
+const MAX_SOLICITUDES_DIA = 5
 
 export async function POST(req: NextRequest) {
   const user = await getClienteActivo()
@@ -24,30 +33,47 @@ export async function POST(req: NextRequest) {
     sobre_cliente?: string | null
     slots_propuestos?: unknown
     franja_horaria?: string
-  } | null
+  } & Record<string, unknown> | null
   if (!body) return err('Solicitud inválida')
 
   const compita_id = body.compita_id
-  const mensaje = typeof body.mensaje === 'string' ? body.mensaje.trim() : ''
-  const sobre_cliente = typeof body.sobre_cliente === 'string' ? body.sobre_cliente.trim() : null
+  // Contrato NUEVO (formulario del rediseño): el cuerpo trae `tipo`. Sin `tipo`, contrato anterior sin cambios.
+  let nueva: SolicitudNueva | null = null
+  if (body.tipo !== undefined) {
+    const v = validarSolicitudNueva(body)
+    if (!v.ok) return err(v.error)
+    nueva = v.valor
+  }
+  const mensajeOriginal = nueva ? (nueva.nota ?? '') : typeof body.mensaje === 'string' ? body.mensaje.trim() : ''
+  const sobreOriginal = typeof body.sobre_cliente === 'string' ? body.sobre_cliente.trim() : null
   const franja_horaria = typeof body.franja_horaria === 'string' ? body.franja_horaria.trim().slice(0, 200) : undefined
   const slotsRaw = body.slots_propuestos
+  // Hasta que existan las horas libres del compita (Lote 3), la entrevista y el contrato anterior siguen proponiendo
+  // 1 a 3 horarios; la contratación directa y el mandado no llevan horarios.
+  // Contrato nuevo: ninguna entrevista lleva horarios; la hora se elige después entre las libres del compita (Lote 3).
+  const necesitaSlots = !nueva
 
-  if (!compita_id || !mensaje) return err('Faltan campos requeridos')
-  if (mensaje.length > 1500) return err('El mensaje es demasiado largo (máximo 1500 caracteres)')
-  if (sobre_cliente && sobre_cliente.length > 1000) return err('La descripción del cliente es demasiado larga (máximo 1000 caracteres)')
-  if (!Array.isArray(slotsRaw) || slotsRaw.length === 0 || slotsRaw.length > 3) {
+  if (!compita_id || (!nueva && !mensajeOriginal)) return err('Faltan campos requeridos')
+  if (mensajeOriginal.length > 1500) return err('El mensaje es demasiado largo (máximo 1500 caracteres)')
+  if (sobreOriginal && sobreOriginal.length > 1000) return err('La descripción del cliente es demasiado larga (máximo 1000 caracteres)')
+  if (necesitaSlots && (!Array.isArray(slotsRaw) || slotsRaw.length === 0 || slotsRaw.length > 3)) {
     return err('Debes proponer entre 1 y 3 horarios')
   }
-  if (!slotsRaw.every((s) => esSlotFuturo(s, 0))) return err('Todos los horarios deben ser válidos y estar en el futuro')
-  if ((slotsRaw as string[]).some((s) => new Date(s).getTime() > Date.now() + 60 * 86400_000)) return err('Los horarios deben estar dentro de los próximos 60 días')
-  const slots_propuestos = [...new Set((slotsRaw as string[]).map((s) => new Date(s).toISOString()))]
+  if (necesitaSlots && !(slotsRaw as unknown[]).every((s) => esSlotFuturo(s, 0))) return err('Todos los horarios deben ser válidos y estar en el futuro')
+  if (necesitaSlots && (slotsRaw as string[]).some((s) => new Date(s).getTime() > Date.now() + 60 * 86400_000)) return err('Los horarios deben estar dentro de los próximos 60 días')
+  const slots_propuestos = necesitaSlots ? [...new Set((slotsRaw as string[]).map((s) => new Date(s).toISOString()))] : []
+
+  // El compita nunca debe recibir teléfonos ni correos del cliente: se censuran igual que en el chat.
+  const mensajeCensurado = detectarContacto(mensajeOriginal)
+  const sobreCensurado = sobreOriginal ? detectarContacto(sobreOriginal) : null
+  const mensaje = nueva ? mensajeDeSolicitud(nueva, nueva.nota ? mensajeCensurado.textoCensurado : null) : mensajeCensurado.textoCensurado
+  const sobre_cliente = sobreCensurado ? sobreCensurado.textoCensurado : null
 
   // Traer datos del cliente y del compita
   const admin = createAdminSupabase()
   const [{ data: cliente }, { data: compita }] = await Promise.all([
     admin.from('usuarios').select('nombre, email, plan').eq('id', user.id).single(),
-    admin.from('compitas').select('nombre, email, telegram_chat_id, estado, verificado').eq('id', compita_id).single(),
+    admin.from('compitas').select('nombre, email, telegram_chat_id, estado, verificado, cmc_permite').eq('id', compita_id).single(),
   ])
 
   if (!compita) return err('Compita no encontrada', 404)
@@ -55,30 +81,44 @@ export async function POST(req: NextRequest) {
 
   // Rate limit: máximo 5 solicitudes por usuario en las últimas 24 horas
   const hace24h = new Date(Date.now() - 24 * 60 * 60_000).toISOString()
-  const { count: solicitudesRecientes } = await admin
+  const { data: recientes } = await admin
     .from('solicitudes')
-    .select('id', { count: 'exact', head: true })
+    .select('created_at')
     .eq('cliente_id', user.id)
     .gte('created_at', hace24h)
-  if ((solicitudesRecientes ?? 0) >= 5) {
-    return err('Has enviado demasiadas solicitudes hoy. Espera 24 horas antes de enviar otra.', 429)
+    .order('created_at', { ascending: true })
+  if ((recientes ?? []).length >= MAX_SOLICITUDES_DIA) {
+    // Se libera un cupo cuando la más antigua cumple 24 horas.
+    return errEspera(explicarEspera('solicitudes_dia', { desde: (recientes as { created_at: string }[])[0].created_at, duracionMs: 24 * 3600_000, usados: (recientes ?? []).length }))
   }
   if ((cliente as { plan: string | null }).plan === 'bloqueado') {
     return err('Tu cuenta ha sido suspendida. Escríbenos a hola@micompaz.com para más información.', 403)
   }
-  if ((compita as { estado: string; verificado: boolean }).estado !== 'activo' || !(compita as { estado: string; verificado: boolean }).verificado) {
+  const disp = compita as { estado: string; verificado: boolean; cmc_permite: boolean | null }
+  if (disp.estado !== 'activo' || !disp.verificado || disp.cmc_permite === false) {
     return err('Este compita no está disponible', 400)
   }
+  // Pausado por cancelaciones tardías sin justificar: no recibe solicitudes nuevas hasta que el equipo lo resuelva.
+  if (await compitaEnPausa(compita_id)) return err('Este compita no está disponible', 400)
+  if (await personaPausada('compita', compita_id)) return err('Este compita no está disponible', 400) // en pausa por contactos: sin dar detalles
+  if (await personaPausada('cliente', user.id)) return err('Tu cuenta está en pausa: por ahora no puedes enviar solicitudes. El equipo se comunica contigo por correo.', 403)
+  // El compita pidió no volver con este cliente: el cliente solo ve que no está disponible, nunca el motivo.
+  if (await parBloqueado(compita_id, user.id)) return err('Este compita no está disponible', 400)
+
+  // Foto opcional: solo si el cliente la eligió mostrar y de verdad tiene una guardada.
+  const fotoId = nueva && body.con_foto === true ? (await fotoClienteVigente(user.id))?.id ?? null : null
 
   let solicitud
   try {
     solicitud = await crearSolicitud({
+      foto_cliente_id: fotoId,
       cliente_id: user.id,
       compita_id,
       mensaje,
       sobre_cliente: sobre_cliente || null,
       slots_propuestos,
       franja_horaria,
+      ...(nueva ? { tipo: nueva.tipo, que: nueva.que, lugar_privado: nueva.lugar_privado, personas_en_lugar: nueva.personas_en_lugar } : {}),
     })
   } catch (e) {
     console.error('[solicitudes] error:', e)
@@ -88,72 +128,38 @@ export async function POST(req: NextRequest) {
     return MENSAJES_NEGOCIO.some((m) => msg.startsWith(m)) ? err(msg) : err('No pudimos crear la solicitud. Intenta de nuevo.', 500)
   }
 
-  const clienteNombre = cliente?.nombre ?? 'Un cliente'
-  const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? ''
-
-  // Construir labels y URLs firmadas de cada slot (usados en Telegram y correo)
-  const slotsConLabel = slots_propuestos.map((iso, i) => {
-    const label = new Date(iso).toLocaleString('es-VE', {
-      timeZone: 'America/Caracas',
-      weekday: 'short', day: 'numeric', month: 'short',
-      hour: '2-digit', minute: '2-digit', hour12: true,
+  if (mensajeCensurado.detectado || sobreCensurado?.detectado) {
+    await reportarContactoEnTexto({
+      origen: 'cliente', donde: 'la solicitud de entrevista', quien: cliente?.nombre ?? 'Un cliente',
+      entidadTipo: 'cliente', entidadId: user.id,
+      textoOriginal: [mensajeCensurado.detectado ? mensajeOriginal : '', sobreCensurado?.detectado ? sobreOriginal : ''].filter(Boolean).join(' | '),
     })
-    const url = `${SITE_URL}/api/solicitud/responder?token=${solicitud.token_respuesta}&slot=${i}&${qRol(solicitud.token_respuesta, 'compita')}`
-    return { iso, i, label, url }
-  })
-  const urlRechazar = `${SITE_URL}/api/solicitud/responder?token=${solicitud.token_respuesta}&slot=-1&${qRol(solicitud.token_respuesta, 'compita')}`
-
-  // Correo al compita (funciona aunque Telegram no esté activo)
-  if (compita.email) {
-    try {
-      await sendSolicitudCompita(
-        compita.email,
-        compita.nombre,
-        clienteNombre,
-        slotsConLabel.map(({ label, url }) => ({ label, url })),
-        urlRechazar,
-      )
-    } catch (e) { console.error('Email solicitud compita:', e) }
   }
 
-  // Telegram: notificación con botones inline para respuesta rápida
-  if (!compita.telegram_chat_id) {
-    await avisarAdmin([
-      `⚠️ <b>Solicitud sin Telegram</b>`, ``,
-      `<b>${esc(clienteNombre)}</b> solicitó a <b>${esc(compita.nombre)}</b> pero no tiene Telegram vinculado.`,
-      compita.email ? `Se le notificó por correo.` : `No tiene correo registrado. Contáctala directamente.`,
+  const clienteNombre = cliente?.nombre ?? 'Un cliente'
+  await registrarEvento({
+    entidad: 'solicitud', entidadId: solicitud.id, tipo: 'solicitud_creada', actor: `cliente:${user.id}`,
+    datos: { compita_id, horarios: slots_propuestos.length, ...(nueva ? { tipo: nueva.tipo, lugar_privado: nueva.lugar_privado } : {}) },
+  })
+
+  // Telegram primero, con registro. Si no se pudo entregar, el correo de respaldo sale en ese momento.
+  // (Antes el correo y Telegram salían a la vez y un fallo de Telegram no quedaba registrado.)
+  const pedido = {
+    plantilla: 'solicitud_nueva' as const,
+    destinatario: { tipo: 'compita' as const, id: compita_id },
+    variables: { solicitudId: solicitud.id },
+    entidad: 'solicitud' as const, entidadId: solicitud.id, paso: 5,
+    plazoAccionMin: 360, // si en 6 h no responde, la escalera (paso 1.5) manda el respaldo
+  }
+  const porTelegram = await notificar({ ...pedido, canal: 'telegram' })
+  if (!porTelegram.ok) {
+    const porCorreo = compita.email ? await notificar({ ...pedido, canal: 'correo', respaldoDe: porTelegram.avisoId }) : null
+    const sinTelegram = porTelegram.error === 'sin Telegram vinculado'
+    await alertaAdmin('tarea', [
+      sinTelegram ? `⚠️ <b>Solicitud sin Telegram</b>` : `🚨 <b>No se pudo notificar por Telegram</b>`, ``,
+      `<b>${esc(clienteNombre)}</b> solicitó a <b>${esc(compita.nombre)}</b>${sinTelegram ? ' pero no tiene Telegram vinculado.' : ', y el aviso por Telegram falló.'}`,
+      porCorreo?.ok ? `Se le notificó por correo.` : compita.email ? `Tampoco se pudo por correo. Contáctala directamente.` : `No tiene correo registrado. Contáctala directamente.`,
     ].join('\n'))
-  } else {
-    const slotLabels = slotsConLabel.map(({ i, label }) => `${['1️⃣', '2️⃣', '3️⃣'][i]} ${label}`).join('\n')
-    const partesSobre: string[] = []
-    if (sobre_cliente?.trim()) partesSobre.push(`<b>Sobre el cliente:</b>`, esc(sobre_cliente.trim()), ``)
-
-    const mensajeTelegram = [
-      `🔔 <b>Nueva solicitud de entrevista</b>`,
-      ``,
-      `<b>${esc(clienteNombre)}</b> quiere conocerte.`,
-      ``,
-      ...partesSobre,
-      `<b>Sobre su familiar:</b>`,
-      esc(mensaje),
-      ``,
-      `<b>Horarios propuestos (llamada de 20 min):</b>`,
-      slotLabels,
-      ``,
-      `👇 <b>Toca el botón del horario que te funcione para confirmar.</b>`,
-    ].join('\n')
-
-    const teclado = makeInlineKeyboard([
-      ...slotsConLabel.map(({ i, label }) => [{ text: `✅ ${label}`, callback_data: `slot:${i}:${solicitud.token_respuesta}` }]),
-      [{ text: '❌ No puedo atender', callback_data: `rechazar:${solicitud.token_respuesta}` }],
-    ])
-
-    try {
-      await sendTelegramMessage(compita.telegram_chat_id, mensajeTelegram, teclado)
-    } catch (e) {
-      console.error('Error Telegram solicitud:', e)
-      await avisarAdmin(`🚨 <b>Telegram falló para solicitud</b>\n\n<b>${esc(clienteNombre)}</b> → <b>${esc(compita.nombre)}</b>. ${compita.email ? 'Se le notificó por correo.' : 'Sin correo registrado.'}`)
-    }
   }
 
   return ok({ solicitud_id: solicitud.id, estado: solicitud.estado })

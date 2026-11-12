@@ -11,7 +11,7 @@ export async function emailAdminPago(asunto: string, detalle: string): Promise<v
       html: `<div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px">
         <h2 style="color:#2D1464;font-size:20px">${esc(asunto)}</h2>
         <p style="color:#4A3B6B;font-size:16px;line-height:1.6">${esc(detalle)}</p>
-        <a href="${SITE_URL}/admin?tab=clientes" style="display:inline-block;background:#FF6B2B;color:white;padding:12px 24px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:14px">Abrir el panel →</a></div>`,
+        <a href="${SITE_URL}/panel?sec=bandeja" style="display:inline-block;background:#FF6B2B;color:white;padding:12px 24px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:14px">Abrir el panel →</a></div>`,
     })
   } catch (e) { console.error('[emailAdminPago] falló:', e) }
 }

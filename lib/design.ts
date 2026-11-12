@@ -35,6 +35,20 @@ export const colors = {
   amarillo: '#D97706',
   amarilloClaro: '#FEF3C7',
 
+  // Tonos que el sistema ya usaba por todas partes (antes escritos a mano). Son los DESTINOS de la migración: al tocar una pantalla vieja se
+  // cambia el color suelto por el token más cercano; no se agregan colores nuevos sin una razón de diseño.
+  borde: '#E8E0D4',            // bordes y divisores suaves
+  lavandaSutil: '#9B8AB8',     // texto secundario y estados apagados
+  bordeLavanda: '#D4C9E8',     // bordes sobre fondo lavanda
+  fondoLavanda: '#F5F0FF',     // fondos de apoyo (avisos informativos)
+  violeta: '#7C4DFF',          // acento secundario
+  verdeVivo: '#22C55E',        // éxito en barras y puntos
+  verdeOscuro: '#15803D',      // texto de éxito sobre fondo claro
+  rojoOscuro: '#991B1B',       // texto de peligro sobre fondo claro
+  ambarOscuro: '#92400E',      // texto de advertencia sobre fondo claro
+  naranjaOscuro: '#C84B0E',    // texto naranja con buen contraste
+  naranjaClaro: '#FFF3E8',     // fondo de apoyo naranja
+
   // Neutros
   blanco: '#FFFFFF',
   negro: '#000000',

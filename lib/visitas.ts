@@ -2,8 +2,12 @@
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { PLANES, CICLO_PAGO_DIAS, type PlanId } from '@/lib/planes'
 import { calcularCreditos, type PaqueteCredito } from '@/lib/creditos'
+import { fichaCompleta } from '@/lib/ficha'
+import { visitasConsumidasPorCancelacion } from '@/lib/cancelaciones'
+import { parBloqueado } from '@/lib/bloqueos-compita'
+import { personaPausada } from '@/lib/pausas'
 
-export type MotivoNuevaVisita = 'sin_compita' | 'compita_no_disponible' | 'cliente_bloqueado' | 'visita_activa' | 'sin_visitas_previas' | 'limite_plan' | 'error'
+export type MotivoNuevaVisita = 'sin_compita' | 'compita_no_disponible' | 'cliente_bloqueado' | 'cuenta_pausada' | 'visita_activa' | 'sin_visitas_previas' | 'ficha_incompleta' | 'limite_plan' | 'error'
 export type ResultadoNuevaVisita =
   | { ok: true; visitaId: string; compitaNombre: string; clienteNombre: string; numero: number; telegramChatId: string | null; cupo: CupoPlan | null }
   | { ok: false; motivo: 'limite_plan'; mensaje: string; clienteNombre: string; compitaNombre: string; cupo: CupoPlan }
@@ -13,9 +17,11 @@ const MENSAJES: Record<MotivoNuevaVisita, string> = {
   sin_compita: 'Todavía no tienes una compita asignada.',
   compita_no_disponible: 'Tu compita no está disponible en este momento. Escríbenos a hola@micompaz.com.',
   cliente_bloqueado: 'Tu cuenta está suspendida. Escríbenos a hola@micompaz.com.',
+  cuenta_pausada: 'Tu cuenta está en pausa: por ahora no puedes agendar visitas. El equipo se comunica contigo por correo.',
   visita_activa: 'Ya tienes una visita en coordinación o programada. Termínala o reagéndala antes de agendar otra.',
   limite_plan: 'Ya usaste todas las visitas de tu plan. Escríbenos a hola@micompaz.com para renovar o ampliar tu plan.',
   sin_visitas_previas: 'Tu primera visita se coordina al contratar. Escríbenos si no la ves en tu portal.',
+  ficha_incompleta: 'Antes de agendar completa la ficha de tu familiar y acepta los términos. La encuentras en tu portal.',
   error: 'No pudimos crear la visita. Intenta de nuevo.',
 }
 const falla = (motivo: Exclude<MotivoNuevaVisita, 'limite_plan'>): ResultadoNuevaVisita => ({ ok: false, motivo, mensaje: MENSAJES[motivo] })
@@ -39,48 +45,75 @@ const LIMITES_LEGADO: Record<string, { visitas: number; ciclo: 'unico' | '30d' }
  * Sin pagos registrados cae al cupo antiguo por plan_contratado/plan_inicio. Sin ninguno de los dos: null (sin límite).
  */
 export async function cupoDelPlan(usuarioId: string): Promise<CupoPlan | null> {
+  return (await cuposDelPlan([usuarioId])).get(usuarioId) ?? null
+}
+
+/**
+ * El cupo de VARIOS clientes con una cantidad fija de consultas (pagos, visitas, cancelaciones consumidas y plan antiguo), no una tanda por cliente.
+ * Es la única implementación: cupoDelPlan de uno solo la usa con un lote de uno. Sin pagos registrados ni plan antiguo, el cliente queda en null.
+ */
+export async function cuposDelPlan(ids: string[]): Promise<Map<string, CupoPlan | null>> {
+  const salida = new Map<string, CupoPlan | null>()
+  if (ids.length === 0) return salida
   const supabase = createAdminSupabase()
+  const [pagosR, visitasR, consumidasR, usuariosR] = await Promise.all([
+    supabase.from('pagos_plan').select('id, usuario_id, tipo, plan, visitas, inicio, vence, estado').in('usuario_id', ids),
+    supabase.from('visitas').select('usuario_id, created_at').in('usuario_id', ids),
+    supabase.from('cancelaciones').select('usuario_id, visita_creada_en').in('usuario_id', ids).eq('cuenta_como_usada', true).eq('justificada', false),
+    supabase.from('usuarios').select('id, plan_contratado, plan_inicio').in('id', ids),
+  ])
+  // Un lote que llega al tope de filas de la base puede venir cortado: se calcula cliente por cliente (M6).
+  if (ids.length > 1 && [pagosR.data, visitasR.data, consumidasR.data].some((d) => ((d ?? []) as unknown[]).length >= 1000)) {
+    for (const id of ids) for (const [k, v] of await cuposDelPlan([id])) salida.set(k, v)
+    return salida
+  }
+  if (pagosR.error) console.error('[cupoDelPlan] tabla de pagos no disponible (¿migración pendiente?):', pagosR.error.message)
+  if (consumidasR.error) console.error('[cancelaciones] consumidas:', consumidasR.error.message)
+  const porUsuario = <T extends { usuario_id: string }>(filas: T[] | null | undefined) => {
+    const m = new Map<string, T[]>(); for (const f of filas ?? []) { const l = m.get(f.usuario_id); if (l) l.push(f); else m.set(f.usuario_id, [f]) } return m
+  }
+  const pagos = pagosR.error ? new Map<string, never[]>() : porUsuario((pagosR.data ?? []) as { usuario_id: string }[])
+  const visitas = porUsuario((visitasR.data ?? []) as { usuario_id: string; created_at: string }[])
+  const consumidas = consumidasR.error ? new Map<string, never[]>() : porUsuario((consumidasR.data ?? []) as { usuario_id: string; visita_creada_en: string | null }[])
+  const filasU = new Map(((usuariosR.data ?? []) as { id: string; plan_contratado: string | null; plan_inicio: string | null }[]).map((u) => [u.id, u]))
 
-  const { data: pagos, error: eP } = await supabase
-    .from('pagos_plan').select('id, tipo, plan, visitas, inicio, vence, estado').eq('usuario_id', usuarioId)
-  // Con pagos registrados (aunque estén anulados) manda el sistema de paquetes: el cupo antiguo no se reactiva.
-  if (!eP && (pagos ?? []).length > 0) {
-    const { data: vs } = await supabase.from('visitas').select('created_at').eq('usuario_id', usuarioId)
-    const todos = pagos as PaqueteCredito[]
-    const r = calcularCreditos(todos, (vs ?? []).map((v) => v.created_at as string))
-    const ultimoPlan = todos.filter((p) => p.tipo === 'plan' && p.estado !== 'anulado').sort((a, b) => (a.inicio < b.inicio ? 1 : -1))[0]
-    const plan = (ultimoPlan?.plan as PlanId | undefined) ?? null
-    const hayActivos = todos.some((p) => p.estado !== 'anulado')
-    return {
-      plan, planNombre: plan ? PLANES[plan].nombre : hayActivos ? 'Visita extra' : 'Sin plan activo',
-      limite: r.total, usadas: r.usadas, restantes: r.disponibles,
-      renueva: ultimoPlan && plan !== 'carta' ? new Date(new Date(ultimoPlan.inicio).getTime() + CICLO_PAGO_DIAS * 86400_000).toISOString() : null,
-      vence: r.proximoVencimiento, modo: 'creditos',
+  for (const id of ids) {
+    const propios = (pagos.get(id) ?? []) as unknown as PaqueteCredito[]
+    // Con pagos registrados (aunque estén anulados) manda el sistema de paquetes: el cupo antiguo no se reactiva.
+    if (propios.length > 0) {
+      const creadas = (visitas.get(id) ?? []).map((v) => v.created_at)
+      // Las visitas canceladas con poco aviso cuentan como usadas aunque la visita ya no exista.
+      const usadasPorCancelacion = ((consumidas.get(id) ?? []) as { visita_creada_en: string | null }[]).map((f) => f.visita_creada_en).filter((x): x is string => !!x)
+      const r = calcularCreditos(propios, [...creadas, ...usadasPorCancelacion])
+      const ultimoPlan = propios.filter((p) => p.tipo === 'plan' && p.estado !== 'anulado').sort((a, b) => (a.inicio < b.inicio ? 1 : -1))[0]
+      const plan = (ultimoPlan?.plan as PlanId | undefined) ?? null
+      const hayActivos = propios.some((p) => p.estado !== 'anulado')
+      salida.set(id, {
+        plan, planNombre: plan ? PLANES[plan].nombre : hayActivos ? 'Visita extra' : 'Sin plan activo',
+        limite: r.total, usadas: r.usadas, restantes: r.disponibles,
+        renueva: ultimoPlan && plan !== 'carta' ? new Date(new Date(ultimoPlan.inicio).getTime() + CICLO_PAGO_DIAS * 86400_000).toISOString() : null,
+        vence: r.proximoVencimiento, modo: 'creditos',
+      })
+      continue
     }
+    // Cupo antiguo (cuentas anteriores a los pagos registrados)
+    if (usuariosR.error) { console.error('[cupoDelPlan] columnas de plan no disponibles:', usuariosR.error.message); salida.set(id, null); continue }
+    const u = filasU.get(id)
+    const lim = u?.plan_contratado ? LIMITES_LEGADO[u.plan_contratado] : undefined
+    if (!u?.plan_contratado || !u.plan_inicio || !lim) { salida.set(id, null); continue }
+    const inicio = new Date(u.plan_inicio).getTime()
+    const CICLO = 30 * 86400_000
+    const k = lim.ciclo === '30d' ? Math.max(0, Math.floor((Date.now() - inicio) / CICLO)) : 0
+    const desde = new Date(lim.ciclo === '30d' ? inicio + k * CICLO : new Date(u.plan_inicio).getTime()).getTime()
+    const renueva = lim.ciclo === '30d' ? new Date(inicio + (k + 1) * CICLO).toISOString() : null
+    const usadas = (visitas.get(id) ?? []).filter((v) => new Date(v.created_at).getTime() >= desde).length
+    const plan = u.plan_contratado as PlanId
+    salida.set(id, {
+      plan, planNombre: PLANES[plan]?.nombre ?? u.plan_contratado, limite: lim.visitas, usadas,
+      restantes: Math.max(0, lim.visitas - usadas), renueva, vence: renueva, modo: 'legado',
+    })
   }
-  if (eP) console.error('[cupoDelPlan] tabla de pagos no disponible (¿migración pendiente?):', eP.message)
-
-  // Cupo antiguo (cuentas anteriores a los pagos registrados)
-  const { data: u, error } = await supabase
-    .from('usuarios').select('plan_contratado, plan_inicio').eq('id', usuarioId).maybeSingle()
-  if (error) { console.error('[cupoDelPlan] columnas de plan no disponibles:', error.message); return null }
-  const lim = u?.plan_contratado ? LIMITES_LEGADO[u.plan_contratado] : undefined
-  if (!u?.plan_contratado || !u.plan_inicio || !lim) return null
-
-  const inicio = new Date(u.plan_inicio).getTime()
-  const CICLO = 30 * 86400_000
-  const k = lim.ciclo === '30d' ? Math.max(0, Math.floor((Date.now() - inicio) / CICLO)) : 0
-  const desde = new Date(inicio + k * CICLO).toISOString()
-  const renueva = lim.ciclo === '30d' ? new Date(inicio + (k + 1) * CICLO).toISOString() : null
-  const { count } = await supabase
-    .from('visitas').select('id', { count: 'exact', head: true })
-    .eq('usuario_id', usuarioId).gte('created_at', lim.ciclo === '30d' ? desde : u.plan_inicio)
-  const usadas = count ?? 0
-  const plan = u.plan_contratado as PlanId
-  return {
-    plan, planNombre: PLANES[plan]?.nombre ?? u.plan_contratado, limite: lim.visitas, usadas,
-    restantes: Math.max(0, lim.visitas - usadas), renueva, vence: renueva, modo: 'legado',
-  }
+  return salida
 }
 
 /**
@@ -93,13 +126,17 @@ export async function crearSiguienteVisita(usuarioId: string): Promise<Resultado
   const supabase = createAdminSupabase()
 
   const { data: usuario } = await supabase
-    .from('usuarios').select('nombre, plan, compita_id').eq('id', usuarioId).maybeSingle()
+    .from('usuarios').select('nombre, plan, compita_id, familiar_nombre, telefono, terminos_aceptados_en').eq('id', usuarioId).maybeSingle()
   if (!usuario?.compita_id) return falla('sin_compita')
   if (usuario.plan === 'bloqueado') return falla('cliente_bloqueado')
+  if (await personaPausada('cliente', usuarioId)) return falla('cuenta_pausada')
+  // Sin ficha completa y términos aceptados no se agenda (la validación vive aquí, no solo en la pantalla).
+  if (!fichaCompleta(usuario)) return falla('ficha_incompleta')
 
   const { data: compita } = await supabase
     .from('compitas').select('nombre, estado, verificado, telegram_chat_id').eq('id', usuario.compita_id).maybeSingle()
   if (!compita || compita.estado !== 'activo' || !compita.verificado) return falla('compita_no_disponible')
+  if (await parBloqueado(usuario.compita_id, usuarioId)) return falla('compita_no_disponible')
 
   const { data: visitas, error: eV } = await supabase
     .from('visitas').select('id, estado').eq('usuario_id', usuarioId)

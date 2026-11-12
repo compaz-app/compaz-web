@@ -1,3 +1,4 @@
+import { explicarEspera } from '@/lib/esperas'
 import { NextRequest } from 'next/server'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { getClienteActivo } from '@/lib/auth'
@@ -5,7 +6,7 @@ import { sendTelegramMessage } from '@/lib/telegram'
 import { sendEmail, SITE_URL as SITE } from '@/lib/email'
 import { esc } from '@/lib/html'
 import { randomBytes } from 'crypto'
-import { ok, err, unauthorized, serverError } from '@/lib/api'
+import { ok, err, unauthorized, serverError, errEspera } from '@/lib/api'
 
 
 export async function POST(req: NextRequest) {
@@ -36,14 +37,14 @@ export async function POST(req: NextRequest) {
   const hace24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
   const { data: tokenReciente } = await admin
     .from('action_tokens')
-    .select('id')
+    .select('id, created_at')
     .eq('cliente_id', user.id)
     .eq('compita_id', compita_id)
     .gte('created_at', hace24h)
     .limit(1)
     .maybeSingle()
 
-  if (tokenReciente) return err('Ya enviaste una solicitud para esta Compita recientemente', 429)
+  if (tokenReciente) return errEspera(explicarEspera('solicitud_mismo_compita', { desde: (tokenReciente as { created_at: string }).created_at, duracionMs: 24 * 3600_000 }))
 
   // Generar token de asignación rápida (7 días, un solo uso)
   const siteUrl = SITE

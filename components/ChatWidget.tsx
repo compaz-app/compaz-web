@@ -253,7 +253,7 @@ export default function ChatWidget() {
             }}
             onClick={openChat}
           >
-            ¿Tienes dudas sobre Compaz? Puedo ayudarte 👋
+            ¿Tienes dudas sobre Compaz? Puedo ayudarte
             <button
               onClick={(e) => { e.stopPropagation(); dismissBubble(); }}
               aria-label="Cerrar"

@@ -1,12 +1,15 @@
 // ══════════════════════════════════════════════════════════════════════════════
 // Compaz — Lógica de negocio para solicitudes de entrevista
 // ══════════════════════════════════════════════════════════════════════════════
+import { registrarAccion } from '@/lib/avisos'
+import { registrarEvento } from '@/lib/eventos'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import type { Solicitud, SolicitudEstado } from '@/types'
 
 export type { Solicitud, SolicitudEstado }
 
 const MAX_SOLICITUDES_ACTIVAS = 3
+export const COMPITA_NO_DISPONIBLE = 'Este compita no está disponible'
 const DIAS_EXPIRACION = 30
 
 // ── Helpers de mapping ────────────────────────────────────────────────────────
@@ -118,6 +121,13 @@ export interface CrearSolicitudInput {
   sobre_cliente?: string | null
   slots_propuestos: string[]  // hasta 3 ISO datetimes
   franja_horaria?: string
+  /** Formulario nuevo (rediseño). Si no vienen, la fila se crea exactamente como antes. */
+  tipo?: 'entrevista' | 'directa' | 'mandado'
+  que?: string
+  lugar_privado?: boolean
+  personas_en_lugar?: string[] | null
+  /** El cliente eligió mostrar su foto al compita mientras decide (id de la foto vigente al crear). */
+  foto_cliente_id?: string | null
 }
 
 /**
@@ -126,6 +136,14 @@ export interface CrearSolicitudInput {
  */
 export async function crearSolicitud(input: CrearSolicitudInput): Promise<Solicitud> {
   const supabase = createAdminSupabase()
+
+  // Autorización en el backend: solo Compitas activas, verificadas y con permiso del CMC
+  // (cmc_permite NULL = Compita anterior al CMC). Cubre cualquier ruta que cree solicitudes.
+  const { data: compita } = await supabase
+    .from('compitas').select('estado, verificado, cmc_permite').eq('id', input.compita_id).maybeSingle()
+  if (!compita || compita.estado !== 'activo' || !compita.verificado || compita.cmc_permite === false) {
+    throw new Error(COMPITA_NO_DISPONIBLE)
+  }
 
   const activas = await getSolicitudesCliente(input.cliente_id)
   const pendientes = activas.filter((s) => s.estado === 'pendiente')
@@ -148,6 +166,8 @@ export async function crearSolicitud(input: CrearSolicitudInput): Promise<Solici
       franja_horaria: input.franja_horaria ?? null,
       estado: 'pendiente',
       recordatorio_enviado: false,
+      ...(input.tipo ? { tipo: input.tipo, que: input.que ?? null, lugar_privado: input.lugar_privado ?? null, personas_en_lugar: input.personas_en_lugar ?? null } : {}),
+      ...(input.foto_cliente_id ? { foto_cliente_id: input.foto_cliente_id } : {}),
     })
     .select(SELECT_FIELDS)
     .single()
@@ -157,8 +177,36 @@ export async function crearSolicitud(input: CrearSolicitudInput): Promise<Solici
 }
 
 export type ResultadoRespuesta =
-  | { ok: true; solicitud: Solicitud }
+  | { ok: true; solicitud: Solicitud; tipo?: string }
   | { ok: false; motivo: 'no_encontrada' | 'slot_invalido' | 'slot_pasado' | 'no_autorizada' }
+
+/**
+ * El compita acepta una contratación directa o un mandado: NO hay horario ni sala. Pasa de 'pendiente' a
+ * 'aceptada' de forma atómica (solo una vez, solo el compita dueño) y desde ahí el cliente puede pagar.
+ */
+export async function aceptarSolicitudDirecta(token: string, compitaId: string): Promise<ResultadoRespuesta> {
+  const supabase = createAdminSupabase()
+  const { data: row } = await supabase.from('solicitudes').select(`${SELECT_FIELDS}, tipo`).eq('token_respuesta', token).maybeSingle()
+  if (!row) return { ok: false, motivo: 'no_encontrada' }
+  const previa = row as Record<string, unknown>
+  if (previa.compita_id !== compitaId) return { ok: false, motivo: 'no_autorizada' }
+  if (previa.estado !== 'pendiente') return { ok: false, motivo: 'no_encontrada' } // ya respondida
+  // Una entrevista con horarios propuestos (contrato anterior) se acepta eligiendo un horario, no con este camino.
+  if (previa.tipo === 'entrevista' && Array.isArray(previa.slots_propuestos) && previa.slots_propuestos.length > 0) return { ok: false, motivo: 'no_encontrada' }
+
+  const { data: updated } = await supabase
+    .from('solicitudes')
+    .update({ estado: 'aceptada', respondido_at: new Date().toISOString() })
+    .eq('token_respuesta', token).eq('compita_id', compitaId).eq('estado', 'pendiente')
+    .in('tipo', ['directa', 'mandado', 'entrevista'])
+    .select(SELECT_FIELDS)
+    .maybeSingle()
+  if (!updated) return { ok: false, motivo: 'no_encontrada' } // no es directa, o ya la respondió otra pulsación
+  const sol = mapRow(updated as Record<string, unknown>)
+  await registrarAccion({ entidad: 'solicitud', entidadId: sol.id, paso: 5 })
+  await registrarEvento({ entidad: 'solicitud', entidadId: sol.id, tipo: 'solicitud_aceptada', actor: `compita:${sol.compita_id}`, datos: { slot: null, directa: previa.tipo !== 'entrevista' } })
+  return { ok: true, solicitud: sol, tipo: String(previa.tipo ?? 'directa') }
+}
 
 /**
  * El compita confirma un slot específico (índice 0-2) o rechaza (-1).
@@ -185,6 +233,13 @@ export async function responderSolicitud(
 
   const ahora = new Date().toISOString()
 
+  // Tras responder: la persona ya actuó (se cancelan avisos pendientes) y queda el evento. Nunca lanzan.
+  const tras = async (sol: Solicitud, tipo: 'solicitud_aceptada' | 'solicitud_rechazada'): Promise<ResultadoRespuesta> => {
+    await registrarAccion({ entidad: 'solicitud', entidadId: sol.id, paso: 5 })
+    await registrarEvento({ entidad: 'solicitud', entidadId: sol.id, tipo, actor: `compita:${sol.compita_id}`, datos: { slot: sol.slot_confirmado ?? null } })
+    return { ok: true, solicitud: sol }
+  }
+
   if (slotIndex === -1) {
     const { data: updated } = await supabase
       .from('solicitudes')
@@ -193,7 +248,7 @@ export async function responderSolicitud(
       .eq('estado', 'pendiente')
       .select(SELECT_FIELDS)
       .maybeSingle()
-    return updated ? { ok: true, solicitud: mapRow(updated as Record<string, unknown>) } : { ok: false, motivo: 'no_encontrada' }
+    return updated ? await tras(mapRow(updated as Record<string, unknown>), 'solicitud_rechazada') : { ok: false, motivo: 'no_encontrada' }
   }
 
   const slot = Number.isInteger(slotIndex) ? solicitud.slots_propuestos[slotIndex] : undefined
@@ -208,7 +263,7 @@ export async function responderSolicitud(
     .select(SELECT_FIELDS)
     .maybeSingle()
 
-  return updated ? { ok: true, solicitud: mapRow(updated as Record<string, unknown>) } : { ok: false, motivo: 'no_encontrada' }
+  return updated ? await tras(mapRow(updated as Record<string, unknown>), 'solicitud_aceptada') : { ok: false, motivo: 'no_encontrada' }
 }
 
 /** Compatibilidad: devuelve la solicitud o null. */
@@ -260,11 +315,14 @@ export async function guardarRoomUrl(solicitudId: string, roomUrl: string): Prom
 /**
  * Solicitudes listas para "¿quieres contratar?":
  * - Ambas partes confirmaron YES, o
- * - Han pasado 4h desde el slot y ninguna dijo NO (timeout: asumimos que ocurrió)
+ * - El cliente confirmó YES y el compita no respondió, 45 min después del horario (el cliente es quien decide:
+ *   antes esperaba hasta 4 h porque el compita no tocaba su botón), o
+ * - Han pasado 90 min desde el slot y ninguna parte dijo NO (timeout: asumimos que ocurrió; antes eran 4 h)
  */
 export async function getSolicitudesParaSeguimiento(): Promise<Solicitud[]> {
   const supabase = createAdminSupabase()
-  const hace4h = new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString()
+  const hace90min = new Date(Date.now() - 90 * 60 * 1000).toISOString()
+  const hace45min = new Date(Date.now() - 45 * 60 * 1000).toISOString()
 
   // Caso A: ambas confirmaron
   const { data: ambas, error: e1 } = await supabase
@@ -277,7 +335,7 @@ export async function getSolicitudesParaSeguimiento(): Promise<Solicitud[]> {
 
   if (e1) throw new Error(e1.message)
 
-  // Caso B: timeout 4h — confirmación enviada, nadie dijo NO, slot ya pasó
+  // Caso B: timeout 90 min — confirmación enviada, nadie dijo NO, slot ya pasó
   const { data: timeout, error: e2 } = await supabase
     .from('solicitudes')
     .select(SELECT_FIELDS)
@@ -287,14 +345,27 @@ export async function getSolicitudesParaSeguimiento(): Promise<Solicitud[]> {
     // PostgREST: neq excluye NULL. Se necesita "null o true" explícito.
     .or('confirmacion_cliente.is.null,confirmacion_cliente.eq.true')
     .or('confirmacion_compita.is.null,confirmacion_compita.eq.true')
-    .lte('slot_confirmado', hace4h)
+    .lte('slot_confirmado', hace90min)
 
   if (e2) throw new Error(e2.message)
 
-  // Deduplicar por id (Caso A puede solaparse con Caso B después de 4h)
+  // Caso C: el cliente confirmó que la llamada ocurrió y el compita no ha respondido (no se le espera)
+  const { data: soloCliente, error: e3 } = await supabase
+    .from('solicitudes')
+    .select(SELECT_FIELDS)
+    .in('estado', ['aceptada', 'completada'])
+    .eq('seguimiento_enviado', false)
+    .eq('confirmacion_llamada_enviada', true)
+    .eq('confirmacion_cliente', true)
+    .is('confirmacion_compita', null)
+    .lte('slot_confirmado', hace45min)
+
+  if (e3) throw new Error(e3.message)
+
+  // Deduplicar por id (los casos pueden solaparse)
   const vistos = new Set<string>()
   const resultado: Solicitud[] = []
-  for (const row of [...(ambas ?? []), ...(timeout ?? [])]) {
+  for (const row of [...(ambas ?? []), ...(soloCliente ?? []), ...(timeout ?? [])]) {
     const s = mapRow(row as Record<string, unknown>)
     if (!vistos.has(s.id)) { vistos.add(s.id); resultado.push(s) }
   }
@@ -536,4 +607,10 @@ export async function guardarSlotsReagendado(
     .maybeSingle()
   if (error) throw new Error(error.message)
   if (!data) throw new Error('La solicitud ya no admite reagendado')
+}
+
+/** La solicitud por su id (para flujos que parten de otra entidad, como una reserva de horario). */
+export async function getSolicitudPorId(id: string): Promise<Solicitud | null> {
+  const { data } = await createAdminSupabase().from('solicitudes').select(SELECT_FIELDS).eq('id', id).maybeSingle()
+  return data ? mapRow(data as Record<string, unknown>) : null
 }

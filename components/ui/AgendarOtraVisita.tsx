@@ -3,7 +3,8 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { colors } from '@/lib/design'
-import { PRECIO_HORA_EXTRA_USD, HORAS_MINIMAS_EXTRA } from '@/lib/planes'
+import { usePrecios, dolares } from '@/components/ui/usePrecios'
+import { HORAS_MINIMAS_EXTRA, etiquetaHoras } from '@/lib/planes'
 
 interface Props {
   compitaNombre: string
@@ -12,6 +13,7 @@ interface Props {
 }
 
 export default function AgendarOtraVisita({ compitaNombre, cupo }: Props) {
+  const precios = usePrecios()
   const [cargando, setCargando] = useState(false)
   const [error, setError] = useState('')
   const router = useRouter()
@@ -48,7 +50,7 @@ export default function AgendarOtraVisita({ compitaNombre, cupo }: Props) {
           {cupo.renueva ? ` Tu próximo pago corresponde desde el ${fmt(cupo.renueva)}.` : ''}
         </p>
         <p style={{ color: colors.textoSutil, fontSize: '13px', margin: 0, lineHeight: 1.5 }}>
-          ¿Solo necesitas una visita más? La visita extra cuesta ${PRECIO_HORA_EXTRA_USD} por hora, con un mínimo de {HORAS_MINIMAS_EXTRA} horas.
+          ¿Solo necesitas una visita más? La visita extra cuesta {dolares(precios?.hora)} por hora, con un mínimo de {etiquetaHoras(HORAS_MINIMAS_EXTRA)}.
         </p>
       </div>
     )

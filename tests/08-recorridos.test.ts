@@ -1,6 +1,6 @@
 /* eslint-disable */
 // Recorridos completos y encadenados: admin + compita + cliente + crons + Daily sobre la MISMA base de datos.
-import { db, net, session, limpiar, req, tgText, tgBtn, tgFoto, ultimoTg, tgPara, emailsA, cron, ahoraMas, hoyVEstr, firmaDaily, mkCompita, mkCliente } from './harness'
+import { db, net, session, limpiar, req, tgText, tgBtn, tgFoto, ultimoTg, tgPara, emailsA, cron, ahoraMas, hoyVEstr, firmaDaily, mkCompita, mkCliente, confirmarLlegada, avisosAdmin, confirmarPropuesta } from './harness'
 import { beforeEach, test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import { tokenRating } from '@/lib/links'
@@ -52,7 +52,7 @@ describe('RECORRIDO 1: de la invitación de la compita hasta la valoración, tod
     const inv = await (await (generarInvite as any)()).json()
     const token = inv.data.token
     session.user = null
-    const reg = await registrar(req('/api/onboarding/registrar', { json: { token, nombre: 'Lucía Fernández', email: 'lucia@mail.test', zona: 'Zulia', descripcion: 'Cuidadora', servicios: ['Compañía'], foto_url: foto } }))
+    const reg = await registrar(req('/api/onboarding/registrar', { json: { token, nombre: 'Lucía Fernández', email: 'lucia@mail.test', telefono: '0412 123 4567', zona: 'Zulia', descripcion: 'Cuidadora', servicios: ['Compañía'], foto_url: foto } }))
     assert.equal(reg.status, 200)
     const lucia = db.rows('compitas')[0]
     assert.equal(lucia.verificado, false)
@@ -125,13 +125,14 @@ describe('RECORRIDO 1: de la invitación de la compita hasta la valoración, tod
     assert.ok(db.rows('mensajes').some((m) => m.origen === 'compita' && m.visit_id === visita.id))
     como(carlos)
     assert.equal((await fechaPut(req('/api/visita/fecha', { method: 'PUT', json: { visita_id: visita.id, fecha_programada: hoyVEstr(1), hora_inicio: '10:00', hora_fin: '12:00' } }))).status, 200)
+    await confirmarPropuesta(visita.id) // el compita confirma la hora
     admin(); net.tg = []
     await manana(cron('m'))
     assert.ok(tgPara(2000).some((m) => m.text.includes('visita mañana')))
 
     // ── 11. El día de la visita: inicia, conversan, foto, termina, cuestionario
     visita.fecha_programada = hoyVEstr()
-    await webhook(tgText(2000, '▶️ Iniciar visita')); await webhook(tgText(2000, '✅ Sí, iniciar'))
+    await webhook(tgText(2000, '▶️ Iniciar visita')); await webhook(tgText(2000, '✅ Sí, iniciar')); await confirmarLlegada()
     assert.equal(visita.estado, 'en_curso')
     await webhook(tgText(2000, 'Llegué, la señora está bien'))
     await webhook(tgFoto(2000))
@@ -155,7 +156,7 @@ describe('RECORRIDO 1: de la invitación de la compita hasta la valoración, tod
     // ── 13. Pasan 40 días sin otra visita → alerta de churn al admin
     visita.fin = hace(40 * 24 * 60)
     await churn(cron('c'))
-    assert.ok(tgPara(999).some((m) => m.text.includes('necesitan seguimiento')))
+    assert.ok(avisosAdmin().some((m) => m.text.includes('necesitan seguimiento')))
   })
 })
 
@@ -245,7 +246,7 @@ describe('RECORRIDO 3: el admin interviene a mitad de los flujos', () => {
 
   test('bloquean a la compita con la visita en curso: ya no puede escribir, terminar ni usar emergencia', async () => {
     const { lucia, v } = await mundoContratado()
-    await webhook(tgText(2200, '▶️ Iniciar visita')); await webhook(tgText(2200, '✅ Sí, iniciar'))
+    await webhook(tgText(2200, '▶️ Iniciar visita')); await webhook(tgText(2200, '✅ Sí, iniciar')); await confirmarLlegada()
     admin(); await bloquearCompita(req('/api/admin/bloquear-compita', { json: { compita_id: lucia.id, bloquear: true } }))
     net.tg = []
     for (const t of ['hola', '🔴 Terminar visita']) await webhook(tgText(2200, t))
@@ -255,27 +256,30 @@ describe('RECORRIDO 3: el admin interviene a mitad de los flujos', () => {
     void v
   })
 
-  test('borrar al cliente con una visita activa: el bot no se rompe y la compita queda utilizable', async () => {
+  test('eliminar al cliente con una visita activa se rechaza: el bot no se rompe y la compita queda utilizable', async () => {
     const { lucia, carlos, v } = await mundoContratado()
-    await webhook(tgText(2200, '▶️ Iniciar visita')); await webhook(tgText(2200, '✅ Sí, iniciar'))
+    await webhook(tgText(2200, '▶️ Iniciar visita')); await webhook(tgText(2200, '✅ Sí, iniciar')); await confirmarLlegada()
     admin()
-    assert.equal((await eliminarCliente(req('/api/admin/eliminar-cliente', { method: 'DELETE', json: { usuario_id: carlos.id } }))).status, 200)
-    assert.equal(db.rows('usuarios').length, 0)
+    // Con una visita en curso no se puede eliminar la cuenta: no queda nada a medias y el bot sigue coherente.
+    assert.equal((await eliminarCliente(req('/api/admin/eliminar-cliente', { method: 'DELETE', json: { usuario_id: carlos.id } }))).status, 409)
+    assert.equal(db.rows('usuarios').length, 1)
     net.tg = []
     for (const t of ['hola', '▶️ Iniciar visita', '🔴 Terminar visita']) { const r = await webhook(tgText(2200, t)); assert.equal(r.status, 200) }
     assert.ok(ultimoTg(2200), 'la compita sigue recibiendo respuestas coherentes (sin crash)')
     void lucia; void v
   })
 
-  test('borrar a la compita con visitas pide confirmación (force) y el cliente no queda apuntando a una compita inexistente', async () => {
+  test('eliminar a la compita: con visitas abiertas se rechaza; ya sin ellas conserva el historial con la marca y el cliente no queda apuntando a ella', async () => {
     const { lucia, carlos } = await mundoContratado()
     admin()
     const r = await eliminarCompita(req('/api/admin/eliminar-compita', { method: 'DELETE', json: { compita_id: lucia.id } }))
     assert.equal(r.status, 409)
-    assert.equal((await eliminarCompita(req('/api/admin/eliminar-compita', { method: 'DELETE', json: { compita_id: lucia.id, force: true } }))).status, 200)
-    assert.equal(db.rows('compitas').length, 0)
+    db.rows('visitas').forEach((v) => { v.estado = 'terminada' })
+    assert.equal((await eliminarCompita(req('/api/admin/eliminar-compita', { method: 'DELETE', json: { compita_id: lucia.id, borrar_datos: true } }))).status, 200)
+    const eliminada = db.rows('compitas').find((c) => c.id === lucia.id)!
+    assert.match(eliminada.nombre, /\(cuenta eliminada\)$/); assert.equal(eliminada.telegram_chat_id, null); assert.equal(eliminada.telefono, null); assert.equal(eliminada.estado, 'bloqueado')
     assert.equal(db.rows('usuarios').find((u) => u.id === carlos.id)!.compita_id, null)
-    assert.equal(db.rows('visitas').length, 0)
+    assert.ok(db.rows('visitas').length > 0) // el historial se conserva
     // cron tras el borrado no se rompe
     assert.equal((await recordatorios(cron('r'))).status, 200)
     assert.equal((await seguimientoCron(cron('s'))).status, 200)
@@ -321,8 +325,8 @@ describe('RECORRIDO 4: varios usuarios a la vez sobre la misma plataforma', () =
     assert.equal(carlos.compita_id, lucia.id); assert.equal(pedro.compita_id, ana.id)
     for (const v of db.rows('visitas')) { v.estado = 'programada'; v.fecha_programada = hoyVEstr(); v.hora_inicio_programada = '10:00'; v.hora_fin_programada = '11:00' }
     // Visitas simultáneas: lo que escribe cada compita va a su propio cliente
-    await webhook(tgText(2300, '▶️ Iniciar visita')); await webhook(tgText(2300, '✅ Sí, iniciar'))
-    await webhook(tgText(2301, '▶️ Iniciar visita')); await webhook(tgText(2301, '✅ Sí, iniciar'))
+    await webhook(tgText(2300, '▶️ Iniciar visita')); await webhook(tgText(2300, '✅ Sí, iniciar')); await confirmarLlegada()
+    await webhook(tgText(2301, '▶️ Iniciar visita')); await webhook(tgText(2301, '✅ Sí, iniciar')); await confirmarLlegada()
     net.emails = []
     await webhook(tgText(2300, 'mensaje de Lucía para Carlos')); await webhook(tgText(2301, 'mensaje de Ana para Pedro'))
     const vCarlos = db.rows('visitas').find((v) => v.usuario_id === carlos.id)!; const vPedro = db.rows('visitas').find((v) => v.usuario_id === pedro.id)!
@@ -348,7 +352,7 @@ describe('RECORRIDO 4: varios usuarios a la vez sobre la misma plataforma', () =
   test('me-interesa → admin asigna → el cliente aparece en el bot de esa compita', async () => {
     const lucia = mkCompita({ telegram_chat_id: '2310' }); const carlos = mkCliente({ email: 'carlos@mail.test' }); como(carlos)
     await meInteresa(req('/api/me-interesa', { json: { compita_id: lucia.id } }))
-    const link = tgPara(999)[0].text.match(/token=([0-9a-f]+)/)![1]
+    const link = avisosAdmin()[0].text.match(/token=([0-9a-f]+)/)![1]
     const { POST: rapido } = await import('@/app/api/admin/asignar-rapido/route')
     await rapido(req(`/api/admin/asignar-rapido?token=${link}`, { method: 'POST' }))
     assert.equal(carlos.compita_id, lucia.id)

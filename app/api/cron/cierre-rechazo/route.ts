@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { sendTelegramMessage, avisarAdmin, TECLADO_SIN_VISITA } from '@/lib/telegram'
+import { alertaAdmin } from '@/lib/alertas-admin'
 import { sendEmail, SITE_URL } from '@/lib/email'
 import { esc } from '@/lib/html'
 import { cronAutorizado, latido, reclamarUnaVez } from '@/lib/cron'
@@ -94,7 +95,7 @@ export async function POST(req: NextRequest) {
         })
       } catch (e) {
         console.error('Email cierre rechazo cliente:', e)
-        await avisarAdmin(`⚠️ No se pudo avisar a <b>${esc(clienteNombre)}</b> (${esc(clienteEmail)}) que su solicitud con <b>${esc(compitaNombre)}</b> se cerró. Avísale manualmente.`)
+        await alertaAdmin('tarea', `⚠️ No se pudo avisar a <b>${esc(clienteNombre)}</b> (${esc(clienteEmail)}) que su solicitud con <b>${esc(compitaNombre)}</b> se cerró. Avísale manualmente.`)
       }
     }
     try {
@@ -142,14 +143,14 @@ export async function POST(req: NextRequest) {
           })
         } catch (e) { console.error('Email cierre pendiente:', e) }
       }
-      await avisarAdmin(`⌛ Solicitud sin respuesta por 72 h cerrada: <b>${esc(sol.usuarios?.nombre ?? 'cliente')}</b> → <b>${esc(nombreCompita)}</b>.`)
+      await alertaAdmin('actividad', `⌛ Solicitud sin respuesta por 72 h cerrada: <b>${esc(sol.usuarios?.nombre ?? 'cliente')}</b> → <b>${esc(nombreCompita)}</b>.`)
     } else if (await reclamarUnaVez(`pend_rec:${sol.id}`)) {
       if (sol.compitas?.telegram_chat_id) {
         try {
           await sendTelegramMessage(sol.compitas.telegram_chat_id, `⏰ <b>Tienes una solicitud sin responder</b>\n\n<b>${esc(sol.usuarios?.nombre ?? 'Un cliente')}</b> quiere conocerte. Busca el mensaje con los horarios y toca el que te funcione, o rechaza si no puedes. Si no respondes, la solicitud se cerrará en 2 días.`)
         } catch (e) { console.error('Recordatorio pendiente compita:', e) }
       } else {
-        await avisarAdmin(`⚠️ Solicitud pendiente hace 24 h para <b>${esc(nombreCompita)}</b>, que no tiene Telegram vinculado.`)
+        await alertaAdmin('tarea', `⚠️ Solicitud pendiente hace 24 h para <b>${esc(nombreCompita)}</b>, que no tiene Telegram vinculado.`)
       }
     }
   }

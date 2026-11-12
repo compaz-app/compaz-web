@@ -3,6 +3,8 @@ import { getSolicitudPorToken } from '@/lib/solicitudes'
 import SalaEntrevista from './SalaEntrevista'
 import { firmaRol, rolValido } from '@/lib/links'
 import { formatSlotVE } from '@/lib/format'
+import { minutosCorteLlamada } from '@/lib/llamada'
+import { enlaceDeLlamada } from '@/lib/llamada-acceso'
 
 export default async function SalaPage({
   params,
@@ -23,7 +25,6 @@ export default async function SalaPage({
     return (
       <div style={{ fontFamily: 'Inter,sans-serif', background: '#FDFAF6', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
         <div style={{ background: 'white', border: '2px solid #E8E0D4', borderRadius: '24px', padding: '40px 32px', maxWidth: '480px', width: '100%', textAlign: 'center' }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px' }}>⏳</div>
           <h2 style={{ color: '#1A0A3C', fontWeight: 800, fontSize: '22px', marginBottom: '12px' }}>Sala aún no lista</h2>
           <p style={{ color: '#4A3B6B', fontSize: '15px', lineHeight: 1.6 }}>
             Recibirás un link por email o Telegram cuando la sala esté lista. Si ya lo tienes, intenta recargar la página.
@@ -45,10 +46,11 @@ export default async function SalaPage({
     <SalaEntrevista
       token={token}
       quien={quien}
-      roomUrl={solicitud.room_url}
+      llamadaHref={enlaceDeLlamada(solicitud.room_url, quien)}
       compitaNombre={compitaRow?.nombre ?? solicitud.compita_nombre ?? 'Compita'}
       clienteNombre={clienteRow?.nombre ?? 'Cliente'}
       slotLabel={formatSlotVE(solicitud.slot_confirmado)}
+      corteMin={await minutosCorteLlamada()}
       slotIso={solicitud.slot_confirmado}
       sig={firmaRol(token, quien)}
     />

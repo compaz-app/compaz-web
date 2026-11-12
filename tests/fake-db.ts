@@ -7,17 +7,22 @@ type Row = Record<string, any>
 const nowIso = () => new Date().toISOString()
 
 // FK: tabla → { tablaRelacionada: columna FK }
+// Relaciones inversas (una fila tiene VARIAS en otra tabla): tabla → { tablaRelacionada: columna FK de ESA tabla que apunta a esta }
+const REV: Record<string, Record<string, string>> = {
+  visitas: { mensajes: 'visit_id', reportes_visita: 'visita_id' },
+}
 const REL: Record<string, Record<string, string>> = {
   visitas: { usuarios: 'usuario_id', compitas: 'compita_id' },
   solicitudes: { usuarios: 'cliente_id', compitas: 'compita_id' },
   usuarios: { compitas: 'compita_id' },
   mensajes: { visitas: 'visit_id' },
   pagos_plan: { usuarios: 'usuario_id' },
+  resenas: { compitas: 'compita_id', usuarios: 'cliente_id' },
 }
 const REL_INVERSA: Record<string, Record<string, string>> = {}
 
 const DEFAULTS: Record<string, () => Row> = {
-  compitas: () => ({ id: randomUUID(), estado: 'activo', verificado: false, visitas_realizadas: 0, total_ratings: 0, rating_promedio: null, telegram_chat_id: null, email: null, foto_url: null, youtube_url: null, servicios: [], horarios_disponibles: [], created_at: nowIso() }),
+  compitas: () => ({ id: randomUUID(), codigo: null, es_demo: false, cmc_permite: null, cmc_estado: null, cmc_actualizado_en: null, cmc_bienvenida_enviada_en: null, estado: 'activo', verificado: false, visitas_realizadas: 0, total_ratings: 0, rating_promedio: null, telegram_chat_id: null, email: null, foto_url: null, youtube_url: null, servicios: [], horarios_disponibles: [], created_at: nowIso() }),
   usuarios: () => ({ plan: null, plan_contratado: null, plan_inicio: null, compita_id: null, familiar_nombre: null, familiar_edad: null, familiar_condicion: null, familiar_notas: null, zona: null, created_at: nowIso() }),
   visitas: () => ({ id: randomUUID(), estado: 'programada', fecha_programada: null, hora_inicio_programada: null, hora_fin_programada: null, inicio: null, fin: null, room_url: null, rating_cliente: null, comentario_cliente: null, created_at: nowIso() }),
   mensajes: () => ({ id: randomUUID(), tipo: 'texto', created_at: nowIso() }),
@@ -27,17 +32,35 @@ const DEFAULTS: Record<string, () => Row> = {
   compita_edit_tokens: () => ({ id: randomUUID(), usado: false, created_at: nowIso() }),
   onboarding_tokens: () => ({ id: randomUUID(), usado: false, created_at: nowIso() }),
   action_tokens: () => ({ id: randomUUID(), usado: false, created_at: nowIso() }),
+  bloqueos_compita_cliente: () => ({ id: randomUUID(), activo: true, levantado_por: null, levantado_en: null, creado_en: nowIso() }),
+  reportes_compita: () => ({ id: randomUUID(), no_volver: false, llamar: false, llamada_en: null, llamada_por: null, resultado: null, escalado_en: null, creado_en: nowIso() }),
+  pausas_contacto: () => ({ id: randomUUID(), activa: true, reincidente: false, decision: null, decidida_por: null, decidida_en: null, creada_en: nowIso() }),
+  actividad_admin: () => ({ id: randomUUID(), creado_en: nowIso(), categoria: null, entidad_tipo: null, entidad_id: null, entidad_nombre: null }),
+  cambios_lugar: () => ({ id: randomUUID(), estado: 'pendiente', respondido_en: null, escalado_en: null, creado_en: nowIso() }),
+  reservas_horario: () => ({ id: randomUUID(), estado: 'reservada', solicitud_id: null, resuelta_en: null, creada_en: nowIso() }),
+  solicitudes_pago: () => ({ id: randomUUID(), estado: 'pendiente', pago_id: null, resuelta_at: null, created_at: nowIso() }),
   pagos_plan: () => ({ id: randomUUID(), estado: 'activo', horas: null, referencia: null, created_at: nowIso() }),
   admin_flags: () => ({ id: randomUUID(), resuelto: false, created_at: nowIso() }),
   resenas: () => ({ id: randomUUID(), publicada: false, created_at: nowIso() }),
+  eventos: () => ({ id: randomUUID(), modulo: 'operacion', actor: 'sistema', datos: {}, creado_en: nowIso() }),
+  admin_emails: () => ({}),
+  equipo: () => ({ id: randomUUID(), activo: true, permisos: {}, creado_en: nowIso(), actualizado_en: nowIso() }),
+  equipo_historial: () => ({ hecho_en: nowIso() }),
+  notas_persona: () => ({ id: randomUUID(), creado_en: nowIso() }),
+  ajustes: () => ({ vigente_desde: nowIso(), actualizado_por: 'sistema', actualizado_en: nowIso() }),
+  ajustes_historial: () => ({ cambiado_en: nowIso(), vigente_desde: nowIso() }),
+  cancelaciones: () => ({ id: randomUUID(), horas_de_aviso: null, tardia: false, motivo: null, justificada: false, justificada_por: null, justificada_en: null, visita_id: null, solicitud_id: null, cuenta_como_usada: false, visita_creada_en: null, creado_en: nowIso() }),
+  fotos_privadas: () => ({ id: randomUUID(), visita_id: null, solicitud_id: null, usuario_id: null, borrada_en: null, creado_en: nowIso() }),
+  avisos: () => ({ id: randomUUID(), estado: 'pendiente', intentos: 0, variables: {}, error: null, accion_en: null, plazo_accion_hasta: null, ultimo_intento_en: null, respaldo_de: null, entidad: null, entidad_id: null, paso: null, programado_para: nowIso(), creado_en: nowIso() }),
+  cmc_sincronizaciones: () => ({ id: randomUUID(), recibida_en: nowIso(), motivo: null, resumen: {}, cambios: [] }),
   postulaciones: () => ({ id: randomUUID(), clasificacion: 'nueva', resolucion: null, airtable_id: null, airtable_estado: 'pendiente', utm_source: null, utm_medium: null, utm_campaign: null, recibida_en: nowIso() }),
 }
 
-const PK: Record<string, string> = { telegram_estados: 'chat_id' }
+const PK: Record<string, string> = { telegram_estados: 'chat_id', ajustes: 'clave', admin_emails: 'email' }
 
 function dupError(msg: string) { return { code: '23505', message: `duplicate key value violates unique constraint "${msg}"` } }
 
-export const OTPS = new Map<string, { id: string; email: string; usado: boolean }>()
+export const OTPS = new Map<string, { id: string; email: string; usado: boolean; codigo?: string }>()
 
 export class FakeDB {
   tables: Record<string, Row[]> = {}
@@ -47,13 +70,30 @@ export class FakeDB {
   rpcs: Record<string, (args: any) => { data: any; error: any } | Promise<{ data: any; error: any }>> = {}
   /** Llamadas recibidas por rpc(), en orden. */
   rpcLlamadas: { fn: string; args: any }[] = []
+  /** Almacenamiento simulado: clave `bucket/ruta`. */
+  objetos = new Map<string, { bytes: number; contentType?: string }>()
   constructor() { this.reset() }
   reset() {
     this.tables = {}
     for (const t of Object.keys(DEFAULTS)) this.tables[t] = []
     this.fail = {}
-    this.rpcs = {}
+    // registrar_evento existe en la base real; aquí guarda el evento en memoria.
+    this.rpcs = {
+      guardar_ajuste: (a: any) => {
+        const previo = this.tables.ajustes.find((x) => x.clave === a.p_clave)
+        this.tables.ajustes_historial.push({ ...DEFAULTS.ajustes_historial(), clave: a.p_clave, valor_anterior: previo ? previo.valor : a.p_anterior, valor_nuevo: a.p_valor, cambiado_por: a.p_actor })
+        const fila = { ...DEFAULTS.ajustes(), clave: a.p_clave, valor: a.p_valor, actualizado_por: a.p_actor }
+        if (previo) Object.assign(previo, fila); else this.tables.ajustes.push(fila)
+        return { data: null, error: null }
+      },
+      registrar_evento: (a: any) => {
+        const r = { ...DEFAULTS.eventos(), entidad: a.p_entidad, entidad_id: a.p_entidad_id, tipo: a.p_tipo, actor: a.p_actor, datos: a.p_datos }
+        this.tables.eventos.push(r)
+        return { data: this.tables.eventos.length, error: null }
+      },
+    }
     this.rpcLlamadas = []
+    this.objetos = new Map()
   }
   rows(t: string): Row[] { return this.tables[t] }
   seed(t: string, row: Row): Row {
@@ -71,11 +111,20 @@ export class FakeDB {
     if (PK[t] && others.some((r) => r[PK[t]] === row[PK[t]])) return dupError(`${t}_pkey`)
     if (t !== 'telegram_estados' && row.id && others.some((r) => r.id === row.id)) return dupError(`${t}_pkey`)
     if (t === 'compitas' && row.telegram_chat_id && others.some((r) => r.telegram_chat_id === row.telegram_chat_id)) return dupError('compitas_telegram_chat_id_key')
+    if (t === 'compitas' && row.codigo && others.some((r) => r.codigo === row.codigo)) return dupError('compitas_codigo_key')
     if (t === 'usuarios' && row.email && others.some((r) => r.email === row.email)) return dupError('usuarios_email_key')
     // Índices de la migración 20261009
-    if (t === 'visitas' && row.estado === 'en_curso' && others.some((r) => r.compita_id === row.compita_id && r.estado === 'en_curso')) return dupError('visitas_una_en_curso_por_compita')
-    if (t === 'visitas' && ['pre_visita', 'programada', 'en_curso'].includes(row.estado) && others.some((r) => r.usuario_id === row.usuario_id && ['pre_visita', 'programada', 'en_curso'].includes(r.estado))) return dupError('visitas_una_activa_por_cliente')
+    if (t === 'visitas' && ['confirmando_inicio', 'en_curso'].includes(row.estado) && others.some((r) => r.compita_id === row.compita_id && ['confirmando_inicio', 'en_curso'].includes(r.estado))) return dupError('visitas_una_en_curso_por_compita')
+    if (t === 'visitas' && ['pre_visita', 'programada', 'confirmando_inicio', 'en_curso'].includes(row.estado) && others.some((r) => r.usuario_id === row.usuario_id && ['pre_visita', 'programada', 'confirmando_inicio', 'en_curso'].includes(r.estado))) return dupError('visitas_una_activa_por_cliente')
     if (t === 'solicitudes' && row.estado === 'pendiente' && others.some((r) => r.cliente_id === row.cliente_id && r.compita_id === row.compita_id && r.estado === 'pendiente')) return dupError('solicitudes_una_pendiente_por_par')
+    if (t === 'bloqueos_compita_cliente' && row.activo && others.some((r) => r.activo && r.compita_id === row.compita_id && r.usuario_id === row.usuario_id)) return dupError('bloqueos_cc_par_activo')
+    if (t === 'pausas_contacto' && row.activa && others.some((r) => r.activa && r.rol === row.rol && r.persona_id === row.persona_id)) return dupError('pausas_contacto_una_activa')
+    if (t === 'cambios_lugar' && row.estado === 'pendiente' && others.some((r) => r.estado === 'pendiente' && r.visita_id === row.visita_id)) return dupError('cambios_lugar_uno_pendiente')
+    // Índices de la migración 20261109f (reservas de horario)
+    const viva = (r: Row) => ['reservada', 'confirmada'].includes(r.estado)
+    if (t === 'reservas_horario' && viva(row) && others.some((r) => viva(r) && r.compita_id === row.compita_id && r.inicio === row.inicio)) return dupError('reservas_horario_hora_unica')
+    if (t === 'reservas_horario' && viva(row) && row.solicitud_id && others.some((r) => viva(r) && r.solicitud_id === row.solicitud_id)) return dupError('reservas_horario_una_por_solicitud')
+    if (t === 'avisos' && row.clave_unica && others.some((r) => r.clave_unica === row.clave_unica)) return dupError('avisos_clave_unica_key')
     if (t === 'reportes_visita' && others.some((r) => r.visita_id === row.visita_id)) return dupError('reportes_visita_unico_por_visita')
     for (const col of ['token']) if ((t === 'compita_edit_tokens' || t === 'onboarding_tokens' || t === 'action_tokens') && others.some((r) => r[col] === row[col])) return dupError(`${t}_token_key`)
     return null
@@ -156,6 +205,7 @@ class Query {
   private head = false
   private orders: Array<{ col: string; asc: boolean }> = []
   private lim: number | null = null
+  private off = 0
   private mode: 'many' | 'single' | 'maybe' = 'many'
   private onConflict?: string
 
@@ -194,6 +244,10 @@ class Query {
   }
   or(expr: string) {
     const conds = splitTop(expr).map((c) => {
+      const n = c.match(/^(\w+)\.not\.(\w+)\.(.*)$/) // col.not.op.valor → negación (como PostgREST)
+      if (n) { const p = predicate(n[1], n[2], parseVal(n[2], n[3])); return (r: Row) => !p(r) }
+      const neg = c.match(/^(\w+)\.not\.(\w+)\.(.*)$/)
+      if (neg) { const p = predicate(neg[1], neg[2], parseVal(neg[2], neg[3])); return (r: Row) => !p(r) }
       const m = c.match(/^(\w+)\.(\w+)\.(.*)$/)
       if (!m) throw new Error(`or() no soportado: ${c}`)
       return predicate(m[1], m[2], parseVal(m[2], m[3]))
@@ -203,6 +257,7 @@ class Query {
   }
   order(col: string, o?: { ascending?: boolean; nullsFirst?: boolean }) { this.orders.push({ col, asc: o?.ascending !== false }); return this }
   limit(n: number) { this.lim = n; return this }
+  range(desde: number, hasta: number) { this.off = desde; this.lim = hasta - desde + 1; return this }
   single() { this.mode = 'single'; return this }
   maybeSingle() { this.mode = 'maybe'; return this }
   then(res: (v: any) => any, rej?: (e: any) => any) { return Promise.resolve(this.run()).then(res, rej) }
@@ -227,6 +282,8 @@ class Query {
       const q = new Query(this.db, table)
       return q.project(target, sub)
     }
+    const rev = REV[this.table]?.[table]
+    if (rev) return this.db.rows(table).filter((r) => r[rev] === row.id).map((r) => new Query(this.db, table).project(r, sub))
     throw new Error(`Relación no definida en el fake: ${this.table} → ${table}`)
   }
   private finish(rows: Row[]): any {
@@ -240,7 +297,7 @@ class Query {
         return o.asc ? cmp(x, y) : cmp(y, x)
       })
     }
-    if (this.lim !== null) out = out.slice(0, this.lim)
+    if (this.lim !== null) out = out.slice(this.off, this.off + this.lim)
     const count = this.count ? rows.length : null
     if (this.head) return { data: null, error: null, count }
     const proj = out.map((r) => this.project(r, this.selStr))
@@ -321,11 +378,14 @@ export function makeClient(db: FakeDB, user: () => { id: string; email: string }
           const existente = db.tables.usuarios.find((u) => u.email === email)
           if (type === 'invite' && existente) return { data: null, error: { status: 422, code: 'email_exists', message: 'A user with this email address has already been registered' } }
           const id = existente?.id ?? randomUUID()
+          // Como en Supabase real (comprobado): un enlace nuevo invalida el anterior de la misma persona.
+          for (const o of OTPS.values()) if (o.email === email && o.codigo) o.usado = true
           const hashed = `hash-${type}-${id}-${OTPS.size}`
-          OTPS.set(hashed, { id, email, usado: false })
-          return { data: { user: { id, email }, properties: { hashed_token: hashed, action_link: 'x', verification_type: type } }, error: null }
+          const codigo = String(Math.floor(10_000_000 + Math.random() * 90_000_000)) // Supabase genera 8 dígitos
+          OTPS.set(hashed, { id, email, usado: false, codigo })
+          return { data: { user: { id, email }, properties: { hashed_token: hashed, action_link: 'x', verification_type: type, email_otp: codigo } }, error: null }
         },
-        updateUserById: async (id: string, attrs: any) => { (db as any).bans = (db as any).bans ?? {}; (db as any).bans[id] = attrs.ban_duration; return { data: { user: { id } }, error: null } },
+        updateUserById: async (id: string, attrs: any) => { (db as any).bans = (db as any).bans ?? {}; (db as any).bans[id] = attrs.ban_duration; (db as any).authAttrs = (db as any).authAttrs ?? {}; (db as any).authAttrs[id] = attrs; return { data: { user: { id } }, error: null } },
         deleteUser: async (id: string) => {
           db.tables.usuarios = db.tables.usuarios.filter((u) => u.id !== id)
           return { error: null }
@@ -334,7 +394,27 @@ export function makeClient(db: FakeDB, user: () => { id: string; email: string }
     },
     storage: {
       from: (bucket: string) => ({
-        upload: async (path: string) => ({ data: { path }, error: null }),
+        upload: async (path: string, cuerpo?: any, opts?: any) => {
+          if (db.shouldFail('storage', 'upload')) return { data: null, error: { message: 'fallo simulado al subir' } }
+          const k = `${bucket}/${path}`
+          if (db.objetos.has(k) && !opts?.upsert) return { data: null, error: { message: 'The resource already exists' } }
+          db.objetos.set(k, { bytes: cuerpo?.byteLength ?? 0, contentType: opts?.contentType })
+          return { data: { path }, error: null }
+        },
+        remove: async (rutas: string[]) => {
+          if (db.shouldFail('storage', 'remove')) return { data: null, error: { message: 'fallo simulado al borrar' } }
+          for (const r of rutas) db.objetos.delete(`${bucket}/${r}`)
+          return { data: rutas.map((name) => ({ name })), error: null }
+        },
+        download: async (path: string) => {
+          const o = db.objetos.get(`${bucket}/${path}`)
+          if (!o) return { data: null, error: { message: 'Object not found' } }
+          return { data: new Blob([new Uint8Array(o.bytes)]), error: null }
+        },
+        createSignedUrl: async (path: string, seg: number) => {
+          if (!db.objetos.has(`${bucket}/${path}`)) return { data: null, error: { message: 'Object not found' } }
+          return { data: { signedUrl: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/sign/${bucket}/${path}?token=firma&exp=${seg}` }, error: null }
+        },
         getPublicUrl: (path: string) => ({ data: { publicUrl: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${bucket}/${path}` } }),
       }),
     },

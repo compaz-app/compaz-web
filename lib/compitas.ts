@@ -3,6 +3,7 @@
 // ══════════════════════════════════════════════════════════════════════════════
 import { createAdminSupabase } from '@/lib/supabase-server'
 import type { Compita } from '@/types'
+import { escLike } from '@/lib/html'
 
 // Campos públicos seguros para mostrar a clientes
 // telegram_chat_id excluido intencionalmente — es dato personal del trabajador
@@ -21,6 +22,7 @@ export async function getCompitasActivas(): Promise<Compita[]> {
     .eq('estado', 'activo')
     .eq('verificado', true)
     .or('telegram_chat_id.not.is.null,es_demo.eq.true')
+    .not('cmc_permite', 'is', false) // el CMC retiró el permiso (NULL = no gestionada: visible)
     .order('visitas_realizadas', { ascending: false })
 
   if (error) throw new Error(error.message)
@@ -52,16 +54,46 @@ export async function getCompitaById(id: string): Promise<Compita | null> {
     .eq('id', id)
     .eq('estado', 'activo')
     .eq('verificado', true)
+    .not('cmc_permite', 'is', false)
     .single()
 
   if (error) return null
   return data as Compita
 }
 
+/** El CMC no permite activar a esta Compita (no habilitada, pausada, suspendida, de baja o sin aceptar nuevos). */
+export class CompitaNoPermitidaPorCmc extends Error {
+  constructor(public estadoCmc: string | null) {
+    super(`El CMC no permite activar a esta Compita${estadoCmc ? ` (${estadoCmc})` : ''}. Cámbialo primero en el CMC.`)
+    this.name = 'CompitaNoPermitidaPorCmc'
+  }
+}
+
+/** Lanza CompitaNoPermitidaPorCmc si cmc_permite = false. NULL (Compitas anteriores al CMC) pasa. */
+export async function exigirPermisoCmc(id: string): Promise<void> {
+  const { data, error } = await createAdminSupabase().from('compitas').select('cmc_permite, cmc_estado').eq('id', id).maybeSingle()
+  if (error) throw new Error(error.message)
+  if (data?.cmc_permite === false) throw new CompitaNoPermitidaPorCmc(data.cmc_estado ?? null)
+}
+
 /**
- * Verifica una compita (la hace aparecer en el mapa).
+ * ¿Hay ya un perfil creado desde el CMC (con código COM-) con este email?
+ * Las altas manuales (invitación por enlace, registro desde el panel) no deben duplicarlo.
+ */
+export async function existePerfilCmcConEmail(email: string | null | undefined): Promise<boolean> {
+  const e = String(email ?? '').trim()
+  if (!e) return false
+  const { data, error } = await createAdminSupabase()
+    .from('compitas').select('id').ilike('email', escLike(e)).not('codigo', 'is', null).limit(1)
+  if (error) throw new Error(error.message)
+  return (data ?? []).length > 0
+}
+
+/**
+ * Verifica una compita (la hace aparecer en el mapa). Exige el permiso del CMC.
  */
 export async function verificarCompita(id: string): Promise<void> {
+  await exigirPermisoCmc(id)
   const supabase = createAdminSupabase()
   const { error } = await supabase
     .from('compitas')
@@ -86,9 +118,10 @@ export async function desactivarCompita(id: string): Promise<void> {
 }
 
 /**
- * Reactiva una compita previamente desactivada.
+ * Reactiva una compita previamente desactivada. Exige el permiso del CMC.
  */
 export async function reactivarCompita(id: string): Promise<void> {
+  await exigirPermisoCmc(id)
   const supabase = createAdminSupabase()
   const { error } = await supabase
     .from('compitas')

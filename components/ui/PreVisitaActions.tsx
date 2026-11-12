@@ -14,9 +14,21 @@ export default function PreVisitaActions({ compitaNombre, tieneFecha }: Props) {
   const [mensaje, setMensaje] = useState('')
   const [cargando, setCargando] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Qué pasa si cancela ahora: la regla de las horas de aviso la calcula el servidor.
+  const [info, setInfo] = useState<{ horas_de_aviso: number | null; minimo_horas: number; cuenta_como_usada: boolean } | null>(null)
+  const [acepta, setAcepta] = useState(false)
 
   function scrollAFecha() {
     document.getElementById('fecha-programada')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
+
+  async function abrirModal() {
+    setModalAbierto(true); setMensaje(''); setError(null); setAcepta(false); setInfo(null)
+    try {
+      const r = await fetch('/api/visita/cancelar')
+      const d = await r.json()
+      if (d.ok) setInfo(d.data)
+    } catch { /* si falla, el servidor igual exige la aceptación cuando corresponde */ }
   }
 
   async function confirmarCancelacion() {
@@ -26,7 +38,7 @@ export default function PreVisitaActions({ compitaNombre, tieneFecha }: Props) {
       const res = await fetch('/api/visita/cancelar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mensaje }),
+        body: JSON.stringify({ mensaje, acepta_perder_visita: acepta }),
       })
       if (res.ok) {
         setModalAbierto(false)
@@ -45,7 +57,7 @@ export default function PreVisitaActions({ compitaNombre, tieneFecha }: Props) {
       {!tieneFecha && (
         <div style={{ marginTop: '16px', background: '#FFFBF0', border: '2px solid #FCD34D', borderRadius: '16px', padding: '20px' }}>
           <p style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, color: '#92400E', fontSize: '15px', margin: '0 0 6px' }}>
-            ⚠️ Falta registrar la fecha en el sistema
+            Falta registrar la fecha en el sistema
           </p>
           <p style={{ color: '#78350F', fontSize: '13px', margin: '0 0 14px', lineHeight: 1.5 }}>
             Acuerda la fecha con {compitaNombre} en el chat y luego ingrésala arriba. No basta con hablar de la fecha en el chat — tiene que quedar registrada para que Compaz active el seguimiento y te mande el recordatorio.
@@ -54,14 +66,14 @@ export default function PreVisitaActions({ compitaNombre, tieneFecha }: Props) {
             onClick={scrollAFecha}
             style={{ background: '#D97706', color: 'white', border: 'none', borderRadius: '9999px', padding: '12px 24px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '14px', cursor: 'pointer' }}
           >
-            📅 Ingresar la fecha →
+            Ingresar la fecha →
           </button>
         </div>
       )}
 
       <div style={{ marginTop: '12px', textAlign: 'right' }}>
         <button
-          onClick={() => { setModalAbierto(true); setMensaje(''); setError(null) }}
+          onClick={abrirModal}
           style={{ background: 'none', border: 'none', color: '#9B8AB8', fontSize: '13px', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
         >
           Cancelar esta visita
@@ -77,6 +89,21 @@ export default function PreVisitaActions({ compitaNombre, tieneFecha }: Props) {
             <p style={{ color: '#6B5C90', fontSize: '14px', margin: '0 0 24px', lineHeight: 1.6 }}>
               {compitaNombre} será notificado. Esta acción no se puede deshacer.
             </p>
+            {info && (info.cuenta_como_usada
+              ? (
+                <div role="alert" style={{ background: '#FEF2F2', border: '2px solid #FCA5A5', borderRadius: '12px', padding: '12px 14px', margin: '0 0 16px', fontSize: '14px', lineHeight: 1.5, color: '#991B1B' }}>
+                  <strong>Faltan menos de {info.minimo_horas} horas.</strong> Si cancelas ahora, esta visita <strong>se cuenta como usada</strong> y se descuenta de tu plan.
+                  <label style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', marginTop: '10px', cursor: 'pointer', color: '#1A0A3C' }}>
+                    <input type="checkbox" checked={acepta} onChange={(e) => setAcepta(e.target.checked)} style={{ width: '22px', height: '22px', flexShrink: 0 }} />
+                    <span>Entiendo que la visita se cuenta como usada y quiero cancelar de todos modos.</span>
+                  </label>
+                </div>
+              )
+              : (
+                <p style={{ background: '#F0FDF4', border: '2px solid #86EFAC', borderRadius: '12px', padding: '12px 14px', margin: '0 0 16px', fontSize: '14px', lineHeight: 1.5, color: '#166534' }}>
+                  Cancelar ahora es gratis: no se descuenta de tu plan.
+                </p>
+              ))}
 
             <label style={{ display: 'block', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '13px', color: '#4A3B6B', marginBottom: '8px' }}>
               Mensaje para {compitaNombre} <span style={{ fontWeight: 400, color: '#9B8AB8' }}>(opcional)</span>
@@ -97,7 +124,7 @@ export default function PreVisitaActions({ compitaNombre, tieneFecha }: Props) {
             <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
               <button
                 onClick={confirmarCancelacion}
-                disabled={cargando}
+                disabled={cargando || (!!info?.cuenta_como_usada && !acepta)}
                 style={{ flex: 1, background: '#DC2626', color: 'white', border: 'none', borderRadius: '9999px', padding: '14px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '15px', cursor: cargando ? 'not-allowed' : 'pointer', opacity: cargando ? 0.7 : 1 }}
               >
                 {cargando ? 'Cancelando…' : 'Sí, cancelar visita'}

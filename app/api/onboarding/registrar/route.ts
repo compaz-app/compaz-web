@@ -3,8 +3,12 @@ import { createAdminSupabase, createServerSupabase } from '@/lib/supabase-server
 import { isAdminEmail } from '@/lib/auth'
 import { ok, err, serverError } from '@/lib/api'
 import { sendBienvenidaCompita } from '@/lib/resend'
-import { validarPerfil, emailValido } from '@/lib/validar'
+import { validarPerfil, revisarCorreo } from '@/lib/validar'
 import { avisarAdmin } from '@/lib/telegram'
+import { alertaAdmin } from '@/lib/alertas-admin'
+import { normalizarTelefono } from '@/lib/captacion'
+import { generarTokenPerfil } from '@/lib/compita-tokens'
+import { existePerfilCmcConEmail } from '@/lib/compitas'
 
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null)
@@ -23,14 +27,23 @@ export async function POST(req: NextRequest) {
   if (!body.descripcion) faltantes.push('descripción')
   if (!Array.isArray(body.servicios) || !body.servicios.length) faltantes.push('al menos un servicio')
   if (faltantes.length) return err(`Faltan campos requeridos: ${faltantes.join(', ')}`)
-  if (email && !emailValido(email)) return err('Correo inválido')
+  if (email) { const rev = revisarCorreo(email); if (!rev.ok) return err(rev.error) }
+  // El teléfono es obligatorio en el formulario (lo usa el equipo para escribirle por WhatsApp). El administrador puede registrar sin él.
+  const telefono = typeof body.telefono === 'string' && body.telefono.trim() ? normalizarTelefono(body.telefono) : null
+  if (typeof body.telefono === 'string' && body.telefono.trim() && !telefono) return err('Teléfono inválido. Escríbelo con código de país, por ejemplo +58 412 123 4567')
+  if (!esAdmin && !telefono) return err('Falta el teléfono de WhatsApp')
   const v = validarPerfil(body, { permitirNombre: true })
   if (!v.ok) {
-    await avisarAdmin(`⚠️ <b>Validación fallida en onboarding</b>\n\n<b>Nombre:</b> ${body.nombre ?? '—'}\n<b>Email:</b> ${email ?? '—'}\n<b>Error:</b> ${v.error}`)
+    await alertaAdmin('actividad', `⚠️ <b>Validación fallida en onboarding</b>\n\n<b>Nombre:</b> ${body.nombre ?? '—'}\n<b>Email:</b> ${email ?? '—'}\n<b>Error:</b> ${v.error}`)
     return err(v.error)
   }
   const { nombre, zona, descripcion, servicios, foto_url, youtube_url, horarios_disponibles } = v.datos
   const habil = typeof habilidades === 'string' ? habilidades.trim().slice(0, 500) : ''
+
+  // Una Compita habilitada en el CMC ya tiene perfil: no crear otro (se comprueba antes de gastar el token)
+  if (await existePerfilCmcConEmail(email)) {
+    return err('Ya tienes un perfil en Compaz. Revisa tu correo: ahí están los pasos para conectar Telegram.', 409)
+  }
 
   const admin = createAdminSupabase()
 
@@ -57,9 +70,10 @@ export async function POST(req: NextRequest) {
     if (!claimed) return err('Token inválido o expirado')
   }
 
-  const { error } = await admin.from('compitas').insert({
+  const { data: creada, error } = await admin.from('compitas').insert({
     nombre,
     email: email || null,
+    telefono,
     zona,
     descripcion: habil ? `${descripcion}\n\nHabilidades especiales: ${habil}` : descripcion,
     servicios,
@@ -69,13 +83,13 @@ export async function POST(req: NextRequest) {
     estado: 'activo',
     verificado: false,
     visitas_realizadas: 0,
-  })
+  }).select('id').single()
 
-  if (error) {
+  if (error || !creada) {
     // Liberar el token: la compita no debe quedarse sin invitación por un fallo nuestro
     if (!esAdmin && token) await admin.from('onboarding_tokens').update({ usado: false }).eq('token', token)
-    await avisarAdmin(`🚨 <b>Error en registro de onboarding</b>\n\n<b>Nombre:</b> ${nombre ?? '—'}\n<b>Email:</b> ${email ?? '—'}\n<b>Error DB:</b> ${error.message ?? JSON.stringify(error)}`)
-    return serverError(error)
+    await alertaAdmin('tarea', `🚨 <b>Error en registro de onboarding</b>\n\n<b>Nombre:</b> ${nombre ?? '—'}\n<b>Email:</b> ${email ?? '—'}\n<b>Error DB:</b> ${error.message ?? JSON.stringify(error)}`)
+    return serverError(error ?? new Error('No se pudo crear el compita'))
   }
 
   // Email de bienvenida con instrucciones de Telegram
@@ -86,5 +100,8 @@ export async function POST(req: NextRequest) {
     } catch (e) { console.error('Error enviando email bienvenida compita:', e) }
   }
 
-  return ok(null)
+  // Enlace de un solo uso para corregir los datos (por ejemplo un correo mal escrito) mientras no conecte Telegram.
+  let editToken: string | null = null
+  try { editToken = await generarTokenPerfil(String(creada.id)) } catch (e) { console.error('[onboarding] no se pudo crear el enlace de corrección:', e) }
+  return ok({ edit_token: editToken })
 }

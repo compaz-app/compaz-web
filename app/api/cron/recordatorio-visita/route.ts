@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { sendTelegramMessage, avisarAdmin, TECLADO_DURANTE_VISITA } from '@/lib/telegram'
+import { alertaAdmin } from '@/lib/alertas-admin'
 import { esc } from '@/lib/html'
 import { cronAutorizado, latido, reclamarUnaVez } from '@/lib/cron'
 
@@ -28,7 +29,7 @@ export async function POST(req: NextRequest) {
 
     if (visita.inicio && visita.inicio < hace8h) {
       if (await reclamarUnaVez(`alerta_visita_larga:${visita.id}`)) {
-        await avisarAdmin(`⏳ <b>Visita en curso hace más de 8 horas</b>\n\n<b>Compita:</b> ${esc(compita?.nombre ?? '—')}\n<b>Cliente:</b> ${esc(cliente?.nombre ?? '—')}\n\nProbablemente olvidó tocar "Terminar visita". Contáctala para cerrarla.`)
+        await alertaAdmin('urgente', `⏳ <b>Visita en curso hace más de 8 horas</b>\n\n<b>Compita:</b> ${esc(compita?.nombre ?? '—')}\n<b>Cliente:</b> ${esc(cliente?.nombre ?? '—')}\n\nProbablemente olvidó tocar "Terminar visita". Contáctala para cerrarla.`)
       }
       continue // no seguir insistiendo con recordatorios de foto
     }

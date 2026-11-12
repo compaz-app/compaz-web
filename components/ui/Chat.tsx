@@ -34,7 +34,7 @@ function MensajeSistema({ texto }: { texto: string }) {
     <div style={{ display: 'flex', justifyContent: 'center', padding: '4px 0' }}>
       <div style={{ background: '#F5F0FF', border: '1.5px solid rgba(124,77,255,0.2)', borderRadius: '12px', padding: '8px 14px', maxWidth: '85%', textAlign: 'center' }}>
         <p style={{ color: '#6B5C90', fontSize: '12px', fontFamily: 'Inter, sans-serif', margin: 0, lineHeight: '1.5', fontStyle: 'italic' }}>
-          🔒 {texto}
+          {texto}
         </p>
       </div>
     </div>
@@ -119,7 +119,7 @@ export default function Chat({ visita, mensajesIniciales, compitaNombre }: ChatP
               ? `${compitaNombre} está esperando tu confirmación`
               : `Visita en curso con ${compitaNombre}`}
         </span>
-        <span style={{ marginLeft: 'auto', fontSize: '11px', color: '#9B8AB8', fontFamily: 'Inter, sans-serif' }}>🔒 Chat seguro</span>
+        <span style={{ marginLeft: 'auto', fontSize: '11px', color: '#9B8AB8', fontFamily: 'Inter, sans-serif' }}>Chat seguro</span>
       </div>
 
       {/* Mensajes */}

@@ -4,7 +4,8 @@
 import { NextRequest } from 'next/server'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { getSolicitudPorToken, guardarSlotsReagendado } from '@/lib/solicitudes'
-import { sendTelegramMessage, avisarAdmin } from '@/lib/telegram'
+import { sendTelegramMessage } from '@/lib/telegram'
+import { alertaAdmin } from '@/lib/alertas-admin'
 import { SITE_URL } from '@/lib/email'
 import { esc } from '@/lib/html'
 import { formatSlotVE, esSlotFuturo } from '@/lib/format'
@@ -57,7 +58,8 @@ export async function POST(req: NextRequest) {
     } catch (e) { console.error('Telegram reagendado compita:', e) }
   }
 
-  await avisarAdmin(
+  await alertaAdmin(
+    notificada ? 'actividad' : 'tarea',
     notificada
       ? `🔄 <b>Reagendado</b>\n\nEl cliente propuso nuevos horarios para <b>${esc(solicitud.compita_nombre)}</b>. La compita recibió la notificación para confirmar.`
       : `⚠️ <b>Reagendado sin notificar</b>\n\nEl cliente propuso nuevos horarios para <b>${esc(solicitud.compita_nombre)}</b>, pero la compita NO pudo ser notificada (sin Telegram o error). Contáctala.`,

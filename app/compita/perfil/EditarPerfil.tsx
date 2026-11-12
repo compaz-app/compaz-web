@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { ZONAS_MUNICIPIOS as ZONAS } from '@/lib/venezuela'
+import { OpcionesProximamenteCompita, SeccionCuidadorMascotas } from '@/components/ui/Proximamente'
 
 // ── Servicios ─────────────────────────────────────────────────────────────────
 
@@ -51,10 +52,12 @@ const SERVICIOS_GRUPOS = [
 type HorarioItem = { dia: string; inicio: string; fin: string }
 
 const DIAS_SEMANA = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo']
-const BLOQUES_HORA = Array.from({ length: 13 }, (_, i) => {
-  const h = 8 + i
-  return `${String(h).padStart(2, '0')}:00`
+// Horas de inicio y fin en pasos de 20 minutos, de 08:00 a 20:00 (los bloques que ve el cliente son de 20 minutos).
+const BLOQUES_HORA = Array.from({ length: 37 }, (_, i) => {
+  const min = 8 * 60 + i * 20
+  return `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`
 })
+const aMin = (hhmm: string) => Number(hhmm.slice(0, 2)) * 60 + Number(hhmm.slice(3))
 
 interface Props {
   token: string
@@ -299,6 +302,9 @@ export default function EditarPerfil({ token, inicial }: Props) {
         </div>
       </div>
 
+      <OpcionesProximamenteCompita />
+      <SeccionCuidadorMascotas />
+
       {/* Foto */}
       <div>
         <label style={s.label}>Foto de perfil</label>
@@ -309,7 +315,7 @@ export default function EditarPerfil({ token, inicial }: Props) {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/images/ejemplo-foto-perfil.webp" alt="Ejemplo foto buena" style={{ width: '100%', maxHeight: '160px', objectFit: 'contain', display: 'block', background: '#f5f5f5' }} />
             <div style={{ padding: '8px 10px' }}>
-              <p style={{ fontSize: '11px', color: '#2E7D32', fontWeight: 700, margin: '0 0 2px' }}>✅ Así sí</p>
+              <p style={{ fontSize: '11px', color: '#2E7D32', fontWeight: 700, margin: '0 0 2px' }}>Así sí</p>
               <p style={{ fontSize: '11px', color: '#4A3B6B', margin: 0, lineHeight: '1.4' }}>Rostro centrado, fondo claro, buena luz</p>
             </div>
           </div>
@@ -317,7 +323,7 @@ export default function EditarPerfil({ token, inicial }: Props) {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/images/ejemplo-foto-perfil.webp" alt="Ejemplo foto mala" style={{ width: '100%', maxHeight: '160px', objectFit: 'contain', display: 'block', background: '#111', filter: 'brightness(0.25) contrast(0.8)' }} />
             <div style={{ padding: '8px 10px' }}>
-              <p style={{ fontSize: '11px', color: '#C62828', fontWeight: 700, margin: '0 0 2px' }}>❌ Así no</p>
+              <p style={{ fontSize: '11px', color: '#C62828', fontWeight: 700, margin: '0 0 2px' }}>Así no</p>
               <p style={{ fontSize: '11px', color: '#4A3B6B', margin: 0, lineHeight: '1.4' }}>Oscura, cara sin ver, fondo desordenado</p>
             </div>
           </div>
@@ -347,8 +353,15 @@ export default function EditarPerfil({ token, inicial }: Props) {
         <label style={s.label}>¿Cuándo puedes recibir llamadas de presentación? *</label>
         <p style={s.hint}>Los clientes elegirán una hora dentro de tu disponibilidad para coordinar una llamada de 20 minutos. Bloques de 20 min, hasta las 8:00 PM.</p>
         <p style={{ ...s.hint, color: '#9B8AB8', marginTop: '-6px' }}>
-          🕐 Horarios en hora de Venezuela (UTC−4) — ahora son las {new Date().toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Caracas' })} VET
+          Horarios en hora de Venezuela (UTC−4) — ahora son las {new Date().toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Caracas' })} VET
         </p>
+
+        {horarios.length > 0 && (() => {
+          // Cuántas horas de 20 minutos verán los clientes por semana (franjas que se solapan no se cuentan dos veces).
+          const bloques = new Set<string>()
+          for (const h of horarios) for (let m = Math.ceil(aMin(h.inicio) / 20) * 20; m + 20 <= aMin(h.fin); m += 20) bloques.add(`${h.dia}-${m}`)
+          return <p style={{ ...s.hint, color: '#2D1464', fontWeight: 700 }}>Los clientes verán {bloques.size} {bloques.size === 1 ? 'hora libre' : 'horas libres'} de 20 minutos por semana.</p>
+        })()}
 
         {horarios.length > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
@@ -429,7 +442,7 @@ export default function EditarPerfil({ token, inicial }: Props) {
 
       {errorForm && (
         <div style={{ background: '#FEF2F2', border: '2px solid #FCA5A5', borderRadius: '12px', padding: '12px 16px', color: '#B91C1C', fontSize: '14px', fontWeight: 600 }}>
-          ⚠️ {errorForm}
+          {errorForm}
         </div>
       )}
 

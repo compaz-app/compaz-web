@@ -5,9 +5,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSolicitudPorToken, iniciarReagendadoPorCompita } from '@/lib/solicitudes'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { sendTelegramMessage, avisarAdmin } from '@/lib/telegram'
+import { alertaAdmin } from '@/lib/alertas-admin'
 import { sendEmail, SITE_URL } from '@/lib/email'
 import { esc } from '@/lib/html'
-import { rolValido } from '@/lib/links'
+import { rolValido, qRol } from '@/lib/links'
+import { registrarAccion } from '@/lib/avisos'
+import { registrarEvento } from '@/lib/eventos'
+import { esEntrevistaConHoras, reagendarEntrevista } from '@/lib/reagendar'
 import { pagina, puertaConfirmacion } from '@/lib/confirm'
 
 type Resultado = 'contratar' | 'reagendar' | 'no_contratar' | 'bien'
@@ -20,6 +24,15 @@ function leer(req: NextRequest) {
   if (!token || !resultado || !['contratar', 'reagendar', 'no_contratar', 'bien'].includes(resultado)) return null
   const firmado = rolValido(token, quienRaw, sp.get('s'))
   return { token, resultado, quien: (quienRaw === 'compita' ? 'compita' : 'cliente') as 'cliente' | 'compita', firmado }
+}
+
+/** El cliente decidió (paso 10): se anota la acción para que no le lleguen recordatorios, y queda el evento. Nunca lanzan. */
+async function anotarDecision(solicitud: { id: string; cliente_id: string }, resultado: Resultado) {
+  await registrarAccion({ entidad: 'solicitud', entidadId: solicitud.id, paso: 10 })
+  await registrarEvento({
+    entidad: 'solicitud', entidadId: solicitud.id, tipo: 'decision_contratar',
+    actor: `cliente:${solicitud.cliente_id}`, datos: { resultado },
+  })
 }
 
 /** ¿Esta acción cambia estado y por tanto requiere firma + POST? */
@@ -89,6 +102,14 @@ async function ejecutar(req: NextRequest, p: NonNullable<ReturnType<typeof leer>
 
   // ── Reagendar ─────────────────────────────────────────────────────────────
   if (resultado === 'reagendar') {
+    // Entrevista agendada con horas libres: se reagenda eligiendo otra hora libre.
+    if (await esEntrevistaConHoras(solicitud.id)) {
+      if (quien === 'compita') {
+        const r = await reagendarEntrevista(solicitud.id, 'compita')
+        return r.ok ? pagina('Reagendado', 'Listo. Le avisamos al cliente para que elija otra de tus horas libres.') : pagina('Error', 'No pudimos procesar el reagendado (la solicitud ya cambió de estado).', 409)
+      }
+      return NextResponse.redirect(`${origin}/reagendar/${encodeURIComponent(token)}`, 303)
+    }
     if (quien === 'compita') {
       const reagendado = await iniciarReagendadoPorCompita(token)
       if (!reagendado) return pagina('Error', 'No pudimos procesar el reagendado (la solicitud ya cambió de estado).', 409)
@@ -126,11 +147,13 @@ async function ejecutar(req: NextRequest, p: NonNullable<ReturnType<typeof leer>
       }
       return pagina('Reagendado iniciado', 'Escríbenos en Telegram los nuevos horarios y se los haremos llegar al cliente.')
     }
+    await anotarDecision(solicitud, 'reagendar')
     return NextResponse.redirect(`${origin}/compitas?compita=${encodeURIComponent(solicitud.compita_id)}&reagendar=${encodeURIComponent(solicitud.id)}`, 303)
   }
 
   // ── Cliente contrata → paywall ────────────────────────────────────────────
   if (resultado === 'contratar') {
+    await anotarDecision(solicitud, 'contratar')
     return NextResponse.redirect(`${origin}/pago?solicitud=${encodeURIComponent(solicitud.id)}`, 303)
   }
 
@@ -146,6 +169,8 @@ async function ejecutar(req: NextRequest, p: NonNullable<ReturnType<typeof leer>
     return pagina('Error', 'No pudimos registrar tu decisión. Intenta de nuevo.', 500)
   }
   if (!cambiada) return NextResponse.redirect(`${origin}/compitas`, 303)
+  await anotarDecision(solicitud, 'no_contratar')
+  const irAMotivo = () => NextResponse.redirect(`${origin}/api/solicitud/motivo?token=${encodeURIComponent(token)}&${qRol(token, 'cliente')}`, 303)
 
   if (compita?.telegram_chat_id) {
     try {
@@ -155,7 +180,8 @@ async function ejecutar(req: NextRequest, p: NonNullable<ReturnType<typeof leer>
       )
     } catch (e) { console.error('Telegram no_contratar compita:', e) }
   }
-  await avisarAdmin(`ℹ️ <b>${esc(cliente?.nombre ?? 'Un cliente')}</b> decidió no contratar a <b>${esc(solicitud.compita_nombre)}</b> después de la llamada.`)
+  await alertaAdmin('actividad', `ℹ️ <b>${esc(cliente?.nombre ?? 'Un cliente')}</b> decidió no contratar a <b>${esc(solicitud.compita_nombre)}</b> después de la llamada.`)
 
-  return NextResponse.redirect(`${origin}/compitas`, 303)
+  // Antes llevaba directo a /compitas; ahora primero se le pregunta (opcional) por qué, y desde ahí puede seguir.
+  return irAMotivo()
 }

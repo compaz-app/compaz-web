@@ -56,9 +56,10 @@ export async function asignarCompita(usuarioId: string, compitaId: string | null
     if (error) throw new Error(error.message)
     return
   }
-  const { data: compita } = await supabase.from('compitas').select('estado, verificado').eq('id', compitaId).maybeSingle()
+  const { data: compita } = await supabase.from('compitas').select('estado, verificado, cmc_permite').eq('id', compitaId).maybeSingle()
   if (!compita) throw new Error('La compita no existe')
   if (compita.estado !== 'activo' || !compita.verificado) throw new Error('La compita no está activa y verificada')
+  if (compita.cmc_permite === false) throw new Error('La compita no tiene permiso del CMC para nuevos clientes')
 
   const { error } = await supabase.from('usuarios').update({ compita_id: compitaId }).eq('id', usuarioId)
   if (error) throw new Error(error.message)
@@ -79,4 +80,16 @@ export async function asignarCompita(usuarioId: string, compitaId: string | null
     const { error: eV } = await supabase.from('visitas').insert({ compita_id: compitaId, usuario_id: usuarioId, estado: 'pre_visita' })
     if (eV) throw new Error(eV.message)
   }
+}
+
+/**
+ * Bloquea o desbloquea a un cliente. El bloqueo real y inmediato lo aplica nuestro servidor en cada petición (getClienteActivo);
+ * la capa extra de Supabase Auth impide iniciar sesión y renovar la sesión.
+ */
+export async function bloquearCliente(usuarioId: string, bloquear: boolean): Promise<void> {
+  const admin = createAdminSupabase()
+  const { error } = await admin.from('usuarios').update({ plan: bloquear ? 'bloqueado' : null }).eq('id', usuarioId)
+  if (error) throw new Error(error.message)
+  const { error: eBan } = await admin.auth.admin.updateUserById(usuarioId, { ban_duration: bloquear ? '876000h' : 'none' })
+  if (eBan) console.error('[bloquearCliente] no se pudo (des)bloquear en Auth:', eBan.message)
 }

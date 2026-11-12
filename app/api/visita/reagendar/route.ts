@@ -7,6 +7,7 @@ import { sendEmail, SITE_URL } from '@/lib/email'
 import { esc } from '@/lib/html'
 import { formatFechaVE } from '@/lib/format'
 import { avisarAdmin } from '@/lib/telegram'
+import { alertaAdmin } from '@/lib/alertas-admin'
 
 // POST /api/visita/reagendar
 // Cancela la fecha acordada y vuelve al estado pre_visita para recoordinar
@@ -31,7 +32,7 @@ export async function POST(req: NextRequest) {
 
   const { data: reseteada, error } = await admin
     .from('visitas')
-    .update({ estado: 'pre_visita', fecha_programada: null })
+    .update({ estado: 'pre_visita', fecha_programada: null, cita_propuesta_fecha: null, cita_propuesta_inicio: null, cita_propuesta_fin: null, cita_propuesta_en: null })
     .eq('id', visita_id)
     .in('estado', ['pre_visita', 'programada'])
     .select('id')
@@ -73,7 +74,7 @@ export async function POST(req: NextRequest) {
         subject: 'Visita reagendada — coordina la nueva fecha con tu compita',
         html: `
           <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px">
-            <h2 style="color:#2D1464;font-size:22px;margin-bottom:12px">🔄 Visita reagendada</h2>
+            <h2 style="color:#2D1464;font-size:22px;margin-bottom:12px">Visita reagendada</h2>
             <p style="color:#4A3B6B;font-size:15px;line-height:1.6">
               Cancelaste la fecha${fechaAnterior ? ` del <strong>${esc(fechaAnterior)}</strong>` : ''}. Le avisamos a <strong>${esc(compita?.nombre ?? 'tu compita')}</strong> para que coordinen un nuevo día.
             </p>
@@ -101,7 +102,7 @@ export async function POST(req: NextRequest) {
     const nuevo = (totalReagendados ?? 0) + 1
     await admin.from('mensajes').insert({ visit_id: visita_id, origen: 'admin', tipo: 'texto', contenido: `reagendado:cliente` })
     if (nuevo >= 3) {
-      await avisarAdmin(
+      await alertaAdmin('tarea', 
         [
           `⚠️ <b>Visita con ${nuevo} reagendados</b>`,
           ``,

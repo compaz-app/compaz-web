@@ -14,7 +14,7 @@ export default async function CompitaPerfilPage({ searchParams }: Props) {
     return (
       <main style={{ minHeight: '100vh', background: '#FDFAF6', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
         <div style={{ textAlign: 'center', maxWidth: 400 }}>
-          <p style={{ fontSize: 48, margin: '0 0 16px' }}>🔗</p>
+          <p style={{ fontSize: 48, margin: '0 0 16px' }}></p>
           <h1 style={{ color: '#1A0A3C', fontSize: 22, fontWeight: 800, margin: '0 0 8px' }}>Enlace no válido</h1>
           <p style={{ color: '#4A3B6B', fontSize: 16, lineHeight: 1.6 }}>
             Para editar tu perfil, escribe <strong>/perfil</strong> en Telegram y usa el enlace que te enviamos.
@@ -29,7 +29,7 @@ export default async function CompitaPerfilPage({ searchParams }: Props) {
     return (
       <main style={{ minHeight: '100vh', background: '#FDFAF6', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
         <div style={{ textAlign: 'center', maxWidth: 400 }}>
-          <p style={{ fontSize: 48, margin: '0 0 16px' }}>⏳</p>
+          <p style={{ fontSize: 48, margin: '0 0 16px' }}></p>
           <h1 style={{ color: '#1A0A3C', fontSize: 22, fontWeight: 800, margin: '0 0 8px' }}>Enlace inválido o expirado</h1>
           <p style={{ color: '#4A3B6B', fontSize: 16, lineHeight: 1.6 }}>
             Este enlace ya fue usado o expiró. Escribe <strong>/perfil</strong> en Telegram para obtener uno nuevo.

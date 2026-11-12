@@ -1,5 +1,5 @@
 /* eslint-disable */
-import { db, net, limpiar, tgText, ultimoTg, tgPara, emailsA, mkCompita, mkCliente, mkSolicitud } from './harness'
+import { db, net, limpiar, tgText, ultimoTg, tgPara, emailsA, mkCompita, mkCliente, mkSolicitud, avisosAdmin } from './harness'
 import { beforeEach, test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import { POST as webhook } from '@/app/api/telegram-webhook/route'
@@ -17,7 +17,7 @@ describe('Hallazgos de la auditoría Cloudflare (corrida 1)', () => {
       await webhook(tgText(700, '/start')); await webhook(tgText(700, 'Ana Gómez'))
       for (let i = 0; i < 5; i++) await webhook(tgText(700, 'xxxxxx'))
     }
-    assert.ok(tgPara(999).some((m) => m.text.includes('Posible intento de suplantar')), 'el admin recibe el aviso')
+    assert.ok(avisosAdmin().some((m) => m.text.includes('Posible intento de suplantar')), 'el admin recibe el aviso')
     const antes = emailsA('ana@mail.test').length
     for (const r of db.rows('telegram_estados')) if (String(r.chat_id).startsWith('cod:')) r.updated_at = new Date(Date.now() - 120_000).toISOString()
     // otro chat distinto no puede pedir más códigos para esa compita

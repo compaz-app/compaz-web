@@ -1,6 +1,7 @@
 // POST /api/solicitud/reconectar-llamada?token=&quien=cliente|compita&s=<firma>
 // Crea una sala nueva y avisa a la otra parte. Solo con firma de rol, solicitud aceptada,
 // cerca de la hora pautada, y con enfriamiento de 2 minutos (evita abuso de salas y spam).
+import { explicarEspera } from '@/lib/esperas'
 import { NextRequest } from 'next/server'
 import { getSolicitudPorToken, guardarRoomUrl } from '@/lib/solicitudes'
 import { createEntrevistaRoom } from '@/lib/daily'
@@ -9,7 +10,8 @@ import { sendTelegramMessage } from '@/lib/telegram'
 import { sendEmail, SITE_URL } from '@/lib/email'
 import { esc } from '@/lib/html'
 import { qRol, rolValido } from '@/lib/links'
-import { ok, err, notFound, serverError } from '@/lib/api'
+import { enlaceDeLlamada } from '@/lib/llamada-acceso'
+import { ok, err, notFound, serverError, errEspera } from '@/lib/api'
 
 export async function POST(req: NextRequest) {
   const sp = req.nextUrl.searchParams
@@ -29,7 +31,7 @@ export async function POST(req: NextRequest) {
   // Enfriamiento: una fila sintética por solicitud
   const clave = `recon:${solicitud.id}`
   const { data: previo } = await admin.from('telegram_estados').select('updated_at').eq('chat_id', clave).maybeSingle()
-  if (previo && Date.now() - new Date(previo.updated_at).getTime() < 120_000) return err('Espera un momento antes de reconectar de nuevo', 429)
+  if (previo && Date.now() - new Date(previo.updated_at).getTime() < 120_000) return errEspera(explicarEspera('reconexion_llamada', { desde: previo.updated_at, duracionMs: 120_000 }))
   await admin.from('telegram_estados').upsert({ chat_id: clave, registro_pendiente: false, updated_at: new Date().toISOString() }, { onConflict: 'chat_id' })
 
   let roomUrl: string
@@ -76,5 +78,6 @@ export async function POST(req: NextRequest) {
     }
   } catch (e) { console.error('Aviso reconexión falló:', e) }
 
-  return ok({ room_url: roomUrl })
+  // La sala es privada: quien pidió la reconexión recibe SU enlace firmado (la otra parte recibe el suyo por correo o Telegram desde /sala).
+  return ok({ llamada_href: enlaceDeLlamada(roomUrl, quien === 'compita' ? 'compita' : 'cliente') })
 }

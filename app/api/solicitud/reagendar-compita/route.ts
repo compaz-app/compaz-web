@@ -1,9 +1,11 @@
 // /api/solicitud/reagendar-compita?token=&quien=compita&s=<firma>
 // La compita inicia un reagendado desde Telegram. GET confirma; POST ejecuta.
 import { NextRequest } from 'next/server'
-import { iniciarReagendadoPorCompita } from '@/lib/solicitudes'
+import { iniciarReagendadoPorCompita, getSolicitudPorToken } from '@/lib/solicitudes'
+import { esEntrevistaConHoras, reagendarEntrevista } from '@/lib/reagendar'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { sendTelegramMessage, avisarAdmin } from '@/lib/telegram'
+import { alertaAdmin } from '@/lib/alertas-admin'
 import { sendEmail } from '@/lib/email'
 import { esc } from '@/lib/html'
 import { rolValido } from '@/lib/links'
@@ -24,6 +26,13 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const p = leer(req)
   if (!p) return pagina('Enlace inválido', 'Este enlace no es válido.', 400)
+
+  // Entrevista agendada con horas libres: el cliente elige otra hora libre (sin proponer horarios a mano).
+  const actual = await getSolicitudPorToken(p.token)
+  if (actual && await esEntrevistaConHoras(actual.id)) {
+    const r = await reagendarEntrevista(actual.id, 'compita')
+    return r.ok ? pagina('Reagendado', 'Listo. Le avisamos al cliente para que elija otra de tus horas libres. Te avisamos cuando la elija.') : pagina('Enlace inválido', 'Este enlace ya no es válido o la solicitud está cerrada.', 410)
+  }
 
   const solicitud = await iniciarReagendadoPorCompita(p.token)
   if (!solicitud) return pagina('Enlace inválido', 'Este enlace ya no es válido o la solicitud está cerrada.', 410)
@@ -54,7 +63,7 @@ export async function POST(req: NextRequest) {
         subject: `${solicitud.compita_nombre} necesita cambiar la fecha de la llamada`,
         html: `
           <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px">
-            <h2 style="color:#2D1464;font-size:22px">🔄 ${esc(solicitud.compita_nombre ?? '')} no puede en ese horario</h2>
+            <h2 style="color:#2D1464;font-size:22px">${esc(solicitud.compita_nombre ?? '')} no puede en ese horario</h2>
             <p style="color:#4A3B6B;font-size:16px;line-height:1.6"><strong>${esc(solicitud.compita_nombre ?? '')}</strong> no pudo en el horario que propusiste, pero quiere reagendar contigo.</p>
             <p style="color:#4A3B6B;font-size:15px;line-height:1.6">En breve recibirás otro correo con los horarios que propone ${esc(solicitud.compita_nombre ?? '')} para que elijas el que mejor te quede.</p>
             <p style="color:#4A3B6B;font-size:15px;line-height:1.6">También puedes verlo desde tu portal:</p>
@@ -65,7 +74,7 @@ export async function POST(req: NextRequest) {
     } catch (e) { console.error('Email cliente reagendar:', e) }
   }
 
-  await avisarAdmin(`🔄 <b>Reagendado por compita</b>\n\n<b>Compita:</b> ${esc(solicitud.compita_nombre)}\n<b>Cliente:</b> ${esc(cliente?.nombre ?? '')}\n\nLa compita inició un reagendado desde Telegram.`)
+  await alertaAdmin('actividad', `🔄 <b>Reagendado por compita</b>\n\n<b>Compita:</b> ${esc(solicitud.compita_nombre)}\n<b>Cliente:</b> ${esc(cliente?.nombre ?? '')}\n\nLa compita inició un reagendado desde Telegram.`)
 
   return pagina('Reagendado iniciado', 'Recibimos tu solicitud. Escríbenos en Telegram los nuevos horarios que te funcionen y se los haremos llegar al cliente.')
 }

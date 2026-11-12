@@ -1,5 +1,5 @@
 /* eslint-disable */
-import { db, net, limpiar, cron, tgPara, emailsA, ahoraMas, hoyVEstr, mkCompita, mkCliente, mkSolicitud, mkVisita } from './harness'
+import { db, net, limpiar, cron, tgPara, emailsA, ahoraMas, hoyVEstr, mkCompita, mkCliente, mkSolicitud, mkVisita, avisosAdmin } from './harness'
 import { beforeEach, test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import { POST as recordatorios } from '@/app/api/cron/recordatorios/route'
@@ -60,7 +60,7 @@ describe('recordatorios (link de la llamada 1 h antes)', () => {
     setup()
     net.dailyFail = true
     await recordatorios(cron('r')); await recordatorios(cron('r'))
-    assert.equal(tgPara(999).filter((m) => m.text.includes('No se pudo crear la sala')).length, 1)
+    assert.equal(avisosAdmin().filter((m) => m.text.includes('No se pudo crear la sala')).length, 1)
     assert.equal(net.emails.length, 0)
     net.dailyFail = false
     await recordatorios(cron('r'))
@@ -84,7 +84,7 @@ describe('recordatorios (link de la llamada 1 h antes)', () => {
     const compita = mkCompita(); const cli = mkCliente()
     mkSolicitud(cli, compita, { estado: 'aceptada', slot_confirmado: hace(120), confirmacion_llamada_enviada: false })
     await recordatorios(cron('r')); await recordatorios(cron('r'))
-    assert.equal(tgPara(999).filter((m) => m.text.includes('posible sala vacía')).length, 1)
+    assert.equal(avisosAdmin().filter((m) => m.text.includes('posible sala vacía')).length, 1)
   })
 })
 
@@ -188,7 +188,7 @@ describe('Crons de visitas', () => {
     mkVisita(cli, compita, { estado: 'programada', fecha_programada: hoyVEstr(), hora_inicio_programada: horaIni, hora_fin_programada: '23:59' })
     await noshow(cron('n')); await noshow(cron('n'))
     const cruzaMedianoche = hoyVEstr() !== new Date(Date.now() - 4 * 3600_000 - 45 * 60_000).toISOString().slice(0, 10)
-    assert.equal(tgPara(999).filter((m) => m.text.includes('Posible no-show')).length, cruzaMedianoche ? 0 : 1)
+    assert.equal(avisosAdmin().filter((m) => m.text.includes('Posible no-show')).length, cruzaMedianoche ? 0 : 1)
   })
 
   test('visita en curso olvidada: máx. 6 recordatorios y alerta al admin a las 8 h (una vez)', async () => {
@@ -198,7 +198,7 @@ describe('Crons de visitas', () => {
     assert.equal(tgPara(730).length, 3)
     v.inicio = hace(9 * 60)
     await visitaCron(cron('v')); await visitaCron(cron('v'))
-    assert.equal(tgPara(999).filter((m) => m.text.includes('más de 8 horas')).length, 1)
+    assert.equal(avisosAdmin().filter((m) => m.text.includes('más de 8 horas')).length, 1)
   })
 
   test('recordatorio de mañana: usa el día de Venezuela y no repite; reprograma → vuelve a avisar', async () => {
@@ -237,7 +237,7 @@ describe('recordatorio-pago (renovación mensual, sin cobros automáticos)', () 
     const m = emailsA('cli@mail.test')
     assert.equal(m.length, 1)
     assert.ok(m[0].html.includes('Zelle') && m[0].html.includes('sin usar') && m[0].html.includes('condiciones'))
-    assert.equal(tgPara(999).filter((x) => x.text.includes('Renovaciones pendientes')).length, 1)
+    assert.equal(avisosAdmin().filter((x) => x.text.includes('Renovaciones pendientes')).length, 1)
   })
   test('no avisa si es "A la carta", si todavía no pasó el mes, o si ya renovó', async () => {
     const a = mkCliente({ email: 'a@mail.test' }); pago(a, 'carta', 31)

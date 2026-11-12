@@ -1,5 +1,5 @@
 /* eslint-disable */
-import { db, net, session, limpiar, req, tgText, tgPara, emailsA, ahoraMas, hoyVEstr, mkCompita, mkCliente, mkSolicitud } from './harness'
+import { db, net, session, limpiar, req, tgText, tgPara, emailsA, ahoraMas, hoyVEstr, mkCompita, mkCliente, mkSolicitud, confirmarLlegada, avisosAdmin } from './harness'
 import { beforeEach, test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import { calcularCreditos } from '@/lib/creditos'
@@ -23,7 +23,7 @@ const terminarActiva = (cli: any) => { const v = db.rows('visitas').find((x) => 
 const mundoCon = (paquetes: Array<{ inicioDias: number; venceDias: number; visitas: number; tipo?: string; plan?: string }>, visitasHaceDias: number[] = []) => {
   const lucia = mkCompita({ telegram_chat_id: '5000', nombre: 'Lucía' })
   const carlos = mkCliente({ email: 'carlos@mail.test', nombre: 'Carlos', compita_id: lucia.id })
-  paquetes.forEach((p) => db.seed('pagos_plan', { usuario_id: carlos.id, tipo: p.tipo ?? 'plan', plan: p.plan ?? 'quincenal', visitas: p.visitas, monto_usd: 75, metodo: 'zelle', inicio: iso(p.inicioDias), vence: iso(p.venceDias) }))
+  paquetes.forEach((p) => db.seed('pagos_plan', { usuario_id: carlos.id, tipo: p.tipo ?? 'plan', plan: p.plan ?? 'quincenal', visitas: p.visitas, monto_usd: 75, metodo: 'zelle', created_at: iso(p.inicioDias), inicio: iso(p.inicioDias), vence: iso(p.venceDias) }))
   visitasHaceDias.forEach((d) => db.seed('visitas', { usuario_id: carlos.id, compita_id: lucia.id, estado: 'terminada', created_at: iso(-d), fin: iso(-d) }))
   return { lucia, carlos }
 }
@@ -74,7 +74,7 @@ describe('Agendar otra visita con créditos', () => {
     const { carlos } = mundoCon([{ inicioDias: -2, venceDias: 58, visitas: 1, plan: 'carta' }], [1])
     como(carlos); const r = await nueva()
     assert.equal(r.status, 409)
-    assert.ok(tgPara(999).some((m) => m.text.includes('Plan agotado')))
+    assert.ok(avisosAdmin().some((m) => m.text.includes('Plan agotado')))
   })
 
   test('Compañía: el saldo del mes anterior se suma y todo se puede usar', async () => {
@@ -94,7 +94,7 @@ describe('Agendar otra visita con créditos', () => {
   test('CICLO VENCIDO sin pagar: puede usar una visita ya programada, pero no agendar nuevas', async () => {
     const { lucia, carlos } = mundoCon([{ inicioDias: -61, venceDias: -1, visitas: 2 }], [])
     const v = db.seed('visitas', { usuario_id: carlos.id, compita_id: lucia.id, estado: 'programada', fecha_programada: hoyVEstr(), hora_inicio_programada: '10:00', hora_fin_programada: '12:00' })
-    await webhook(tgText(5000, '▶️ Iniciar visita')); await webhook(tgText(5000, '✅ Sí, iniciar'))
+    await webhook(tgText(5000, '▶️ Iniciar visita')); await webhook(tgText(5000, '✅ Sí, iniciar')); await confirmarLlegada()
     assert.equal(v.estado, 'en_curso', 'la visita ya programada se realiza')
     terminarActiva(carlos); como(carlos)
     assert.equal((await nueva()).status, 409)
@@ -105,7 +105,7 @@ describe('Agendar otra visita con créditos', () => {
     como(carlos); assert.equal((await nueva()).status, 409)
     const r = await pagar(carlos, { tipo: 'extra', plan: undefined, horas: 2, metodo: 'zelle' })
     assert.equal(r.status, 200)
-    assert.equal((await r.json()).data.pago.monto_usd, 40)
+    assert.equal((await r.json()).data.pago.monto_usd, 44) // 2 horas a 22 dólares
     como(carlos); assert.equal((await nueva()).status, 200)
     terminarActiva(carlos); assert.equal((await nueva()).status, 409)
   })
@@ -142,11 +142,11 @@ describe('Registrar pago (panel admin)', () => {
     assert.equal(carlos.plan_contratado, 'semanal')
   })
 
-  test('validaciones: método, plan, horas mínimas (2), monto, cliente inexistente', async () => {
+  test('validaciones: método, plan, horas mínimas (1), monto, cliente inexistente', async () => {
     const { carlos } = mundoCon([])
     assert.equal((await pagar(carlos, { metodo: 'bitcoin' })).status, 400)
     assert.equal((await pagar(carlos, { plan: 'platino' })).status, 400)
-    assert.equal((await pagar(carlos, { tipo: 'extra', horas: 1 })).status, 400)
+    assert.equal((await pagar(carlos, { tipo: 'extra', horas: 0 })).status, 400)
     assert.equal((await pagar(carlos, { tipo: 'extra', horas: 13 })).status, 400)
     assert.equal((await pagar(carlos, { monto_usd: -5 })).status, 400)
     assert.equal((await pagar({ id: 'no-existe' })).status, 404)
@@ -158,12 +158,14 @@ describe('Registrar pago (panel admin)', () => {
     assert.equal((await pagar(carlos, { plan: 'quincenal', monto_usd: 74 })).status, 400)
     assert.equal((await pagar(carlos, { plan: 'quincenal', monto_usd: 60 })).status, 400)
     assert.equal((await pagar(carlos, { plan: 'semanal', monto_usd: 0 })).status, 400)
-    assert.equal((await pagar(carlos, { tipo: 'extra', horas: 3, monto_usd: 59 })).status, 400)
+    assert.equal((await pagar(carlos, { tipo: 'extra', horas: 3, monto_usd: 60 })).status, 400)
     assert.equal(db.rows('pagos_plan').length, 0, 'ningún pago incorrecto queda guardado')
     assert.match((await (await pagar(carlos, { plan: 'quincenal', monto_usd: 74 })).json()).error, /exactamente \$75/)
     assert.equal((await (await pagar(carlos, { plan: 'quincenal', monto_usd: 75 })).json()).data.pago.monto_usd, 75)
-    assert.equal((await (await pagar(carlos, { plan: 'quincenal' })).json()).data.pago.monto_usd, 75)
-    assert.equal((await (await pagar(carlos, { tipo: 'extra', horas: 3 })).json()).data.pago.monto_usd, 60)
+    assert.equal((await (await pagar(carlos, { plan: 'quincenal', referencia: 'otro-pago' })).json()).data.pago.monto_usd, 75)
+    assert.equal((await (await pagar(carlos, { tipo: 'extra', horas: 3 })).json()).data.pago.monto_usd, 66) // 3 horas a 22 dólares
+    assert.equal((await (await pagar(carlos, { tipo: 'extra', horas: 1 })).json()).data.pago.monto_usd, 22) // desde 1 hora, sin mínimo de 2
+    assert.equal((await (await pagar(carlos, { plan: 'carta' })).json()).data.pago.monto_usd, 22) // A la carta: 1 hora
   })
 
   test('anular un pago equivocado devuelve el cupo; no se puede anular dos veces; el historial lo muestra', async () => {

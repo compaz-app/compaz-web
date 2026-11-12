@@ -1,30 +1,18 @@
 import { NextRequest } from 'next/server'
-import { createAdminSupabase } from '@/lib/supabase-server'
-import { getAdminUser } from '@/lib/auth'
-import { ok, err, unauthorized, serverError } from '@/lib/api'
+import { requierePermiso } from '@/lib/permisos'
+import { eliminarClientePorEquipo } from '@/lib/cuenta-eliminar'
+import { ok, err, notFound, serverError } from '@/lib/api'
 
+// DELETE /api/admin/eliminar-cliente { usuario_id, borrar_datos? } — solo el administrador raíz. Cierra la cuenta y conserva el historial con el nombre y
+// la marca "(cuenta eliminada)". Solo con borrar_datos (la persona pidió que se borren sus datos) se anonimiza.
 export async function DELETE(req: NextRequest) {
-  if (!(await getAdminUser())) return unauthorized()
-
-  const { usuario_id } = (await req.json().catch(() => ({})))
-  if (!usuario_id) return err('usuario_id requerido')
-
-  const admin = createAdminSupabase()
-
-  // Limpiar FKs que no tienen CASCADE antes de borrar el auth user
-  const { error: eVisitas } = await admin.from('visitas').delete().eq('usuario_id', usuario_id)
-  if (eVisitas) return serverError(eVisitas)
-
-  const { error: eSolicitudes } = await admin.from('solicitudes').delete().eq('cliente_id', usuario_id)
-  if (eSolicitudes) return serverError(eSolicitudes)
-
-  const { error: eTokens } = await admin.from('action_tokens').delete().eq('cliente_id', usuario_id)
-  if (eTokens) return serverError(eTokens)
-
-  // Borrar auth.users PRIMERO — propaga CASCADE a usuarios, garantizando que
-  // el email quede libre incluso si algún paso anterior hubiera fallado.
-  const { error: eAuth } = await admin.auth.admin.deleteUser(usuario_id)
-  if (eAuth) return serverError(eAuth)
-
-  return ok(null)
+  const g = await requierePermiso('raiz'); if (!g.ok) return g.res
+  const { usuario_id, borrar_datos } = (await req.json().catch(() => ({}))) as { usuario_id?: unknown; borrar_datos?: unknown }
+  if (typeof usuario_id !== 'string' || !usuario_id) return err('usuario_id requerido')
+  const r = await eliminarClientePorEquipo(usuario_id, g.actor.correo, { borrarDatos: borrar_datos === true })
+  if (r.ok) return ok({ visitas_canceladas: r.visitasCanceladas ?? 0 })
+  if (r.motivo === 'no_existe') return notFound('Cliente')
+  if (r.motivo === 'ya_eliminada') return err('Esta cuenta ya está eliminada', 409)
+  if (r.motivo === 'visita_en_vivo') return err('Tiene una visita en curso. Espera a que termine o ciérrala antes de eliminar la cuenta.', 409)
+  return serverError(new Error('No se pudo eliminar la cuenta'))
 }

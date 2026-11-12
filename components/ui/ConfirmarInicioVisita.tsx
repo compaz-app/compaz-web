@@ -39,7 +39,6 @@ export default function ConfirmarInicioVisita({ visitaId, compitaNombre }: { vis
       marginBottom: '20px',
       textAlign: 'center',
     }}>
-      <div style={{ fontSize: '48px', marginBottom: '12px' }}>🚪</div>
       <h3 style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '22px', color: '#15803d', margin: '0 0 8px' }}>
         {compitaNombre} ya llegó
       </h3>
@@ -67,7 +66,7 @@ export default function ConfirmarInicioVisita({ visitaId, compitaNombre }: { vis
           transition: 'background 0.15s',
         }}
       >
-        {confirmando ? 'Confirmando…' : `✅ Sí, ${compitaNombre} ya llegó`}
+        {confirmando ? 'Confirmando…' : `Sí, ${compitaNombre} ya llegó`}
       </button>
       <p style={{ color: '#4A7C59', fontSize: '12px', marginTop: '12px', margin: '12px 0 0' }}>
         Si no confirmas en 5 minutos la visita arranca automáticamente.

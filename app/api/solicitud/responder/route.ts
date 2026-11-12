@@ -4,6 +4,7 @@ import { NextRequest } from 'next/server'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { responderSolicitud } from '@/lib/solicitudes'
 import { sendTelegramMessage, avisarAdmin } from '@/lib/telegram'
+import { alertaAdmin } from '@/lib/alertas-admin'
 import { sendEmail, SITE_URL } from '@/lib/email'
 import { esc } from '@/lib/html'
 import { formatSlotVE } from '@/lib/format'
@@ -45,7 +46,7 @@ export async function POST(req: NextRequest) {
   ])
 
   if (solicitud.estado === 'rechazada') {
-    await avisarAdmin(`❌ <b>${esc(solicitud.compita_nombre)}</b> rechazó la solicitud de entrevista.\nEsperando que sugiera horarios alternativos.`)
+    await alertaAdmin('actividad', `❌ <b>${esc(solicitud.compita_nombre)}</b> rechazó la solicitud de entrevista.\nEsperando que sugiera horarios alternativos.`)
     if (compita?.telegram_chat_id) {
       await admin.from('telegram_estados').upsert(
         { chat_id: compita.telegram_chat_id, registro_pendiente: false, pendiente_accion: `sugerir_horarios:${solicitud.id}:${cliente?.email ?? ''}:${cliente?.nombre ?? 'el cliente'}`, pendiente_expira: new Date(Date.now() + 24 * 3600_000).toISOString() },
@@ -75,10 +76,10 @@ export async function POST(req: NextRequest) {
               <strong>${esc(solicitud.compita_nombre)}</strong> confirmó la llamada para el:<br><strong>${esc(slotLabel)}</strong>
             </p>
             <p style="color:#4A3B6B;background:#F5F0E8;border:2px solid #D4C9E8;border-radius:12px;padding:14px;font-size:14px">
-              📩 Te enviaremos el link de acceso a la llamada <strong>1 hora antes</strong>.
+             Te enviaremos el link de acceso a la llamada <strong>1 hora antes</strong>.
             </p>
             <p style="color:#6B5C90;font-size:14px;line-height:1.6;margin-top:24px">¿Surgió algo y necesitas cambiar la fecha? Puedes proponer nuevos horarios desde aquí:</p>
-            <a href="${SITE_URL}/reagendar/${encodeURIComponent(solicitud.token_respuesta)}" style="display:inline-block;background:#6B5C90;color:white;padding:12px 24px;border-radius:9999px;text-decoration:none;font-weight:700;font-size:14px;margin-top:4px">🔄 Reagendar llamada</a>
+            <a href="${SITE_URL}/reagendar/${encodeURIComponent(solicitud.token_respuesta)}" style="display:inline-block;background:#6B5C90;color:white;padding:12px 24px;border-radius:9999px;text-decoration:none;font-weight:700;font-size:14px;margin-top:4px">Reagendar llamada</a>
             <p style="color:#6B5C90;font-size:13px;margin-top:24px">Compaz — <em>Cerca aunque estés lejos</em></p>
           </div>`,
       })
@@ -96,7 +97,7 @@ export async function POST(req: NextRequest) {
     } catch (e) { console.error('Telegram compita confirmación:', e) }
   }
 
-  await avisarAdmin([
+  await alertaAdmin('actividad', [
     `📞 <b>Entrevista confirmada</b>`, ``,
     `<b>Cliente:</b> ${esc(cliente?.nombre ?? 'Cliente')} (${esc(cliente?.email ?? '')})`,
     `<b>Compita:</b> ${esc(solicitud.compita_nombre)}`,

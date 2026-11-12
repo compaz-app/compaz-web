@@ -1,10 +1,11 @@
 import { NextRequest } from 'next/server'
-import { getAdminUser } from '@/lib/auth'
-import { ok, err, unauthorized, serverError } from '@/lib/api'
+import { requierePermiso } from '@/lib/permisos'
+import { ok, err, serverError } from '@/lib/api'
 import { bloquearCompita, desbloquearCompita } from '@/lib/compitas'
+import { anotarAccion } from '@/lib/acciones-equipo'
 
 export async function POST(req: NextRequest) {
-  if (!(await getAdminUser())) return unauthorized()
+  const g = await requierePermiso('cuentas'); if (!g.ok) return g.res
 
   const { compita_id, bloquear } = (await req.json().catch(() => ({})))
   if (!compita_id) return err('compita_id requerido')
@@ -15,6 +16,7 @@ export async function POST(req: NextRequest) {
     } else {
       await desbloquearCompita(compita_id)
     }
+    await anotarAccion(g.actor.correo, bloquear ? 'bloqueó a un compita' : 'desbloqueó a un compita', { tipo: 'compita', id: String(compita_id) })
     return ok(null)
   } catch (e) {
     return serverError(e)

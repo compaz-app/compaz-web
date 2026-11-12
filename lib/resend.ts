@@ -81,7 +81,7 @@ export async function sendCodigoTelegram(email: string, nombre: string, codigo: 
         <div style="font-size: 40px; font-weight: bold; letter-spacing: 8px; color: #FF6B2B; text-align: center; padding: 24px 0;">${codigo}</div>
         <p style="font-size: 14px; color: #6B5C90;">Expira en 15 minutos. Ingrésalo en el chat de Telegram con el bot de Compaz.</p>
         <div style="margin-top: 24px; padding: 16px; background: #FFF3CD; border-left: 4px solid #FF6B2B; border-radius: 8px;">
-          <p style="font-size: 14px; font-weight: 700; color: #1A0A3C; margin: 0 0 6px 0;">🚨 Alerta de fraude</p>
+          <p style="font-size: 14px; font-weight: 700; color: #1A0A3C; margin: 0 0 6px 0;">Alerta de fraude</p>
           <p style="font-size: 14px; color: #1A0A3C; margin: 0;">El código llega únicamente por correo. Compaz nunca te llamará por teléfono. No compartas este código con nadie.</p>
         </div>
       </div>
@@ -102,7 +102,7 @@ export async function sendBienvenidaCompita(
       <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px;background:#FDFAF6">
         <img src="${SITE_URL}/logo.png" alt="Compaz" style="height:40px;margin-bottom:24px" />
 
-        <h1 style="color:#2D1464;font-size:26px;margin-bottom:8px">¡Hola, ${escapeHtml(nombre)}! 👋</h1>
+        <h1 style="color:#2D1464;font-size:26px;margin-bottom:8px">¡Hola, ${escapeHtml(nombre)}!</h1>
         <p style="color:#4A3B6B;font-size:16px;line-height:1.6;margin-bottom:24px">
           Ya eres parte de la familia Compaz. Aquí te explicamos todo lo que necesitas saber para comenzar.
         </p>
@@ -110,13 +110,13 @@ export async function sendBienvenidaCompita(
         <!-- Paso 1 -->
         <div style="background:white;border:2px solid #E8E0D4;border-radius:16px;padding:24px;margin-bottom:16px">
           <p style="color:#FF6B2B;font-weight:800;font-size:13px;margin:0 0 8px 0;text-transform:uppercase;letter-spacing:1px">Paso 1</p>
-          <h2 style="color:#2D1464;font-size:18px;margin:0 0 12px 0">Conecta tu Telegram 📱</h2>
+          <h2 style="color:#2D1464;font-size:18px;margin:0 0 12px 0">Conecta tu Telegram</h2>
           <p style="color:#4A3B6B;font-size:15px;line-height:1.6;margin:0 0 16px 0">
             Toda la comunicación con Compaz es a través de Telegram — una aplicación gratuita de mensajería, como WhatsApp. Si aún no la tienes, descárgala primero:
           </p>
           <p style="margin:0 0 16px 0">
-            <a href="https://apps.apple.com/app/telegram-messenger/id686449807" style="display:inline-block;background:#2D1464;color:white;padding:8px 16px;border-radius:9999px;text-decoration:none;font-weight:700;font-size:13px;margin-right:8px">📱 App Store (iPhone)</a>
-            <a href="https://play.google.com/store/apps/details?id=org.telegram.messenger" style="display:inline-block;background:#2D1464;color:white;padding:8px 16px;border-radius:9999px;text-decoration:none;font-weight:700;font-size:13px">▶ Play Store (Android)</a>
+            <a href="https://apps.apple.com/app/telegram-messenger/id686449807" style="display:inline-block;background:#2D1464;color:white;padding:8px 16px;border-radius:9999px;text-decoration:none;font-weight:700;font-size:13px;margin-right:8px">App Store (iPhone)</a>
+            <a href="https://play.google.com/store/apps/details?id=org.telegram.messenger" style="display:inline-block;background:#2D1464;color:white;padding:8px 16px;border-radius:9999px;text-decoration:none;font-weight:700;font-size:13px">Play Store (Android)</a>
           </p>
           <ol style="color:#4A3B6B;font-size:15px;line-height:2;padding-left:20px;margin:0 0 16px 0">
             <li>Busca <strong>@${escapeHtml(telegramBotUsername)}</strong> en Telegram — o pulsa el botón de abajo:<br>
@@ -126,16 +126,16 @@ export async function sendBienvenidaCompita(
             <li>El bot te pedirá tu nombre completo. Escríbelo tal como apareces aquí.</li>
             <li>Te enviamos un código de 6 dígitos a este correo. Ingrésalo en el chat para activar tu cuenta.</li>
           </ol>
-          <p style="color:#B91C1C;font-size:14px;font-weight:700;margin:0 0 12px">🚨 El código llega solo por correo. No lo compartas con nadie.</p>
+          <p style="color:#B91C1C;font-size:14px;font-weight:700;margin:0 0 12px">El código llega solo por correo. No lo compartas con nadie.</p>
           <p style="color:#1A0A3C;font-size:14px;font-weight:700;background:#FFF3E8;border-left:3px solid #FF6B2B;padding:10px 14px;border-radius:0 8px 8px 0;margin:0">
-            🔔 <strong>Activa las notificaciones de Telegram</strong> (Configuración → Notificaciones) para no perderte solicitudes de clientes.
+            <strong>Activa las notificaciones de Telegram</strong> (Configuración → Notificaciones) para no perderte solicitudes de clientes.
           </p>
         </div>
 
         <!-- Paso 2 -->
         <div style="background:white;border:2px solid #E8E0D4;border-radius:16px;padding:24px;margin-bottom:16px">
           <p style="color:#FF6B2B;font-weight:800;font-size:13px;margin:0 0 8px 0;text-transform:uppercase;letter-spacing:1px">Paso 2</p>
-          <h2 style="color:#2D1464;font-size:18px;margin:0 0 12px 0">Completa tu perfil ✏️</h2>
+          <h2 style="color:#2D1464;font-size:18px;margin:0 0 12px 0">Completa tu perfil</h2>
           <p style="color:#4A3B6B;font-size:15px;line-height:1.6;margin:0">
             Si ya completaste tu perfil al inscribirte, salta este paso. Si no, desde Telegram escribe <strong>/perfil</strong> para editar tu página: foto, descripción, servicios, horarios y video de YouTube. Las familias comparan perfiles — uno completo tiene muchas más posibilidades de ser elegido.
           </p>
@@ -144,7 +144,7 @@ export async function sendBienvenidaCompita(
         <!-- Paso 3 -->
         <div style="background:white;border:2px solid #E8E0D4;border-radius:16px;padding:24px;margin-bottom:24px">
           <p style="color:#FF6B2B;font-weight:800;font-size:13px;margin:0 0 8px 0;text-transform:uppercase;letter-spacing:1px">Paso 3</p>
-          <h2 style="color:#2D1464;font-size:18px;margin:0 0 12px 0">¡Listo! Ahora espera a que lleguen las familias 🤝</h2>
+          <h2 style="color:#2D1464;font-size:18px;margin:0 0 12px 0">¡Listo! Ahora espera a que lleguen las familias</h2>
           <p style="color:#4A3B6B;font-size:15px;line-height:1.6;margin:0">
             Cuando una familia quiera conocerte, recibirás un mensaje de Telegram con todos los detalles. Desde ahí puedes <strong>aceptar o rechazar</strong> la solicitud y coordinar el horario de la videollamada.
           </p>
@@ -161,21 +161,28 @@ export async function sendBienvenidaCompita(
         </div>
 
         <div style="background:#FFF3E8;border-left:4px solid #FF6B2B;border-radius:0 8px 8px 0;padding:14px 16px;margin-bottom:20px">
-          <p style="color:#B91C1C;font-weight:700;font-size:13px;margin:0 0 4px;font-family:Inter,sans-serif">🔒 Aviso de seguridad</p>
+          <p style="color:#B91C1C;font-weight:700;font-size:13px;margin:0 0 4px;font-family:Inter,sans-serif">Aviso de seguridad</p>
           <p style="color:#1A0A3C;font-size:13px;line-height:1.6;margin:0">Compaz nunca te pedirá contraseñas, datos bancarios, números de cédula ni información privada por correo, chat ni ningún otro medio. Tampoco te pediremos que hagas transferencias de dinero directamente a una persona. Si alguien te lo solicita diciendo ser de Compaz, no respondas y avísanos a <a href="mailto:hola@micompaz.com" style="color:#FF6B2B">hola@micompaz.com</a>.</p>
         </div>
 
         <p style="color:#4A3B6B;font-size:15px;line-height:1.6;margin-bottom:8px">
           Cualquier duda, escríbenos a <a href="mailto:hola@micompaz.com" style="color:#FF6B2B">hola@micompaz.com</a> o responde a este correo. ¡Estamos para ayudarte!
         </p>
-        <p style="color:#2D1464;font-size:15px;font-weight:700;margin-bottom:32px">El equipo Compaz 💙</p>
+        <p style="color:#2D1464;font-size:15px;font-weight:700;margin-bottom:32px">El equipo Compaz</p>
         <p style="color:#9990A8;font-size:13px;margin:0">Compaz — <em>Cerca aunque estés lejos</em></p>
       </div>
     `,
   })
 }
 
-export async function sendAccesoEmail(email: string, nombre: string, enlaceAcceso: string): Promise<void> {
+export async function sendAccesoEmail(email: string, nombre: string, enlaceAcceso: string, codigo?: string): Promise<void> {
+  // Solo dígitos: se muestra tal cual y se escribe en micompaz.com/login si el enlace se abrió en otra app o teléfono
+  const bloqueCodigo = codigo && /^\d{6,10}$/.test(codigo)
+    ? `<div style="background:#F5F0FF;border-radius:12px;padding:14px 18px;margin:20px 0 0">
+          <p style="color:#4A3B6B;font-size:14px;line-height:1.6;margin:0 0 6px">¿El botón no funciona? Entra con este código: escríbelo en micompaz.com/login.</p>
+          <p style="color:#2D1464;font-size:28px;font-weight:800;letter-spacing:6px;margin:0">${codigo}</p>
+        </div>`
+    : ''
   await sendEmail({
     to: email,
     subject: 'Tu acceso a Compaz',
@@ -184,7 +191,8 @@ export async function sendAccesoEmail(email: string, nombre: string, enlaceAcces
         <h2 style="color:#2D1464;font-size:24px;margin-bottom:8px">Hola, ${escapeHtml(nombre.split(' ')[0])}</h2>
         <p style="color:#4A3B6B;font-size:16px;line-height:1.6;margin-bottom:20px">Pulsa el botón para entrar a tu portal de Compaz.</p>
         <a href="${escapeHtml(enlaceAcceso)}" style="display:inline-block;background:#FF6B2B;color:white;padding:16px 32px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:17px">Entrar a Compaz →</a>
-        <p style="color:#6B5C90;font-size:13px;line-height:1.6;margin:16px 0 0">El enlace es personal, funciona una sola vez y <strong>vence en 1 hora</strong>. Si vence, vuelve a micompaz.com/login y pide uno nuevo. Si no lo pediste, ignora este correo.</p>
+        ${bloqueCodigo}
+        <p style="color:#6B5C90;font-size:13px;line-height:1.6;margin:16px 0 0">El enlace y el código son personales, funcionan una sola vez y <strong>vencen en 1 hora</strong>. Si pides otro, <strong>usa siempre el correo más reciente</strong>: el anterior deja de servir. Si no lo pediste, ignora este correo.</p>
         <p style="color:#9990A8;font-size:13px;margin-top:20px">Compaz, <em>Cerca aunque estés lejos</em></p>
       </div>
     `,
@@ -198,7 +206,7 @@ export async function sendBienvenidaCliente(email: string, nombre: string, enlac
     subject: `Bienvenido a Compaz, ${nombre.split(' ')[0]}`,
     html: `
       <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px;background:#FDFAF6">
-        <h1 style="color:#2D1464;font-size:26px;margin-bottom:8px">¡Hola, ${primero}! 👋</h1>
+        <h1 style="color:#2D1464;font-size:26px;margin-bottom:8px">¡Hola, ${primero}!</h1>
         <p style="color:#4A3B6B;font-size:16px;line-height:1.6;margin-bottom:20px">
           Te damos la bienvenida a Compaz. Lee los tres pasos a continuación y luego activa tu cuenta.
         </p>
@@ -235,7 +243,7 @@ export async function sendBienvenidaCliente(email: string, nombre: string, enlac
         </p>
 
         <div style="background:#FFF3E8;border-left:4px solid #FF6B2B;border-radius:0 8px 8px 0;padding:14px 16px;margin-bottom:20px">
-          <p style="color:#B91C1C;font-weight:700;font-size:13px;margin:0 0 4px;font-family:Inter,sans-serif">🔒 Aviso de seguridad</p>
+          <p style="color:#B91C1C;font-weight:700;font-size:13px;margin:0 0 4px;font-family:Inter,sans-serif">Aviso de seguridad</p>
           <p style="color:#1A0A3C;font-size:13px;line-height:1.6;margin:0">Compaz nunca te pedirá contraseñas, datos bancarios, números de cédula ni información privada por correo, chat ni ningún otro medio. Tampoco te pediremos que hagas transferencias de dinero directamente a una persona. Si alguien te lo solicita diciendo ser de Compaz, no respondas y avísanos a <a href="mailto:hola@micompaz.com" style="color:#FF6B2B">hola@micompaz.com</a>.</p>
         </div>
 
@@ -248,30 +256,29 @@ export async function sendBienvenidaCliente(email: string, nombre: string, enlac
   })
 }
 
-export async function sendSolicitudCompita(
-  email: string,
+/** Arma el correo de nueva solicitud al compita (sin enviarlo). Lo usa también la plantilla de avisos. */
+export function armarSolicitudCompita(
   nombre: string,
   clienteNombre: string,
   slots: { label: string; url: string }[],
   urlRechazar: string,
-): Promise<void> {
+): { asunto: string; html: string } {
   const primero = escapeHtml(nombre.split(' ')[0])
   const botonesSlots = slots.map(({ label, url }) => `
     <a href="${escapeHtml(url)}" style="display:block;background:#7C4DFF;color:white;padding:12px 20px;border-radius:9999px;text-decoration:none;font-weight:700;font-size:14px;margin-bottom:8px;text-align:center">
-      ✅ ${escapeHtml(label)}
+      ${escapeHtml(label)}
     </a>`).join('')
-  await sendEmail({
-    to: email,
-    subject: `Nueva solicitud de entrevista — ${escapeHtml(clienteNombre)}`,
+  return {
+    asunto: `Nueva solicitud de entrevista — ${escapeHtml(clienteNombre)}`,
     html: `
       <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px;background:#FDFAF6">
-        <h2 style="color:#2D1464;font-size:22px;margin-bottom:4px">¡Hola, ${primero}! 👋</h2>
+        <h2 style="color:#2D1464;font-size:22px;margin-bottom:4px">¡Hola, ${primero}!</h2>
         <p style="color:#4A3B6B;font-size:16px;line-height:1.6;margin-bottom:20px">
           <strong>${escapeHtml(clienteNombre)}</strong> quiere conocerte. Elige el horario que te funcione para la videollamada de 20 minutos.
         </p>
         ${botonesSlots}
         <a href="${escapeHtml(urlRechazar)}" style="display:block;background:white;color:#6B5C90;border:2px solid #D1C8E0;padding:12px 20px;border-radius:9999px;text-decoration:none;font-weight:700;font-size:14px;margin-bottom:24px;text-align:center">
-          ❌ No puedo en ninguno de esos horarios
+          No puedo en ninguno de esos horarios
         </a>
         <p style="color:#9990A8;font-size:13px;line-height:1.6">
           Cada botón funciona una sola vez. Si ya respondiste desde Telegram, ignora este correo.
@@ -279,7 +286,18 @@ export async function sendSolicitudCompita(
         <p style="color:#9990A8;font-size:13px;margin-top:20px">Compaz — <em>Cerca aunque estés lejos</em></p>
       </div>
     `,
-  })
+  }
+}
+
+export async function sendSolicitudCompita(
+  email: string,
+  nombre: string,
+  clienteNombre: string,
+  slots: { label: string; url: string }[],
+  urlRechazar: string,
+): Promise<void> {
+  const { asunto, html } = armarSolicitudCompita(nombre, clienteNombre, slots, urlRechazar)
+  await sendEmail({ to: email, subject: asunto, html })
 }
 
 export async function sendVisitaInicio(

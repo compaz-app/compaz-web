@@ -1,81 +1,30 @@
 import { NextRequest } from 'next/server'
-import { createAdminSupabase } from '@/lib/supabase-server'
-import { getAdminUser } from '@/lib/auth'
-import { ok, err, unauthorized, serverError } from '@/lib/api'
+import { requierePermiso } from '@/lib/permisos'
+import { listarFlags, crearFlag, resolverFlag } from '@/lib/acciones-equipo'
+import { ok, err } from '@/lib/api'
 
-const requireAdmin = getAdminUser
-
-// GET /api/admin/flags — listar flags abiertos
+// GET /api/admin/flags?resueltos=true|false — tareas abiertas (o resueltas). Sin el permiso de teléfonos, las notas llegan sin teléfonos ni correos.
 export async function GET(req: NextRequest) {
-  const user = await requireAdmin()
-  if (!user) return unauthorized()
-
-  const { searchParams } = req.nextUrl
-  const resueltos = searchParams.get('resueltos') === 'true'
-
-  const admin = createAdminSupabase()
-  const { data, error } = await admin
-    .from('admin_flags')
-    .select('*')
-    .eq('resuelto', resueltos)
-    .order('created_at', { ascending: false })
-
-  if (error) return serverError(error)
-  return ok(data)
+  const g = await requierePermiso('atender'); if (!g.ok) return g.res
+  const r = await listarFlags(g.actor, req.nextUrl.searchParams.get('resueltos') === 'true')
+  return r.ok ? ok(r.data) : err(r.error, r.status)
 }
 
-// POST /api/admin/flags — crear flag
+// POST /api/admin/flags — crear una tarea { entidad_tipo, entidad_id, entidad_nombre?, nota }
 export async function POST(req: NextRequest) {
-  const user = await requireAdmin()
-  if (!user) return unauthorized()
-
-  const body = await req.json().catch(() => null) as {
-    entidad_tipo: 'visita' | 'compita' | 'cliente'
-    entidad_id: string
-    entidad_nombre: string
-    nota: string
-  } | null
-
-  if (!body || !['visita', 'compita', 'cliente'].includes(body.entidad_tipo) || !body.entidad_id || !body.nota?.trim()) {
-    return err('Faltan campos requeridos')
-  }
+  const g = await requierePermiso('atender'); if (!g.ok) return g.res
+  const body = await req.json().catch(() => null) as { entidad_tipo?: string; entidad_id?: string; entidad_nombre?: string; nota?: string } | null
+  if (!body || !['visita', 'compita', 'cliente'].includes(String(body.entidad_tipo)) || !body.entidad_id || !body.nota?.trim()) return err('Faltan campos requeridos')
   if (body.nota.length > 2000) return err('La nota es demasiado larga')
-
-  const admin = createAdminSupabase()
-  const { data, error } = await admin
-    .from('admin_flags')
-    .insert({
-      entidad_tipo: body.entidad_tipo,
-      entidad_id: body.entidad_id,
-      entidad_nombre: body.entidad_nombre ?? '',
-      nota: body.nota.trim(),
-      reportado_por: user.email ?? 'admin', // identidad de la sesión, no del body
-      resuelto: false,
-    })
-    .select()
-    .single()
-
-  if (error) {
-    console.error('[flags POST]', JSON.stringify(error))
-    return serverError(error)
-  }
-  return ok(data)
+  const r = await crearFlag(g.actor.correo, { entidad_tipo: body.entidad_tipo as string, entidad_id: body.entidad_id, entidad_nombre: body.entidad_nombre, nota: body.nota })
+  return r.ok ? ok(r.data) : err(r.error, r.status)
 }
 
-// PATCH /api/admin/flags — resolver flag
+// PATCH /api/admin/flags { flag_id } — resolver una tarea
 export async function PATCH(req: NextRequest) {
-  const user = await requireAdmin()
-  if (!user) return unauthorized()
-
-  const { flag_id } = (await req.json().catch(() => ({}))) as { flag_id: string }
+  const g = await requierePermiso('atender'); if (!g.ok) return g.res
+  const { flag_id } = (await req.json().catch(() => ({}))) as { flag_id?: string }
   if (!flag_id) return err('flag_id requerido')
-
-  const admin = createAdminSupabase()
-  const { error } = await admin
-    .from('admin_flags')
-    .update({ resuelto: true, resuelto_at: new Date().toISOString() })
-    .eq('id', flag_id)
-
-  if (error) return serverError(error)
-  return ok(null)
+  const r = await resolverFlag(flag_id, g.actor.correo)
+  return r.ok ? ok(null) : err(r.error, r.status)
 }

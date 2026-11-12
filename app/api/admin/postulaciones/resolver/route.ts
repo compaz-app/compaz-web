@@ -2,19 +2,19 @@
 // Body: { id, resolucion: 'vinculada_airtable' | 'registrada_en_cmc' | 'no_procede', nota?, airtableId? }
 // El operador queda registrado con el correo verificado de su sesión.
 import { NextRequest } from 'next/server'
-import { getAdminUser } from '@/lib/auth'
+import { requierePermiso } from '@/lib/permisos'
 import { resolverPostulacion, type Resolucion } from '@/lib/captacion'
-import { ok, err, unauthorized } from '@/lib/api'
+import { ok, err } from '@/lib/api'
 
 export async function POST(req: NextRequest) {
-  const admin = await getAdminUser()
-  if (!admin?.email) return unauthorized()
+  const g = await requierePermiso('cuentas')
+  if (!g.ok) return g.res
 
   const body = (await req.json().catch(() => ({}))) as { id?: unknown; resolucion?: unknown; nota?: unknown; airtableId?: unknown }
   const r = await resolverPostulacion(
     typeof body.id === 'string' ? body.id : '',
     body.resolucion as Resolucion,
-    admin.email.toLowerCase(),
+    g.actor.correo,
     typeof body.nota === 'string' ? body.nota : '',
     typeof body.airtableId === 'string' ? body.airtableId.trim() : '',
   )

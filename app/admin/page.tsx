@@ -1,95 +1,10 @@
-import { requireAdmin } from '@/lib/auth'
-import { createAdminSupabase } from '@/lib/supabase-server'
-import AdminDashboard from './AdminDashboard'
-import type { Visita, Compita, Usuario } from '@/types'
-import { Suspense } from 'react'
+// /admin ya no es un panel: el panel del equipo vive en /panel. Se conserva esta dirección para los enlaces y marcadores viejos.
+import { redirect } from 'next/navigation'
 
-export type SolicitudAdmin = {
-  id: string
-  cliente_id: string
-  compita_id: string
-  estado: string
-  slot_confirmado: string | null
-  room_url: string | null
-  created_at: string
-  slots_propuestos: string[]
-  mensaje: string
-  usuarios: { nombre: string; email: string } | null
-  compitas: { nombre: string; foto_url: string | null; zona: string } | null
-}
+// Las pestañas del panel viejo que tienen su equivalente directo en el nuevo.
+const DESTINO: Record<string, string> = { clientes: '/panel?sec=personas', compitas: '/panel?sec=personas', accesos: '/panel?sec=personas', visitas: '/panel?sec=visitas' }
 
-export default async function AdminPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ tab?: string }>
-}) {
-  await requireAdmin()
-
-  const supabase = createAdminSupabase()
-  const params = await searchParams
-  const defaultTab = params.tab ?? 'visitas'
-
-  const inicioMes = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
-
-  const hace30dias = new Date(Date.now() - 30 * 24 * 60 * 60_000).toISOString()
-
-  const [
-    { data: visitasActivas },
-    { data: visitasPreVisita },
-    { data: todosUsuarios },
-    { data: todosCompitas },
-    { data: visitasPasadas },
-    { data: todasSolicitudes },
-    { count: visitasMes },
-    { data: ultimasVisitasPorUsuario },
-    { data: visitasActivas30 },
-  ] = await Promise.all([
-    supabase.from('visitas').select('*, compita:compitas(*), usuario:usuarios(*)').eq('estado', 'en_curso').order('inicio', { ascending: false }).then((r) => ({ data: r.data ?? [] })),
-    supabase.from('visitas').select('*, compita:compitas(*), usuario:usuarios(*)').eq('estado', 'pre_visita').order('created_at', { ascending: false }).then((r) => ({ data: r.data ?? [] })),
-    supabase.from('usuarios').select('*, compita:compitas(nombre, zona, verificado)').order('created_at', { ascending: false }).then((r) => ({ data: r.data ?? [] })),
-    supabase.from('compitas').select('id, nombre, zona, estado, verificado, telegram_chat_id, foto_url, descripcion, servicios, youtube_url, visitas_realizadas, rating_promedio, total_ratings, fecha_ingreso, codigo, email, created_at').order('nombre', { ascending: true }).then((r) => ({ data: r.data ?? [] })),
-    supabase.from('visitas').select('*, compita:compitas(nombre), usuario:usuarios(nombre, email)').eq('estado', 'terminada').order('fin', { ascending: false }).limit(50).then((r) => ({ data: r.data ?? [] })),
-    supabase.from('solicitudes').select('id, cliente_id, compita_id, estado, slot_confirmado, room_url, created_at, slots_propuestos, mensaje, usuarios(nombre, email), compitas(nombre, foto_url, zona)').order('created_at', { ascending: false }).limit(100).then((r) => ({ data: r.data ?? [] })),
-    supabase.from('visitas').select('*', { count: 'exact', head: true }).gte('created_at', inicioMes).then((r) => ({ count: r.count ?? 0 })),
-    // Última visita terminada por usuario (para detectar inactivos)
-    supabase.from('visitas').select('usuario_id, fin').eq('estado', 'terminada').order('fin', { ascending: false }).limit(500).then((r) => ({ data: r.data ?? [] })),
-    // Visitas activas en los últimos 30 días (para excluir del churn)
-    supabase.from('visitas').select('usuario_id').in('estado', ['pre_visita', 'programada', 'en_curso']).then((r) => ({ data: r.data ?? [] })),
-  ])
-
-  // Calcular set de clientes inactivos (última visita terminada >30 días, sin visita activa)
-  const usuariosConActivaSet = new Set((visitasActivas30 ?? []).map((v) => v.usuario_id))
-  const ultimaFinPorUsuario = new Map<string, string>()
-  for (const v of (ultimasVisitasPorUsuario ?? [])) {
-    if (v.fin && !ultimaFinPorUsuario.has(v.usuario_id)) {
-      ultimaFinPorUsuario.set(v.usuario_id, v.fin)
-    }
-  }
-  const usuariosConCompitaSet = new Set((todosUsuarios ?? []).filter((u) => u.compita).map((u) => u.id))
-  const clientesInactivosSet = new Set<string>()
-  for (const [usuarioId, fin] of ultimaFinPorUsuario) {
-    if (
-      usuariosConCompitaSet.has(usuarioId) &&
-      !usuariosConActivaSet.has(usuarioId) &&
-      new Date(fin) < new Date(hace30dias)
-    ) {
-      clientesInactivosSet.add(usuarioId)
-    }
-  }
-
-  return (
-    <Suspense>
-      <AdminDashboard
-        visitasActivas={(visitasActivas ?? []) as (Visita & { compita: Compita; usuario: Usuario })[]}
-        visitasPreVisita={(visitasPreVisita ?? []) as (Visita & { compita: Compita; usuario: Usuario })[]}
-        usuarios={(todosUsuarios ?? []) as (Usuario & { compita: { nombre: string; zona: string; verificado: boolean } | null })[]}
-        compitas={(todosCompitas ?? []) as Compita[]}
-        visitasPasadas={(visitasPasadas ?? []) as Visita[]}
-        todasSolicitudes={(todasSolicitudes ?? []) as unknown as SolicitudAdmin[]}
-        visitasMes={visitasMes ?? 0}
-        defaultTab={defaultTab}
-        clientesInactivos={[...clientesInactivosSet]}
-      />
-    </Suspense>
-  )
+export default async function AdminPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
+  const { tab } = await searchParams
+  redirect(DESTINO[tab ?? ''] ?? '/panel')
 }

@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { avisarAdmin } from '@/lib/telegram'
+import { alertaAdmin } from '@/lib/alertas-admin'
 import { esc } from '@/lib/html'
 import { hoyVE, horaVE } from '@/lib/format'
 import { cronAutorizado, latido, vigilarLatidos, reclamarUnaVez } from '@/lib/cron'
@@ -37,7 +38,7 @@ export async function POST(req: NextRequest) {
     if (!(await reclamarUnaVez(`noshow:${visita.id}`))) continue
     const compita = visita.compitas as unknown as { nombre: string } | null
     const cliente = visita.usuarios as unknown as { nombre: string; email: string } | null
-    const enviado = await avisarAdmin([
+    const enviado = await alertaAdmin('urgente', [
       `🚨 <b>Posible no-show</b>`, ``,
       `La visita debía empezar a las <b>${esc(visita.hora_inicio_programada)}</b> y la compita aún no la inició.`, ``,
       `<b>Compita:</b> ${esc(compita?.nombre ?? '—')}`,

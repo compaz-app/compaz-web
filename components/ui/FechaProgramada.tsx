@@ -1,5 +1,6 @@
 'use client'
 
+import { colors } from '@/lib/design'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
@@ -28,6 +29,8 @@ export default function FechaProgramada({ visitaId, fechaActual, horaInicioActua
   const [guardando, setGuardando] = useState(false)
   const [guardada, setGuardada] = useState(!!(fechaActual && horaInicioActual && horaFinActual))
   const [errorGuardar, setErrorGuardar] = useState('')
+  // Con la confirmación del compita encendida, la hora queda PROPUESTA hasta que ella responda.
+  const [pendiente, setPendiente] = useState(false)
   const router = useRouter()
 
   const valido = fecha && fecha >= hoy && horaInicio && horaFin && horaFin > horaInicio
@@ -43,6 +46,8 @@ export default function FechaProgramada({ visitaId, fechaActual, horaInicioActua
         body: JSON.stringify({ visita_id: visitaId, fecha_programada: fecha, hora_inicio: horaInicio.slice(0, 5), hora_fin: horaFin.slice(0, 5) }),
       })
       if (res.ok) {
+        const d = await res.json().catch(() => ({}))
+        setPendiente(d?.data?.estado === 'pendiente_confirmacion')
         setGuardada(true)
         router.refresh()
       } else {
@@ -69,7 +74,7 @@ export default function FechaProgramada({ visitaId, fechaActual, horaInicioActua
   return (
     <div style={{ background: '#F0FDF4', border: '2px solid #86EFAC', borderRadius: '12px', padding: '14px 18px', marginBottom: '12px' }}>
       <p style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, color: '#15803d', fontSize: '14px', margin: '0 0 4px' }}>
-        📅 ¿Acordaron una fecha con {compitaNombre}?
+        ¿Acordaron una fecha con {compitaNombre}?
       </p>
       <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '12px', color: '#166534', margin: '0 0 10px' }}>
         Todos los horarios son en hora de Venezuela (VET){horaVE ? ` · Ahora en Venezuela: ${horaVE}` : ''}.
@@ -77,6 +82,7 @@ export default function FechaProgramada({ visitaId, fechaActual, horaInicioActua
       {errorGuardar && (
         <p style={{ color: '#E05520', fontSize: '13px', margin: '0 0 8px', fontFamily: 'Inter, sans-serif' }}>{errorGuardar}</p>
       )}
+      {pendiente && <p role="status" style={{ color: colors.verdeOscuro, fontSize: '13px', fontWeight: 700, lineHeight: 1.5, margin: '8px 0 0' }}>Le pedimos a tu compita que confirme esa hora. Te avisamos por correo apenas responda; si no puede, eliges otra sin costo.</p>}
       {guardada && fecha && horaInicio && horaFin ? (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
           <span style={{ color: '#166534', fontSize: '14px', fontWeight: 600, textTransform: 'capitalize' }}>

@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { sendTelegramMessage, avisarAdmin, INLINE_REAGENDAR_VISITA } from '@/lib/telegram'
+import { alertaAdmin } from '@/lib/alertas-admin'
 import { sendEmail, SITE_URL } from '@/lib/email'
 import { esc } from '@/lib/html'
 import { hoyVE, formatFechaVE } from '@/lib/format'
-import { cronAutorizado } from '@/lib/cron'
+import { cronAutorizado, latido } from '@/lib/cron'
 
 // POST /api/cron/recordatorio-visita-manana — diario 10:00 VE
 // Recordatorio 24 h antes de toda visita 'programada'. El marcador incluye la fecha, así que
@@ -22,7 +23,7 @@ export async function POST(req: NextRequest) {
     .eq('estado', 'programada')
     .eq('fecha_programada', mananaStr)
   if (error) console.error('[recordatorio-primera-visita] consulta falló:', error)
-  if (!visitas || visitas.length === 0) return NextResponse.json({ ok: true, recordatorios: 0 })
+  if (!visitas || visitas.length === 0) { await latido('recordatorio-primera-visita'); return NextResponse.json({ ok: true, recordatorios: 0 }) }
 
   let enviados = 0
   for (const visita of visitas) {
@@ -63,11 +64,11 @@ export async function POST(req: NextRequest) {
           subject: `Recordatorio: mañana es la visita de ${compita?.nombre ?? 'tu compita'}`,
           html: `
             <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px">
-              <h2 style="color:#2D1464;font-size:22px;margin-bottom:12px">🗓️ Visita mañana</h2>
+              <h2 style="color:#2D1464;font-size:22px;margin-bottom:12px">Visita mañana</h2>
               <p style="color:#4A3B6B;font-size:15px;line-height:1.6">Mañana es la visita de <strong>${esc(compita?.nombre ?? 'tu compita')}</strong> con tu familiar.</p>
               <div style="background:#F5F0FF;border:2px solid #7C4DFF;border-radius:12px;padding:16px 20px;margin:16px 0;text-align:center">
                 <p style="color:#2D1464;font-size:18px;font-weight:800;margin:0 0 4px;text-transform:capitalize">${esc(fechaFormateada)}</p>
-                ${horarioLabel ? `<p style="color:#2D1464;font-size:16px;font-weight:700;margin:0">🕐 ${esc(horarioLabel)}</p>` : ''}
+                ${horarioLabel ? `<p style="color:#2D1464;font-size:16px;font-weight:700;margin:0">${esc(horarioLabel)}</p>` : ''}
               </div>
               <p style="color:#4A3B6B;font-size:14px;line-height:1.6">Si necesitas hacer algún cambio, entra al dashboard y comunícaselo a ${esc(compita?.nombre ?? 'tu compita')} por el chat. También puedes reagendar desde allí si surge algún imprevisto.</p>
               <a href="${SITE_URL}/dashboard" style="display:inline-block;background:#FF6B2B;color:white;padding:12px 24px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:14px;margin-top:8px">Ver en el dashboard →</a>
@@ -82,8 +83,9 @@ export async function POST(req: NextRequest) {
       await admin.from('mensajes').insert({ visit_id: visita.id, origen: 'admin', tipo: 'texto', contenido: marcador })
       enviados++
     } else {
-      await avisarAdmin(`⚠️ No se pudo enviar el recordatorio de la visita de mañana (<b>${esc(compita?.nombre ?? '—')}</b> con <b>${esc(cliente?.nombre ?? '—')}</b>).`)
+      await alertaAdmin('tarea', `⚠️ No se pudo enviar el recordatorio de la visita de mañana (<b>${esc(compita?.nombre ?? '—')}</b> con <b>${esc(cliente?.nombre ?? '—')}</b>).`)
     }
   }
+  await latido('recordatorio-primera-visita')
   return NextResponse.json({ ok: true, recordatorios: enviados })
 }

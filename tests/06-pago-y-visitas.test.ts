@@ -1,5 +1,5 @@
 /* eslint-disable */
-import { db, net, session, limpiar, req, tgText, tgBtn, tgFoto, ultimoTg, tgPara, emailsA, ahoraMas, hoyVEstr, mkCompita, mkCliente, mkSolicitud, mkVisita } from './harness'
+import { db, net, session, limpiar, req, tgText, tgBtn, tgFoto, ultimoTg, tgPara, emailsA, ahoraMas, hoyVEstr, mkCompita, mkCliente, mkSolicitud, mkVisita, confirmarLlegada, avisosAdmin, confirmarPropuesta } from './harness'
 import { beforeEach, test, describe, afterEach } from 'node:test'
 import assert from 'node:assert/strict'
 import { POST as pagoConfirmar } from '@/app/api/pago/confirmar/route'
@@ -42,7 +42,7 @@ describe('Pago / contratación (Stripe aún no contratado)', () => {
     assert.equal((await r.json()).data.pendiente, true)
     assert.equal(db.rows('solicitudes')[0].estado, 'aceptada')
     assert.equal(db.rows('visitas').length, 0)
-    assert.ok(tgPara(999).some((m) => m.text.includes('pago pendiente')))
+    assert.ok(avisosAdmin().some((m) => m.text.includes('pago pendiente')))
   })
 
   test('modo simulado/dev: contrata, crea visita, ASIGNA la compita al cliente y avisa a la compita', async () => {
@@ -89,26 +89,26 @@ describe('Ciclo de la visita (cliente ↔ compita)', () => {
     const v = mkVisita(cli, compita, { estado: 'programada', fecha_programada: hoyVEstr(), hora_inicio_programada: '10:00', hora_fin_programada: '12:00' })
     return { compita, cli, v }
   }
-  const iniciar = async () => { await webhook(tgText(910, '▶️ Iniciar visita')); await webhook(tgText(910, '✅ Sí, iniciar')) }
+  const iniciar = async () => { await webhook(tgText(910, '▶️ Iniciar visita')); await webhook(tgText(910, '✅ Sí, iniciar')); await confirmarLlegada() }
 
   test('iniciar: confirma, pasa a en_curso, avisa a la familia; HTML en notas del familiar NO rompe el mensaje', async () => {
     const { v } = mundo()
     await webhook(tgText(910, '▶️ Iniciar visita'))
     assert.match(ultimoTg(910)!.text, /¿Vas a empezar la visita con <b>Carlos/)
-    await webhook(tgText(910, '✅ Sí, iniciar'))
+    await webhook(tgText(910, '✅ Sí, iniciar')); await confirmarLlegada()
     assert.equal(v.estado, 'en_curso')
-    assert.match(tgPara(910).at(-1)!.text, /Visita iniciada/)
+    assert.match(tgPara(910).at(-1)!.text, /confirmó tu llegada/)
     assert.match(tgPara(910).at(-1)!.text, /&lt;8am/, 'el "<" del familiar llega escapado')
-    assert.equal(emailsA('cli@mail.test').filter((e) => e.subject.includes('llegó')).length, 1)
-    assert.ok(tgPara(999).some((m) => m.text.includes('Visita iniciada')))
+    assert.equal(emailsA('cli@mail.test').filter((e) => e.subject.includes('llegó con tu familiar')).length, 1)
+    assert.ok(avisosAdmin().some((m) => m.text.includes('Visita iniciada')))
   })
 
   test('doble toque en "Sí, iniciar": una sola visita en curso y un solo correo', async () => {
     const { v } = mundo()
     await webhook(tgText(910, '▶️ Iniciar visita'))
-    await Promise.all([webhook(tgText(910, '✅ Sí, iniciar')), webhook(tgText(910, '✅ Sí, iniciar'))])
+    await Promise.all([webhook(tgText(910, '✅ Sí, iniciar')), webhook(tgText(910, '✅ Sí, iniciar'))]); await confirmarLlegada()
     assert.equal(db.rows('visitas').filter((x) => x.estado === 'en_curso').length, 1)
-    assert.equal(emailsA('cli@mail.test').filter((e) => e.subject.includes('llegó')).length, 1)
+    assert.equal(emailsA('cli@mail.test').filter((e) => e.subject.includes('llegó con tu familiar')).length, 1)
     void v
   })
 
@@ -125,7 +125,7 @@ describe('Ciclo de la visita (cliente ↔ compita)', () => {
     assert.match(ultimoTg(910)!.text, /fecha de la visita aún no está confirmada/)
     // forzar la confirmación igualmente
     db.seed('telegram_estados', { chat_id: 'conf:910', pendiente_accion: `iniciar:${v.id}`, pendiente_expira: ahoraMas(5) })
-    await webhook(tgText(910, '✅ Sí, iniciar'))
+    await webhook(tgText(910, '✅ Sí, iniciar')); await confirmarLlegada()
     assert.notEqual(v.estado, 'en_curso')
   })
 
@@ -135,7 +135,7 @@ describe('Ciclo de la visita (cliente ↔ compita)', () => {
     const v2 = mkVisita(otro, compita, { estado: 'programada', fecha_programada: hoyVEstr(), hora_inicio_programada: '15:00', hora_fin_programada: '17:00' })
     await iniciar()
     assert.equal(v2.estado, 'en_curso'); assert.equal(v.estado, 'programada')
-    assert.equal(emailsA('otro@mail.test').length, 1); assert.equal(emailsA('cli@mail.test').length, 0)
+    assert.equal(emailsA('otro@mail.test').length, 2, 'aviso de llegada + inicio confirmado'); assert.equal(emailsA('cli@mail.test').length, 0)
   })
 
   test('mensajes: se guardan, se limita el email a 1 cada 10 min, y si Resend falla el siguiente reintenta', async () => {
@@ -209,7 +209,7 @@ describe('Ciclo de la visita (cliente ↔ compita)', () => {
     await webhook(tgText(910, '▶️ Iniciar visita'))
     const principal = db.rows('telegram_estados').find((e) => e.chat_id === '910')!
     assert.match(principal.pendiente_accion, /^reporte:/, 'el cuestionario sigue vivo')
-    await webhook(tgText(910, '✅ Sí, iniciar'))
+    await webhook(tgText(910, '✅ Sí, iniciar')); await confirmarLlegada()
     await webhook(tgBtn(910, 'rr:4'))
     assert.match(db.rows('telegram_estados').find((e) => e.chat_id === '910')!.pendiente_accion, /^reporte:.*:2:5,4$/)
     void v
@@ -229,7 +229,7 @@ describe('Ciclo de la visita (cliente ↔ compita)', () => {
   test('EMERGENCIA con datos del familiar con HTML: el aviso al admin llega', async () => {
     mundo(); await iniciar(); net.tg = []
     await webhook(tgBtn(910, 'emergencia'))
-    const aviso = tgPara(999).find((m) => m.text.includes('EMERGENCIA'))!
+    const aviso = avisosAdmin().find((m) => m.text.includes('EMERGENCIA'))!
     assert.ok(aviso, 'el admin recibió la emergencia aunque la condición tenga "&"')
     assert.match(aviso.text, /Parkinson &amp; demencia/)
   })
@@ -259,7 +259,7 @@ describe('Ciclo de la visita (cliente ↔ compita)', () => {
 
 describe('Fecha de la visita (cliente)', () => {
   const mundo = () => { const compita = mkCompita({ telegram_chat_id: '920' }); const cli = mkCliente({ email: 'cli@mail.test' }); const v = mkVisita(cli, compita); comoCliente(cli); return { compita, cli, v } }
-  const put = (v: any, f: string, i = '10:00', fin = '12:00') => fechaPut(req('/api/visita/fecha', { method: 'PUT', json: { visita_id: v.id, fecha_programada: f, hora_inicio: i, hora_fin: fin } }))
+  const put = async (v: any, f: string, i = '10:00', fin = '12:00') => { const r = await fechaPut(req('/api/visita/fecha', { method: 'PUT', json: { visita_id: v.id, fecha_programada: f, hora_inicio: i, hora_fin: fin } })); if (r.status === 200) await confirmarPropuesta(v.id); return r }
 
   test('validaciones: pasado, 30 feb, hora 99:99, fin<inicio, hoy a hora pasada, muy lejana', async () => {
     const { v } = mundo()
