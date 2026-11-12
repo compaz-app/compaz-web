@@ -40,3 +40,13 @@ Devolver las 3 variables de Netlify a los valores del proyecto viejo y redespleg
 Hecho: proyecto `compaz-prod` creado; estructura, datos y usuarios de acceso copiados con `01-copiar-base.sh`; `03-verificar.sh` dice "TODO IGUAL" (37 tablas, 47 funciones, 23 políticas RLS, trigger de `auth.users`, 3 tablas en tiempo real); buckets vacíos creados; permisos de `anon` y `authenticated` idénticos al viejo (`service_role` tiene más en el nuevo, sin riesgo).
 Configuración de acceso del proyecto nuevo: HECHA y verificada (registro cerrado, Confirm email activado, Site URL, 3 URLs de retorno, SMTP de Resend guardado con una clave puesta por una persona, plantillas Magic link e Invite user copiadas del viejo, captcha desactivado igual que el viejo).
 Falta: cambio de claves en Netlify (con redespliegue), prueba en producción y, antes del lanzamiento, pasar `compaz-prod` a Pro. Recomendado usar las claves LEGACY (anon y service_role, JWT) del proyecto nuevo para no cambiar de tipo de clave en el mismo paso; migrar a publishable/secret más adelante (las legacy se retiran a principios de 2027).
+
+## Cambio de producción hecho (2026-11-12, 15:54 hora local)
+1. PR #16 unido (CSP desde `NEXT_PUBLIC_SUPABASE_URL`), despliegue `main@43145b3`.
+2. Variables de Netlify cambiadas al proyecto `compaz-prod`: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` (legacy) y `SUPABASE_SERVICE_ROLE_KEY` (legacy, ahora marcada como secreta).
+3. Redespliegue sin caché (`6af60b50caa03b93b62b503c`). Comprobado: la CSP ya trae `jizckcfuemgfbmopbhbh`, las páginas responden 200 y los registros de `compaz-prod` muestran `GET /rest/v1/ajustes` 200 desde producción.
+Pendiente de comprobar por una persona: entrar con enlace mágico, abrir el panel, un aviso de Telegram y una llamada.
+
+## Vuelta atrás (si algo falla)
+1. Devolver `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` y `SUPABASE_SERVICE_ROLE_KEY` a los valores del proyecto viejo (`qrhkzlzblaknzsxqfney`, panel de Supabase, API Keys, legacy).
+2. Netlify, Deploys, redesplegar sin caché (o publicar el despliegue anterior `main@43145b3` de las 3:47 PM).
