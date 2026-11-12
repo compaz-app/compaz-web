@@ -7,7 +7,7 @@ import { sendEmail, SITE_URL } from '@/lib/email'
 import { sendBienvenidaCliente, sendBienvenidaCompita } from '@/lib/resend'
 import { alertaAdmin } from '@/lib/alertas-admin'
 import { esc } from '@/lib/html'
-import { emailValido, validarPerfil } from '@/lib/validar'
+import { revisarCorreo, validarPerfil } from '@/lib/validar'
 import { normalizarTelefono } from '@/lib/captacion'
 import { recortarTexto } from '@/lib/panel-datos'
 import { asignarCompita } from '@/lib/usuarios'
@@ -139,7 +139,7 @@ export async function registrarCompitaManual(body: Record<string, unknown>, acto
   if (!Array.isArray(body.servicios) || !body.servicios.length) faltantes.push('al menos un servicio')
   if (faltantes.length) return mal(400, `Faltan campos: ${faltantes.join(', ')}`)
   const email = typeof body.email === 'string' && body.email.trim() ? body.email.trim() : null
-  if (email && !emailValido(email)) return mal(400, 'Correo inválido')
+  if (email) { const rev = revisarCorreo(email); if (!rev.ok) return mal(400, rev.error) }
   const telefonoCrudo = typeof body.telefono === 'string' ? body.telefono.trim() : ''
   const telefono = telefonoCrudo ? normalizarTelefono(telefonoCrudo) : null
   if (telefonoCrudo && !telefono) return mal(400, 'Teléfono inválido. Escríbelo con código de país, por ejemplo +58 412 123 4567')

@@ -7,7 +7,7 @@
 import { NextRequest } from 'next/server'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { isAdminEmail } from '@/lib/auth'
-import { emailValido } from '@/lib/validar'
+import { revisarCorreo } from '@/lib/validar'
 import { sendAccesoEmail } from '@/lib/resend'
 import { baseUrl } from '@/lib/site'
 import { ok, err, errEspera } from '@/lib/api'
@@ -40,7 +40,8 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null) as { email?: unknown; returnTo?: unknown } | null
   const email = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : ''
   const returnTo = typeof body?.returnTo === 'string' ? body.returnTo.trim() : ''
-  if (!emailValido(email)) return err('Escribe un correo válido', 400)
+  const rev = revisarCorreo(email)
+  if (!rev.ok) return err(rev.error, 400)
 
   const ip = req.headers.get('x-nf-client-connection-ip') ?? req.headers.get('x-forwarded-for')?.split(',')[0].trim() ?? 'desconocida'
   const bloqueadaHasta = await ipExcedida(ip)

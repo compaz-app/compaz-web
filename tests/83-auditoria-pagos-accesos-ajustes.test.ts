@@ -339,3 +339,34 @@ describe('revisión posterior: M3, M4, M6, M7 y los bajos', () => {
     const f = leer('lib/cuenta-eliminar.ts', 'utf8'); assert.match(f, /const visitasCanceladas = await cancelarAbiertas[\s\S]*?if \(await visitaEnVivo\(u\.id\)\) return \{ ok: false, motivo: 'visita_en_vivo' \}[\s\S]*?cerrarCuentaCliente/)
   })
 })
+
+import { revisarCorreo, emailValido } from '@/lib/validar'
+import { POST as invitarClienteRuta } from '@/app/api/admin/invitar-cliente/route'
+
+describe('correos mal escritos no se aceptan (.coin en vez de .com)', () => {
+  test('el final .coin se rechaza y se sugiere .com', () => {
+    const r = revisarCorreo('ana@gmail.coin') as any
+    assert.equal(r.ok, false); assert.equal(r.sugerencia, 'ana@gmail.com'); assert.match(r.error, /¿Quisiste decir ana@gmail\.com\?/)
+    assert.equal((revisarCorreo('luis@empresa.con') as any).sugerencia, 'luis@empresa.com')
+    assert.equal((revisarCorreo('maria@hotmial.com') as any).sugerencia, 'maria@hotmail.com')
+    assert.equal((revisarCorreo('x@gmail.co') as any).sugerencia, 'x@gmail.com')
+  })
+  test('finales que no existen se rechazan, y los reales (genéricos y de país) pasan', () => {
+    for (const mal of ['ana@gmail.cmo9', 'ana@correo.zzzzz', 'ana@correo.c0m', 'ana@correo']) assert.equal(emailValido(mal), false, mal)
+    for (const bien of ['ana@gmail.com', 'ana@correo.com.ve', 'ana@empresa.es', 'ana@universidad.edu', 'ana@ong.org', 'ana.perez+tag@mail.net', 'ana@correo.co', 'ana@empresa.io']) assert.equal(emailValido(bien), true, bien)
+  })
+  test('forma: sin @, dos @, espacios, puntos seguidos o al borde', () => {
+    for (const mal of ['ana.com', 'a@@b.com', 'ana perez@gmail.com', 'ana..p@gmail.com', '.ana@gmail.com', 'ana.@gmail.com', 'ana@-gmail.com', 'ana@gmail..com', '']) assert.equal(emailValido(mal), false, mal)
+  })
+  test('en producción los finales de prueba (.test, .invalid) no valen', () => {
+    const antes = process.env.NODE_ENV; ;(process.env as any).NODE_ENV = 'production'
+    try { assert.equal(emailValido('ana@mail.test'), false); assert.equal(emailValido('ana@mail.com'), true) } finally { ;(process.env as any).NODE_ENV = antes }
+    assert.equal(emailValido('ana@mail.test'), true) // fuera de producción sí (las pruebas lo usan)
+  })
+  test('invitar a un cliente con .coin se rechaza con la sugerencia y no crea nada', async () => {
+    session.user = { id: 'adm', email: 'admin@compaz.test' } as any
+    const r = await invitarClienteRuta(req('/api/admin/invitar-cliente', { json: { nombre: 'Ana', email: 'ana@gmail.coin' } }))
+    assert.equal(r.status, 400); assert.match((await r.json()).error, /¿Quisiste decir ana@gmail\.com\?/)
+    assert.equal(db.rows('usuarios').length, 0)
+  })
+})

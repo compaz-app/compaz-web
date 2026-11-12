@@ -4,7 +4,7 @@
 import { NextRequest } from 'next/server'
 import { requierePermiso } from '@/lib/permisos'
 import { invitarCliente } from '@/lib/acciones-equipo'
-import { emailValido } from '@/lib/validar'
+import { revisarCorreo } from '@/lib/validar'
 import { ok, err } from '@/lib/api'
 
 export async function POST(req: NextRequest) {
@@ -12,7 +12,9 @@ export async function POST(req: NextRequest) {
   const { nombre, email: emailRaw } = (await req.json().catch(() => ({}))) as { nombre?: string; email?: string }
   const email = typeof emailRaw === 'string' ? emailRaw.trim().toLowerCase() : ''
   if (!nombre || !email) return err('Faltan datos')
-  if (!emailValido(email) || typeof nombre !== 'string' || nombre.length > 100) return err('Datos inválidos')
+  const rev = revisarCorreo(email)
+  if (!rev.ok) return err(rev.error) // dice qué está mal y, si se puede, cómo corregirlo
+  if (typeof nombre !== 'string' || nombre.length > 100) return err('Datos inválidos')
   const r = await invitarCliente(nombre, email, g.actor.correo)
   return r.ok ? ok(r.data) : err(r.error, r.status)
 }

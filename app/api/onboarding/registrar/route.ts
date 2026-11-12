@@ -3,7 +3,7 @@ import { createAdminSupabase, createServerSupabase } from '@/lib/supabase-server
 import { isAdminEmail } from '@/lib/auth'
 import { ok, err, serverError } from '@/lib/api'
 import { sendBienvenidaCompita } from '@/lib/resend'
-import { validarPerfil, emailValido } from '@/lib/validar'
+import { validarPerfil, revisarCorreo } from '@/lib/validar'
 import { avisarAdmin } from '@/lib/telegram'
 import { alertaAdmin } from '@/lib/alertas-admin'
 import { normalizarTelefono } from '@/lib/captacion'
@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
   if (!body.descripcion) faltantes.push('descripción')
   if (!Array.isArray(body.servicios) || !body.servicios.length) faltantes.push('al menos un servicio')
   if (faltantes.length) return err(`Faltan campos requeridos: ${faltantes.join(', ')}`)
-  if (email && !emailValido(email)) return err('Correo inválido')
+  if (email) { const rev = revisarCorreo(email); if (!rev.ok) return err(rev.error) }
   // El teléfono es obligatorio en el formulario (lo usa el equipo para escribirle por WhatsApp). El administrador puede registrar sin él.
   const telefono = typeof body.telefono === 'string' && body.telefono.trim() ? normalizarTelefono(body.telefono) : null
   if (typeof body.telefono === 'string' && body.telefono.trim() && !telefono) return err('Teléfono inválido. Escríbelo con código de país, por ejemplo +58 412 123 4567')
