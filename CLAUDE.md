@@ -59,6 +59,9 @@ Toda pantalla nueva del panel, todo permiso nuevo y toda regla de espera nueva d
 ## 6d. Emojis solo en Telegram (decidido 2026-11-12)
 Los emojis se usan ÚNICAMENTE en los mensajes y botones de Telegram y en las estrellas ⭐ de la calificación de 1 a 5. En la web, el portal, el panel y los correos NO hay emojis: se usa texto o iconos de línea (SVG, como `Icono` en `components/ui/Proximamente.tsx` o `IconoPersona`). Se permiten símbolos de texto como flechas, ©, ⓘ, ★ y ✓. La landing (`app/page.tsx`) queda fuera por ahora: no se toca. `tests/84-sin-emojis.test.ts` lo vigila.
 
+## 6e. Versión del sistema (decidido 2026-11-12)
+La versión vive en `lib/version.ts` (una sola fuente) y se ve en el panel. Al cerrar un cambio relevante se sube (mayor: lanzamiento o cambio grande; menor: función nueva; parche: arreglo), se actualiza `package.json` y se anota arriba en `docs/versiones.md`. `tests/85-version.test.ts` falla si no coinciden. Hoy: 1.0.0-beta.1; sale de beta tras una o dos semanas de uso real sin sorpresas.
+
 ## 7. Cómo agregar o quitar a alguien del panel (recordar siempre)
 Hay dos tipos de persona y cada uno tiene su ruta:
 1. **Administrador (acceso total):** se agrega o quita SOLO en la variable `ADMIN_EMAILS` de Netlify (correos separados por coma, y también en `.env.local` para pruebas locales). Después hay que volver a desplegar para que el servidor la lea. La lista de la base (`admin_emails`, que usa el tiempo real) se copia sola en la limpieza diaria de las 3 am; para verla al instante, llamar a `POST /api/cron/limpieza` con la cabecera `x-cron-secret`. Nunca editar la tabla `admin_emails` a mano: la siguiente limpieza la deja igual a `ADMIN_EMAILS`.
