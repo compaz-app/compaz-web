@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
     try {
       await sendTelegramMessage(
         compita.telegram_chat_id,
-        `<b>Reagendado iniciado</b>\n\n¿Cuándo puedes tener la llamada con ${esc(cliente?.nombre ?? 'el cliente')}?\n\n<b>Responde a este mensaje con los horarios que te funcionen</b> y se los haremos llegar por email.\n\n<i>Incluye el día y la hora exacta. Por ejemplo: lunes 13 de octubre a las 3:00pm.</i>`,
+        `🔄 <b>Reagendado iniciado</b>\n\n¿Cuándo puedes tener la llamada con ${esc(cliente?.nombre ?? 'el cliente')}?\n\n✍️ <b>Responde a este mensaje con los horarios que te funcionen</b> y se los haremos llegar por email.\n\n📅 <i>Incluye el día y la hora exacta. Por ejemplo: lunes 13 de octubre a las 3:00pm.</i>`,
       )
     } catch (e) { console.error('Telegram reagendar compita:', e) }
   }
@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
     } catch (e) { console.error('Email cliente reagendar:', e) }
   }
 
-  await alertaAdmin('actividad', `<b>Reagendado por compita</b>\n\n<b>Compita:</b> ${esc(solicitud.compita_nombre)}\n<b>Cliente:</b> ${esc(cliente?.nombre ?? '')}\n\nLa compita inició un reagendado desde Telegram.`)
+  await alertaAdmin('actividad', `🔄 <b>Reagendado por compita</b>\n\n<b>Compita:</b> ${esc(solicitud.compita_nombre)}\n<b>Cliente:</b> ${esc(cliente?.nombre ?? '')}\n\nLa compita inició un reagendado desde Telegram.`)
 
   return pagina('Reagendado iniciado', 'Recibimos tu solicitud. Escríbenos en Telegram los nuevos horarios que te funcionen y se los haremos llegar al cliente.')
 }

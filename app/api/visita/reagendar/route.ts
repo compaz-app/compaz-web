@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
       await sendTelegramMessage(
         compita.telegram_chat_id,
         [
-          `<b>La visita necesita reagendarse</b>`,
+          `🔄 <b>La visita necesita reagendarse</b>`,
           ``,
           `${esc(cliente?.nombre ?? 'El cliente')} canceló la fecha${fechaAnterior ? ` del ${esc(fechaAnterior)}` : ''} y necesita acordar un nuevo día.`,
           ``,
@@ -104,7 +104,7 @@ export async function POST(req: NextRequest) {
     if (nuevo >= 3) {
       await alertaAdmin('tarea', 
         [
-          `<b>Visita con ${nuevo} reagendados</b>`,
+          `⚠️ <b>Visita con ${nuevo} reagendados</b>`,
           ``,
           `<b>Cliente:</b> ${esc(cliente?.nombre ?? visita.usuario_id)}`,
           `<b>Compita:</b> ${esc(compita?.nombre ?? visita.compita_id)}`,

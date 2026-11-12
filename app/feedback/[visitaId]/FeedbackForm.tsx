@@ -69,7 +69,7 @@ export default function FeedbackForm({ visitaId, compitaNombre, estrellas, yaCom
     return (
       <div style={{ minHeight: '100vh', background: '#FDFAF6', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
         <div style={card}>
-          <div style={{ fontSize: '48px', marginBottom: '16px' }}>{'★'.repeat(estrellas)}</div>
+          <div style={{ fontSize: '48px', marginBottom: '16px' }}>{'⭐'.repeat(estrellas)}</div>
           <h2 style={{ color: '#1A0A3C', fontWeight: 800, fontSize: '22px', margin: '0 0 12px' }}>¡Gracias!</h2>
           <p style={{ color: '#4A3B6B', lineHeight: '1.6', fontSize: '15px', marginBottom: '24px' }}>{MENSAJES[estrellas]}</p>
           {resena.trim() && (
@@ -96,7 +96,7 @@ export default function FeedbackForm({ visitaId, compitaNombre, estrellas, yaCom
   return (
     <div style={{ minHeight: '100vh', background: '#FDFAF6', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
       <div style={card}>
-        <div style={{ fontSize: '40px', marginBottom: '8px' }}>{'★'.repeat(estrellas)}</div>
+        <div style={{ fontSize: '40px', marginBottom: '8px' }}>{'⭐'.repeat(estrellas)}</div>
         <h2 style={{ color: '#1A0A3C', fontWeight: 800, fontSize: '22px', margin: '0 0 8px' }}>
           {MENSAJES[estrellas]}
         </h2>

@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
 
     if (visita.inicio && visita.inicio < hace8h) {
       if (await reclamarUnaVez(`alerta_visita_larga:${visita.id}`)) {
-        await alertaAdmin('urgente', `<b>Visita en curso hace más de 8 horas</b>\n\n<b>Compita:</b> ${esc(compita?.nombre ?? '—')}\n<b>Cliente:</b> ${esc(cliente?.nombre ?? '—')}\n\nProbablemente olvidó tocar "Terminar visita". Contáctala para cerrarla.`)
+        await alertaAdmin('urgente', `⏳ <b>Visita en curso hace más de 8 horas</b>\n\n<b>Compita:</b> ${esc(compita?.nombre ?? '—')}\n<b>Cliente:</b> ${esc(cliente?.nombre ?? '—')}\n\nProbablemente olvidó tocar "Terminar visita". Contáctala para cerrarla.`)
       }
       continue // no seguir insistiendo con recordatorios de foto
     }
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
     if ((previos ?? 0) >= 6) continue
 
     try {
-      await sendTelegramMessage(tg, `¿Cómo va la visita? Manda una foto o un mensaje corto para que la familia sepa cómo está su familiar.`, TECLADO_DURANTE_VISITA)
+      await sendTelegramMessage(tg, `📸 ¿Cómo va la visita? Manda una foto o un mensaje corto para que la familia sepa cómo está su familiar.`, TECLADO_DURANTE_VISITA)
       enviados++
       await supabase.from('mensajes').insert({ visit_id: visita.id, origen: 'admin', tipo: 'texto', contenido: 'recordatorio_visita' })
     } catch (e) { console.error('Error recordatorio visita:', e) }

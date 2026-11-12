@@ -57,7 +57,7 @@ export async function PUT(req: NextRequest) {
     try {
       await sendTelegramMessage(
         compita.telegram_chat_id,
-        `<b>¡Tu perfil fue actualizado!</b>\n\nLos cambios ya son visibles para las familias en la plataforma.\n\nEscribe /perfil cuando quieras editarlo de nuevo.`,
+        `✅ <b>¡Tu perfil fue actualizado!</b>\n\nLos cambios ya son visibles para las familias en la plataforma.\n\nEscribe /perfil cuando quieras editarlo de nuevo.`,
       )
     } catch (e) { console.error('Telegram confirmación perfil:', e) }
   }

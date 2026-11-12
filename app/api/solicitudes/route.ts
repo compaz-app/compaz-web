@@ -155,7 +155,7 @@ export async function POST(req: NextRequest) {
     const porCorreo = compita.email ? await notificar({ ...pedido, canal: 'correo', respaldoDe: porTelegram.avisoId }) : null
     const sinTelegram = porTelegram.error === 'sin Telegram vinculado'
     await alertaAdmin('tarea', [
-      sinTelegram ? `<b>Solicitud sin Telegram</b>` : `<b>No se pudo notificar por Telegram</b>`, ``,
+      sinTelegram ? `⚠️ <b>Solicitud sin Telegram</b>` : `🚨 <b>No se pudo notificar por Telegram</b>`, ``,
       `<b>${esc(clienteNombre)}</b> solicitó a <b>${esc(compita.nombre)}</b>${sinTelegram ? ' pero no tiene Telegram vinculado.' : ', y el aviso por Telegram falló.'}`,
       porCorreo?.ok ? `Se le notificó por correo.` : compita.email ? `Tampoco se pudo por correo. Contáctala directamente.` : `No tiene correo registrado. Contáctala directamente.`,
     ].join('\n'))

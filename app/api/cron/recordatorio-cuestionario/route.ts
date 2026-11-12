@@ -48,8 +48,8 @@ export async function POST(req: NextRequest) {
     try {
       await sendTelegramMessage(
         estado.chat_id,
-        `<b>Cuestionario pendiente</b>\n\nTodavía no completaste el resumen de la visita. La familia espera saber cómo estuvo su familiar.\n\nTienes unos minutos antes de que expire. Toca el botón para retomarlo:`,
-        makeInlineKeyboard([[{ text: 'Completar ahora', callback_data: 'reanudar_reporte' }]]),
+        `⏰ <b>Cuestionario pendiente</b>\n\nTodavía no completaste el resumen de la visita. La familia espera saber cómo estuvo su familiar.\n\nTienes unos minutos antes de que expire. Toca el botón para retomarlo:`,
+        makeInlineKeyboard([[{ text: '📋 Completar ahora', callback_data: 'reanudar_reporte' }]]),
       )
       enviados++
     } catch (e) { console.error('Error recordatorio cuestionario:', e) }

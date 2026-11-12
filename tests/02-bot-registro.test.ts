@@ -82,13 +82,13 @@ describe('Estados de la cuenta de compita', () => {
     mkCompita({ telegram_chat_id: '510', verificado: false })
     await webhook(tgText(510, '/perfil'))
     assert.match(ultimoTg(510)!.text, /compita\/perfil\?token=/)
-    await webhook(tgText(510, 'Iniciar visita'))
+    await webhook(tgText(510, '▶️ Iniciar visita'))
     assert.match(ultimoTg(510)!.text, /en revisión/)
   })
 
   test('compita bloqueada: no puede hacer nada, ni siquiera /perfil', async () => {
     mkCompita({ telegram_chat_id: '511', estado: 'bloqueado', verificado: false })
-    for (const t of ['/perfil', '/menu', 'Iniciar visita', 'hola']) {
+    for (const t of ['/perfil', '/menu', '▶️ Iniciar visita', 'hola']) {
       net.tg = []
       await webhook(tgText(511, t))
       assert.match(ultimoTg(511)!.text, /suspendida/, t)

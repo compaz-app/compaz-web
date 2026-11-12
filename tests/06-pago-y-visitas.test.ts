@@ -89,13 +89,13 @@ describe('Ciclo de la visita (cliente ↔ compita)', () => {
     const v = mkVisita(cli, compita, { estado: 'programada', fecha_programada: hoyVEstr(), hora_inicio_programada: '10:00', hora_fin_programada: '12:00' })
     return { compita, cli, v }
   }
-  const iniciar = async () => { await webhook(tgText(910, 'Iniciar visita')); await webhook(tgText(910, 'Sí, iniciar')); await confirmarLlegada() }
+  const iniciar = async () => { await webhook(tgText(910, '▶️ Iniciar visita')); await webhook(tgText(910, '✅ Sí, iniciar')); await confirmarLlegada() }
 
   test('iniciar: confirma, pasa a en_curso, avisa a la familia; HTML en notas del familiar NO rompe el mensaje', async () => {
     const { v } = mundo()
-    await webhook(tgText(910, 'Iniciar visita'))
+    await webhook(tgText(910, '▶️ Iniciar visita'))
     assert.match(ultimoTg(910)!.text, /¿Vas a empezar la visita con <b>Carlos/)
-    await webhook(tgText(910, 'Sí, iniciar')); await confirmarLlegada()
+    await webhook(tgText(910, '✅ Sí, iniciar')); await confirmarLlegada()
     assert.equal(v.estado, 'en_curso')
     assert.match(tgPara(910).at(-1)!.text, /confirmó tu llegada/)
     assert.match(tgPara(910).at(-1)!.text, /&lt;8am/, 'el "<" del familiar llega escapado')
@@ -105,8 +105,8 @@ describe('Ciclo de la visita (cliente ↔ compita)', () => {
 
   test('doble toque en "Sí, iniciar": una sola visita en curso y un solo correo', async () => {
     const { v } = mundo()
-    await webhook(tgText(910, 'Iniciar visita'))
-    await Promise.all([webhook(tgText(910, 'Sí, iniciar')), webhook(tgText(910, 'Sí, iniciar'))]); await confirmarLlegada()
+    await webhook(tgText(910, '▶️ Iniciar visita'))
+    await Promise.all([webhook(tgText(910, '✅ Sí, iniciar')), webhook(tgText(910, '✅ Sí, iniciar'))]); await confirmarLlegada()
     assert.equal(db.rows('visitas').filter((x) => x.estado === 'en_curso').length, 1)
     assert.equal(emailsA('cli@mail.test').filter((e) => e.subject.includes('llegó con tu familiar')).length, 1)
     void v
@@ -114,18 +114,18 @@ describe('Ciclo de la visita (cliente ↔ compita)', () => {
 
   test('visita pautada para mañana: no se puede iniciar hoy; ofrece reagendar', async () => {
     const { v } = mundo(); v.fecha_programada = hoyVEstr(1)
-    await webhook(tgText(910, 'Iniciar visita'))
+    await webhook(tgText(910, '▶️ Iniciar visita'))
     assert.match(ultimoTg(910)!.text, /Podrás iniciarla ese día/)
     assert.equal(db.rows('telegram_estados').filter((e) => e.chat_id.startsWith('conf:')).length, 0)
   })
 
   test('sin fecha confirmada no se puede iniciar (candado), ni siquiera por la vía de "confirmar"', async () => {
     const { v } = mundo(); v.fecha_programada = null; v.estado = 'pre_visita'
-    await webhook(tgText(910, 'Iniciar visita'))
+    await webhook(tgText(910, '▶️ Iniciar visita'))
     assert.match(ultimoTg(910)!.text, /fecha de la visita aún no está confirmada/)
     // forzar la confirmación igualmente
     db.seed('telegram_estados', { chat_id: 'conf:910', pendiente_accion: `iniciar:${v.id}`, pendiente_expira: ahoraMas(5) })
-    await webhook(tgText(910, 'Sí, iniciar')); await confirmarLlegada()
+    await webhook(tgText(910, '✅ Sí, iniciar')); await confirmarLlegada()
     assert.notEqual(v.estado, 'en_curso')
   })
 
@@ -177,7 +177,7 @@ describe('Ciclo de la visita (cliente ↔ compita)', () => {
     assert.ok(!todo.includes('TESTBOTTOKEN'), 'el token del bot no debe aparecer en datos persistidos ni notificaciones')
 
     // terminar → correo resumen con foto firmada
-    await webhook(tgText(910, 'Terminar visita')); await webhook(tgText(910, 'Sí, terminar'))
+    await webhook(tgText(910, '🔴 Terminar visita')); await webhook(tgText(910, '✅ Sí, terminar'))
     const resumen = emailsA('cli@mail.test').find((e) => e.subject.startsWith('Resumen'))!
     assert.match(resumen.html, /\/api\/foto\/[0-9a-f-]+\?e=\d+&amp;s=[0-9a-f]+/)
     assert.ok(!JSON.stringify(net.emails).includes('TESTBOTTOKEN'))
@@ -186,8 +186,8 @@ describe('Ciclo de la visita (cliente ↔ compita)', () => {
 
   test('terminar: doble toque → un correo, +1 visita, cuestionario; luego cuestionario completo y sin duplicar', async () => {
     const { compita, v } = mundo(); await iniciar(); net.emails = []
-    await webhook(tgText(910, 'Terminar visita'))
-    await Promise.all([webhook(tgText(910, 'Sí, terminar')), webhook(tgText(910, 'Sí, terminar'))])
+    await webhook(tgText(910, '🔴 Terminar visita'))
+    await Promise.all([webhook(tgText(910, '✅ Sí, terminar')), webhook(tgText(910, '✅ Sí, terminar'))])
     assert.equal(v.estado, 'terminada')
     assert.equal(emailsA('cli@mail.test').filter((e) => e.subject.startsWith('Resumen')).length, 1)
     assert.equal(compita.visitas_realizadas, 1)
@@ -202,14 +202,14 @@ describe('Ciclo de la visita (cliente ↔ compita)', () => {
 
   test('CRUCE: iniciar OTRA visita con el cuestionario pendiente NO borra el cuestionario', async () => {
     const { compita, v } = mundo(); await iniciar()
-    await webhook(tgText(910, 'Terminar visita')); await webhook(tgText(910, 'Sí, terminar'))
+    await webhook(tgText(910, '🔴 Terminar visita')); await webhook(tgText(910, '✅ Sí, terminar'))
     await webhook(tgBtn(910, 'rr:5'))
     const otro = mkCliente({ email: 'otro@mail.test', compita_id: compita.id })
     mkVisita(otro, compita, { estado: 'programada', fecha_programada: hoyVEstr(), hora_inicio_programada: '15:00', hora_fin_programada: '17:00' })
-    await webhook(tgText(910, 'Iniciar visita'))
+    await webhook(tgText(910, '▶️ Iniciar visita'))
     const principal = db.rows('telegram_estados').find((e) => e.chat_id === '910')!
     assert.match(principal.pendiente_accion, /^reporte:/, 'el cuestionario sigue vivo')
-    await webhook(tgText(910, 'Sí, iniciar')); await confirmarLlegada()
+    await webhook(tgText(910, '✅ Sí, iniciar')); await confirmarLlegada()
     await webhook(tgBtn(910, 'rr:4'))
     assert.match(db.rows('telegram_estados').find((e) => e.chat_id === '910')!.pendiente_accion, /^reporte:.*:2:5,4$/)
     void v
@@ -251,7 +251,7 @@ describe('Ciclo de la visita (cliente ↔ compita)', () => {
     assert.equal(r.status, 200)
     assert.equal(compita.telegram_chat_id, null); assert.equal(compita.estado, 'bloqueado')
     assert.equal(db.rows('usuarios').find((u) => u.id === cli.id)!.compita_id, null)
-    await webhook(tgText(910, 'Iniciar visita'))
+    await webhook(tgText(910, '▶️ Iniciar visita'))
     assert.match(ultimoTg(910)!.text, /no está vinculada|Comenzar/i)
     assert.equal(v.estado, 'programada')
   })

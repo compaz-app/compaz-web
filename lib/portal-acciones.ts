@@ -24,7 +24,7 @@ export async function avisarAlEquipo(c: { id: string; nombre: string }, ahora: D
   if (ultimo && ahora.getTime() - new Date(ultimo).getTime() < VENTANA_MIN * 60_000) return { avisado: false, espera: explicarEspera('ayuda_cliente', { desde: ultimo, duracionMs: VENTANA_MIN * 60_000, ahora }) }
   const estado = await estadoDelCliente(c.id, ahora).catch(() => null)
   await registrarEvento({ entidad: 'cliente', entidadId: c.id, tipo: 'ayuda_cliente', actor: `cliente:${c.id}`, datos: { estado: estado?.codigo ?? null } })
-  await alertaAdmin('tarea', `<b>${esc(c.nombre || 'Un cliente')} pide ayuda desde su portal</b>\n\n${estado ? `Está en el paso "${esc(estado.codigo.replace(/_/g, ' '))}".` : ''} Escríbele por correo (no llames para pedirle datos) y ayúdalo a seguir.`,
-    { categoria: 'cliente_pide_ayuda', clave: `ayuda:${c.id}:${ahora.toISOString().slice(0, 13)}`, entidad: { tipo: 'cliente', id: c.id, nombre: `Pide ayuda: ${c.nombre || 'cliente'}` } })
+  await alertaAdmin('tarea', `🙋 <b>${esc(c.nombre || 'Un cliente')} pide ayuda desde su portal</b>\n\n${estado ? `Está en el paso "${esc(estado.codigo.replace(/_/g, ' '))}".` : ''} Escríbele por correo (no llames para pedirle datos) y ayúdalo a seguir.`,
+    { categoria: 'cliente_pide_ayuda', clave: `ayuda:${c.id}:${ahora.toISOString().slice(0, 13)}`, entidad: { tipo: 'cliente', id: c.id, nombre: `🙋 Pide ayuda: ${c.nombre || 'cliente'}` } })
   return { avisado: true }
 }

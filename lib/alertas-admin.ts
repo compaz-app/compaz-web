@@ -57,7 +57,7 @@ export async function alertaAdmin(nivel: NivelAlerta, textoHtml: string, opc: Op
     const { count } = await admin.from('actividad_admin').select('id', { count: 'exact', head: true }).eq('nivel', 'urgente').gte('creado_en', desde)
     if ((count ?? 0) <= max) return avisarAdmin(textoHtml, opc.teclado)
     if (await reclamarUnaVez(`timbre_colapsado:${new Date().toISOString().slice(0, 13)}`)) {
-      await avisarAdmin(`<b>Hay varias urgencias seguidas</b>\n\nPara no llenarte de mensajes, el resto las ves en la bandeja del panel (pestaña Atención).`)
+      await avisarAdmin(`🔴 <b>Hay varias urgencias seguidas</b>\n\nPara no llenarte de mensajes, el resto las ves en la bandeja del panel (pestaña Atención).`)
     }
     return true
   } catch (e) {

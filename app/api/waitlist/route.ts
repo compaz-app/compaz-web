@@ -267,7 +267,7 @@ export async function POST(req: NextRequest) {
   registrarEnvioEmail(emailKey);
   if (respaldo && Date.now() - ultimoAvisoRespaldo > 15 * 60_000) {
     ultimoAvisoRespaldo = Date.now();
-    await alertaAdmin('urgente', "<b>Supabase no respondió en /api/waitlist</b>\n\nAl menos una postulación se guardó solo en Airtable. La conciliación horaria la importará a Supabase.").catch(() => false);
+    await alertaAdmin('urgente', "⚠️ <b>Supabase no respondió en /api/waitlist</b>\n\nAl menos una postulación se guardó solo en Airtable. La conciliación horaria la importará a Supabase.").catch(() => false);
   }
   return NextResponse.json({ ok: true }, { headers });
 }

@@ -89,10 +89,10 @@ export async function POST(req: NextRequest) {
           const n = esc(cliente?.nombre?.split(' ')[0] ?? 'el cliente')
           await sendTelegramMessage(
             compita.telegram_chat_id,
-            `<b>¿Cómo estuvo la llamada con ${n}?</b>\n\n¿Pudiste conectarte y hablar con ${n}?`,
+            `🤙 <b>¿Cómo estuvo la llamada con ${n}?</b>\n\n¿Pudiste conectarte y hablar con ${n}?`,
             makeInlineKeyboard([[
-              { text: 'Sí, ocurrió', url: url('compita', 'si') },
-              { text: 'No se pudo', url: url('compita', 'no') },
+              { text: '✅ Sí, ocurrió', url: url('compita', 'si') },
+              { text: '❌ No se pudo', url: url('compita', 'no') },
             ]]),
           )
           enviado = true

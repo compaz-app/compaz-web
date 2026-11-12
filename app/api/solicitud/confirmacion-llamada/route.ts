@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
   const cp = sol.confirmacion_compita
   if (cc !== null && cp !== null && cc !== cp) {
     await alertaAdmin('tarea', [
-      `<b>Conflicto en confirmación de llamada</b>`, ``,
+      `⚠️ <b>Conflicto en confirmación de llamada</b>`, ``,
       `<b>Compita:</b> ${esc(solicitud.compita_nombre)} dice <b>${cp ? 'SÍ ocurrió' : 'NO ocurrió'}</b>`,
       `<b>Cliente:</b> ${esc(cliente?.nombre ?? '')} dice <b>${cc ? 'SÍ ocurrió' : 'NO ocurrió'}</b>`, ``,
       `Revisar manualmente qué pasó.`,
@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
 
   if (!ocurrio) {
     await alertaAdmin('actividad', [
-      `<b>Llamada no ocurrió</b>`, ``,
+      `⚠️ <b>Llamada no ocurrió</b>`, ``,
       `<b>${quien === 'cliente' ? 'El cliente' : 'La compita'}</b> reportó que la llamada con <b>${esc(solicitud.compita_nombre)}</b>${quien === 'compita' ? ` y <b>${esc(cliente?.nombre ?? 'el cliente')}</b>` : ''} no se realizó.`, ``,
       `El cliente recibirá un link para proponer nuevos horarios.`,
     ].join('\n'))
@@ -102,7 +102,7 @@ export async function POST(req: NextRequest) {
         })
       } catch (e) {
         console.error('Email reagendar al cliente:', e)
-        await alertaAdmin('tarea', `No se pudo enviar al cliente <b>${esc(cliente?.nombre ?? '')}</b> el enlace para reagendar. Avísale manualmente.`)
+        await alertaAdmin('tarea', `⚠️ No se pudo enviar al cliente <b>${esc(cliente?.nombre ?? '')}</b> el enlace para reagendar. Avísale manualmente.`)
       }
     }
 

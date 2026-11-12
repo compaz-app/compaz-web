@@ -19,7 +19,7 @@ function leer(req: NextRequest) {
 export async function GET(req: NextRequest) {
   const p = leer(req)
   if (!p) return pagina('Enlace inválido', 'Este enlace no es válido o ya expiró.', 400)
-  return puertaConfirmacion(req, `${'★'.repeat(p.valor)} Confirmar calificación`, `Vas a calificar la visita con ${p.valor} de 5 estrellas.`, 'Enviar calificación')
+  return puertaConfirmacion(req, `${'⭐'.repeat(p.valor)} Confirmar calificación`, `Vas a calificar la visita con ${p.valor} de 5 estrellas.`, 'Enviar calificación')
 }
 
 const MENSAJES: Record<number, string> = {

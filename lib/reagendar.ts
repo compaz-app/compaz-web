@@ -54,9 +54,9 @@ export async function reagendarEntrevista(solicitudId: string, quien: 'cliente' 
     })
   } else if (cmp?.telegram_chat_id) {
     try {
-      await sendTelegramMessage(String(cmp.telegram_chat_id), `<b>${esc(String(cli?.nombre ?? 'El cliente').split(' ')[0])} pidió cambiar la hora de la videollamada</b>\n\nElegirá otra de tus horas libres y te avisamos para que la confirmes.`)
+      await sendTelegramMessage(String(cmp.telegram_chat_id), `🔄 <b>${esc(String(cli?.nombre ?? 'El cliente').split(' ')[0])} pidió cambiar la hora de la videollamada</b>\n\nElegirá otra de tus horas libres y te avisamos para que la confirmes.`)
     } catch (e) { console.error('[reagendar] Telegram al compita:', e) }
   }
-  await alertaAdmin('actividad', `<b>Entrevista reagendada</b>\n\n${quien === 'compita' ? 'El compita' : 'El cliente'} pidió cambiar la hora.\n<b>Cliente:</b> ${esc(String(cli?.nombre ?? ''))}\n<b>Compita:</b> ${esc(String(cmp?.nombre ?? ''))}\n\nEl cliente elegirá otra hora libre.`)
+  await alertaAdmin('actividad', `🔄 <b>Entrevista reagendada</b>\n\n${quien === 'compita' ? 'El compita' : 'El cliente'} pidió cambiar la hora.\n<b>Cliente:</b> ${esc(String(cli?.nombre ?? ''))}\n<b>Compita:</b> ${esc(String(cmp?.nombre ?? ''))}\n\nEl cliente elegirá otra hora libre.`)
   return { ok: true, yaEstabaSinHora }
 }

@@ -33,7 +33,7 @@ export async function anunciarEntrevistaConfirmada(i: { solicitud: Solicitud; co
               <strong>${esc(slotLabel)}</strong>
             </p>
             <p style="color:#4A3B6B;background:#F5F0E8;border:2px solid #D4C9E8;border-radius:12px;padding:14px;font-size:14px">
-              Te enviaremos el link de acceso a la llamada <strong>1 hora antes</strong>.
+             Te enviaremos el link de acceso a la llamada <strong>1 hora antes</strong>.
             </p>
             <p style="color:#6B5C90;font-size:14px;line-height:1.6;margin-top:24px">¿Surgió algo y necesitas cambiar la fecha? Puedes proponer nuevos horarios desde aquí:</p>
             <a href="${SITE_URL_PUBLICA}/reagendar/${encodeURIComponent(solicitud.token_respuesta)}" style="display:inline-block;background:#6B5C90;color:white;padding:12px 24px;border-radius:9999px;text-decoration:none;font-weight:700;font-size:14px;margin-top:4px">Reagendar llamada</a>
@@ -46,16 +46,16 @@ export async function anunciarEntrevistaConfirmada(i: { solicitud: Solicitud; co
   }
 
   await alertaAdmin('actividad', [
-    `<b>Entrevista confirmada</b>`, ``,
+    `📞 <b>Entrevista confirmada</b>`, ``,
     `<b>Cliente:</b> ${esc(cliente?.nombre ?? '')} (${esc(cliente?.email ?? '')})`,
     `<b>Compita:</b> ${esc(compita.nombre)}`,
     `<b>Fecha:</b> ${esc(slotLabel)}`, ``,
-    emailOk ? `El link de sala se generará y enviará 1 hora antes.` : `No se pudo enviar el correo de confirmación al cliente. Avísale manualmente.`,
+    emailOk ? `🔗 El link de sala se generará y enviará 1 hora antes.` : `⚠️ No se pudo enviar el correo de confirmación al cliente. Avísale manualmente.`,
   ].join('\n'))
 
   await sendTelegramMessage(
     chatId,
-    `<b>Llamada confirmada</b>\n\n<b>Cliente:</b> ${esc(cliente?.nombre ?? 'Cliente')}\n<b>Fecha y hora:</b> ${esc(slotLabel)}\n\nTe enviaremos el link de acceso <b>1 hora antes</b> de la llamada.\n\nSi necesitas cambiar la fecha, toca el botón de abajo.`,
-    { inline_keyboard: [[{ text: 'Reagendar llamada', url: `${SITE_URL}/api/solicitud/reagendar-compita?token=${solicitud.token_respuesta}&${qRol(solicitud.token_respuesta, 'compita')}` }]] },
+    `✅ <b>Llamada confirmada</b>\n\n<b>Cliente:</b> ${esc(cliente?.nombre ?? 'Cliente')}\n<b>Fecha y hora:</b> ${esc(slotLabel)}\n\n📩 Te enviaremos el link de acceso <b>1 hora antes</b> de la llamada.\n\nSi necesitas cambiar la fecha, toca el botón de abajo.`,
+    { inline_keyboard: [[{ text: '🔄 Reagendar llamada', url: `${SITE_URL}/api/solicitud/reagendar-compita?token=${solicitud.token_respuesta}&${qRol(solicitud.token_respuesta, 'compita')}` }]] },
   )
 }

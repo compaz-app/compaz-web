@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
       if (compita?.telegram_chat_id) {
         await sendTelegramMessage(
           compita.telegram_chat_id,
-          `<b>La llamada se cayó</b>\n\n<b>${esc(cliente?.nombre ?? 'El cliente')}</b> quiere retomar la llamada ahora mismo. Se creó una sala nueva.\n\nToca el enlace de abajo para entrar. La sala estará abierta por 30 minutos.\n\n<a href="${salaCompitaUrl}">Entrar a la nueva sala →</a>`,
+          `⚡ <b>La llamada se cayó</b>\n\n<b>${esc(cliente?.nombre ?? 'El cliente')}</b> quiere retomar la llamada ahora mismo. Se creó una sala nueva.\n\n👉 Toca el enlace de abajo para entrar. La sala estará abierta por 30 minutos.\n\n<a href="${salaCompitaUrl}">Entrar a la nueva sala →</a>`,
         )
       }
     } else if (cliente?.email) {

@@ -21,7 +21,7 @@ function mundo() {
   return { compita, cliente }
 }
 const visita = (compita: any, cliente: any, min: number, o: any = {}) => { const i = ve(min); return mkVisita(cliente, compita, { estado: 'programada', fecha_programada: i.fecha, hora_inicio_programada: i.hora, hora_fin_programada: ve(min + 120).hora, direccion: 'Av. Miranda, Edif. Sol', indicaciones: 'Avisar en conserjería', quien_abre: 'Rosa, la vecina', contacto_nombre: 'Rosa Linares', contacto_tel: '+58 414 555 0101', ...o }) }
-const qmt = () => webhook(tgText(CHAT, '¿Qué me toca?'))
+const qmt = () => webhook(tgText(CHAT, '❓ ¿Qué me toca?'))
 const btn = (data: string) => webhook(tgBtn(CHAT, data))
 const ultimo = () => tgPara(CHAT).at(-1)!
 const botones = (m: any) => (m?.markup?.inline_keyboard ?? []).flat().map((b: any) => b.callback_data)
@@ -80,8 +80,8 @@ describe('el compita atascado', () => {
 
 describe('"Tengo una duda"', () => {
   test('el botón está en todos los teclados y en el aviso de la dirección; abre el menú de 6 opciones', async () => {
-    for (const t of [TECLADO_SIN_VISITA, TECLADO_INICIO, TECLADO_DURANTE_VISITA]) assert.ok(t.keyboard.flat().some((b: any) => b.text === 'Tengo una duda'))
-    mundo(); await webhook(tgText(CHAT, 'Tengo una duda'))
+    for (const t of [TECLADO_SIN_VISITA, TECLADO_INICIO, TECLADO_DURANTE_VISITA]) assert.ok(t.keyboard.flat().some((b: any) => b.text === '🙋 Tengo una duda'))
+    mundo(); await webhook(tgText(CHAT, '🙋 Tengo una duda'))
     assert.deepEqual(botones(ultimo()), ['d:dir', 'd:ent', 'd:hora', 'd:mal', 'd:otra', 'xp']); await btn('duda'); assert.equal(botones(ultimo()).length, 6)
   })
   test('"No encuentro la dirección" con dirección: se la vuelve a dar (sin teléfono) y pregunta si se resolvió', async () => {

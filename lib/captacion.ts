@@ -378,11 +378,11 @@ export async function avisarBandeja(): Promise<number> {
   for (const p of pendientes) if (await reclamarUnaVez(`alerta_post:${p.id}`)) nuevas.push(p)
   if (nuevas.length > 0) {
     await alertaAdmin('tarea', 
-      `<b>${nuevas.length} postulación(es) no llegaron a Airtable</b>\n\n` +
+      `⚠️ <b>${nuevas.length} postulación(es) no llegaron a Airtable</b>\n\n` +
       `Están guardadas en Supabase pero el CMC no las ve. Resuélvelas en la bandeja:\n${enlace}`,
     )
   } else if (await reclamarUnaVez(`alerta_bandeja:${hoyVE()}`)) {
-    await alertaAdmin('actividad', `<b>Bandeja de postulaciones</b>\n\nSiguen ${pendientes.length} sin resolver.\n${enlace}`)
+    await alertaAdmin('actividad', `🔔 <b>Bandeja de postulaciones</b>\n\nSiguen ${pendientes.length} sin resolver.\n${enlace}`)
   }
   return pendientes.length
 }

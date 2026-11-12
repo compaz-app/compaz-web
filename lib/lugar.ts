@@ -108,13 +108,13 @@ export async function cambiarPersonasEnLugar(clienteId: string, body: Record<str
     const primero = esc((visita.usuarios?.nombre ?? 'El cliente').split(' ')[0])
     try {
       await sendTelegramMessage(chat, [
-        `<b>Cambió quién estará en el lugar</b>`, ``,
+        `⚠️ <b>Cambió quién estará en el lugar</b>`, ``,
         `<b>${primero}</b> modificó la lista de personas de tu próxima visita.`, ``,
         `<b>Antes:</b> ${esc(describir(antes))}`, `<b>Ahora:</b> ${esc(describir(v.lista))}`, ``,
         `Por tu seguridad, decide si sigues con la visita. Si prefieres no ir, no hay ninguna penalización.`,
       ].join('\n'), makeInlineKeyboard([
-        [{ text: 'Sigo con la visita', callback_data: `lugar:ok:${id}` }],
-        [{ text: 'Prefiero no ir', callback_data: `lugar:no:${id}` }],
+        [{ text: '✅ Sigo con la visita', callback_data: `lugar:ok:${id}` }],
+        [{ text: '🚫 Prefiero no ir', callback_data: `lugar:no:${id}` }],
       ]))
       avisado = true
     } catch (e) { console.error('[lugar] Telegram al compita:', e) }
@@ -184,11 +184,11 @@ export async function escalarCambiosLugar(ahora: Date = new Date()): Promise<num
     const urgente = restantes !== null && restantes <= 24
     const nombreCmp = String((cmp as { nombre: string } | null)?.nombre ?? 'el compita'); const nombreCli = String((cli as { nombre: string } | null)?.nombre ?? 'el cliente')
     await admin.from('admin_flags').insert({
-      entidad_tipo: 'visita', entidad_id: c.visita_id, entidad_nombre: `Cambio en el lugar: ${nombreCmp} / ${nombreCli}`,
+      entidad_tipo: 'visita', entidad_id: c.visita_id, entidad_nombre: `⚠️ Cambio en el lugar: ${nombreCmp} / ${nombreCli}`,
       nota: `${nombreCli} cambió quién estará en el lugar y ${nombreCmp} no ha respondido.\nAntes: ${describir(c.antes)}\nAhora: ${describir(c.despues)}\n${escribio ? 'El cliente YA le escribió por el chat.' : 'El cliente todavía no le ha escrito por el chat.'}${restantes !== null ? `\nFaltan ${Math.max(0, Math.round(restantes))} h para la visita.` : ''}\nContacta al compita antes de la visita: nunca debe ir sin saber quién estará.`,
       reportado_por: 'cambio en el lugar', resuelto: false, tipo: 'cambio_lugar', prioridad: urgente ? 1 : 2,
     })
-    await alertaAdmin('actividad', `<b>Cambio en el lugar sin respuesta</b>\n\n<b>${esc(nombreCmp)}</b> no ha respondido al cambio de personas de <b>${esc(nombreCli)}</b>.${escribio ? ' El cliente ya le escribió por el chat.' : ''}\n\nAbrimos una tarea en la Bandeja.`)
+    await alertaAdmin('actividad', `⚠️ <b>Cambio en el lugar sin respuesta</b>\n\n<b>${esc(nombreCmp)}</b> no ha respondido al cambio de personas de <b>${esc(nombreCli)}</b>.${escribio ? ' El cliente ya le escribió por el chat.' : ''}\n\nAbrimos una tarea en la Bandeja.`)
     n++
   }
   return n

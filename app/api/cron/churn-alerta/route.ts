@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
     await sendTelegramMessage(
       adminTg,
       [
-        i === 0 ? `<b>Clientes que necesitan seguimiento (${inactivos.length})</b>\n\nLlevan más de 30 días sin visita y no tienen ninguna activa:\n` : '',
+        i === 0 ? `⚠️ <b>Clientes que necesitan seguimiento (${inactivos.length})</b>\n\nLlevan más de 30 días sin visita y no tienen ninguna activa:\n` : '',
         bloques[i],
         i === bloques.length - 1 ? `\nContáctalos personalmente para saber cómo están.` : '',
       ].join('\n'),

@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
     try {
       await sendTelegramMessage(
         estado.chat_id,
-        `<b>Recordatorio</b>\n\nAún tienes pendiente sugerir nuevos horarios a <b>${esc(clienteNombre)}</b>.\n\nSi no respondes en las próximas 22 horas, la solicitud se cerrará automáticamente y el cliente será notificado.`,
+        `⏰ <b>Recordatorio</b>\n\nAún tienes pendiente sugerir nuevos horarios a <b>${esc(clienteNombre)}</b>.\n\nSi no respondes en las próximas 22 horas, la solicitud se cerrará automáticamente y el cliente será notificado.`,
       )
       recordatorios++
     } catch (e) { console.error('Error recordatorio rechazo:', e) }
@@ -95,7 +95,7 @@ export async function POST(req: NextRequest) {
         })
       } catch (e) {
         console.error('Email cierre rechazo cliente:', e)
-        await alertaAdmin('tarea', `No se pudo avisar a <b>${esc(clienteNombre)}</b> (${esc(clienteEmail)}) que su solicitud con <b>${esc(compitaNombre)}</b> se cerró. Avísale manualmente.`)
+        await alertaAdmin('tarea', `⚠️ No se pudo avisar a <b>${esc(clienteNombre)}</b> (${esc(clienteEmail)}) que su solicitud con <b>${esc(compitaNombre)}</b> se cerró. Avísale manualmente.`)
       }
     }
     try {
@@ -143,14 +143,14 @@ export async function POST(req: NextRequest) {
           })
         } catch (e) { console.error('Email cierre pendiente:', e) }
       }
-      await alertaAdmin('actividad', `Solicitud sin respuesta por 72 h cerrada: <b>${esc(sol.usuarios?.nombre ?? 'cliente')}</b> → <b>${esc(nombreCompita)}</b>.`)
+      await alertaAdmin('actividad', `⌛ Solicitud sin respuesta por 72 h cerrada: <b>${esc(sol.usuarios?.nombre ?? 'cliente')}</b> → <b>${esc(nombreCompita)}</b>.`)
     } else if (await reclamarUnaVez(`pend_rec:${sol.id}`)) {
       if (sol.compitas?.telegram_chat_id) {
         try {
-          await sendTelegramMessage(sol.compitas.telegram_chat_id, `<b>Tienes una solicitud sin responder</b>\n\n<b>${esc(sol.usuarios?.nombre ?? 'Un cliente')}</b> quiere conocerte. Busca el mensaje con los horarios y toca el que te funcione, o rechaza si no puedes. Si no respondes, la solicitud se cerrará en 2 días.`)
+          await sendTelegramMessage(sol.compitas.telegram_chat_id, `⏰ <b>Tienes una solicitud sin responder</b>\n\n<b>${esc(sol.usuarios?.nombre ?? 'Un cliente')}</b> quiere conocerte. Busca el mensaje con los horarios y toca el que te funcione, o rechaza si no puedes. Si no respondes, la solicitud se cerrará en 2 días.`)
         } catch (e) { console.error('Recordatorio pendiente compita:', e) }
       } else {
-        await alertaAdmin('tarea', `Solicitud pendiente hace 24 h para <b>${esc(nombreCompita)}</b>, que no tiene Telegram vinculado.`)
+        await alertaAdmin('tarea', `⚠️ Solicitud pendiente hace 24 h para <b>${esc(nombreCompita)}</b>, que no tiene Telegram vinculado.`)
       }
     }
   }

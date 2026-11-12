@@ -23,11 +23,11 @@ export async function POST(req: NextRequest) {
     const r = await conciliarAirtable(desde)
     for (const id of r.ilegibles) {
       if (await reclamarUnaVez(`alerta_ilegible:${id}`)) {
-        await alertaAdmin('tarea', `<b>Registro de Airtable sin importar</b>\n\n${id} no tiene el formato "WA: … | Email: … | Rol: …" y no se pudo pasar a Supabase. Revísalo a mano.`)
+        await alertaAdmin('tarea', `⚠️ <b>Registro de Airtable sin importar</b>\n\n${id} no tiene el formato "WA: … | Email: … | Rol: …" y no se pudo pasar a Supabase. Revísalo a mano.`)
       }
     }
     if (r.ambigua > 0 && (await reclamarUnaVez(`alerta_ambigua:${new Date().toISOString().slice(0, 10)}`))) {
-      await alertaAdmin('tarea', `<b>Conciliación con Airtable</b>\n\n${r.ambigua} registro(s) coinciden con más de una postulación y no se vincularon. Revisa los eventos "airtable_conciliacion_ambigua".`)
+      await alertaAdmin('tarea', `⚠️ <b>Conciliación con Airtable</b>\n\n${r.ambigua} registro(s) coinciden con más de una postulación y no se vincularon. Revisa los eventos "airtable_conciliacion_ambigua".`)
     }
     await latido('conciliar-airtable')
     return ok({ ...r, ilegibles: r.ilegibles.length })

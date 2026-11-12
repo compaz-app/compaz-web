@@ -26,8 +26,8 @@ describe('lo informativo NO suena', () => {
   test('una visita completa (iniciar y terminar) no manda ni un Telegram al admin, pero queda todo registrado', async () => {
     const compita = mkCompita({ telegram_chat_id: CHAT, nombre: 'María Pérez' }); const cliente = mkCliente({ nombre: 'Carolina Pérez', email: 'caro@mail.test' })
     mkVisita(cliente, compita, { estado: 'programada', fecha_programada: hoyVEstr(), hora_inicio_programada: '09:00', hora_fin_programada: '11:00' })
-    await webhook(tgText(CHAT, 'Iniciar visita')); await webhook(tgText(CHAT, 'Sí, iniciar')); await confirmarLlegada()
-    await webhook(tgText(CHAT, 'Terminar visita')); await webhook(tgText(CHAT, 'Sí, terminar'))
+    await webhook(tgText(CHAT, '▶️ Iniciar visita')); await webhook(tgText(CHAT, '✅ Sí, iniciar')); await confirmarLlegada()
+    await webhook(tgText(CHAT, '🔴 Terminar visita')); await webhook(tgText(CHAT, '✅ Sí, terminar'))
     assert.equal(telegramAlAdmin().length, 0, 'nada suena por eventos normales')
     const textos = act('actividad').map((r) => r.resumen)
     assert.ok(textos.some((t) => /Visita iniciada/.test(t))); assert.ok(textos.some((t) => /Visita terminada/.test(t)))
@@ -35,13 +35,13 @@ describe('lo informativo NO suena', () => {
   })
 
   test('muchos eventos normales seguidos: el admin sigue sin recibir nada', async () => {
-    for (let i = 0; i < 30; i++) await alertaAdmin('actividad', `<b>Visita terminada</b>\n\nCompita ${i}`, { categoria: 'prueba' })
+    for (let i = 0; i < 30; i++) await alertaAdmin('actividad', `✅ <b>Visita terminada</b>\n\nCompita ${i}`, { categoria: 'prueba' })
     assert.equal(telegramAlAdmin().length, 0); assert.equal(act('actividad').length, 30)
   })
 
   test('el registro guarda texto plano (sin etiquetas HTML)', async () => {
-    await alertaAdmin('actividad', '<b>Visita</b> &amp; <i>otra</i>')
-    assert.equal(act()[0].resumen, 'Visita & otra')
+    await alertaAdmin('actividad', '✅ <b>Visita</b> &amp; <i>otra</i>')
+    assert.equal(act()[0].resumen, '✅ Visita & otra')
   })
 })
 
@@ -56,10 +56,10 @@ describe('lo que hay que hacer va a la bandeja, sin Telegram', () => {
 
   test('la misma tarea no se duplica mientras siga abierta; resuelta, vuelve a poder abrirse', async () => {
     const e = { tipo: 'compita' as const, id: 'c-1', nombre: 'María' }
-    await alertaAdmin('tarea', 'No se pudo enviar el aviso', { entidad: e, categoria: 'x' }); await alertaAdmin('tarea', 'No se pudo enviar el aviso', { entidad: e, categoria: 'x' })
+    await alertaAdmin('tarea', '⚠️ No se pudo enviar el aviso', { entidad: e, categoria: 'x' }); await alertaAdmin('tarea', '⚠️ No se pudo enviar el aviso', { entidad: e, categoria: 'x' })
     assert.equal(tareas().length, 1); assert.equal(act('tarea').length, 2, 'cada vez queda en el registro')
     tareas()[0].resuelto = true
-    await alertaAdmin('tarea', 'No se pudo enviar el aviso', { entidad: e, categoria: 'x' })
+    await alertaAdmin('tarea', '⚠️ No se pudo enviar el aviso', { entidad: e, categoria: 'x' })
     assert.equal(tareas().length, 2)
   })
 
@@ -72,20 +72,20 @@ describe('lo que hay que hacer va a la bandeja, sin Telegram', () => {
 
 describe('solo lo urgente suena, con tope', () => {
   test('una urgencia: Telegram al dueño, tarea de prioridad 1 y registro', async () => {
-    await alertaAdmin('urgente', '<b>Algo grave</b>', { categoria: 'x' })
+    await alertaAdmin('urgente', '🚨 <b>Algo grave</b>', { categoria: 'x' })
     assert.equal(telegramAlAdmin().length, 1); assert.equal(tareas()[0].prioridad, 1); assert.equal(act('urgente').length, 1)
   })
 
   test('una emergencia real (botón del compita) suena y su tarea no se duplica', async () => {
     const compita = mkCompita({ telegram_chat_id: CHAT, nombre: 'María Pérez' }); const cliente = mkCliente({ nombre: 'Carolina', email: 'c@mail.test' })
     mkVisita(cliente, compita, { estado: 'en_curso' })
-    await webhook(tgText(CHAT, 'Emergencia'))
+    await webhook(tgText(CHAT, '🚨 Emergencia'))
     assert.ok(telegramAlAdmin().some((m) => /EMERGENCIA/.test(m.text))); assert.equal(tareas().filter((t) => /EMERGENCIA/.test(t.entidad_nombre)).length, 1)
   })
 
   test('pasado el tope por hora, el resto se resume en UN solo mensaje que remite a la bandeja; todo queda registrado', async () => {
     await setAjuste({ clave: 'timbre_max_hora', valor: 3, actor: 'admin:a' }); limpiarCacheAjustes()
-    for (let i = 0; i < 12; i++) await alertaAdmin('urgente', `Urgencia número ${i}`, { categoria: 'x', entidad: { tipo: 'compita', id: `c-${i}`, nombre: `C${i}` } })
+    for (let i = 0; i < 12; i++) await alertaAdmin('urgente', `🔴 Urgencia número ${i}`, { categoria: 'x', entidad: { tipo: 'compita', id: `c-${i}`, nombre: `C${i}` } })
     const t = telegramAlAdmin()
     assert.ok(t.length <= 3 + 1, `como máximo 3 + el resumen (hubo ${t.length})`); assert.equal(t.filter((m) => /varias urgencias/.test(m.text)).length, 1)
     assert.match(t.find((m) => /varias urgencias/.test(m.text))!.text, /bandeja/)
@@ -94,13 +94,13 @@ describe('solo lo urgente suena, con tope', () => {
 
   test('la seguridad de personas NUNCA se suprime por el tope', async () => {
     await setAjuste({ clave: 'timbre_max_hora', valor: 1, actor: 'admin:a' }); limpiarCacheAjustes()
-    for (let i = 0; i < 6; i++) await alertaAdmin('urgente', `Emergencia ${i}`, { critica: true, sinTarea: true })
+    for (let i = 0; i < 6; i++) await alertaAdmin('urgente', `🚨 Emergencia ${i}`, { critica: true, sinTarea: true })
     assert.equal(telegramAlAdmin().length, 6)
   })
 
   test('si el registro falla, el aviso NO se pierde: sale por Telegram como antes', async () => {
     db.fail['actividad_admin:insert'] = 1
-    await alertaAdmin('actividad', 'Algo que no debe perderse')
+    await alertaAdmin('actividad', 'ℹ️ Algo que no debe perderse')
     assert.ok(telegramAlAdmin().some((m) => /no debe perderse/.test(m.text)))
   })
 
@@ -112,9 +112,9 @@ describe('solo lo urgente suena, con tope', () => {
 
 describe('el colaborador trabaja desde el panel', () => {
   const sembrar = async () => {
-    await alertaAdmin('tarea', 'Falta la dirección de Carolina (caro@mail.com) tel +58 414 555 0101', { categoria: 'dir', entidad: { tipo: 'compita', id: 'c-1', nombre: 'María' } })
-    await alertaAdmin('actividad', 'Visita iniciada\nCliente: Carolina (caro@mail.com)', { categoria: 'v' })
-    await alertaAdmin('urgente', 'Nadie abre', { categoria: 'n', entidad: { tipo: 'visita', id: 'v-1', nombre: 'María / Carolina' } })
+    await alertaAdmin('tarea', '⚠️ Falta la dirección de Carolina (caro@mail.com) tel +58 414 555 0101', { categoria: 'dir', entidad: { tipo: 'compita', id: 'c-1', nombre: 'María' } })
+    await alertaAdmin('actividad', '▶️ Visita iniciada\nCliente: Carolina (caro@mail.com)', { categoria: 'v' })
+    await alertaAdmin('urgente', '🚪 Nadie abre', { categoria: 'n', entidad: { tipo: 'visita', id: 'v-1', nombre: 'María / Carolina' } })
   }
 
   test('con permiso de atender ve la bandeja SIN teléfonos ni correos, y el administrador sí los ve', async () => {

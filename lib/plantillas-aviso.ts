@@ -69,7 +69,7 @@ function avisoSinHorario(s: Record<string, unknown>, clienteNombre: string): Con
   const esEntrevista = s.tipo === 'entrevista'
   const personas = textoPersonas(s.personas_en_lugar)
   const lineas = [
-    esMandado ? `<b>Mandado</b>` : esEntrevista ? `<b>Quieren conocerte</b>` : `<b>Contratación directa</b>`,
+    esMandado ? `🧾 <b>Mandado</b>` : esEntrevista ? `🔔 <b>Quieren conocerte</b>` : `🤝 <b>Contratación directa</b>`,
     ``,
     esMandado ? `<b>${primero}</b> te pide un mandado (tarifa plana).` : esEntrevista ? `<b>${primero}</b> quiere hablar contigo primero, en una videollamada de 20 minutos.` : `<b>${primero}</b> quiere contratarte directamente, sin entrevista.`,
     ``,
@@ -88,9 +88,9 @@ function avisoSinHorario(s: Record<string, unknown>, clienteNombre: string): Con
       texto: lineas.join('\n'),
       teclado: makeInlineKeyboard([
         // La foto del cliente se abre desde nuestro servidor mientras decides; no se manda por Telegram para poder borrarla.
-        ...(s.foto_cliente_id ? [[{ text: `Ver la foto de ${clienteNombre.split(' ')[0]}`, url: `${SITE_URL}/api/solicitud-foto/${token}` }]] : []),
-        [{ text: 'Aceptar', callback_data: `directa:${token}` }],
-        [{ text: 'No puedo', callback_data: `rechazar:${token}` }],
+        ...(s.foto_cliente_id ? [[{ text: `📷 Ver la foto de ${clienteNombre.split(' ')[0]}`, url: `${SITE_URL}/api/solicitud-foto/${token}` }]] : []),
+        [{ text: '✅ Aceptar', callback_data: `directa:${token}` }],
+        [{ text: '❌ No puedo', callback_data: `rechazar:${token}` }],
       ]),
     },
     correo: {
@@ -125,7 +125,7 @@ const solicitudNueva: Plantilla = {
     if (typeof s.sobre_cliente === 'string' && s.sobre_cliente.trim()) partesSobre.push(`<b>Sobre el cliente:</b>`, esc(s.sobre_cliente.trim()), ``)
 
     const texto = [
-      `<b>Nueva solicitud de entrevista</b>`,
+      `🔔 <b>Nueva solicitud de entrevista</b>`,
       ``,
       `<b>${esc(clienteNombre)}</b> quiere conocerte.`,
       ``,
@@ -134,14 +134,14 @@ const solicitudNueva: Plantilla = {
       esc(String(s.mensaje ?? '')),
       ``,
       `<b>Horarios propuestos (llamada de 20 min):</b>`,
-      conEtiqueta.map(({ i, label }) => `${['', '', ''][i]} ${label}`).join('\n'),
+      conEtiqueta.map(({ i, label }) => `${['1️⃣', '2️⃣', '3️⃣'][i]} ${label}`).join('\n'),
       ``,
-      `<b>Toca el botón del horario que te funcione para confirmar.</b>`,
+      `👇 <b>Toca el botón del horario que te funcione para confirmar.</b>`,
     ].join('\n')
 
     const teclado = makeInlineKeyboard([
-      ...conEtiqueta.map(({ i, label }) => [{ text: `${label}`, callback_data: `slot:${i}:${s.token_respuesta}` }]),
-      [{ text: 'No puedo atender', callback_data: `rechazar:${s.token_respuesta}` }],
+      ...conEtiqueta.map(({ i, label }) => [{ text: `✅ ${label}`, callback_data: `slot:${i}:${s.token_respuesta}` }]),
+      [{ text: '❌ No puedo atender', callback_data: `rechazar:${s.token_respuesta}` }],
     ])
 
     // Correo de respaldo: mismos horarios, con enlaces firmados que funcionan sin iniciar sesión.
@@ -264,7 +264,7 @@ const llamadaTerminadaCliente: Plantilla = {
     const intro = corta
       ? `Parece que la llamada fue muy corta o tuvo problemas técnicos. ¿Qué pasó?`
       : `Tu llamada con <strong>${esc(d.compitaNombre)}</strong> acaba de terminar. ¿Qué decides?`
-    const botonContratar = corta ? '' : `<a href="${d.contratarUrl}" style="display:block;background:#22C55E;color:white;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:16px;text-align:center;margin-bottom:12px">Sí, quiero contratar a ${esc(d.compitaNombre)}</a>`
+    const botonContratar = corta ? '': `<a href="${d.contratarUrl}" style="display:block;background:#22C55E;color:white;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:16px;text-align:center;margin-bottom:12px">Sí, quiero contratar a ${esc(d.compitaNombre)}</a>`
     return {
       correo: {
         asunto: v.recordatorio === true ? `Recordatorio: ${titulo}` : titulo,
@@ -274,8 +274,8 @@ const llamadaTerminadaCliente: Plantilla = {
               <p style="color:#4A3B6B;font-size:16px;line-height:1.6">Hola, <strong>${nombre}</strong>. ${intro}</p>
               <div style="margin-top:24px">
                 ${botonContratar}
-                <a href="${d.reagendarUrl}" style="display:block;background:#6B5C90;color:white;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:700;font-size:15px;text-align:center;margin-bottom:12px">${corta ? 'La llamada se cortó — quiero reagendar' : 'Quiero reagendar para hablar más'}</a>
-                <a href="${d.noUrl}" style="display:block;background:#E8E0D4;color:#1A0A3C;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:700;font-size:15px;text-align:center">${corta ? 'No pude hablar — ver otros compitas' : 'No es lo que busco — ver otros perfiles'}</a>
+                <a href="${d.reagendarUrl}" style="display:block;background:#6B5C90;color:white;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:700;font-size:15px;text-align:center;margin-bottom:12px">${corta ? 'La llamada se cortó — quiero reagendar': 'Quiero reagendar para hablar más'}</a>
+                <a href="${d.noUrl}" style="display:block;background:#E8E0D4;color:#1A0A3C;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:700;font-size:15px;text-align:center">${corta ? 'No pude hablar — ver otros compitas': 'No es lo que busco — ver otros perfiles'}</a>
               </div>
               <p style="color:#6B5C90;font-size:13px;margin-top:32px">Compaz — <em>Cerca aunque estés lejos</em></p>
             </div>`,
@@ -294,15 +294,15 @@ const llamadaTerminadaCompita: Plantilla = {
     if (v.corta === true) {
       return {
         telegram: {
-          texto: `La llamada con <b>${nombre}</b> parece que tuvo problemas técnicos.\n\n¿Qué pasó?`,
-          teclado: { inline_keyboard: [[{ text: 'Estuvo bien', url: d.compitaBienUrl }, { text: 'Necesitamos reagendar', url: d.compitaReagendarUrl }]] },
+          texto: `📞 La llamada con <b>${nombre}</b> parece que tuvo problemas técnicos.\n\n¿Qué pasó?`,
+          teclado: { inline_keyboard: [[{ text: '✅ Estuvo bien', url: d.compitaBienUrl }, { text: '🔄 Necesitamos reagendar', url: d.compitaReagendarUrl }]] },
         },
       }
     }
     return {
       telegram: {
-        texto: `<b>¡Gracias por la llamada!</b>\n\nLa entrevista con <b>${nombre}</b> terminó.\n\nEstaremos en contacto según lo que decida la familia. Si tuviste algún problema técnico, avísanos.`,
-        teclado: { inline_keyboard: [[{ text: 'Tuvimos problemas — reagendar', url: d.compitaReagendarUrl }]] },
+        texto: `✅ <b>¡Gracias por la llamada!</b>\n\nLa entrevista con <b>${nombre}</b> terminó.\n\nEstaremos en contacto según lo que decida la familia. Si tuviste algún problema técnico, avísanos.`,
+        teclado: { inline_keyboard: [[{ text: '🔄 Tuvimos problemas — reagendar', url: d.compitaReagendarUrl }]] },
       },
     }
   },
@@ -346,8 +346,8 @@ const reservaPedida: Plantilla = {
     const primero = esc(String(cli?.nombre ?? 'El cliente').split(' ')[0])
     const hasta = new Date(r.vence_en).toLocaleTimeString('es-VE', { timeZone: 'America/Caracas', hour: 'numeric', minute: '2-digit', hour12: true })
     return { telegram: {
-      texto: [`<b>${primero} eligió una hora para la videollamada</b>`, ``, `<b>${esc(etiquetaSlot(String(r.inicio)))}</b> (hora de Caracas)`, ``, `Confírmala o dinos que no puedes a esa hora. Si no respondes, la hora se libera sola a las ${esc(hasta)}.`].join('\n'),
-      teclado: makeInlineKeyboard([[{ text: 'Confirmar', callback_data: `reserva:ok:${r.id}` }], [{ text: 'No puedo a esa hora', callback_data: `reserva:no:${r.id}` }]]),
+      texto: [`📅 <b>${primero} eligió una hora para la videollamada</b>`, ``, `<b>${esc(etiquetaSlot(String(r.inicio)))}</b> (hora de Caracas)`, ``, `Confírmala o dinos que no puedes a esa hora. Si no respondes, la hora se libera sola a las ${esc(hasta)}.`].join('\n'),
+      teclado: makeInlineKeyboard([[{ text: '✅ Confirmar', callback_data: `reserva:ok:${r.id}` }], [{ text: '❌ No puedo a esa hora', callback_data: `reserva:no:${r.id}` }]]),
     } }
   },
 }
@@ -420,17 +420,17 @@ const direccionVisita: Plantilla = {
     const fecha = new Date(`${vis.fecha_programada}T12:00:00-04:00`).toLocaleDateString('es-VE', { timeZone: 'America/Caracas', weekday: 'long', day: 'numeric', month: 'long' })
     return { telegram: {
       texto: [
-        `<b>Dirección de tu visita</b>`, ``,
+        `📍 <b>Dirección de tu visita</b>`, ``,
         `Visita con <b>${primero}</b>: ${esc(fecha)}, ${esc(String(vis.hora_inicio_programada).slice(0, 5))}.`, ``,
         `<b>Dirección:</b> ${esc(String(vis.direccion))}`,
         ...(vis.indicaciones ? [`<b>Cómo entrar:</b> ${esc(String(vis.indicaciones))}`] : []),
         ...(vis.quien_abre ? [`<b>Quién abre:</b> ${esc(String(vis.quien_abre))}`] : []),
         ...(vis.contacto_nombre ? [`<b>Contacto en el sitio:</b> ${esc(String(vis.contacto_nombre))}`] : []),
         ...(personas ? [`<b>Quién más estará:</b> ${esc(personas)}`] : []),
-        ``, `Esta dirección es solo para ti: no la compartas. Se entrega por aquí y nunca por el chat.`,
-        ``, `${antifraude}`,
+        ``, `🔒 Esta dirección es solo para ti: no la compartas. Se entrega por aquí y nunca por el chat.`,
+        ``, `⚠️ ${antifraude}`,
       ].join('\n'),
-      teclado: makeInlineKeyboard([[{ text: 'Voy en camino', callback_data: `camino:${vis.id}` }], [{ text: 'Tengo una duda', callback_data: 'duda' }]]),
+      teclado: makeInlineKeyboard([[{ text: '🚗 Voy en camino', callback_data: `camino:${vis.id}` }], [{ text: '🙋 Tengo una duda', callback_data: 'duda' }]]),
     } }
   },
 }
@@ -545,8 +545,8 @@ const nadieAbreCerrar: Plantilla = {
     if (!vis || vis.estado !== 'programada' || !vis.sin_acceso_en) return null
     const espera = Number((await getAjustes()).nadie_abre_espera_min)
     return { telegram: {
-      texto: [`<b>Ya pasaron ${espera} minutos</b>`, ``, `Nadie abrió. Si ya no puedes esperar, cierra la visita: se cuenta como usada y tu tiempo queda registrado. Si el cliente aparece antes, toca Iniciar visita.`].join('\n'),
-      teclado: makeInlineKeyboard([[{ text: 'Cerrar visita sin acceso', callback_data: `sinacceso:${visitaId}` }]]),
+      texto: [`⏱️ <b>Ya pasaron ${espera} minutos</b>`, ``, `Nadie abrió. Si ya no puedes esperar, cierra la visita: se cuenta como usada y tu tiempo queda registrado. Si el cliente aparece antes, toca ▶️ Iniciar visita.`].join('\n'),
+      teclado: makeInlineKeyboard([[{ text: '🚪 Cerrar visita sin acceso', callback_data: `sinacceso:${visitaId}` }]]),
     } }
   },
 }
@@ -652,8 +652,8 @@ const todoBien: Plantilla = {
     const { data: vis } = await admin.from('visitas').select('estado').eq('id', visitaId).maybeSingle()
     if (!vis || vis.estado !== 'en_curso') return null // ya terminó: no hace falta preguntar
     return { telegram: {
-      texto: [`<b>¿Todo bien?</b>`, ``, `La hora de fin de la visita ya pasó. Cuéntanos cómo estás:`].join('\n'),
-      teclado: makeInlineKeyboard([[{ text: 'Todo bien', callback_data: `tb:ok:${visitaId}` }], [{ text: 'Necesito ayuda', callback_data: `tb:ayuda:${visitaId}` }]]),
+      texto: [`⏱️ <b>¿Todo bien?</b>`, ``, `La hora de fin de la visita ya pasó. Cuéntanos cómo estás:`].join('\n'),
+      teclado: makeInlineKeyboard([[{ text: '✅ Todo bien', callback_data: `tb:ok:${visitaId}` }], [{ text: '🆘 Necesito ayuda', callback_data: `tb:ayuda:${visitaId}` }]]),
     } }
   },
 }

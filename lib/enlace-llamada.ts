@@ -80,7 +80,7 @@ export async function enviarEnlaceDeLlamada(solicitudId: string): Promise<Result
               <strong>${esc(slotLabel)}</strong>
             </p>
             <p style="color:#C84B0E;background:#FFF3E8;border:2px solid #FF6B2B;border-radius:12px;padding:14px;font-size:14px">
-              ${duracion}
+              ⏱️ ${duracion}
             </p>
             <a href="${salaClienteUrl}" style="display:inline-block;background:#FF6B2B;color:white;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:16px;margin-top:8px">
               Entrar a la llamada →
@@ -108,15 +108,15 @@ export async function enviarEnlaceDeLlamada(solicitudId: string): Promise<Result
       await sendTelegramMessage(
         compitaData.telegram_chat_id,
         [
-          `<b>Link de tu llamada listo</b>`,
+          `⏰ <b>Link de tu llamada listo</b>`,
           ``,
           `Con <b>${esc(cliente?.nombre ?? 'el cliente')}</b> — <b>${esc(slotLabel)}</b>`,
           ``,
-          `${duracion}`,
+          `⏱️ ${duracion}`,
           ``,
           `Si no puedes a esa hora, toca Reagendar abajo.`,
         ].join('\n'),
-        { inline_keyboard: [[{ text: 'Entrar a la llamada', url: salaCompitaUrl }, { text: 'Reagendar', url: `${SITE_URL}/api/solicitud/reagendar-compita?token=${t}&${qRol(t, 'compita')}` }]] },
+        { inline_keyboard: [[{ text: '▶️ Entrar a la llamada', url: salaCompitaUrl }, { text: '🔄 Reagendar', url: `${SITE_URL}/api/solicitud/reagendar-compita?token=${t}&${qRol(t, 'compita')}` }]] },
       )
       resultados.push('telegram_compita: ok')
     } catch (e) {
@@ -141,7 +141,7 @@ export async function enviarEnlaceDeLlamada(solicitudId: string): Promise<Result
               <strong>${esc(slotLabel)}</strong>
             </p>
             <p style="color:#C84B0E;background:#FFF3E8;border:2px solid #FF6B2B;border-radius:12px;padding:14px;font-size:14px">
-              ${duracion}
+              ⏱️ ${duracion}
             </p>
             <a href="${salaCompitaUrl}" style="display:inline-block;background:#FF6B2B;color:white;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:16px;margin-top:8px">
               Entrar a la llamada →

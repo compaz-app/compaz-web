@@ -405,7 +405,7 @@ export async function sendVisitaResumen(
         <div style="margin-top:28px;padding-top:24px;border-top:1.5px solid #E8E0D4">
           <p style="color:#4A3B6B;font-size:14px;font-weight:600;margin:0 0 12px">¿Cómo estuvo la visita de hoy?</p>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
-            ${[1,2,3,4,5].map(n => `<a href="${SITE_URL}/api/visita/rating?visita_id=${visita.id}&valor=${n}&t=${ratingToken(visita.id, n)}" style="display:inline-block;background:#F5F0FF;border:2px solid #D4C9E8;color:#2D1464;padding:8px 14px;border-radius:9999px;text-decoration:none;font-weight:700;font-size:16px">${'★'.repeat(n)}</a>`).join('')}
+            ${[1,2,3,4,5].map(n => `<a href="${SITE_URL}/api/visita/rating?visita_id=${visita.id}&valor=${n}&t=${ratingToken(visita.id, n)}" style="display:inline-block;background:#F5F0FF;border:2px solid #D4C9E8;color:#2D1464;padding:8px 14px;border-radius:9999px;text-decoration:none;font-weight:700;font-size:16px">${'⭐'.repeat(n)}</a>`).join('')}
           </div>
         </div>
         ${esRecurrente ? `
@@ -483,7 +483,7 @@ export async function sendResumenConReporte(
         <div style="margin-top:28px;padding-top:24px;border-top:1.5px solid #E8E0D4">
           <p style="color:#4A3B6B;font-size:14px;font-weight:600;margin:0 0 12px">¿Cómo estuvo la visita de hoy?</p>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
-            ${[1,2,3,4,5].map(n => `<a href="${SITE_URL}/api/visita/rating?visita_id=${visita.id}&valor=${n}&t=${ratingToken(visita.id, n)}" style="display:inline-block;background:#F5F0FF;border:2px solid #D4C9E8;color:#2D1464;padding:8px 14px;border-radius:9999px;text-decoration:none;font-weight:700;font-size:16px">${'★'.repeat(n)}</a>`).join('')}
+            ${[1,2,3,4,5].map(n => `<a href="${SITE_URL}/api/visita/rating?visita_id=${visita.id}&valor=${n}&t=${ratingToken(visita.id, n)}" style="display:inline-block;background:#F5F0FF;border:2px solid #D4C9E8;color:#2D1464;padding:8px 14px;border-radius:9999px;text-decoration:none;font-weight:700;font-size:16px">${'⭐'.repeat(n)}</a>`).join('')}
           </div>
         </div>
         ${esRecurrente ? `

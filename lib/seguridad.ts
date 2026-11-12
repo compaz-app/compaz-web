@@ -56,13 +56,13 @@ export async function salidaPorSeguridad(compita: { id: string; nombre: string }
     })
     // La tarea queda visible en la Bandeja del equipo.
     await admin.from('admin_flags').insert({
-      entidad_tipo: 'visita', entidad_id: v.id, entidad_nombre: `Salida por seguridad: ${compita.nombre}`,
+      entidad_tipo: 'visita', entidad_id: v.id, entidad_nombre: `🛡️ Salida por seguridad: ${compita.nombre}`,
       nota: `${compita.nombre} interrumpió la visita con ${cliente?.nombre ?? 'el cliente'} porque no se sintió seguro. Sin penalización para el compita. Contacta al compita y al cliente de inmediato. Si el compita cobra la visita se decide caso por caso.`,
       reportado_por: 'no me siento seguro', resuelto: false, tipo: 'salida_seguridad', prioridad: 1,
     })
   }
   const detalle = [
-    `<b>NO ME SIENTO SEGURO</b>`, ``,
+    `🛡️ <b>NO ME SIENTO SEGURO</b>`, ``,
     `<b>${esc(compita.nombre)}</b> interrumpió la visita por seguridad.`,
     v && cliente ? `<b>Cliente:</b> ${esc(cliente.nombre)}${cliente.email ? ` (${esc(cliente.email)})` : ''}` : `No hay una visita registrada en este momento.`,
     ...(v && cliente?.zona ? [`<b>Zona:</b> ${esc(cliente.zona)}`] : []),
@@ -118,12 +118,12 @@ async function alertarVisitaAlargada(v: VisitaSeg, nombreCompita: string, motivo
   const { data: cli } = await admin.from('usuarios').select('nombre, email, zona').eq('id', v.usuario_id).maybeSingle()
   const c = cli as { nombre: string; email: string | null; zona: string | null } | null
   await admin.from('admin_flags').insert({
-    entidad_tipo: 'visita', entidad_id: v.id, entidad_nombre: `Visita alargada: ${nombreCompita} / ${c?.nombre ?? ''}`,
+    entidad_tipo: 'visita', entidad_id: v.id, entidad_nombre: `⏱️ Visita alargada: ${nombreCompita} / ${c?.nombre ?? ''}`,
     nota: `${nombreCompita} ${motivo}. La visita con ${c?.nombre ?? 'el cliente'} sigue abierta después de la hora de fin. Contacta al compita y al cliente ahora.`,
     reportado_por: 'visita alargada', resuelto: false, tipo: 'visita_alargada', prioridad: 1,
   })
   const texto = [
-    `<b>VISITA ALARGADA</b>`, ``, `<b>${esc(nombreCompita)}</b> ${esc(motivo)}.`,
+    `⏱️ <b>VISITA ALARGADA</b>`, ``, `<b>${esc(nombreCompita)}</b> ${esc(motivo)}.`,
     `<b>Cliente:</b> ${esc(c?.nombre ?? '')}${c?.email ? ` (${esc(c.email)})` : ''}`,
     ...(c?.zona ? [`<b>Zona:</b> ${esc(c.zona)}`] : []),
     ...(v.contacto_nombre ? [`<b>Contacto en el sitio:</b> ${esc(v.contacto_nombre)} ${esc(v.contacto_tel ?? '')}`] : []),

@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
   if (!esAdmin && !telefono) return err('Falta el teléfono de WhatsApp')
   const v = validarPerfil(body, { permitirNombre: true })
   if (!v.ok) {
-    await alertaAdmin('actividad', `<b>Validación fallida en onboarding</b>\n\n<b>Nombre:</b> ${body.nombre ?? '—'}\n<b>Email:</b> ${email ?? '—'}\n<b>Error:</b> ${v.error}`)
+    await alertaAdmin('actividad', `⚠️ <b>Validación fallida en onboarding</b>\n\n<b>Nombre:</b> ${body.nombre ?? '—'}\n<b>Email:</b> ${email ?? '—'}\n<b>Error:</b> ${v.error}`)
     return err(v.error)
   }
   const { nombre, zona, descripcion, servicios, foto_url, youtube_url, horarios_disponibles } = v.datos
@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
   if (error || !creada) {
     // Liberar el token: la compita no debe quedarse sin invitación por un fallo nuestro
     if (!esAdmin && token) await admin.from('onboarding_tokens').update({ usado: false }).eq('token', token)
-    await alertaAdmin('tarea', `<b>Error en registro de onboarding</b>\n\n<b>Nombre:</b> ${nombre ?? '—'}\n<b>Email:</b> ${email ?? '—'}\n<b>Error DB:</b> ${error.message ?? JSON.stringify(error)}`)
+    await alertaAdmin('tarea', `🚨 <b>Error en registro de onboarding</b>\n\n<b>Nombre:</b> ${nombre ?? '—'}\n<b>Email:</b> ${email ?? '—'}\n<b>Error DB:</b> ${error.message ?? JSON.stringify(error)}`)
     return serverError(error ?? new Error('No se pudo crear el compita'))
   }
 

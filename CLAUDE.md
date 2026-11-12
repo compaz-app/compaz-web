@@ -56,8 +56,8 @@ Cuando el sistema frena algo (plazo entre envíos, máximo de intentos, límite 
 ## 6c. El manual del equipo no se queda atrás (obligatorio, 2026-11-10)
 Toda pantalla nueva del panel, todo permiso nuevo y toda regla de espera nueva debe quedar explicada en el manual (`lib/manual.ts`, Más, Manual). Permisos y límites se arman solos desde sus catálogos; las pantallas se agregan a `PANTALLAS_PANEL` con su entrada escrita. `tests/60-manual.test.ts` falla si una pantalla o un permiso queda sin explicar, y también si un plazo del manual ya no coincide con Ajustes (si cambias un valor por defecto, actualiza el texto del manual).
 
-## 6d. Sin emojis (decidido 2026-11-12)
-El producto NO usa emojis en ningún lado: ni en la web, el portal o el panel, ni en correos, mensajes de Telegram, avisos o textos de las pruebas. Se usa texto o iconos de línea (SVG, como `Icono` en `components/ui/Proximamente.tsx` o `IconoPersona`). Se permiten símbolos de texto como flechas, ©, ⓘ, ★ y ✓. `tests/84-sin-emojis.test.ts` falla si entra uno.
+## 6d. Emojis solo en Telegram (decidido 2026-11-12)
+Los emojis se usan ÚNICAMENTE en los mensajes y botones de Telegram y en las estrellas ⭐ de la calificación de 1 a 5. En la web, el portal, el panel y los correos NO hay emojis: se usa texto o iconos de línea (SVG, como `Icono` en `components/ui/Proximamente.tsx` o `IconoPersona`). Se permiten símbolos de texto como flechas, ©, ⓘ, ★ y ✓. La landing (`app/page.tsx`) queda fuera por ahora: no se toca. `tests/84-sin-emojis.test.ts` lo vigila.
 
 ## 7. Cómo agregar o quitar a alguien del panel (recordar siempre)
 Hay dos tipos de persona y cada uno tiene su ruta:

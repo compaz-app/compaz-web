@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
   ])
 
   if (solicitud.estado === 'rechazada') {
-    await alertaAdmin('actividad', `<b>${esc(solicitud.compita_nombre)}</b> rechazó la solicitud de entrevista.\nEsperando que sugiera horarios alternativos.`)
+    await alertaAdmin('actividad', `❌ <b>${esc(solicitud.compita_nombre)}</b> rechazó la solicitud de entrevista.\nEsperando que sugiera horarios alternativos.`)
     if (compita?.telegram_chat_id) {
       await admin.from('telegram_estados').upsert(
         { chat_id: compita.telegram_chat_id, registro_pendiente: false, pendiente_accion: `sugerir_horarios:${solicitud.id}:${cliente?.email ?? ''}:${cliente?.nombre ?? 'el cliente'}`, pendiente_expira: new Date(Date.now() + 24 * 3600_000).toISOString() },
@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
       try {
         await sendTelegramMessage(
           compita.telegram_chat_id,
-          `Entendido. ¿Puedes sugerir otros horarios que sí te funcionen?\n\n<b>Responde a este mensaje</b> y se los haremos llegar a ${esc(cliente?.nombre ?? 'el cliente')} por email.\n\n<i>Incluye el día y la hora exacta. Por ejemplo: lunes 6 de octubre a las 3:00pm.</i>`,
+          `Entendido. ¿Puedes sugerir otros horarios que sí te funcionen?\n\n✍️ <b>Responde a este mensaje</b> y se los haremos llegar a ${esc(cliente?.nombre ?? 'el cliente')} por email.\n\n📅 <i>Incluye el día y la hora exacta. Por ejemplo: lunes 6 de octubre a las 3:00pm.</i>`,
         )
       } catch (e) { console.error('Telegram pedir horarios:', e) }
     }
@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
               <strong>${esc(solicitud.compita_nombre)}</strong> confirmó la llamada para el:<br><strong>${esc(slotLabel)}</strong>
             </p>
             <p style="color:#4A3B6B;background:#F5F0E8;border:2px solid #D4C9E8;border-radius:12px;padding:14px;font-size:14px">
-              Te enviaremos el link de acceso a la llamada <strong>1 hora antes</strong>.
+             Te enviaremos el link de acceso a la llamada <strong>1 hora antes</strong>.
             </p>
             <p style="color:#6B5C90;font-size:14px;line-height:1.6;margin-top:24px">¿Surgió algo y necesitas cambiar la fecha? Puedes proponer nuevos horarios desde aquí:</p>
             <a href="${SITE_URL}/reagendar/${encodeURIComponent(solicitud.token_respuesta)}" style="display:inline-block;background:#6B5C90;color:white;padding:12px 24px;border-radius:9999px;text-decoration:none;font-weight:700;font-size:14px;margin-top:4px">Reagendar llamada</a>
@@ -91,18 +91,18 @@ export async function POST(req: NextRequest) {
     try {
       await sendTelegramMessage(
         compita.telegram_chat_id,
-        [`<b>Llamada confirmada</b>`, ``, `<b>Cliente:</b> ${esc(cliente?.nombre ?? 'Cliente')}`, `<b>Fecha y hora:</b> ${esc(slotLabel)}`, ``, `Te enviaremos el link de acceso <b>1 hora antes</b> de la llamada.`, ``, `Si surge algo y necesitas cambiar la fecha, toca el botón de abajo.`].join('\n'),
-        { inline_keyboard: [[{ text: 'Reagendar llamada', url: `${SITE_URL}/api/solicitud/reagendar-compita?token=${solicitud.token_respuesta}&${qRol(solicitud.token_respuesta, 'compita')}` }]] },
+        [`✅ <b>Llamada confirmada</b>`, ``, `<b>Cliente:</b> ${esc(cliente?.nombre ?? 'Cliente')}`, `<b>Fecha y hora:</b> ${esc(slotLabel)}`, ``, `📩 Te enviaremos el link de acceso <b>1 hora antes</b> de la llamada.`, ``, `Si surge algo y necesitas cambiar la fecha, toca el botón de abajo.`].join('\n'),
+        { inline_keyboard: [[{ text: '🔄 Reagendar llamada', url: `${SITE_URL}/api/solicitud/reagendar-compita?token=${solicitud.token_respuesta}&${qRol(solicitud.token_respuesta, 'compita')}` }]] },
       )
     } catch (e) { console.error('Telegram compita confirmación:', e) }
   }
 
   await alertaAdmin('actividad', [
-    `<b>Entrevista confirmada</b>`, ``,
+    `📞 <b>Entrevista confirmada</b>`, ``,
     `<b>Cliente:</b> ${esc(cliente?.nombre ?? 'Cliente')} (${esc(cliente?.email ?? '')})`,
     `<b>Compita:</b> ${esc(solicitud.compita_nombre)}`,
     `<b>Fecha y hora:</b> ${esc(slotLabel)}`, ``,
-    emailOk ? `El link de sala se generará y enviará 1 hora antes.` : `No se pudo enviar el correo de confirmación al cliente.`,
+    emailOk ? `🔗 El link de sala se generará y enviará 1 hora antes.` : `⚠️ No se pudo enviar el correo de confirmación al cliente.`,
   ].join('\n'))
 
   return pagina('Llamada confirmada', `Confirmaste la llamada para el ${slotLabel}. Te llegará el link por Telegram.`)

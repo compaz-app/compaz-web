@@ -104,7 +104,7 @@ export async function entregarDireccionDeVisita(visitaId: string, ahora: Date = 
   if (r.ok && r.estado === 'duplicado') return 'ya_entregada'
   if (!r.ok) {
     // No se pudo entregar: el equipo debe saberlo ya (la escalera de avisos reintenta; esto es el respaldo humano).
-    await alertaAdmin('urgente', `<b>No se pudo entregar la dirección</b>\n\nLa visita empieza pronto y el aviso con la dirección al compita falló. Contáctalo.`)
+    await alertaAdmin('urgente', `🚨 <b>No se pudo entregar la dirección</b>\n\nLa visita empieza pronto y el aviso con la dirección al compita falló. Contáctalo.`)
     return 'ya_entregada'
   }
   await registrarEvento({ entidad: 'visita', entidadId: v.id, tipo: 'direccion_entregada', actor: 'sistema', datos: { horas_antes: Math.round((falta / 3600_000) * 10) / 10 } })
@@ -121,7 +121,7 @@ async function alertarDireccionFaltante(v: VisitaDir, ahora: Date): Promise<void
     admin.from('usuarios').select('nombre').eq('id', v.usuario_id).maybeSingle(),
   ])
   await admin.from('admin_flags').insert({
-    entidad_tipo: 'visita', entidad_id: v.id, entidad_nombre: `Falta la dirección: ${(cmp as { nombre: string } | null)?.nombre ?? ''} / ${(cli as { nombre: string } | null)?.nombre ?? ''}`,
+    entidad_tipo: 'visita', entidad_id: v.id, entidad_nombre: `📍 Falta la dirección: ${(cmp as { nombre: string } | null)?.nombre ?? ''} / ${(cli as { nombre: string } | null)?.nombre ?? ''}`,
     nota: `La visita empieza en menos de ${Number((await getAjustes()).direccion_horas_antes)} horas y el cliente todavía no registró la dirección. Contáctalo para que la registre en su portal.`,
     reportado_por: 'dirección automática', resuelto: false, tipo: 'direccion_faltante', prioridad: 1,
   })
@@ -131,9 +131,9 @@ async function alertarDireccionFaltante(v: VisitaDir, ahora: Date): Promise<void
   })
   const chat = (cmp as { telegram_chat_id: string | null } | null)?.telegram_chat_id
   if (chat) {
-    try { await sendTelegramMessage(chat, `<b>Aún falta la dirección</b>\n\nEl cliente todavía no registró dónde será la visita. Apenas lo haga te la enviamos por aquí. Ya le avisamos.`) } catch (e) { console.error('[direccion] Telegram al compita:', e) }
+    try { await sendTelegramMessage(chat, `📍 <b>Aún falta la dirección</b>\n\nEl cliente todavía no registró dónde será la visita. Apenas lo haga te la enviamos por aquí. Ya le avisamos.`) } catch (e) { console.error('[direccion] Telegram al compita:', e) }
   }
-  await alertaAdmin('actividad', `<b>Falta la dirección de una visita</b>\n\n<b>${esc((cmp as { nombre: string } | null)?.nombre ?? '')}</b> visita a <b>${esc((cli as { nombre: string } | null)?.nombre ?? '')}</b> en menos de ${Number((await getAjustes()).direccion_horas_antes)} h y no hay dirección. Abrimos una tarea.`)
+  await alertaAdmin('actividad', `📍 <b>Falta la dirección de una visita</b>\n\n<b>${esc((cmp as { nombre: string } | null)?.nombre ?? '')}</b> visita a <b>${esc((cli as { nombre: string } | null)?.nombre ?? '')}</b> en menos de ${Number((await getAjustes()).direccion_horas_antes)} h y no hay dirección. Abrimos una tarea.`)
   void ahora
 }
 

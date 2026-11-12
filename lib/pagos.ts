@@ -149,7 +149,7 @@ export async function anularPago(pagoId: string, motivo: string, actor: { correo
   const pago = data as { usuario_id: string; tipo: string; plan: string | null; horas: number | null; monto_usd: number }
   await registrarEvento({ entidad: 'pago', entidadId: pagoId, tipo: 'pago_anulado', actor: `admin:${actor.correo}`, datos: { usuario_id: pago.usuario_id, monto_usd: Number(pago.monto_usd), motivo: limpio, rol: actor.rol } })
   await alertaAdmin(actor.rol === 'admin' ? 'actividad' : 'tarea',
-    `${esc(actor.correo)} anuló un pago de <b>$${Number(pago.monto_usd)}</b> (${pago.tipo === 'extra' ? `visita extra de ${pago.horas ?? '?'} h` : `plan ${pago.plan ?? ''}`}). Motivo: ${esc(limpio)}`,
+    `💸 ${esc(actor.correo)} anuló un pago de <b>$${Number(pago.monto_usd)}</b> (${pago.tipo === 'extra' ? `visita extra de ${pago.horas ?? '?'} h` : `plan ${pago.plan ?? ''}`}). Motivo: ${esc(limpio)}`,
     { categoria: 'pago_anulado', entidad: { tipo: 'cliente', id: pago.usuario_id, nombre: 'Pago anulado' } })
   return { ok: true, usuarioId: pago.usuario_id }
 }

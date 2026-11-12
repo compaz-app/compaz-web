@@ -111,7 +111,7 @@ describe('lo que ve cada persona cuando algo se frena', () => {
     const t = tgPara('9956').at(-1)!.text
     assert.match(t, /Ya se lo recordaste hace un momento/); assert.match(t, /Podrás volver a hacerlo (hoy|mañana|en)/)
     // la razón va en un bloque desplegable de Telegram, no a la vista
-    assert.match(t, /<blockquote expandable>¿Por qué\? [\s\S]*no llenarle el correo/)
+    assert.match(t, /<blockquote expandable>🔎 ¿Por qué\? [\s\S]*no llenarle el correo/)
   })
 })
 

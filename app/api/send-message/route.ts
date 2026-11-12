@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
     try {
       await sendTelegramMessage(
         visita.compita.telegram_chat_id,
-        `<b>${escapeHtml(nombreCliente)}:</b>\n\n${escapeHtml(contenido)}`
+        `💬 <b>${escapeHtml(nombreCliente)}:</b>\n\n${escapeHtml(contenido)}`
       )
     } catch (e) {
       console.error('Error reenviando a Telegram:', e)

@@ -44,7 +44,7 @@ export async function registrarInsistenciaPago(s: SolicitudPago, nombreCliente: 
   await registrarEvento({ entidad: 'pago', entidadId: s.id, tipo: 'pago_insistido', actor: `cliente:${s.usuario_id}`, datos: { alertado: alertar, veces: filas.length + 1 } })
   if (alertar) {
     await alertaAdmin(
-      'urgente', `<b>URGENTE</b>: ${esc(nombreCliente)} insiste en que ya pagó $${s.monto_usd}. Si el dinero ya llegó, confírmalo ahora.`,
+      'urgente', `🔴 <b>URGENTE</b>: ${esc(nombreCliente)} insiste en que ya pagó $${s.monto_usd}. Si el dinero ya llegó, confírmalo ahora.`,
       { categoria: 'pago_insistido', entidad: { tipo: 'cliente', id: s.usuario_id, nombre: nombreCliente }, teclado: { inline_keyboard: [[{ text: 'Confirmar pago recibido', callback_data: `pagoconf:${s.id}` }]] } },
     ).catch(() => false)
   }
@@ -80,7 +80,7 @@ export async function escalarPagosInsistidos(): Promise<number> {
     const { data: cli } = await supabase.from('usuarios').select('nombre').eq('id', s.usuario_id).maybeSingle()
     const nombre = (cli?.nombre as string | undefined) ?? 'Un cliente'
     await emailAdminPago('URGENTE: pago sin confirmar', `${nombre} insistió hace más de ${horas} horas en que ya pagó $${s.monto_usd} y el pago sigue sin confirmar. Revisa si el dinero llegó.`)
-    await alertaAdmin('urgente', `<b>URGENTE</b>: el pago de $${s.monto_usd} de ${esc(nombre)} lleva más de ${horas} h sin confirmar. Se avisó por correo a todos los administradores.`, { categoria: 'pago_escalado', entidad: { tipo: 'cliente', id: s.usuario_id, nombre }, teclado: { inline_keyboard: [[{ text: 'Confirmar pago recibido', callback_data: `pagoconf:${s.id}` }]] } }).catch(() => false)
+    await alertaAdmin('urgente', `🔴 <b>URGENTE</b>: el pago de $${s.monto_usd} de ${esc(nombre)} lleva más de ${horas} h sin confirmar. Se avisó por correo a todos los administradores.`, { categoria: 'pago_escalado', entidad: { tipo: 'cliente', id: s.usuario_id, nombre }, teclado: { inline_keyboard: [[{ text: 'Confirmar pago recibido', callback_data: `pagoconf:${s.id}` }]] } }).catch(() => false)
     n++
   }
   return n

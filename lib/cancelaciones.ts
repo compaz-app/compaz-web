@@ -183,13 +183,13 @@ export async function alertarCancelacionesCompita(compitaId: string, nombre: str
     if ((abiertas ?? []).length > 0 && (r.nivel === 'revision' || yaPausa)) return r.nivel
     const pausa = r.nivel === 'pausa'
     await admin.from('admin_flags').insert({
-      entidad_tipo: 'compita', entidad_id: compitaId, entidad_nombre: `Cancelaciones tardías: ${nombre}`,
+      entidad_tipo: 'compita', entidad_id: compitaId, entidad_nombre: `${pausa ? '⛔' : '⚠️'} Cancelaciones tardías: ${nombre}`,
       nota: pausa
         ? `PAUSA: ${nombre} suma ${r.cuentanContra} cancelaciones tardías sin justificar. Sus solicitudes nuevas están en pausa hasta que el equipo hable con esta persona y justifique o resuelva.`
         : `REVISIÓN: ${nombre} suma ${r.cuentanContra} cancelaciones tardías sin justificar. Conviene hablar con esta persona antes de que se pausen sus solicitudes nuevas.`,
       reportado_por: 'cancelaciones automáticas', resuelto: false, tipo: 'cancelacion_tardia', prioridad: pausa ? 1 : 2,
     })
-    await alertaAdmin('actividad', `<b>Cancelaciones tardías de ${esc(nombre)}</b>\n\n${r.cuentanContra} sin justificar. ${pausa ? 'Sus solicitudes nuevas quedaron en pausa.' : 'Abrimos una tarea de revisión en la Bandeja.'}`)
+    await alertaAdmin('actividad', `${pausa ? '⛔' : '⚠️'} <b>Cancelaciones tardías de ${esc(nombre)}</b>\n\n${r.cuentanContra} sin justificar. ${pausa ? 'Sus solicitudes nuevas quedaron en pausa.' : 'Abrimos una tarea de revisión en la Bandeja.'}`)
   } catch (e) {
     console.error('[cancelaciones] no se pudo alertar:', e)
   }

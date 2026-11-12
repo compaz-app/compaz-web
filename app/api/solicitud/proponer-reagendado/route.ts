@@ -44,14 +44,14 @@ export async function POST(req: NextRequest) {
     const slotsLabel = unicos.map((s, i) => `${i + 1}. ${esc(formatSlotVE(s))}`).join('\n')
     const rol = qRol(token, 'compita')
     const botones = unicos.map((s, i) => [{
-      text: `Opción ${i + 1}: ${formatSlotVE(s)}`,
+      text: `✅ Opción ${i + 1}: ${formatSlotVE(s)}`,
       url: `${SITE_URL}/api/solicitud/responder?token=${token}&slot=${i}&${rol}`,
     }])
-    botones.push([{ text: 'No puedo en ninguno', url: `${SITE_URL}/api/solicitud/responder?token=${token}&slot=-1&${rol}` }])
+    botones.push([{ text: '❌ No puedo en ninguno', url: `${SITE_URL}/api/solicitud/responder?token=${token}&slot=-1&${rol}` }])
     try {
       await sendTelegramMessage(
         compita.telegram_chat_id,
-        [`<b>El cliente propone nuevos horarios</b>`, ``, `La llamada anterior no pudo realizarse. El cliente propone:`, ``, slotsLabel, ``, `Elige el que mejor te quede:`].join('\n'),
+        [`🗓️ <b>El cliente propone nuevos horarios</b>`, ``, `La llamada anterior no pudo realizarse. El cliente propone:`, ``, slotsLabel, ``, `Elige el que mejor te quede:`].join('\n'),
         { inline_keyboard: botones },
       )
       notificada = true
@@ -61,8 +61,8 @@ export async function POST(req: NextRequest) {
   await alertaAdmin(
     notificada ? 'actividad' : 'tarea',
     notificada
-      ? `<b>Reagendado</b>\n\nEl cliente propuso nuevos horarios para <b>${esc(solicitud.compita_nombre)}</b>. La compita recibió la notificación para confirmar.`
-      : `<b>Reagendado sin notificar</b>\n\nEl cliente propuso nuevos horarios para <b>${esc(solicitud.compita_nombre)}</b>, pero la compita NO pudo ser notificada (sin Telegram o error). Contáctala.`,
+      ? `🔄 <b>Reagendado</b>\n\nEl cliente propuso nuevos horarios para <b>${esc(solicitud.compita_nombre)}</b>. La compita recibió la notificación para confirmar.`
+      : `⚠️ <b>Reagendado sin notificar</b>\n\nEl cliente propuso nuevos horarios para <b>${esc(solicitud.compita_nombre)}</b>, pero la compita NO pudo ser notificada (sin Telegram o error). Contáctala.`,
   )
 
   return ok({ reagendado: true })

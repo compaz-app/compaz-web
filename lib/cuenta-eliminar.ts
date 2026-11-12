@@ -88,7 +88,7 @@ async function cancelarAbiertas(usuarioId: string, ahora: Date): Promise<number>
     if (v.llegada_en) await programarBorradoVisita(v.id, ahora)
     await admin.from('visitas').delete().eq('id', v.id)
     if (v.compitas?.telegram_chat_id) {
-      try { await sendTelegramMessage(v.compitas.telegram_chat_id, 'Se canceló tu próxima visita. No tienes que hacer nada: esta cancelación no cuenta en tu contra.') } catch (e) { console.error('[cuenta-eliminar] Telegram compita:', e) }
+      try { await sendTelegramMessage(v.compitas.telegram_chat_id, '👋 Se canceló tu próxima visita. No tienes que hacer nada: esta cancelación no cuenta en tu contra.') } catch (e) { console.error('[cuenta-eliminar] Telegram compita:', e) }
     }
     n++
   }
@@ -113,7 +113,7 @@ export async function confirmarEliminacion(token: string, ahora: Date = new Date
   if (!ok) return { ok: false, motivo: 'enlace_invalido' }
   const visitasCanceladas = await cancelarAbiertas(u.id, ahora)
   await registrarEvento({ entidad: 'cliente', entidadId: u.id, tipo: 'eliminacion_confirmada', actor: `cliente:${u.id}`, datos: { borra_el: borraEl, visitas_canceladas: visitasCanceladas } })
-  await alertaAdmin('actividad', `<b>${esc(u.nombre ?? 'Un cliente')}</b> pidió eliminar su cuenta. Se borra el ${borraEl.slice(0, 10)}${visitasCanceladas ? ` y se cancelaron ${visitasCanceladas} visita(s) abiertas sin costo` : ''}. Si tenía saldo, los reembolsos se tratan con el equipo.`, { categoria: 'cuenta_eliminada', entidad: { tipo: 'cliente', id: u.id, nombre: u.nombre ?? 'cliente' } })
+  await alertaAdmin('actividad', `🗑️ <b>${esc(u.nombre ?? 'Un cliente')}</b> pidió eliminar su cuenta. Se borra el ${borraEl.slice(0, 10)}${visitasCanceladas ? ` y se cancelaron ${visitasCanceladas} visita(s) abiertas sin costo` : ''}. Si tenía saldo, los reembolsos se tratan con el equipo.`, { categoria: 'cuenta_eliminada', entidad: { tipo: 'cliente', id: u.id, nombre: u.nombre ?? 'cliente' } })
   try {
     await sendEmail({
       to: u.email ?? '', subject: 'Tu cuenta de Compaz se borrará en 7 días',
@@ -227,7 +227,7 @@ async function cerrarCuentaCliente(id: string, ahora: Date, actor: ActorEvento, 
   const { error: eBan } = await admin.auth.admin.updateUserById(id, { email: correoNuevo, ban_duration: '876000h' })
   if (eBan) {
     console.error('[cuenta-eliminar] no se pudo bloquear la cuenta de acceso:', eBan.message)
-    await alertaAdmin('tarea', `La cuenta de ${anonimizar ? 'un cliente' : esc(antes?.nombre ?? 'un cliente')} quedó cerrada pero NO se pudo bloquear su acceso en el sistema de cuentas. Revísalo en Supabase, Authentication, Users.`, { categoria: 'cuenta_eliminada', entidad: { tipo: 'cliente', id, nombre: 'Cuenta eliminada' } })
+    await alertaAdmin('tarea', `⚠️ La cuenta de ${anonimizar ? 'un cliente' : esc(antes?.nombre ?? 'un cliente')} quedó cerrada pero NO se pudo bloquear su acceso en el sistema de cuentas. Revísalo en Supabase, Authentication, Users.`, { categoria: 'cuenta_eliminada', entidad: { tipo: 'cliente', id, nombre: 'Cuenta eliminada' } })
   }
   await registrarEvento({ entidad: 'cliente', entidadId: id, tipo: 'cuenta_eliminada', actor, datos: { anonimizada: anonimizar, ...(anonimizar ? {} : { correo_anterior: antes?.email ?? null }) } })
   return true
@@ -260,7 +260,7 @@ export async function eliminarClientePorEquipo(usuarioId: string, actorCorreo: s
     // Ya cerrada: solo tiene sentido si ahora piden anonimizarla y todavía conserva su nombre.
     if (!opts.borrarDatos || u.nombre === 'Cuenta eliminada') return { ok: false, motivo: 'ya_eliminada' }
     if (!(await cerrarCuentaCliente(u.id, ahora, `admin:${actorCorreo}`, true))) return { ok: false, motivo: 'error' }
-    await alertaAdmin('actividad', `${esc(actorCorreo)} anonimizó una cuenta que ya estaba eliminada (la persona pidió que se borren sus datos).`, { categoria: 'cuenta_eliminada', entidad: { tipo: 'cliente', id: u.id, nombre: 'Cuenta eliminada' } })
+    await alertaAdmin('actividad', `🗑️ ${esc(actorCorreo)} anonimizó una cuenta que ya estaba eliminada (la persona pidió que se borren sus datos).`, { categoria: 'cuenta_eliminada', entidad: { tipo: 'cliente', id: u.id, nombre: 'Cuenta eliminada' } })
     return { ok: true }
   }
   if (await visitaEnVivo(u.id)) return { ok: false, motivo: 'visita_en_vivo' }
@@ -268,7 +268,7 @@ export async function eliminarClientePorEquipo(usuarioId: string, actorCorreo: s
   // Una visita pudo pasar a "en vivo" entre la comprobación y la cancelación: se vuelve a mirar antes de cerrar la cuenta (M7).
   if (await visitaEnVivo(u.id)) return { ok: false, motivo: 'visita_en_vivo' }
   if (!(await cerrarCuentaCliente(u.id, ahora, `admin:${actorCorreo}`, opts.borrarDatos === true))) return { ok: false, motivo: 'error' }
-  await alertaAdmin('actividad', `${esc(actorCorreo)} eliminó la cuenta de <b>${opts.borrarDatos ? 'un cliente' : esc(u.nombre ?? 'un cliente')}</b>${opts.borrarDatos ? ' (datos borrados a pedido de la persona)' : ' (información conservada)'}${visitasCanceladas ? ` y se cancelaron ${visitasCanceladas} visita(s) abiertas sin costo` : ''}.`, { categoria: 'cuenta_eliminada', entidad: { tipo: 'cliente', id: u.id, nombre: opts.borrarDatos ? 'Cuenta eliminada' : nombreDeCuentaEliminada(u.nombre) } })
+  await alertaAdmin('actividad', `🗑️ ${esc(actorCorreo)} eliminó la cuenta de <b>${opts.borrarDatos ? 'un cliente' : esc(u.nombre ?? 'un cliente')}</b>${opts.borrarDatos ? ' (datos borrados a pedido de la persona)' : ' (información conservada)'}${visitasCanceladas ? ` y se cancelaron ${visitasCanceladas} visita(s) abiertas sin costo` : ''}.`, { categoria: 'cuenta_eliminada', entidad: { tipo: 'cliente', id: u.id, nombre: opts.borrarDatos ? 'Cuenta eliminada' : nombreDeCuentaEliminada(u.nombre) } })
   return { ok: true, visitasCanceladas }
 }
 
@@ -329,6 +329,6 @@ export async function eliminarCompitaPorEquipo(compitaId: string, actorCorreo: s
     : { nombre: nombreDeCuentaEliminada(completo), apellido: null, telegram_chat_id: null, estado: 'bloqueado', verificado: false }
   if (!(await paso('compita', admin.from('compitas').update(cierre).eq('id', compitaId)))) return { ok: false, motivo: 'error' }
   await registrarEvento({ entidad: 'compita', entidadId: compitaId, tipo: 'cuenta_eliminada', actor: `admin:${actorCorreo}`, datos: { anonimizada: opts.borrarDatos === true } })
-  await alertaAdmin('actividad', `${esc(actorCorreo)} eliminó la cuenta del compita <b>${opts.borrarDatos ? 'sin nombre' : esc(completo || 'sin nombre')}</b>.`, { categoria: 'cuenta_eliminada', entidad: { tipo: 'compita', id: compitaId, nombre: opts.borrarDatos ? 'Cuenta eliminada' : nombreDeCuentaEliminada(completo) } })
+  await alertaAdmin('actividad', `🗑️ ${esc(actorCorreo)} eliminó la cuenta del compita <b>${opts.borrarDatos ? 'sin nombre' : esc(completo || 'sin nombre')}</b>.`, { categoria: 'cuenta_eliminada', entidad: { tipo: 'compita', id: compitaId, nombre: opts.borrarDatos ? 'Cuenta eliminada' : nombreDeCuentaEliminada(completo) } })
   return { ok: true }
 }

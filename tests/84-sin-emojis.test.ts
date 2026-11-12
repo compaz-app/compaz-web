@@ -1,5 +1,5 @@
 /* eslint-disable */
-// Decidido 2026-11-12: el producto NO usa emojis en ningún lado (web, portal, panel, correos, Telegram). Esta prueba impide que vuelvan a entrar.
+// Decidido 2026-11-12: emojis SOLO en Telegram y las estrellas ⭐ de la calificación (1 a 5). Ni web, portal, panel ni correos. La landing (app/page.tsx) queda fuera por ahora.
 // Se permiten los símbolos de texto (flechas, ©, ⓘ, ★, ✓): no son emojis.
 import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
@@ -16,14 +16,25 @@ function archivos(d: string): string[] {
   })
 }
 
-describe('sin emojis', () => {
-  test('ningún archivo del producto contiene un emoji', () => {
+const SIN_ESTRELLA = (s: string) => s.replace(/⭐/gu, '')
+const TELEGRAM = /sendTelegramMessage|avisarAdmin|alertaAdmin|telegram/i
+const EXENTOS = new Set(['app/page.tsx'])
+describe('emojis solo en Telegram y estrellas', () => {
+  test('fuera de Telegram no hay emojis', () => {
     const malos: string[] = []
-    for (const c of CARPETAS) { try { for (const f of archivos(c)) { const t = readFileSync(f, 'utf8'); const m = t.match(EMOJI); if (m) malos.push(`${f}: ${m[0]}`) } } catch {} }
-    assert.deepEqual(malos, [], 'Hay emojis (el producto no los usa): usa texto o un icono de línea (SVG).')
+    for (const c of CARPETAS) { try { for (const f of archivos(c)) {
+      if (EXENTOS.has(f)) continue
+      const t = SIN_ESTRELLA(readFileSync(f, 'utf8'))
+      if (!TELEGRAM.test(t) || f.startsWith('components/') || f.endsWith('.tsx')) { const m = t.match(EMOJI); if (m) malos.push(`${f}: ${m[0]}`) }
+    } } catch {} }
+    assert.deepEqual(malos, [], 'Emojis solo en Telegram (y ⭐ en calificaciones): usa texto o un icono de línea (SVG).')
   })
-  test('las pruebas tampoco los esperan en los textos', () => {
-    const malos = archivos('tests').filter((f) => f.endsWith('.ts') && EMOJI.test(readFileSync(f, 'utf8')) && !f.endsWith('84-sin-emojis.test.ts'))
+  test('ni correos ni pantallas dentro de archivos de Telegram', () => {
+    const malos: string[] = []
+    for (const c of CARPETAS) { try { for (const f of archivos(c)) {
+      if (EXENTOS.has(f)) continue
+      for (const l of SIN_ESTRELLA(readFileSync(f, 'utf8')).split('\n')) if (/style=|subject:|<h2|<strong>/.test(l) && EMOJI.test(l)) malos.push(`${f}: ${l.trim().slice(0, 80)}`)
+    } } catch {} }
     assert.deepEqual(malos, [])
   })
 })

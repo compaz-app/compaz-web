@@ -45,12 +45,12 @@ export async function POST(req: NextRequest) {
         await sendTelegramMessage(
           compita.telegram_chat_id,
           [
-            `<b>Recordatorio: visita mañana</b>`, ``,
+            `🗓️ <b>Recordatorio: visita mañana</b>`, ``,
             `Mañana tienes visita con <b>${esc(cliente?.nombre ?? 'el cliente')}</b>.`, ``,
-            `<b>${esc(fechaFormateada)}</b>`,
-            horarioLabel ? `<b>${esc(horarioLabel)}</b>` : '', ``,
+            `📅 <b>${esc(fechaFormateada)}</b>`,
+            horarioLabel ? `🕐 <b>${esc(horarioLabel)}</b>` : '', ``,
             `Recuerda llegar puntual, presentarte con una sonrisa y revisar las notas del familiar. ¡Éxito!`, ``,
-            `<b>Si surge algún imprevisto:</b> toca el botón de abajo para reagendar y le avisaremos al cliente automáticamente.`,
+            `🔄 <b>Si surge algún imprevisto:</b> toca el botón de abajo para reagendar y le avisaremos al cliente automáticamente.`,
           ].filter(Boolean).join('\n'),
           INLINE_REAGENDAR_VISITA,
         )
@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
       await admin.from('mensajes').insert({ visit_id: visita.id, origen: 'admin', tipo: 'texto', contenido: marcador })
       enviados++
     } else {
-      await alertaAdmin('tarea', `No se pudo enviar el recordatorio de la visita de mañana (<b>${esc(compita?.nombre ?? '—')}</b> con <b>${esc(cliente?.nombre ?? '—')}</b>).`)
+      await alertaAdmin('tarea', `⚠️ No se pudo enviar el recordatorio de la visita de mañana (<b>${esc(compita?.nombre ?? '—')}</b> con <b>${esc(cliente?.nombre ?? '—')}</b>).`)
     }
   }
   await latido('recordatorio-primera-visita')

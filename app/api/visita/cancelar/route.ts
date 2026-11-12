@@ -79,14 +79,14 @@ export async function POST(req: Request) {
   // Notificar al compita por Telegram
   if (visita.compitas?.telegram_chat_id) {
     const textoMensaje = mensaje
-      ? `<b>${esc(clienteNombre)}</b> ha cancelado la próxima visita${etiqueta}.\n\n<b>Mensaje del cliente:</b> ${esc(mensaje)}`
-      : `<b>${esc(clienteNombre)}</b> ha cancelado la próxima visita${etiqueta}.`
+      ? `👋 <b>${esc(clienteNombre)}</b> ha cancelado la próxima visita${etiqueta}.\n\n<b>Mensaje del cliente:</b> ${esc(mensaje)}`
+      : `👋 <b>${esc(clienteNombre)}</b> ha cancelado la próxima visita${etiqueta}.`
     try {
       await sendTelegramMessage(visita.compitas.telegram_chat_id, textoMensaje)
     } catch (err2) { console.error('[visita/cancelar] Telegram compita:', err2) }
   }
 
-  await alertaAdmin('actividad', `<b>${esc(clienteNombre)}</b> canceló la visita con <b>${esc(compitaNombre)}</b>${e.cuentaComoUsada ? ` <b>con poco aviso (${e.horasDeAviso} h): cuenta como usada</b>` : ''}.${mensaje ? `\n<b>Motivo:</b> ${esc(mensaje)}` : ''}`)
+  await alertaAdmin('actividad', `ℹ️ <b>${esc(clienteNombre)}</b> canceló la visita con <b>${esc(compitaNombre)}</b>${e.cuentaComoUsada ? ` <b>con poco aviso (${e.horasDeAviso} h): cuenta como usada</b>` : ''}.${mensaje ? `\n<b>Motivo:</b> ${esc(mensaje)}` : ''}`)
 
   return ok({ cuenta_como_usada: e.cuentaComoUsada })
 }

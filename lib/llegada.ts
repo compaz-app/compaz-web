@@ -78,7 +78,7 @@ export async function clienteYaAbre(visitaId: string, clienteId: string, ahora: 
   await admin.from('admin_flags').update({ resuelto: true, resuelto_at: ahora.toISOString() }).eq('tipo', 'nadie_abre').eq('entidad_id', v.id).eq('resuelto', false)
   const { data: cmp } = await admin.from('compitas').select('telegram_chat_id').eq('id', v.compita_id).maybeSingle()
   const chat = (cmp as { telegram_chat_id: string | null } | null)?.telegram_chat_id
-  if (chat) { try { await sendTelegramMessage(chat, `<b>El cliente avisó que ya abren.</b>\n\nToca Iniciar visita cuando estés adentro.`) } catch (e) { console.error('[llegada] Telegram al compita:', e) } }
+  if (chat) { try { await sendTelegramMessage(chat, `🚪 <b>El cliente avisó que ya abren.</b>\n\nToca ▶️ Iniciar visita cuando estés adentro.`) } catch (e) { console.error('[llegada] Telegram al compita:', e) } }
   return true
 }
 
@@ -112,7 +112,7 @@ export async function cerrarSinAcceso(visitaId: string, compitaId: string, ahora
   const [{ data: cmp }, { data: cli }] = await Promise.all([
     admin.from('compitas').select('nombre').eq('id', compitaId).maybeSingle(), admin.from('usuarios').select('nombre').eq('id', v.usuario_id).maybeSingle(),
   ])
-  await alertaAdmin('actividad', `<b>Visita sin acceso</b>\n\n<b>${esc(String((cmp as { nombre: string } | null)?.nombre ?? ''))}</b> esperó ${espera} minutos y nadie abrió a <b>${esc(String((cli as { nombre: string } | null)?.nombre ?? ''))}</b>. La visita cuenta como usada. Si hubo una causa justificada, puedes devolverla desde Personas.`)
+  await alertaAdmin('actividad', `🚪 <b>Visita sin acceso</b>\n\n<b>${esc(String((cmp as { nombre: string } | null)?.nombre ?? ''))}</b> esperó ${espera} minutos y nadie abrió a <b>${esc(String((cli as { nombre: string } | null)?.nombre ?? ''))}</b>. La visita cuenta como usada. Si hubo una causa justificada, puedes devolverla desde Personas.`)
   return { ok: true }
 }
 
@@ -137,14 +137,14 @@ export async function procesarNadieAbre(ahora: Date = new Date()): Promise<{ tar
       const clave = `nadie_abre:${v.id}:${v.sin_acceso_en}:${n}`
       const { data: previa } = await admin.from('admin_flags').select('id').eq('tipo', 'nadie_abre').eq('entidad_id', v.id).like('nota', `%[${clave}]%`).maybeSingle()
       if (previa) return
-      await admin.from('admin_flags').insert({ entidad_tipo: 'visita', entidad_id: v.id, entidad_nombre: `${titulo}: ${nombreCmp} / ${nombreCli}`, nota: `${cuerpo}\n[${clave}]`, reportado_por: 'nadie abre', resuelto: false, tipo: 'nadie_abre', prioridad: 1 })
+      await admin.from('admin_flags').insert({ entidad_tipo: 'visita', entidad_id: v.id, entidad_nombre: `🚪 ${titulo}: ${nombreCmp} / ${nombreCli}`, nota: `${cuerpo}\n[${clave}]`, reportado_por: 'nadie abre', resuelto: false, tipo: 'nadie_abre', prioridad: 1 })
       await alertaAdmin('urgente', telegram, { critica: true, sinTarea: true, categoria: 'nadie_abre', entidad: { tipo: 'visita', id: v.id, nombre: `${nombreCmp} / ${nombreCli}` } })
       r.tareas++
     }
     if (min >= m1) await paso(1, 'Nadie abre (contactar al contacto en el sitio)', `${nombreCmp} lleva ${Math.floor(min)} minutos en la puerta de ${nombreCli} y nadie abre. Contacta a la persona de contacto en el sitio.`,
-      `<b>Nadie abre (${Math.floor(min)} min)</b>\n\n<b>${esc(nombreCmp)}</b> está en la puerta de <b>${esc(nombreCli)}</b>.\n<b>Contacto en el sitio:</b> ${esc(v.contacto_nombre ?? 'sin nombre')} ${esc(v.contacto_tel ?? '')}\n\nContáctalo para que abra.`)
+      `🚪 <b>Nadie abre (${Math.floor(min)} min)</b>\n\n<b>${esc(nombreCmp)}</b> está en la puerta de <b>${esc(nombreCli)}</b>.\n<b>Contacto en el sitio:</b> ${esc(v.contacto_nombre ?? 'sin nombre')} ${esc(v.contacto_tel ?? '')}\n\nContáctalo para que abra.`)
     if (min >= m2) await paso(2, 'Nadie abre (segundo intento: llamar al cliente)', `Siguen sin abrir tras ${Math.floor(min)} minutos. Intenta contactar al cliente directamente. Si no aparece, a los ${m30} minutos el compita puede cerrar y la visita cuenta como usada.`,
-      `<b>Siguen sin abrir (${Math.floor(min)} min)</b>\n\nIntenta con el cliente <b>${esc(nombreCli)}</b>. A los ${m30} minutos <b>${esc(nombreCmp)}</b> puede cerrar la visita.`)
+      `🚪 <b>Siguen sin abrir (${Math.floor(min)} min)</b>\n\nIntenta con el cliente <b>${esc(nombreCli)}</b>. A los ${m30} minutos <b>${esc(nombreCmp)}</b> puede cerrar la visita.`)
     if (min >= m30 && (cmp as { telegram_chat_id: string | null } | null)?.telegram_chat_id) {
       const res = await notificar({
         plantilla: 'nadie_abre_cerrar', canal: 'telegram', destinatario: { tipo: 'compita', id: v.compita_id },
@@ -157,8 +157,8 @@ export async function procesarNadieAbre(ahora: Date = new Date()): Promise<{ tar
 }
 
 export const tecladoLlegada = (visitaId: string) => makeInlineKeyboard([
-  [{ text: 'Sí, iniciar', callback_data: 'Sí, iniciar' }],
-  [{ text: 'Llegué y nadie abre', callback_data: `nadie:${visitaId}` }],
-  [{ text: 'No me siento seguro', callback_data: 'seguro' }],
-  [{ text: 'Necesito reagendar', callback_data: 'reagendar_visita' }],
+  [{ text: '✅ Sí, iniciar', callback_data: '✅ Sí, iniciar' }],
+  [{ text: '🚪 Llegué y nadie abre', callback_data: `nadie:${visitaId}` }],
+  [{ text: '🛡️ No me siento seguro', callback_data: 'seguro' }],
+  [{ text: '🔄 Necesito reagendar', callback_data: 'reagendar_visita' }],
 ])
