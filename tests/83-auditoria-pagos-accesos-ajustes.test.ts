@@ -206,3 +206,27 @@ describe('resto de la auditoría: S-07, S-09, S-11, S-12, E-05, E-06, A-03, A-04
     assert.ok(e.porQue.length > 30); assert.ok(e.segundos! > 0)
   })
 })
+
+import { serverError } from '@/lib/api'
+import { reportarError, resumenDeError } from '@/lib/errores'
+
+describe('O-02: los errores del servidor se anotan y no se filtran al cliente', () => {
+  test('serverError responde un mensaje genérico, no el texto interno', async () => {
+    const r = serverError(new Error('relation "usuarios" column "secreto" does not exist'))
+    assert.equal(r.status, 500); const j = await r.json(); assert.equal(j.error, 'Error interno del servidor'); assert.doesNotMatch(JSON.stringify(j), /usuarios|secreto/)
+  })
+  test('el error queda en Actividad una sola vez por ventana y sin saltos de línea', async () => {
+    const e = new Error('falló algo\n  at archivo.ts:10')
+    await reportarError(e, 'prueba'); await reportarError(e, 'prueba')
+    const filas = db.rows('actividad_admin').filter((a: any) => a.categoria === 'error_servidor' && /falló algo/.test(a.resumen))
+    assert.equal(filas.length, 1); assert.match(filas[0].resumen, /Error del servidor en prueba: Error: falló algo at archivo\.ts:10/)
+    await reportarError(new Error('otro distinto'))
+    assert.equal(db.rows('actividad_admin').filter((a: any) => a.categoria === 'error_servidor' && /otro distinto/.test(a.resumen)).length, 1)
+  })
+  test('reportar un error nunca lanza, aunque falle el registro', async () => {
+    db.fail['actividad_admin:insert'] = 5
+    await assert.doesNotReject(() => reportarError(new Error('x')))
+    db.fail['actividad_admin:insert'] = 0
+    assert.equal(resumenDeError('texto').length > 0, true)
+  })
+})

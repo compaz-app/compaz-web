@@ -328,7 +328,7 @@ Leyenda: **Hecho** = corregido en código y con prueba; **Tú** = depende de alg
 | E-01 | Hecho | `cargarFotos` y `cuposDelPlan` por lotes: de 89 a unas 15 consultas para 7 clientes. |
 | E-02 | Hecho | `AutoRefresh` no refresca en pestañas ocultas y es lento en reposo. |
 | D-01 | Hecho | Pagos sin duplicados; anular exige motivo y deja evento y alerta. |
-| O-01 | Parcial: **Tú** | Añadido `.github/workflows/ci.yml` (tipos, pruebas y compilación en cada cambio). Siguen siendo tuyos: proyecto Supabase de pruebas separado y copias de seguridad con una restauración ensayada (CLAUDE.md, sección 6). |
+| O-01 | Parcial: **Tú** | Añadido `.github/workflows/ci.yml` (tipos, pruebas y compilación en cada cambio), `scripts/respaldo.sh` y la guía paso a paso `docs/entorno-de-pruebas-y-respaldos.md`. Crear el proyecto de pruebas y activar los respaldos requiere tu cuenta de Supabase. |
 | S-04 | Hecho | `registrarAcceso` falla cerrado y no mutila el motivo. |
 | S-05 | Hecho | La línea de tiempo oculta los accesos a quien no tiene `telefonos`. Se mantiene que `atender` abre la ficha: la Bandeja lo necesita. |
 | S-06 | Hecho | Precios, retención y textos solo para el administrador; el lote de ajustes es todo o nada (con reversión). |
@@ -342,12 +342,12 @@ Leyenda: **Hecho** = corregido en código y con prueba; **Tú** = depende de alg
 | A-01 | Hecho | Todas las rutas de `/api/admin` tienen pantalla, salvo cuatro de lectura (`bloqueos-compita`, `dudas`, `esperas`, `pagos`) que se conservan como API probada; una prueba impide que aparezcan rutas huérfanas nuevas. |
 | A-02 | Hecho en `/api/admin` y `create-call` | Sin consultas dentro de las rutas del equipo (prueba de guardia). Las otras 49 rutas antiguas quedan con un trinquete: no pueden sumar consultas directas. |
 | C-01 | Hecho | Una sola frase (`textoDuracionLlamada`) con el corte de Ajustes. |
-| O-02 | Parcial: **Decisión** | Toda acción del equipo (bloquear, verificar, activar, asignar, editar perfil, portal nuevo, invitar, registrar, cerrar visita, completar, reseñas) queda anotada con quién (`anotarAccion`). Un servicio de errores (Sentry u otro) requiere abrir una cuenta y elegir proveedor: queda como decisión tuya. |
+| O-02 | Hecho (sin servicio externo) | Toda acción del equipo queda anotada con quién; todo error 500 queda en Actividad (categoría `error_servidor`, una vez cada 10 minutos por mensaje) y al cliente le llega un mensaje genérico. Un servicio como Sentry (trazas y agrupación) sigue siendo opcional. |
 | S-11 | Parcial: **Decisión** | Quitados Airtable y Telegram de `connect-src`. `'unsafe-inline'` en scripts se mantiene: los scripts de analítica y el modo de Next lo requieren; quitarlo exige nonces por petición (renderizado dinámico de todo el sitio). |
 | S-12 | Hecho | El secreto estático del webhook de Daily ya no se acepta salvo `DAILY_WEBHOOK_LEGACY=1`. |
 | S-13 | Hecho | Los errores de avisos fallidos se muestran sin teléfonos ni correos si no hay permiso. |
 | S-14 | Decisión | El token de `asignar-rapido` viaja en la URL a propósito: es de un solo uso, vence y se confirma por POST. Queda documentado aquí. |
-| S-15 | **Tú** | Comprobar en Supabase, Authentication, Providers, que "Confirm email" está activo y que no se permiten registros por contraseña. Si no, quien registre el correo de un colaborador sin verificarlo heredaría sus permisos. |
+| S-15 | Hecho (verificado) | Comprobado el 2026-11-12 por la API de Supabase y con tu captura: registros nuevos desactivados, "Confirm email" activo, sin inicios anónimos. |
 | E-06 | Hecho | `/api/precios` manda `Cache-Control`. La memoria corta sigue siendo por instancia y no se trata como caché real. |
 | E-07 | Parcial | Toda llamada a Daily tiene tiempo máximo de 8 s. Dos peticiones simultáneas todavía pueden crear dos salas; la última que se guarda gana, y la otra expira sola. |
 | A-03 | Hecho | `/prototipo` devuelve 404 en producción (se enciende con `PROTOTIPO_VISIBLE=1`). |

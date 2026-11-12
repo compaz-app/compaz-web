@@ -43,3 +43,6 @@ next-env.d.ts
 .impeccable/
 .next/dev
 .tests-dist
+
+# Respaldos manuales de la base (scripts/respaldo.sh): nunca se suben
+respaldos/
