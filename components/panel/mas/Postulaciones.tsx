@@ -6,7 +6,7 @@ import { DESCRIPCION_POSTULACIONES, ETIQUETA_CLASIF, ETIQUETA_FUENTE, ETIQUETA_T
 import type { PostulacionPorResolver } from '@/lib/captacion'
 
 type Enlace = (cambios: Record<string, string | null>) => string
-interface Pend { activa: boolean; error: boolean; filas: PostulacionPorResolver[] }
+interface Pend { activa: boolean; error: boolean; soloSupabase?: boolean; filas: PostulacionPorResolver[] }
 
 // Postulaciones y origen: arriba lo que no llegó a Airtable (hay que resolverlo), luego qué campañas traen gente y el listado de postulaciones.
 export default function Postulaciones({ q, pend, enlace }: { q: ConsultaPost; pend: Pend; enlace: Enlace }) {
@@ -16,6 +16,7 @@ export default function Postulaciones({ q, pend, enlace }: { q: ConsultaPost; pe
       <Encabezado titulo="Postulaciones y origen (CMC)" descripcion={DESCRIPCION_POSTULACIONES} info={INFO_POSTULACIONES} infoQue="Para qué sirve esta pantalla" />
 
       {pend.error && <p role="alert" className="rounded-xl border border-borde bg-blanco p-3 text-sm font-bold text-rojo-oscuro">No se pudo leer lo que falta por resolver. Inténtalo en unos minutos.</p>}
+      {pend.activa && pend.soloSupabase && <p className="rounded-xl border border-borde bg-blanco p-3 text-sm text-texto-medio">La copia a Airtable está desactivada: las postulaciones nuevas llegan al CMC directo desde Supabase y no aparecen en la lista de abajo. Lo que quede ahí es anterior: comprueba su ID en el CMC y ciérralo con "La registré directamente en el CMC".</p>}
       {pend.activa && !pend.error && pend.filas.length > 0 && (
         <div className="space-y-2">
           <div className="flex items-center gap-1"><TituloSeccion>Sin llegar a Airtable ({pend.filas.length})</TituloSeccion><InfoBoton que="Qué es esto" texto="Están guardadas en Compaz pero no se pudieron copiar a Airtable, así que el equipo de selección no las ve. Resuélvelas: vincúlalas a un registro de Airtable, regístralas directamente en el CMC o márcalas como no procedentes." /></div>

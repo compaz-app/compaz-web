@@ -199,6 +199,8 @@ Desde el Bloque 1, cada postulación de la home y de `/se-compita` se guarda pri
 
 **Reversión.** Se quita solo `POSTULACIONES_DESTINO`. La web vuelve a guardar directamente en Airtable, y los dos crons, que dependen de `CAPTACION_DESDE`, siguen entregando las pendientes y conciliando. Así lo recibido durante un incidente o durante la reversión queda en Airtable y en Supabase sin duplicados. Sin `CAPTACION_DESDE`, los crons no hacen nada.
 
+**Solo Supabase (`POSTULACIONES_DESTINO=solo_supabase`, desde nov-2026).** El CMC lee las postulaciones de Supabase (`/api/cmc/postulaciones`, ver `docs/cmc/fuente-supabase.md`), así que la web deja de copiarlas a Airtable. Cada postulación se guarda solo en Supabase y queda con `airtable_estado = 'pendiente'`, que significa copia diferida, no un error. Los crons `reintentar-airtable` y `conciliar-airtable` no llaman a Airtable ni avisan; solo registran su latido. Si Supabase falla, no hay ruta de respaldo: la persona ve un error para que vuelva a enviar y se avisa por Telegram. La bandeja sigue mostrando lo que quedó pendiente de antes, para cerrarlo a mano. Para revertir, se vuelve a `supabase_y_airtable`: el cron copia las diferidas una sola vez y el CMC las sigue reconociendo por su clave `SB-`.
+
 ```
 Formulario → /api/waitlist (Turnstile, honeypot, límites: sin cambios)
 → Supabase: registrar_postulacion() guarda persona, postulación y evento en una transacción

@@ -1,6 +1,6 @@
 import { explicarEspera } from "@/lib/esperas";
 import { NextRequest, NextResponse } from "next/server";
-import { registrarPostulacion, claveIdempotencia, fuenteValida } from "@/lib/captacion";
+import { registrarPostulacion, claveIdempotencia, fuenteValida, destinoPostulaciones } from "@/lib/captacion";
 import { avisarAdmin } from "@/lib/telegram";
 import { alertaAdmin } from '@/lib/alertas-admin'
 
@@ -213,17 +213,29 @@ export async function POST(req: NextRequest) {
   // 6. Guardar
   let respaldo = false;
   //    POSTULACIONES_DESTINO=supabase_y_airtable → Supabase primero (fuente principal) y copia a Airtable.
+  //    POSTULACIONES_DESTINO=solo_supabase → solo Supabase (el CMC lee de Supabase); sin Airtable.
   //    Sin la variable (o con "airtable") se mantiene el comportamiento anterior: solo Airtable.
-  if (process.env.POSTULACIONES_DESTINO === "supabase_y_airtable") {
+  const destino = destinoPostulaciones();
+  if (destino !== "airtable") {
     const r = await registrarPostulacion({
       clave: claveIdempotencia(body.claveIdempotencia),
       fuente: fuenteValida(body.fuente),
       nombre, whatsapp, email, contacto, ubicacion: ciudad,
       utm: { source: utmSource, medium: utmMedium, campaign: utmCampaign, content: utmContent, term: utmTerm },
-    });
+    }, { copiarAirtable: destino === "supabase_y_airtable" });
     if (r.ok) {
       registrarEnvioEmail(emailKey);
       return NextResponse.json({ ok: true }, { headers });
+    }
+    if (destino === "solo_supabase") {
+      // Sin ruta de respaldo: lo que se guardara solo en Airtable no llegaría al CMC (que lee
+      // de Supabase) y nadie lo conciliaría. La persona ve el error y puede volver a enviar.
+      console.error("[waitlist] Supabase falló (solo_supabase): postulación no guardada");
+      if (Date.now() - ultimoAvisoRespaldo > 15 * 60_000) {
+        ultimoAvisoRespaldo = Date.now();
+        await avisarAdmin("🚨 <b>Supabase no respondió en /api/waitlist</b>\n\nAl menos una persona no pudo enviar su postulación (vio un error y puede reintentar). Con POSTULACIONES_DESTINO=solo_supabase no hay copia en Airtable.").catch(() => false);
+      }
+      return NextResponse.json({ error: "No pudimos guardar tu postulación. Inténtalo de nuevo en unos minutos." }, { status: 503, headers });
     }
     // Supabase no respondió: se guarda como antes, directamente en Airtable, para no
     // perder la postulación. El cron conciliar-airtable la importará después a Supabase.

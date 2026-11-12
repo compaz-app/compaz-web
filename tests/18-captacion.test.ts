@@ -24,14 +24,15 @@ import { POST as resolver } from '@/app/api/admin/postulaciones/resolver/route'
 // ── Airtable simulado ──────────────────────────────────────────────────────────
 type Modo = 'ok' | 'limite' | 'guarda_y_timeout' | 'guarda_y_502' | 'caido'
 const at = {
-  registros: [] as any[], modo: 'ok' as Modo, busquedaFalla: false, creaciones: 0,
-  reset() { this.registros = []; this.modo = 'ok'; this.busquedaFalla = false; this.creaciones = 0 },
+  registros: [] as any[], modo: 'ok' as Modo, busquedaFalla: false, creaciones: 0, llamadas: 0,
+  reset() { this.registros = []; this.modo = 'ok'; this.busquedaFalla = false; this.creaciones = 0; this.llamadas = 0 },
 }
 const desescapar = (s: string) => s.replace(/\\(["\\])/g, '$1')
 const fetchHarness = globalThis.fetch
 globalThis.fetch = (async (input: any, init?: any) => {
   const url = typeof input === 'string' ? input : input.url
   if (!url.startsWith('https://api.airtable.com/v0/')) return fetchHarness(input, init)
+  at.llamadas++
   const u = new URL(url)
   const metodo = init?.method ?? 'GET'
   const json = (b: any, status = 200) => new Response(JSON.stringify(b), { status })
@@ -387,5 +388,90 @@ describe('Activación y cron', () => {
     assert.deepEqual(r.p_utm, { source: 'meta', medium: 'paid', campaign: 'oct', content: 'video-3', term: 'cuidado' })
     assert.equal(at.registros[0].fields['UTM Source'], 'meta')
     assert.equal(at.registros[0].fields['UTM Content'], undefined, 'Airtable no recibe campos nuevos')
+  })
+})
+
+
+// ── POSTULACIONES_DESTINO=solo_supabase (nov-2026: el CMC lee de Supabase) ─────
+describe('solo_supabase', () => {
+  const latido = (c: string) => db.rows('telegram_estados').find((r) => r.chat_id === `cron:${c}`)
+  const conciliarCron = async () => (await (await conciliar(cron('conciliar-airtable'))).json()).data
+
+  test('S1 · familias y Compitas se guardan en Supabase sin ninguna llamada a Airtable y sin errores', async () => {
+    process.env.POSTULACIONES_DESTINO = 'solo_supabase'
+    assert.equal((await waitlist(postulacion())).status, 200)
+    assert.equal(fila().tipo, 'compita')
+    const email = 'familia.solo@mail.test'
+    assert.equal((await waitlist(postulacion({ email, contacto: `WA: +584121234567 | Email: ${email} | Rol: familia` }))).status, 200)
+    assert.equal(fila().tipo, 'familia')
+    assert.equal(at.llamadas, 0)
+    assert.ok(sb.filas.every((f) => f.airtable_estado === 'pendiente' && f.airtable_intentos === 0 && !f.airtable_id), 'copia diferida, sin errores')
+    assert.equal(db.rpcLlamadas.filter((l) => l.fn === 'marcar_envio_airtable').length, 0, 'ningún evento de error de Airtable')
+  })
+
+  test('S2 · los crons no llaman a Airtable, no avisan y siguen registrando su latido (sin alertas de cron detenido)', async () => {
+    process.env.POSTULACIONES_DESTINO = 'solo_supabase'
+    await waitlist(postulacion())
+    pasaElTiempo()
+    assert.deepEqual(await correrCron(), { desactivado: 'solo_supabase' })
+    assert.deepEqual(await conciliarCron(), { desactivado: 'solo_supabase' })
+    assert.equal(at.llamadas, 0)
+    assert.equal(tgPara('999').length, 0)
+    assert.ok(latido('reintentar-airtable') && latido('conciliar-airtable'))
+    assert.equal(fila().airtable_estado, 'pendiente', 'nada cambia de estado')
+  })
+
+  test('S3 · lo pendiente de antes de activar no se oculta ni se pierde: sigue en la bandeja y se puede cerrar', async () => {
+    at.modo = 'limite'
+    await waitlist(postulacion())
+    for (let i = 0; i < 4; i++) { pasaElTiempo(); await correrCron() }
+    assert.equal(fila().airtable_estado, 'agotada')
+    const avisosAntes = tgPara('999').length
+    process.env.POSTULACIONES_DESTINO = 'solo_supabase'
+    pasaElTiempo(); await correrCron()
+    assert.equal(tgPara('999').length, avisosAntes, 'sin avisos nuevos por no copiar a Airtable')
+    const { postulacionesPorResolver } = await import('@/lib/captacion')
+    assert.equal((await postulacionesPorResolver()).length, 1, 'sigue visible en la bandeja')
+    session.user = { id: 'admin', email: 'admin@compaz.test' }
+    const r = await resolver(req('/api/admin/postulaciones/resolver', { json: { id: fila().id, resolucion: 'registrada_en_cmc', nota: 'COM-1063' } }))
+    assert.equal(r.status, 200)
+    assert.equal((await postulacionesPorResolver()).length, 0)
+  })
+
+  test('S4 · si Supabase falla, la persona ve un error (503), no se escribe en Airtable y se avisa una vez', async () => {
+    process.env.POSTULACIONES_DESTINO = 'solo_supabase'
+    db.fail['registrar_postulacion:rpc'] = 2
+    // El límite de avisos es por instancia (15 min): se adelanta el reloj para no depender de otras pruebas.
+    const ahora = Date.now, base = ahora() + 3_600_000
+    Date.now = () => base
+    try {
+    const r = await waitlist(postulacion())
+    assert.equal(r.status, 503)
+    assert.match((await r.json()).error, /Inténtalo de nuevo/)
+    assert.equal(at.llamadas, 0)
+    await waitlist(postulacion())
+    assert.equal(avisos('no pudo enviar su postulación'), 1, 'como mucho un aviso cada 15 min')
+    } finally { Date.now = ahora }
+  })
+
+  test('S5 · reversión a supabase_y_airtable: las diferidas se copian una sola vez y lo nuevo vuelve a copiarse', async () => {
+    process.env.POSTULACIONES_DESTINO = 'solo_supabase'
+    await waitlist(postulacion())
+    const diferida = fila()
+    process.env.POSTULACIONES_DESTINO = 'supabase_y_airtable'
+    pasaElTiempo(); await correrCron()
+    assert.equal(diferida.airtable_estado, 'enviada')
+    assert.equal(at.registros.length, 1)
+    pasaElTiempo(); await correrCron()
+    assert.equal(at.registros.length, 1, 'sin duplicados en Airtable')
+    await waitlist(postulacion())
+    assert.equal(at.registros.length, 2)
+  })
+
+  test('S6 · el resto de valores no cambia: sin variable = solo Airtable (comportamiento anterior)', async () => {
+    delete process.env.POSTULACIONES_DESTINO
+    assert.equal((await waitlist(postulacion())).status, 200)
+    assert.equal(sb.filas.length, 0)
+    assert.equal(at.registros.length, 1)
   })
 })

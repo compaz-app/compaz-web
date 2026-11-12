@@ -1,6 +1,6 @@
 // Datos de Postulaciones y origen (servidor). Nunca trae teléfono ni correo: aquí solo se ve de dónde llegó cada postulación y si calificó.
 import { createAdminSupabase } from '@/lib/supabase-server'
-import { postulacionesPorResolver, type PostulacionPorResolver } from '@/lib/captacion'
+import { postulacionesPorResolver, destinoPostulaciones, type PostulacionPorResolver } from '@/lib/captacion'
 import type { FilaOrigen } from '@/lib/panel-postulaciones-tipos'
 
 const LIMITE = 500
@@ -18,8 +18,8 @@ export async function listarPostulaciones(): Promise<FilaOrigen[]> {
 }
 
 /** Las que no llegaron a Airtable. Solo si la captación está activa; si la lectura falla, se dice (no se esconde). */
-export async function pendientesDeAirtable(): Promise<{ activa: boolean; error: boolean; filas: PostulacionPorResolver[] }> {
+export async function pendientesDeAirtable(): Promise<{ activa: boolean; error: boolean; soloSupabase?: boolean; filas: PostulacionPorResolver[] }> {
   if (!process.env.CAPTACION_DESDE) return { activa: false, error: false, filas: [] }
-  try { return { activa: true, error: false, filas: await postulacionesPorResolver(500) } }
+  try { return { activa: true, error: false, soloSupabase: destinoPostulaciones() === 'solo_supabase', filas: await postulacionesPorResolver(500) } }
   catch (e) { console.error('[panel/postulaciones]', e); return { activa: true, error: true, filas: [] } }
 }

@@ -27,6 +27,22 @@ import { hoyVE } from '@/lib/format'
 import { SITE_URL } from '@/lib/email'
 
 export type TipoPostulacion = 'familia' | 'compita' | 'desconocido'
+
+/**
+ * Destino de las postulaciones (variable POSTULACIONES_DESTINO):
+ *   · 'airtable' (sin variable): comportamiento anterior al Bloque 1, solo Airtable.
+ *   · 'supabase_y_airtable': Supabase primero y copia a Airtable (con reintentos, conciliación y bandeja).
+ *   · 'solo_supabase': solo Supabase. El CMC las lee de Supabase (/api/cmc/postulaciones),
+ *     no se copia nada a Airtable y los crons de Airtable no hacen llamadas ni avisos.
+ *     Las filas nuevas quedan con airtable_estado = 'pendiente' (copia diferida): si se
+ *     vuelve a 'supabase_y_airtable', el cron las copia y el CMC las sigue reconociendo
+ *     por su clave SB-<uuid> (sin duplicados).
+ */
+export type DestinoPostulaciones = 'airtable' | 'supabase_y_airtable' | 'solo_supabase'
+export function destinoPostulaciones(): DestinoPostulaciones {
+  const v = process.env.POSTULACIONES_DESTINO
+  return v === 'supabase_y_airtable' || v === 'solo_supabase' ? v : 'airtable'
+}
 export type FuentePostulacion = 'home' | 'se_compita' | 'otra'
 
 // ── Normalización (funciones puras) ────────────────────────────────────────────
@@ -149,7 +165,7 @@ export interface DatosPostulacion {
 }
 
 export type ResultadoRegistro =
-  | { ok: true; postulacionId: string; resultado: 'registrada' | 'repetida' | 'reintento_tecnico'; airtable: 'enviada' | 'pendiente' | 'no_aplica' }
+  | { ok: true; postulacionId: string; resultado: 'registrada' | 'repetida' | 'reintento_tecnico'; airtable: 'enviada' | 'pendiente' | 'no_aplica' | 'diferida' }
   | { ok: false; error: string }
 
 /**
@@ -157,7 +173,7 @@ export type ResultadoRegistro =
  * Si la copia falla o no se confirma, la fila queda pendiente y el cron la retoma
  * buscando antes su huella: nunca se crea un segundo registro de la misma postulación.
  */
-export async function registrarPostulacion(d: DatosPostulacion): Promise<ResultadoRegistro> {
+export async function registrarPostulacion(d: DatosPostulacion, opciones: { copiarAirtable?: boolean } = {}): Promise<ResultadoRegistro> {
   const tipo = tipoDesdeContacto(d.contacto)
   const { ciudad, region } = separarUbicacion(d.ubicacion)
   const { data, error } = await rpc<Array<{ postulacion_id: string; resultado: string; enviar_a_airtable: boolean; recibida_en: string }>>(
@@ -177,6 +193,8 @@ export async function registrarPostulacion(d: DatosPostulacion): Promise<Resulta
   const postulacionId = String(fila.postulacion_id)
   const resultado = fila.resultado as 'registrada' | 'repetida' | 'reintento_tecnico'
   if (!fila.enviar_a_airtable) return { ok: true, postulacionId, resultado, airtable: 'no_aplica' }
+  // solo_supabase: sin primer intento ni llamadas a Airtable; la fila queda 'pendiente' (copia diferida).
+  if (opciones.copiarAirtable === false) return { ok: true, postulacionId, resultado, airtable: 'diferida' }
 
   const envio = await crearRegistroAirtable({
     nombre: d.nombre, contacto: contactoCanonico(d.whatsapp, d.email, tipo), ciudad: d.ubicacion,

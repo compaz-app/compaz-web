@@ -47,12 +47,12 @@ const DEFAULTS: Record<string, () => Row> = {
   equipo: () => ({ id: randomUUID(), activo: true, permisos: {}, creado_en: nowIso(), actualizado_en: nowIso() }),
   equipo_historial: () => ({ hecho_en: nowIso() }),
   notas_persona: () => ({ id: randomUUID(), creado_en: nowIso() }),
-  postulaciones: () => ({ id: randomUUID(), recibida_en: nowIso() }),
   ajustes: () => ({ vigente_desde: nowIso(), actualizado_por: 'sistema', actualizado_en: nowIso() }),
   ajustes_historial: () => ({ cambiado_en: nowIso(), vigente_desde: nowIso() }),
   cancelaciones: () => ({ id: randomUUID(), horas_de_aviso: null, tardia: false, motivo: null, justificada: false, justificada_por: null, justificada_en: null, visita_id: null, solicitud_id: null, cuenta_como_usada: false, visita_creada_en: null, creado_en: nowIso() }),
   fotos_privadas: () => ({ id: randomUUID(), visita_id: null, solicitud_id: null, usuario_id: null, borrada_en: null, creado_en: nowIso() }),
   avisos: () => ({ id: randomUUID(), estado: 'pendiente', intentos: 0, variables: {}, error: null, accion_en: null, plazo_accion_hasta: null, ultimo_intento_en: null, respaldo_de: null, entidad: null, entidad_id: null, paso: null, programado_para: nowIso(), creado_en: nowIso() }),
+  postulaciones: () => ({ id: randomUUID(), clasificacion: 'nueva', resolucion: null, airtable_id: null, airtable_estado: 'pendiente', utm_source: null, utm_medium: null, utm_campaign: null, recibida_en: nowIso() }),
 }
 
 const PK: Record<string, string> = { telegram_estados: 'chat_id', ajustes: 'clave', admin_emails: 'email' }
