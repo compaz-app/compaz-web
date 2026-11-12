@@ -56,6 +56,9 @@ Cuando el sistema frena algo (plazo entre envíos, máximo de intentos, límite 
 ## 6c. El manual del equipo no se queda atrás (obligatorio, 2026-11-10)
 Toda pantalla nueva del panel, todo permiso nuevo y toda regla de espera nueva debe quedar explicada en el manual (`lib/manual.ts`, Más, Manual). Permisos y límites se arman solos desde sus catálogos; las pantallas se agregan a `PANTALLAS_PANEL` con su entrada escrita. `tests/60-manual.test.ts` falla si una pantalla o un permiso queda sin explicar, y también si un plazo del manual ya no coincide con Ajustes (si cambias un valor por defecto, actualiza el texto del manual).
 
+## 6d. Sin emojis (decidido 2026-11-12)
+El producto NO usa emojis en ningún lado: ni en la web, el portal o el panel, ni en correos, mensajes de Telegram, avisos o textos de las pruebas. Se usa texto o iconos de línea (SVG, como `Icono` en `components/ui/Proximamente.tsx` o `IconoPersona`). Se permiten símbolos de texto como flechas, ©, ⓘ, ★ y ✓. `tests/84-sin-emojis.test.ts` falla si entra uno.
+
 ## 7. Cómo agregar o quitar a alguien del panel (recordar siempre)
 Hay dos tipos de persona y cada uno tiene su ruta:
 1. **Administrador (acceso total):** se agrega o quita SOLO en la variable `ADMIN_EMAILS` de Netlify (correos separados por coma, y también en `.env.local` para pruebas locales). Después hay que volver a desplegar para que el servidor la lea. La lista de la base (`admin_emails`, que usa el tiempo real) se copia sola en la limpieza diaria de las 3 am; para verla al instante, llamar a `POST /api/cron/limpieza` con la cabecera `x-cron-secret`. Nunca editar la tabla `admin_emails` a mano: la siguiente limpieza la deja igual a `ADMIN_EMAILS`.

@@ -16,6 +16,7 @@ interface Props {
 }
 
 import type { Solicitud } from '@/types'
+import IconoPersona from '@/components/ui/IconoPersona'
 
 type ResenaPublica = { id: string; texto: string; estrellas: number; created_at: string }
 
@@ -377,8 +378,8 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
             <div style={{ flex: 1, minWidth: '200px' }}>
               <div style={{ color: 'white', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '17px', marginBottom: '4px' }}>
                 {solicitudesAceptadas.length === 1
-                  ? `🎉 ¡${solicitudesAceptadas[0].compita_nombre} confirmó tu entrevista!`
-                  : `🎉 ¡Tienes ${solicitudesAceptadas.length} entrevistas confirmadas!`}
+                  ? `¡${solicitudesAceptadas[0].compita_nombre} confirmó tu entrevista!`
+                  : `¡Tienes ${solicitudesAceptadas.length} entrevistas confirmadas!`}
               </div>
               <div style={{ color: 'rgba(255,255,255,0.85)', fontSize: '14px' }}>
                 Entra a tu portal para ver el horario y el enlace de la llamada.
@@ -422,7 +423,6 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
           onClick={toggleMapa}
           style={{ background: mapaAbierto ? '#EDE8FF' : 'white', border: `2px solid ${mapaAbierto ? '#7C3AED' : '#D4C9E8'}`, borderRadius: '9999px', padding: '10px 18px', cursor: 'pointer', color: mapaAbierto ? '#2D1464' : '#4A3B6B', fontSize: '14px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}
         >
-          <span style={{ fontSize: '16px' }}>🗺️</span>
           {mapaAbierto ? 'Ocultar mapa' : 'Buscar en el mapa'}
           <span style={{ fontSize: '11px', marginLeft: '2px' }}>{mapaAbierto ? '▲' : '▼'}</span>
         </button>
@@ -464,7 +464,7 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
                     {s.compita_foto
                       // eslint-disable-next-line @next/next/no-img-element
                       ? <img src={s.compita_foto} alt={s.compita_nombre ?? ''} style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-                      : <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#F0EBF8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>👤</div>
+                      : <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#F0EBF8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}><IconoPersona /></div>
                     }
                     <span style={{ flex: 1, color: '#1A0A3C', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.compita_nombre}</span>
                     <span style={{ color: '#9B8AB8', fontSize: '12px', flexShrink: 0 }}>Esperando respuesta</span>
@@ -531,7 +531,7 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
                   {compita.foto_url
                     // eslint-disable-next-line @next/next/no-img-element
                     ? <img src={compita.foto_url} alt={compita.nombre} style={{ width: '52px', height: '52px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-                    : <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: '#F0EBF8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', flexShrink: 0 }}>👤</div>
+                    : <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: '#F0EBF8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', flexShrink: 0 }}><IconoPersona /></div>
                   }
                   {/* Info principal */}
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -570,7 +570,7 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
                 {seleccionada.foto_url
                   // eslint-disable-next-line @next/next/no-img-element
                   ? <img src={seleccionada.foto_url} alt={seleccionada.nombre} style={{ width: '80px', height: '80px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-                  : <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: '#F0EBF8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '36px', flexShrink: 0 }}>👤</div>
+                  : <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: '#F0EBF8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '36px', flexShrink: 0 }}><IconoPersona /></div>
                 }
                 <div style={{ minWidth: 0 }}>
                   <h2 style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '22px', color: '#1A0A3C', margin: '0 0 4px' }}>{seleccionada.nombre}</h2>
@@ -692,7 +692,7 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
                 </div>
               ) : !reagendando && idsYaSolicitados.has(seleccionada.id) ? (
                 <div style={{ background: '#FFF3E8', border: '2px solid #FF6B2B', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
-                  <p style={{ color: '#C84B0E', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif', margin: '0 0 6px' }}>⏳ Solicitud enviada</p>
+                  <p style={{ color: '#C84B0E', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif', margin: '0 0 6px' }}>Solicitud enviada</p>
                   <p style={{ color: '#6B5C90', fontSize: '13px', margin: 0 }}>Ya solicitaste conocer a {seleccionada.nombre}. Te avisaremos cuando confirme un horario.</p>
                 </div>
               ) : !reagendando && solicitudesActivas.length >= MAX_SOLICITUDES ? (
@@ -718,7 +718,7 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
                   {/* Banner reagendando */}
                   {reagendando && (
                     <div style={{ background: '#F0FDF4', border: '2px solid #86EFAC', borderRadius: '12px', padding: '12px 16px' }}>
-                      <p style={{ color: '#15803d', fontWeight: 700, fontSize: '13px', margin: '0 0 4px', fontFamily: 'Bricolage Grotesque, sans-serif' }}>↩️ Reagendando con {seleccionada.nombre}</p>
+                      <p style={{ color: '#15803d', fontWeight: 700, fontSize: '13px', margin: '0 0 4px', fontFamily: 'Bricolage Grotesque, sans-serif' }}>Reagendando con {seleccionada.nombre}</p>
                       <p style={{ color: '#166534', fontSize: '12px', margin: 0 }}>Tu descripción ya está guardada. Solo elige nuevos horarios para proponer.</p>
                     </div>
                   )}
@@ -726,7 +726,7 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
                   {/* Aviso llamada 20 min */}
                   {!reagendando && (
                     <div style={{ background: '#FFF3E8', border: '2px solid #FF6B2B', borderRadius: '12px', padding: '12px 16px' }}>
-                      <p style={{ color: '#C84B0E', fontWeight: 700, fontSize: '13px', margin: 0, fontFamily: 'Bricolage Grotesque, sans-serif' }}>⏱️ Llamada de presentación de 20 minutos. La sala se cierra a los 23.</p>
+                      <p style={{ color: '#C84B0E', fontWeight: 700, fontSize: '13px', margin: 0, fontFamily: 'Bricolage Grotesque, sans-serif' }}>Llamada de presentación de 20 minutos. La sala se cierra a los 23.</p>
                     </div>
                   )}
 
@@ -767,7 +767,7 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
                       {seleccionada.nombre} confirmará uno. Puedes proponer hasta 3 para darle más opciones.
                     </p>
                     <p style={{ color: '#9B8AB8', fontSize: '11px', marginBottom: '10px' }}>
-                      🕐 Horarios en hora de Venezuela (UTC−4) — ahora son las {new Date().toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Caracas' })} VET
+                      Horarios en hora de Venezuela (UTC−4) — ahora son las {new Date().toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Caracas' })} VET
                     </p>
                     {(() => {
                       const diasConSlots = generarSlotsSinLimite()

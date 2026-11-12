@@ -58,7 +58,7 @@ export default function ReagendarButton({ visitaId, compitaNombre }: Props) {
           opacity: reagendando ? 0.6 : 1,
         }}
       >
-        {reagendando ? 'Reagendando…' : `🔄 Necesito cambiar la fecha con ${compitaNombre}`}
+        {reagendando ? 'Reagendando…' : `Necesito cambiar la fecha con ${compitaNombre}`}
       </button>
     </div>
   )

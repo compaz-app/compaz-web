@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
       await sendTelegramMessage(
         compita.telegram_chat_id,
         [
-          `🔄 <b>La visita necesita reagendarse</b>`,
+          `<b>La visita necesita reagendarse</b>`,
           ``,
           `${esc(cliente?.nombre ?? 'El cliente')} canceló la fecha${fechaAnterior ? ` del ${esc(fechaAnterior)}` : ''} y necesita acordar un nuevo día.`,
           ``,
@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
         subject: 'Visita reagendada — coordina la nueva fecha con tu compita',
         html: `
           <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px">
-            <h2 style="color:#2D1464;font-size:22px;margin-bottom:12px">🔄 Visita reagendada</h2>
+            <h2 style="color:#2D1464;font-size:22px;margin-bottom:12px">Visita reagendada</h2>
             <p style="color:#4A3B6B;font-size:15px;line-height:1.6">
               Cancelaste la fecha${fechaAnterior ? ` del <strong>${esc(fechaAnterior)}</strong>` : ''}. Le avisamos a <strong>${esc(compita?.nombre ?? 'tu compita')}</strong> para que coordinen un nuevo día.
             </p>
@@ -104,7 +104,7 @@ export async function POST(req: NextRequest) {
     if (nuevo >= 3) {
       await alertaAdmin('tarea', 
         [
-          `⚠️ <b>Visita con ${nuevo} reagendados</b>`,
+          `<b>Visita con ${nuevo} reagendados</b>`,
           ``,
           `<b>Cliente:</b> ${esc(cliente?.nombre ?? visita.usuario_id)}`,
           `<b>Compita:</b> ${esc(compita?.nombre ?? visita.compita_id)}`,

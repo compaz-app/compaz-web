@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
       const slotMs = new Date(solicitud.slot_confirmado!).getTime()
       const slotLabel = formatSlotVE(solicitud.slot_confirmado!)
       const horaLabel = `a las ${horaSlotVE(solicitud.slot_confirmado!)} (hora de Venezuela)`
-      const recordatorio20 = `⏱️ ${textoDuracionLlamada(corteLlamada)}`
+      const recordatorio20 = `${textoDuracionLlamada(corteLlamada)}`
 
       let roomUrl = solicitud.room_url ?? ''
       if (!roomUrl) {
@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
         } catch (e) {
           console.error('Error creando sala Daily en recordatorio:', e)
           if (await reclamarUnaVez(`sala_fail:${solicitud.id}`)) {
-            await alertaAdmin('urgente', `🚨 <b>No se pudo crear la sala de la llamada</b>\n\n<b>Compita:</b> ${esc(solicitud.compita_nombre)}\n<b>Hora:</b> ${esc(slotLabel)}\n\nSe reintenta cada 5 min. Si persiste, usa "Enviar link" en el panel admin.`)
+            await alertaAdmin('urgente', `<b>No se pudo crear la sala de la llamada</b>\n\n<b>Compita:</b> ${esc(solicitud.compita_nombre)}\n<b>Hora:</b> ${esc(slotLabel)}\n\nSe reintenta cada 5 min. Si persiste, usa "Enviar link" en el panel admin.`)
           }
         }
       }
@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
         try {
           await sendEmail({
             to: cliente.email,
-            subject: `⏰ Tu llamada con ${solicitud.compita_nombre} empieza ${horaLabel}`,
+            subject: `Tu llamada con ${solicitud.compita_nombre} empieza ${horaLabel}`,
             html: `
               <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px">
                 <h2 style="color:#2D1464;font-size:22px">Tu llamada empieza ${esc(horaLabel)}</h2>
@@ -84,10 +84,10 @@ export async function POST(req: NextRequest) {
           await sendTelegramMessage(
             compita.telegram_chat_id,
             [
-              `⏰ <b>Tu llamada empieza ${esc(horaLabel)}</b>`, ``,
+              `<b>Tu llamada empieza ${esc(horaLabel)}</b>`, ``,
               `Con <b>${esc(cliente?.nombre ?? 'el cliente')}</b>: <b>${esc(slotLabel)}</b>.`, ``,
-              `⏱️ ${textoDuracionLlamada(corteLlamada)}`, ``,
-              `🔓 La sala ya está lista. Puedes entrar cuando quieras.`, ``,
+              `${textoDuracionLlamada(corteLlamada)}`, ``,
+              `La sala ya está lista. Puedes entrar cuando quieras.`, ``,
               `<a href="${salaCompitaUrl}">Entrar a la llamada →</a>`,
             ].join('\n'),
           )
@@ -96,11 +96,11 @@ export async function POST(req: NextRequest) {
       }
 
       await alertaAdmin('actividad', [
-        `⏰ <b>Llamada ${esc(horaLabel)}</b>`, ``,
+        `<b>Llamada ${esc(horaLabel)}</b>`, ``,
         `<b>Cliente:</b> ${esc(cliente?.nombre ?? '')} (${esc(cliente?.email ?? '')})`,
-        `<b>Compita:</b> ${esc(solicitud.compita_nombre)}${compitaAvisada ? '' : ' ⚠️ NO se pudo avisar por Telegram'}`,
+        `<b>Compita:</b> ${esc(solicitud.compita_nombre)}${compitaAvisada ? '' : ' NO se pudo avisar por Telegram'}`,
         `<b>Hora:</b> ${esc(slotLabel)}`, ``,
-        `⏱️ Llamada de 20 min. Únete como supervisor:`,
+        `Llamada de 20 min. Únete como supervisor:`,
         `<a href="${SITE_URL}${rutaLlamada(roomUrl)}">Entrar a la sala →</a>`,
       ].join('\n'))
       enviados++
@@ -125,7 +125,7 @@ export async function POST(req: NextRequest) {
   for (const sol of sinConfirmacion ?? []) {
     if (!(await reclamarUnaVez(`alerta_sala_vacia:${sol.id}`))) continue
     await alertaAdmin('tarea', [
-      `⚠️ <b>Llamada sin confirmar — posible sala vacía</b>`, ``,
+      `<b>Llamada sin confirmar — posible sala vacía</b>`, ``,
       `La entrevista estaba pautada para <b>${esc(formatSlotVE(sol.slot_confirmado))}</b> y no hay registro de que ocurriera.`, ``,
       `<b>Compita:</b> ${esc(sol.compitas?.nombre ?? '—')}`,
       `<b>Cliente:</b> ${esc(sol.usuarios?.nombre ?? '—')} (${esc(sol.usuarios?.email ?? '—')})`, ``,

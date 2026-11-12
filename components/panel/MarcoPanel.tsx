@@ -10,13 +10,13 @@ export default function MarcoPanel({ actor, actual, comoColaborador, puedeElegir
   const lateral = (s: (typeof secciones)[number]) => (
     <Link key={s.id} href={hrefSeccion(s.id, comoColaborador)} aria-current={actual === s.id ? 'page' : undefined}
       className={`flex min-h-12 items-center gap-3 rounded-xl px-3 text-base ${actual === s.id ? 'bg-morado-medio font-extrabold text-blanco' : 'font-bold text-morado-claro hover:bg-fondo-claro'}`}>
-      <span aria-hidden className="text-lg">{s.icono}</span><span>{s.texto}</span>
+      <span>{s.texto}</span>
     </Link>
   )
   const inferior = (s: (typeof secciones)[number]) => (
     <Link key={s.id} href={hrefSeccion(s.id, comoColaborador)} aria-current={actual === s.id ? 'page' : undefined}
       className={`flex min-h-16 flex-col items-center justify-center text-xs ${actual === s.id ? 'font-extrabold text-naranja-oscuro' : 'font-bold text-morado-claro'}`}>
-      <span aria-hidden className="text-2xl">{s.icono}</span><span>{s.texto}</span>
+      <span>{s.texto}</span>
     </Link>
   )
   const vista = (como: boolean, texto: string) => (

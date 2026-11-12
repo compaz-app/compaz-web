@@ -64,7 +64,7 @@ export default function VerChat({ clienteId, compitaId, cerrarHref, pideMotivo, 
         {fallo && <Aviso tamano="compacto" tono="peligro">{fallo}</Aviso>}
         {datos && (
           <>
-            <p className="text-xs text-texto-sutil">🔒 Solo el equipo ve esta conversación. Quedó anotado en Actividad que la abriste.</p>
+            <p className="text-xs text-texto-sutil">Solo el equipo ve esta conversación. Quedó anotado en Actividad que la abriste.</p>
             {dias.length === 0 ? <p className="text-sm text-texto-sutil">Todavía no hay mensajes entre ellos.</p> : (
               <div className="space-y-2" aria-label="Mensajes">
                 {dias.length > 1 && (
@@ -94,7 +94,7 @@ export default function VerChat({ clienteId, compitaId, cerrarHref, pideMotivo, 
                                 <p className={`text-xs font-extrabold uppercase tracking-wide ${ESTILO[b.de].nombre}`}>{b.de}</p>
                                 {b.lineas.map((l, k) => (
                                   <p key={k} className="flex items-baseline justify-between gap-3 text-sm leading-snug">
-                                    <span className="min-w-0 [overflow-wrap:anywhere]">{l.esFoto ? '📷 Envió una foto' : l.texto || '·'}</span>
+                                    <span className="min-w-0 [overflow-wrap:anywhere]">{l.esFoto ? 'Envió una foto' : l.texto || '·'}</span>
                                     <time className="shrink-0 text-[11px] text-texto-sutil">{l.hora}</time>
                                   </p>
                                 ))}

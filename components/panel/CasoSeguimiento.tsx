@@ -49,7 +49,7 @@ export default function CasoSeguimiento({ caso, cerrarHref, fichaClienteHref, fi
           <div className="flex flex-wrap gap-2">
             <Boton tamano="compacto" variante="secundario" navegacion href={fichaClienteHref}>Ficha del cliente</Boton>
             {fichaCompitaHref && <Boton tamano="compacto" variante="secundario" navegacion href={fichaCompitaHref}>Ficha del compita</Boton>}
-            {chatHref && <Boton tamano="compacto" variante="secundario" navegacion href={chatHref}>💬 Chat</Boton>}
+            {chatHref && <Boton tamano="compacto" variante="secundario" navegacion href={chatHref}>Chat</Boton>}
           </div>
         </section>
 

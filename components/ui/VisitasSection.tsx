@@ -127,9 +127,9 @@ export default function VisitasSection({ usuarioId, inicial }: Props) {
       {/* Lista */}
       {lista.length === 0 ? (
         <div style={{ background: 'white', border: '2px solid #E8E0D4', borderRadius: '16px', padding: '32px 24px', textAlign: 'center', color: '#9B8AB8', fontSize: '14px' }}>
-          {tab === 'en_curso'  && '🕐 No hay visitas en curso ahora mismo.'}
-          {tab === 'agendadas' && '📅 No hay visitas agendadas.'}
-          {tab === 'cerradas'  && '✅ Todavía no hay visitas cerradas.'}
+          {tab === 'en_curso'  && 'No hay visitas en curso ahora mismo.'}
+          {tab === 'agendadas' && 'No hay visitas agendadas.'}
+          {tab === 'cerradas'  && 'Todavía no hay visitas cerradas.'}
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -162,12 +162,12 @@ function VisitaCard({ visita, tab }: { visita: VisitaResumen; tab: Tab }) {
   })()
 
   const badge = tab === 'en_curso'
-    ? { label: '🟢 En curso', bg: '#F0FDF4', color: '#15803d', border: '#22c55e' }
+    ? { label: 'En curso', bg: '#F0FDF4', color: '#15803d', border: '#22c55e' }
     : tab === 'agendadas' && visita.estado === 'programada'
-    ? { label: '📅 Programada', bg: '#F5F0FF', color: '#2D1464', border: '#7C4DFF' }
+    ? { label: 'Programada', bg: '#F5F0FF', color: '#2D1464', border: '#7C4DFF' }
     : tab === 'agendadas'
-    ? { label: '💬 Coordinando', bg: '#F0FDF4', color: '#15803d', border: '#86EFAC' }
-    : { label: '✅ Terminada', bg: '#F5F5F5', color: '#6B5C90', border: '#E8E0D4' }
+    ? { label: 'Coordinando', bg: '#F0FDF4', color: '#15803d', border: '#86EFAC' }
+    : { label: 'Terminada', bg: '#F5F5F5', color: '#6B5C90', border: '#E8E0D4' }
 
   return (
     <div style={{ background: 'white', border: `2px solid ${badge.border}`, borderRadius: '16px', padding: '20px 24px', display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>

@@ -94,7 +94,7 @@ async function ejecutar(req: NextRequest, p: NonNullable<ReturnType<typeof leer>
       .maybeSingle()
     if (marcada && compita?.telegram_chat_id) {
       try {
-        await sendTelegramMessage(compita.telegram_chat_id, `✅ <b>Llamada registrada</b>\n\nGracias por tu tiempo. Ahora esperamos que la familia nos confirme su decisión. Te avisamos en cuanto sepamos. ¡Gracias por ser parte de Compaz!`)
+        await sendTelegramMessage(compita.telegram_chat_id, `<b>Llamada registrada</b>\n\nGracias por tu tiempo. Ahora esperamos que la familia nos confirme su decisión. Te avisamos en cuanto sepamos. ¡Gracias por ser parte de Compaz!`)
       } catch (e) { console.error('Telegram bien compita:', e) }
     }
     return pagina('¡Gracias!', 'Registramos que la llamada fue bien. Estaremos en contacto según lo que decida la familia.')
@@ -123,7 +123,7 @@ async function ejecutar(req: NextRequest, p: NonNullable<ReturnType<typeof leer>
         try {
           await sendTelegramMessage(
             compita.telegram_chat_id,
-            `🔄 <b>Reagendado iniciado</b>\n\n¿Cuándo puedes repetir la llamada con ${esc(cliente?.nombre ?? 'el cliente')}?\n\n✍️ <b>Responde a este mensaje con los horarios que te funcionen</b> y se los haremos llegar por email.\n\n📅 <i>Incluye el día y la hora exacta. Por ejemplo: lunes 13 de octubre a las 3:00pm.</i>`,
+            `<b>Reagendado iniciado</b>\n\n¿Cuándo puedes repetir la llamada con ${esc(cliente?.nombre ?? 'el cliente')}?\n\n<b>Responde a este mensaje con los horarios que te funcionen</b> y se los haremos llegar por email.\n\n<i>Incluye el día y la hora exacta. Por ejemplo: lunes 13 de octubre a las 3:00pm.</i>`,
           )
         } catch (e) { console.error('Telegram reagendar compita:', e) }
       }
@@ -176,11 +176,11 @@ async function ejecutar(req: NextRequest, p: NonNullable<ReturnType<typeof leer>
     try {
       await sendTelegramMessage(
         compita.telegram_chat_id,
-        `👋 <b>Gracias por tu dedicación</b>\n\nLa familia decidió no seguir adelante en esta ocasión. No es un reflejo de tu valor. A veces simplemente no encajan las necesidades o la química. Pasa, y no hay que desanimarse.\n\nMientras tanto, hay cosas que pueden ayudarte a destacar más:\n\n1. Agrega un video de presentación o mejora el que ya tienes. Las familias confían mucho más cuando te ven hablar.\n2. Actualiza o mejora la foto que tienes en tu perfil.\n3. Describe con más detalle tu experiencia específica (adultos mayores, niños, enfermedades crónicas, etc.).\n\nEl equipo de Compaz está trabajando para conectarte con nuevas familias. ¡Tú puedes!`,
+        `<b>Gracias por tu dedicación</b>\n\nLa familia decidió no seguir adelante en esta ocasión. No es un reflejo de tu valor. A veces simplemente no encajan las necesidades o la química. Pasa, y no hay que desanimarse.\n\nMientras tanto, hay cosas que pueden ayudarte a destacar más:\n\n1. Agrega un video de presentación o mejora el que ya tienes. Las familias confían mucho más cuando te ven hablar.\n2. Actualiza o mejora la foto que tienes en tu perfil.\n3. Describe con más detalle tu experiencia específica (adultos mayores, niños, enfermedades crónicas, etc.).\n\nEl equipo de Compaz está trabajando para conectarte con nuevas familias. ¡Tú puedes!`,
       )
     } catch (e) { console.error('Telegram no_contratar compita:', e) }
   }
-  await alertaAdmin('actividad', `ℹ️ <b>${esc(cliente?.nombre ?? 'Un cliente')}</b> decidió no contratar a <b>${esc(solicitud.compita_nombre)}</b> después de la llamada.`)
+  await alertaAdmin('actividad', `<b>${esc(cliente?.nombre ?? 'Un cliente')}</b> decidió no contratar a <b>${esc(solicitud.compita_nombre)}</b> después de la llamada.`)
 
   // Antes llevaba directo a /compitas; ahora primero se le pregunta (opcional) por qué, y desde ahí puede seguir.
   return irAMotivo()

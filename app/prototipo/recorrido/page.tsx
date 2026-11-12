@@ -64,7 +64,7 @@ function Landing() {
           <select className="mt-1 min-h-14 w-full rounded-2xl border border-[var(--border-muted)] bg-white px-3 text-lg font-normal"><option>Distrito Capital</option><option>Miranda</option><option>Zulia</option></select>
         </label>
         <div className="flex gap-2">
-          <select aria-label="País" className="min-h-14 rounded-2xl border border-[var(--border-muted)] bg-white px-2 text-base"><option>+1 🇺🇸</option><option>+58 🇻🇪</option></select>
+          <select aria-label="País" className="min-h-14 rounded-2xl border border-[var(--border-muted)] bg-white px-2 text-base"><option>+1</option><option>+58</option></select>
           <input aria-label="Teléfono" inputMode="tel" className="min-h-14 min-w-0 flex-1 rounded-2xl border border-[var(--border-muted)] px-4 text-lg" />
         </div>
         <button className="min-h-14 rounded-2xl bg-[var(--orange)] px-3 text-lg font-extrabold text-white">Quiero contratar el servicio para mi familiar</button>

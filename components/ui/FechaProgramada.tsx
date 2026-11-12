@@ -74,7 +74,7 @@ export default function FechaProgramada({ visitaId, fechaActual, horaInicioActua
   return (
     <div style={{ background: '#F0FDF4', border: '2px solid #86EFAC', borderRadius: '12px', padding: '14px 18px', marginBottom: '12px' }}>
       <p style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, color: '#15803d', fontSize: '14px', margin: '0 0 4px' }}>
-        📅 ¿Acordaron una fecha con {compitaNombre}?
+        ¿Acordaron una fecha con {compitaNombre}?
       </p>
       <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '12px', color: '#166534', margin: '0 0 10px' }}>
         Todos los horarios son en hora de Venezuela (VET){horaVE ? ` · Ahora en Venezuela: ${horaVE}` : ''}.

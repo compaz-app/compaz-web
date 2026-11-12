@@ -137,7 +137,7 @@ function Inner() {
         <div>
           <div className="text-base font-bold">Tu foto <span className="font-normal text-[var(--text-light)]">(opcional)</span></div>
           <p className="mt-1 text-sm text-[var(--text-mid)]">Tu foto es opcional, pero ayuda mucho: los compitas aceptan con más confianza a quien pueden ver. Solo la ve el compita al decidir.</p>
-          <ConInfo que="Foto de tu familiar" texto="Agrega o quita una foto para que el compita te reconozca. Es opcional, solo la ve él mientras tu solicitud esté pendiente, y se borra a los 90 días."><button onClick={() => setFoto((f) => !f)} className={`mt-2 min-h-12 w-full rounded-2xl border-2 text-base font-extrabold ${foto ? 'border-[#1f9d6b] bg-[#1f9d6b]/10 text-[#146c49]' : 'border-dashed border-[var(--border-muted)] text-[var(--text-mid)]'}`}>{foto ? '✓ Foto agregada (tocar para quitar)' : '📷 Agregar mi foto'}</button></ConInfo>
+          <ConInfo que="Foto de tu familiar" texto="Agrega o quita una foto para que el compita te reconozca. Es opcional, solo la ve él mientras tu solicitud esté pendiente, y se borra a los 90 días."><button onClick={() => setFoto((f) => !f)} className={`mt-2 min-h-12 w-full rounded-2xl border-2 text-base font-extrabold ${foto ? 'border-[#1f9d6b] bg-[#1f9d6b]/10 text-[#146c49]' : 'border-dashed border-[var(--border-muted)] text-[var(--text-mid)]'}`}>{foto ? '✓ Foto agregada (tocar para quitar)' : 'Agregar mi foto'}</button></ConInfo>
         </div>
 
         <div className="rounded-2xl bg-[var(--warm-gray)] p-4 text-base">

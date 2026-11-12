@@ -114,12 +114,12 @@ async function crearTarea(admin: Admin, raizId: string, v: Fila): Promise<boolea
   await admin.from('admin_flags').insert({
     entidad_tipo: v.destinatario_tipo === 'compita' ? 'compita' : 'cliente',
     entidad_id: v.destinatario_id ?? 'sin-id',
-    entidad_nombre: `⏳ Sin respuesta: ${titulo}`,
+    entidad_nombre: `Sin respuesta: ${titulo}`,
     nota,
     reportado_por: 'escalera automática',
     resuelto: false,
   })
-  await alertaAdmin('actividad', `⏳ <b>${esc(titulo)}</b>\n\n${esc(nota)}`).catch(() => false)
+  await alertaAdmin('actividad', `<b>${esc(titulo)}</b>\n\n${esc(nota)}`).catch(() => false)
   return true
 }
 

@@ -51,9 +51,9 @@ export default function Bandeja({ tareas, puedeAtender, pideMotivo }: { tareas: 
 
   return (
     <section className="max-w-3xl space-y-3">
-      <Encabezado titulo="Requiere tu atención" descripcion={activas.length ? `${activas.length} ${activas.length === 1 ? 'cosa esperando' : 'cosas esperando'}, lo más urgente primero.` : 'Todo al día 🎉'} info={INFO_BANDEJA} infoQue="Para qué sirve la Bandeja" />
+      <Encabezado titulo="Requiere tu atención" descripcion={activas.length ? `${activas.length} ${activas.length === 1 ? 'cosa esperando' : 'cosas esperando'}, lo más urgente primero.` : 'Todo al día'} info={INFO_BANDEJA} infoQue="Para qué sirve la Bandeja" />
 
-      {emergencias > 0 && <Aviso tamano="compacto" tono="peligro">🚨 {emergencias === 1 ? '1 emergencia activa' : `${emergencias} emergencias activas`}. Atiéndela antes que cualquier otra tarea.</Aviso>}
+      {emergencias > 0 && <Aviso tamano="compacto" tono="peligro">{emergencias === 1 ? '1 emergencia activa' : `${emergencias} emergencias activas`}. Atiéndela antes que cualquier otra tarea.</Aviso>}
       {fallo && <Aviso tamano="compacto" tono="peligro">{fallo}</Aviso>}
 
       <Filtros info="Muestra solo un tipo de tarea. El número es cuántas hay de cada tipo. No resuelve ni cambia nada." infoQue="Filtrar por tipo de tarea">
@@ -83,7 +83,7 @@ export default function Bandeja({ tareas, puedeAtender, pideMotivo }: { tareas: 
             )}
           </li>
         ))}
-        {!lista.length && <li className="p-6 text-center text-texto-sutil">Nada pendiente en esta categoría 🎉</li>}
+        {!lista.length && <li className="p-6 text-center text-texto-sutil">Nada pendiente en esta categoría</li>}
       </ul>
 
       {lista.length > mostrar && (

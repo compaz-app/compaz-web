@@ -15,7 +15,7 @@ Hoy Compaz ofrece **compañía** para adultos mayores. Estas líneas están **pl
 | Portal del cliente, Inicio | "Pronto en Compaz" con Voluntariado y Mascotas |
 | Portal del cliente, Mi plan | Tarjeta "Dona horas" |
 | Página de pago | Tarjeta "Dona horas" |
-| Registro del compita y su perfil | Casillas deshabilitadas "Lo que podrás ofrecer más adelante" |
+| Registro del compita y su perfil | Casilla deshabilitada de voluntariado y una sección propia "Cuidador de mascotas" con las preguntas que se harán más adelante (sin campos que se envíen) |
 | Panel, Más | Sección "Próximamente" con ⓘ |
 
 ## Para activar una línea más adelante

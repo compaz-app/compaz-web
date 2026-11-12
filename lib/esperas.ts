@@ -122,5 +122,5 @@ export function explicarEspera(clave: ClaveEspera, p: ParamsEspera = {}): Espera
 const escHtml = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 /** Para Telegram: lo esencial a la vista y la razón en un bloque que se despliega con un toque (así el chat no se llena de texto). */
 export function esperaTelegram(e: Espera): string {
-  return `⏳ ${escHtml(e.resumen)}\n<blockquote expandable>🔎 ¿Por qué? ${escHtml(e.porQue)}</blockquote>`
+  return `${escHtml(e.resumen)}\n<blockquote expandable>¿Por qué? ${escHtml(e.porQue)}</blockquote>`
 }

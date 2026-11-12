@@ -7,6 +7,7 @@ import { usePrecios } from '@/components/ui/usePrecios'
 import { TarjetaProximamente } from '@/components/ui/Proximamente'
 import { SERVICIOS_PROXIMOS } from '@/lib/servicios-proximos'
 import type { Precios } from '@/lib/precios'
+import IconoPersona from '@/components/ui/IconoPersona'
 
 // ── Planes (precios y visitas vienen de lib/planes.ts, única fuente) ─────────
 const DETALLES: Record<PlanId, string[]> = {
@@ -148,7 +149,7 @@ function PagoContent() {
           {info.compitaFoto
             // eslint-disable-next-line @next/next/no-img-element
             ? <img src={info.compitaFoto} alt={info.compitaNombre} style={{ width: '80px', height: '80px', borderRadius: '50%', objectFit: 'cover', marginBottom: '16px', border: '3px solid #FF6B2B' }} />
-            : <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: '#F5F0E8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '36px', margin: '0 auto 16px' }}>👤</div>
+            : <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: '#F5F0E8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '36px', margin: '0 auto 16px' }}><IconoPersona /></div>
           }
           <h1 style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '24px', color: '#1A0A3C', margin: '0 0 8px' }}>
             ¡Excelente elección, {primerNombre}!
@@ -160,7 +161,6 @@ function PagoContent() {
 
         {/* Aviso placeholder */}
         <div style={{ background: '#FFF3E8', border: '2px solid #FF6B2B', borderRadius: '12px', padding: '12px 16px', marginBottom: '28px', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-          <span style={{ fontSize: '18px', flexShrink: 0 }}>🔧</span>
           <p style={{ color: '#C84B0E', fontSize: '13px', margin: 0, lineHeight: 1.5 }}>
             <strong>Cómo pagar.</strong> Puedes pagar por <strong>Zelle</strong> o transferencia: nuestro equipo te contactará con los datos para completar el pago. El pago con tarjeta estará disponible muy pronto.
           </p>
@@ -267,7 +267,7 @@ function PagoContent() {
         {/* Garantía */}
         <div style={{ background: '#F0FDF4', border: '1.5px solid #86EFAC', borderRadius: '12px', padding: '14px 16px', marginBottom: '12px' }}>
           <p style={{ color: '#166534', fontSize: '13px', margin: 0, lineHeight: 1.5 }}>
-            🛡️ <strong>Garantía Compaz:</strong> Todas las visitas están monitoreadas por nuestro equipo. Si algo no va bien, te ayudamos a resolverlo.
+            <strong>Garantía Compaz:</strong> Todas las visitas están monitoreadas por nuestro equipo. Si algo no va bien, te ayudamos a resolverlo.
           </p>
         </div>
 

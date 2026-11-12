@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { ZONAS_MUNICIPIOS as ZONAS } from '@/lib/venezuela'
-import { OpcionesProximamenteCompita } from '@/components/ui/Proximamente'
+import { OpcionesProximamenteCompita, SeccionCuidadorMascotas } from '@/components/ui/Proximamente'
 
 // ── Servicios ─────────────────────────────────────────────────────────────────
 
@@ -303,6 +303,7 @@ export default function EditarPerfil({ token, inicial }: Props) {
       </div>
 
       <OpcionesProximamenteCompita />
+      <SeccionCuidadorMascotas />
 
       {/* Foto */}
       <div>
@@ -314,7 +315,7 @@ export default function EditarPerfil({ token, inicial }: Props) {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/images/ejemplo-foto-perfil.webp" alt="Ejemplo foto buena" style={{ width: '100%', maxHeight: '160px', objectFit: 'contain', display: 'block', background: '#f5f5f5' }} />
             <div style={{ padding: '8px 10px' }}>
-              <p style={{ fontSize: '11px', color: '#2E7D32', fontWeight: 700, margin: '0 0 2px' }}>✅ Así sí</p>
+              <p style={{ fontSize: '11px', color: '#2E7D32', fontWeight: 700, margin: '0 0 2px' }}>Así sí</p>
               <p style={{ fontSize: '11px', color: '#4A3B6B', margin: 0, lineHeight: '1.4' }}>Rostro centrado, fondo claro, buena luz</p>
             </div>
           </div>
@@ -322,7 +323,7 @@ export default function EditarPerfil({ token, inicial }: Props) {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/images/ejemplo-foto-perfil.webp" alt="Ejemplo foto mala" style={{ width: '100%', maxHeight: '160px', objectFit: 'contain', display: 'block', background: '#111', filter: 'brightness(0.25) contrast(0.8)' }} />
             <div style={{ padding: '8px 10px' }}>
-              <p style={{ fontSize: '11px', color: '#C62828', fontWeight: 700, margin: '0 0 2px' }}>❌ Así no</p>
+              <p style={{ fontSize: '11px', color: '#C62828', fontWeight: 700, margin: '0 0 2px' }}>Así no</p>
               <p style={{ fontSize: '11px', color: '#4A3B6B', margin: 0, lineHeight: '1.4' }}>Oscura, cara sin ver, fondo desordenado</p>
             </div>
           </div>
@@ -352,7 +353,7 @@ export default function EditarPerfil({ token, inicial }: Props) {
         <label style={s.label}>¿Cuándo puedes recibir llamadas de presentación? *</label>
         <p style={s.hint}>Los clientes elegirán una hora dentro de tu disponibilidad para coordinar una llamada de 20 minutos. Bloques de 20 min, hasta las 8:00 PM.</p>
         <p style={{ ...s.hint, color: '#9B8AB8', marginTop: '-6px' }}>
-          🕐 Horarios en hora de Venezuela (UTC−4) — ahora son las {new Date().toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Caracas' })} VET
+          Horarios en hora de Venezuela (UTC−4) — ahora son las {new Date().toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Caracas' })} VET
         </p>
 
         {horarios.length > 0 && (() => {
@@ -441,7 +442,7 @@ export default function EditarPerfil({ token, inicial }: Props) {
 
       {errorForm && (
         <div style={{ background: '#FEF2F2', border: '2px solid #FCA5A5', borderRadius: '12px', padding: '12px 16px', color: '#B91C1C', fontSize: '14px', fontWeight: 600 }}>
-          ⚠️ {errorForm}
+          {errorForm}
         </div>
       )}
 

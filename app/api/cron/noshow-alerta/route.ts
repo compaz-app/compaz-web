@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
     const compita = visita.compitas as unknown as { nombre: string } | null
     const cliente = visita.usuarios as unknown as { nombre: string; email: string } | null
     const enviado = await alertaAdmin('urgente', [
-      `🚨 <b>Posible no-show</b>`, ``,
+      `<b>Posible no-show</b>`, ``,
       `La visita debía empezar a las <b>${esc(visita.hora_inicio_programada)}</b> y la compita aún no la inició.`, ``,
       `<b>Compita:</b> ${esc(compita?.nombre ?? '—')}`,
       `<b>Cliente:</b> ${esc(cliente?.nombre ?? '—')} (${esc(cliente?.email ?? '—')})`, ``,

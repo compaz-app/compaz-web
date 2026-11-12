@@ -30,7 +30,7 @@ export default function ChatColapsable({ visita, mensajesIniciales, compitaNombr
         }}
       >
         <span style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, color: '#2D1464', fontSize: '15px' }}>
-          💬 Escribirle a {compitaNombre}
+          Escribirle a {compitaNombre}
         </span>
         <span style={{ color: '#9B8AB8', fontSize: '13px', fontFamily: 'Inter, sans-serif' }}>
           {abierto ? '▲ Cerrar' : '▼ Abrir'}

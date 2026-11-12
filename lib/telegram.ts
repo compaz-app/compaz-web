@@ -49,43 +49,43 @@ export async function editMessageReplyMarkup(chatId: string, messageId: number, 
 }
 
 // Teclados inline para visitas
-export const INLINE_INICIO = makeInlineKeyboard([[{ text: '▶️ Iniciar visita', callback_data: '▶️ Iniciar visita' }]])
+export const INLINE_INICIO = makeInlineKeyboard([[{ text: 'Iniciar visita', callback_data: 'Iniciar visita' }]])
 export const INLINE_DURANTE = makeInlineKeyboard([
-  [{ text: '🔴 Terminar visita', callback_data: '🔴 Terminar visita' }],
-  [{ text: '🚨 Emergencia', callback_data: 'emergencia' }],
+  [{ text: 'Terminar visita', callback_data: 'Terminar visita' }],
+  [{ text: 'Emergencia', callback_data: 'emergencia' }],
 ])
 export const INLINE_CONFIRMAR_INICIO = makeInlineKeyboard([[
-  { text: '✅ Sí, iniciar', callback_data: '✅ Sí, iniciar' },
-  { text: '❌ Cancelar', callback_data: '❌ Cancelar' },
+  { text: 'Sí, iniciar', callback_data: 'Sí, iniciar' },
+  { text: 'Cancelar', callback_data: 'Cancelar' },
 ]])
 export const INLINE_CONFIRMAR_FIN = makeInlineKeyboard([[
-  { text: '✅ Sí, terminar', callback_data: '✅ Sí, terminar' },
-  { text: '❌ Cancelar', callback_data: '❌ Cancelar' },
+  { text: 'Sí, terminar', callback_data: 'Sí, terminar' },
+  { text: 'Cancelar', callback_data: 'Cancelar' },
 ]])
-export const INLINE_START = makeInlineKeyboard([[{ text: '▶️ Comenzar', callback_data: '/start' }]])
-export const INLINE_REAGENDAR_VISITA = makeInlineKeyboard([[{ text: '🔄 Necesito reagendar la visita', callback_data: 'reagendar_visita' }]])
+export const INLINE_START = makeInlineKeyboard([[{ text: 'Comenzar', callback_data: '/start' }]])
+export const INLINE_REAGENDAR_VISITA = makeInlineKeyboard([[{ text: 'Necesito reagendar la visita', callback_data: 'reagendar_visita' }]])
 export const INLINE_INICIAR_O_REAGENDAR = makeInlineKeyboard([
-  [{ text: '✅ Sí, iniciar', callback_data: '✅ Sí, iniciar' }],
-  [{ text: '🔄 Necesito reagendar', callback_data: 'reagendar_visita' }],
+  [{ text: 'Sí, iniciar', callback_data: 'Sí, iniciar' }],
+  [{ text: 'Necesito reagendar', callback_data: 'reagendar_visita' }],
 ])
 
 // Teclados reutilizables
 // Sin visita: solo Menú
 /** Respuesta a una nota de voz, audio o videomensaje: el cliente no los recibe, y callar haría creer que sí llegaron. */
-export const TEXTO_NOTA_DE_VOZ = '🎤 Las notas de voz no están activas: el cliente no las recibe. Escribe tu mensaje en texto o manda una foto. Gracias por entender 🙏'
+export const TEXTO_NOTA_DE_VOZ = 'Las notas de voz no están activas: el cliente no las recibe. Escribe tu mensaje en texto o manda una foto. Gracias por entender'
 
 export const TECLADO_SIN_VISITA = {
-  keyboard: [[{ text: '❓ ¿Qué me toca?' }, { text: '🙋 Tengo una duda' }], [{ text: '🚨 Emergencia' }, { text: '📋 Menú' }]],
+  keyboard: [[{ text: '¿Qué me toca?' }, { text: 'Tengo una duda' }], [{ text: 'Emergencia' }, { text: 'Menú' }]],
   resize_keyboard: true,
 } satisfies ReplyKeyboard
 
 // Visita programada (fecha agendada, no iniciada aún): Iniciar + Terminar + Emergencia + Menú
 export const TECLADO_INICIO = {
   keyboard: [
-    [{ text: '▶️ Iniciar visita' }, { text: '🔴 Terminar visita' }],
-    [{ text: '❓ ¿Qué me toca?' }, { text: '🙋 Tengo una duda' }],
-    [{ text: '🛡️ No me siento seguro' }],
-    [{ text: '🚨 Emergencia' }, { text: '📋 Menú' }],
+    [{ text: 'Iniciar visita' }, { text: 'Terminar visita' }],
+    [{ text: '¿Qué me toca?' }, { text: 'Tengo una duda' }],
+    [{ text: 'No me siento seguro' }],
+    [{ text: 'Emergencia' }, { text: 'Menú' }],
   ],
   resize_keyboard: true,
 } satisfies ReplyKeyboard
@@ -93,22 +93,22 @@ export const TECLADO_INICIO = {
 // Visita en curso: Terminar + Llamar al cliente + Emergencia + Menú
 export const TECLADO_DURANTE_VISITA = {
   keyboard: [
-    [{ text: '🔴 Terminar visita' }, { text: '📹 Llamar al cliente' }],
-    [{ text: '❓ ¿Qué me toca?' }, { text: '🙋 Tengo una duda' }],
-    [{ text: '🛡️ No me siento seguro' }],
-    [{ text: '🚨 Emergencia' }, { text: '📋 Menú' }],
+    [{ text: 'Terminar visita' }, { text: 'Llamar al cliente' }],
+    [{ text: '¿Qué me toca?' }, { text: 'Tengo una duda' }],
+    [{ text: 'No me siento seguro' }],
+    [{ text: 'Emergencia' }, { text: 'Menú' }],
   ],
   resize_keyboard: true,
 } satisfies ReplyKeyboard
 
 export const TECLADO_CONFIRMAR_INICIO = {
-  keyboard: [[{ text: '✅ Sí, iniciar' }, { text: '❌ Cancelar' }]],
+  keyboard: [[{ text: 'Sí, iniciar' }, { text: 'Cancelar' }]],
   resize_keyboard: true,
   one_time_keyboard: true,
 } satisfies ReplyKeyboard
 
 export const TECLADO_CONFIRMAR_FIN = {
-  keyboard: [[{ text: '✅ Sí, terminar' }, { text: '❌ Cancelar' }]],
+  keyboard: [[{ text: 'Sí, terminar' }, { text: 'Cancelar' }]],
   resize_keyboard: true,
   one_time_keyboard: true,
 } satisfies ReplyKeyboard
@@ -116,7 +116,7 @@ export const TECLADO_CONFIRMAR_FIN = {
 export const QUITAR_TECLADO: RemoveKeyboard = { remove_keyboard: true }
 
 export const TECLADO_START = {
-  keyboard: [[{ text: '▶️ Comenzar' }]],
+  keyboard: [[{ text: 'Comenzar' }]],
   resize_keyboard: true,
   one_time_keyboard: true,
 } satisfies ReplyKeyboard

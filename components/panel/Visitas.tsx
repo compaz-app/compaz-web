@@ -26,12 +26,12 @@ export default function Visitas({ d, enlace, puedeChats }: { d: DatosVisitas; en
               <span className="min-w-48 flex-1">
                 <span className="block truncate text-sm font-bold">{v.cliente}</span>
                 <span className="block truncate text-sm text-texto-medio"><span className="text-xs text-texto-sutil">Compita </span>{v.compita}</span>
-                {v.motivo ? <span className="block text-xs font-bold text-rojo-oscuro">⚠ {v.motivo}</span> : v.zona ? <span className="block truncate text-xs text-texto-sutil">{v.zona}</span> : null}
+                {v.motivo ? <span className="block text-xs font-bold text-rojo-oscuro">{v.motivo}</span> : v.zona ? <span className="block truncate text-xs text-texto-sutil">{v.zona}</span> : null}
               </span>
               <span className="shrink-0 text-right"><span className={`rounded-full px-2 py-0.5 text-xs font-bold ${CHIP[v.estado]}`}>{v.estado}</span>{v.rating !== null && <span className={`mt-1 block text-xs font-bold ${v.rating <= 3 ? 'text-rojo-oscuro' : 'text-texto-medio'}`}>{'★'.repeat(v.rating)}</span>}</span>
               <Flecha />
             </Link>
-            {puedeChats && <Link href={enlace({ chat: `${v.clienteId}:${v.compitaId}` })} aria-label={`Ver el chat de ${v.cliente} y ${v.compita}`} className="flex shrink-0 items-center border-l border-borde px-3 text-sm font-bold text-texto-medio hover:bg-fondo-claro">💬 Chat</Link>}
+            {puedeChats && <Link href={enlace({ chat: `${v.clienteId}:${v.compitaId}` })} aria-label={`Ver el chat de ${v.cliente} y ${v.compita}`} className="flex shrink-0 items-center border-l border-borde px-3 text-sm font-bold text-texto-medio hover:bg-fondo-claro">Chat</Link>}
           </li>
         ))}
         {!d.fila.length && <li className="p-6 text-center text-texto-sutil">No hay visitas en esta vista</li>}

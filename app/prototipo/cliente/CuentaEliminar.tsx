@@ -64,7 +64,7 @@ export default function CuentaEliminar({ momento, visitasQuedan }: { momento: 's
   if (paso === 'enviado') {
     return (
       <section className="mt-6 rounded-3xl border-2 border-[var(--purple)] bg-white p-5">
-        <div aria-hidden className="text-3xl">📩</div>
+        <div aria-hidden className="text-3xl"></div>
         <h2 className="mt-1 text-xl font-extrabold">Revisa tu correo</h2>
         <p className="mt-1 text-base text-[var(--text-mid)]">Te enviamos un enlace a c***@mail.com. Tócalo para confirmar. Vence en 1 hora y hasta entonces tu cuenta sigue igual.</p>
         <div className="mt-4 grid gap-2">
@@ -83,7 +83,7 @@ export default function CuentaEliminar({ momento, visitasQuedan }: { momento: 's
 
   return (
     <section className="mt-6 rounded-3xl border-2 border-[#991B1B] bg-white p-5">
-      <div aria-hidden className="text-3xl">🗑️</div>
+      <div aria-hidden className="text-3xl"></div>
       <h2 className="mt-1 text-xl font-extrabold">Tu cuenta está desactivada</h2>
       <p className="mt-1 text-base text-[var(--text-mid)]">Se borra de forma definitiva el 17 de noviembre. Te enviamos un correo para confirmarlo. Si cambias de opinión antes de esa fecha, puedes reactivarla.</p>
       <div className="mt-3 flex items-center gap-1">

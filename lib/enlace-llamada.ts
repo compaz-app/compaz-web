@@ -71,7 +71,7 @@ export async function enviarEnlaceDeLlamada(solicitudId: string): Promise<Result
     try {
       await sendEmail({
         to: cliente.email,
-        subject: `⏰ Tu llamada con ${compitaData?.nombre ?? 'tu compita'} — link de acceso`,
+        subject: `Tu llamada con ${compitaData?.nombre ?? 'tu compita'} — link de acceso`,
         html: `
           <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px">
             <h2 style="color:#2D1464;font-size:22px">Tu link de llamada está listo</h2>
@@ -80,13 +80,13 @@ export async function enviarEnlaceDeLlamada(solicitudId: string): Promise<Result
               <strong>${esc(slotLabel)}</strong>
             </p>
             <p style="color:#C84B0E;background:#FFF3E8;border:2px solid #FF6B2B;border-radius:12px;padding:14px;font-size:14px">
-              ⏱️ ${duracion}
+              ${duracion}
             </p>
             <a href="${salaClienteUrl}" style="display:inline-block;background:#FF6B2B;color:white;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:16px;margin-top:8px">
               Entrar a la llamada →
             </a>
             <p style="color:#6B5C90;font-size:14px;line-height:1.6;margin-top:24px">¿Surgió algo y no puedes a esa hora? Propón nuevos horarios aquí:</p>
-            <a href="${SITE_URL}/reagendar/${encodeURIComponent(t)}" style="display:inline-block;background:#6B5C90;color:white;padding:12px 24px;border-radius:9999px;text-decoration:none;font-weight:700;font-size:14px;margin-top:4px">🔄 Reagendar llamada</a>
+            <a href="${SITE_URL}/reagendar/${encodeURIComponent(t)}" style="display:inline-block;background:#6B5C90;color:white;padding:12px 24px;border-radius:9999px;text-decoration:none;font-weight:700;font-size:14px;margin-top:4px">Reagendar llamada</a>
             <p style="color:#6B5C90;font-size:13px;margin-top:24px">
               Compaz — <em>Cerca aunque estés lejos</em>
             </p>
@@ -108,15 +108,15 @@ export async function enviarEnlaceDeLlamada(solicitudId: string): Promise<Result
       await sendTelegramMessage(
         compitaData.telegram_chat_id,
         [
-          `⏰ <b>Link de tu llamada listo</b>`,
+          `<b>Link de tu llamada listo</b>`,
           ``,
           `Con <b>${esc(cliente?.nombre ?? 'el cliente')}</b> — <b>${esc(slotLabel)}</b>`,
           ``,
-          `⏱️ ${duracion}`,
+          `${duracion}`,
           ``,
           `Si no puedes a esa hora, toca Reagendar abajo.`,
         ].join('\n'),
-        { inline_keyboard: [[{ text: '▶️ Entrar a la llamada', url: salaCompitaUrl }, { text: '🔄 Reagendar', url: `${SITE_URL}/api/solicitud/reagendar-compita?token=${t}&${qRol(t, 'compita')}` }]] },
+        { inline_keyboard: [[{ text: 'Entrar a la llamada', url: salaCompitaUrl }, { text: 'Reagendar', url: `${SITE_URL}/api/solicitud/reagendar-compita?token=${t}&${qRol(t, 'compita')}` }]] },
       )
       resultados.push('telegram_compita: ok')
     } catch (e) {
@@ -132,7 +132,7 @@ export async function enviarEnlaceDeLlamada(solicitudId: string): Promise<Result
     try {
       await sendEmail({
         to: compitaData.email,
-        subject: `⏰ Tu llamada con ${esc(cliente?.nombre ?? 'el cliente')} — link de acceso`,
+        subject: `Tu llamada con ${esc(cliente?.nombre ?? 'el cliente')} — link de acceso`,
         html: `
           <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px">
             <h2 style="color:#2D1464;font-size:22px">Tu link de llamada está listo</h2>
@@ -141,7 +141,7 @@ export async function enviarEnlaceDeLlamada(solicitudId: string): Promise<Result
               <strong>${esc(slotLabel)}</strong>
             </p>
             <p style="color:#C84B0E;background:#FFF3E8;border:2px solid #FF6B2B;border-radius:12px;padding:14px;font-size:14px">
-              ⏱️ ${duracion}
+              ${duracion}
             </p>
             <a href="${salaCompitaUrl}" style="display:inline-block;background:#FF6B2B;color:white;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:16px;margin-top:8px">
               Entrar a la llamada →

@@ -72,7 +72,7 @@ export async function PUT(req: NextRequest) {
   if (r === 'pendiente') return ok({ estado: 'pendiente_confirmacion', fecha_programada, hora_inicio_programada: horaInicioN, hora_fin_programada: horaFinN })
   // Telegram es requisito para trabajar en Compaz: si no se pudo avisarle (bot bloqueado, vínculo perdido), la visita NO se agenda a ciegas.
   // El cliente puede reintentar y el equipo recibe la tarea para arreglar el vínculo del compita.
-  await alertaAdmin('tarea', `📅 <b>No se pudo avisar al compita de una cita</b>\n\nEl cliente eligió ${esc(fecha_programada)}, ${esc(horaInicioN)}, pero Telegram no entregó el aviso al compita (bot bloqueado o vínculo perdido). La visita NO se agendó. Revisa y arregla el vínculo de Telegram de este compita.`, { categoria: 'cita_sin_telegram', clave: `cita_sin_telegram:${visita.compita_id}`, entidad: { tipo: 'compita', id: visita.compita_id } })
+  await alertaAdmin('tarea', `<b>No se pudo avisar al compita de una cita</b>\n\nEl cliente eligió ${esc(fecha_programada)}, ${esc(horaInicioN)}, pero Telegram no entregó el aviso al compita (bot bloqueado o vínculo perdido). La visita NO se agendó. Revisa y arregla el vínculo de Telegram de este compita.`, { categoria: 'cita_sin_telegram', clave: `cita_sin_telegram:${visita.compita_id}`, entidad: { tipo: 'compita', id: visita.compita_id } })
   return err('No pudimos avisarle a tu compita. Intenta de nuevo en unos minutos; el equipo ya fue avisado para ayudarte.', 502)
 }
 

@@ -30,7 +30,7 @@ export default function Resenas({ filas, ver, enlace, puedeActuar }: { filas: Fi
             {puedeActuar && <AccionResena id={r.id} publicada={r.publicada} />}
           </li>
         ))}
-        {!lista.length && <li className="p-6 text-center text-texto-sutil">{ver === 'publicadas' ? 'Todavía no hay reseñas publicadas.' : 'No hay reseñas esperando. Todo al día 🎉'}</li>}
+        {!lista.length && <li className="p-6 text-center text-texto-sutil">{ver === 'publicadas' ? 'Todavía no hay reseñas publicadas.' : 'No hay reseñas esperando. Todo al día'}</li>}
       </ul>
     </section>
   )

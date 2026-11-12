@@ -2,9 +2,9 @@
 // los bloques en este orden. Es la lógica que antes estaba dentro de las condiciones del portal viejo.
 
 export type PestanaPortal = 'inicio' | 'visitas' | 'familiar' | 'plan'
-export const PESTANAS: { id: PestanaPortal; icono: string; texto: string }[] = [
-  { id: 'inicio', icono: '🏠', texto: 'Inicio' }, { id: 'visitas', icono: '📅', texto: 'Visitas' },
-  { id: 'familiar', icono: '👵', texto: 'Mi familiar' }, { id: 'plan', icono: '💳', texto: 'Mi plan' },
+export const PESTANAS: { id: PestanaPortal; texto: string }[] = [
+  { id: 'inicio', texto: 'Inicio' }, { id: 'visitas', texto: 'Visitas' },
+  { id: 'familiar', texto: 'Mi familiar' }, { id: 'plan', texto: 'Mi plan' },
 ]
 export const esPestana = (v: unknown): v is PestanaPortal => typeof v === 'string' && PESTANAS.some((p) => p.id === v)
 

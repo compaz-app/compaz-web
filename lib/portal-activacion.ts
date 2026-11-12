@@ -21,6 +21,6 @@ export async function fijarPortalNuevo(usuarioId: string, activo: boolean | null
   const { data } = await createAdminSupabase().from('usuarios').update({ portal_nuevo: activo }).eq('id', usuarioId).select('id, nombre').maybeSingle()
   if (!data) return false
   await registrarEvento({ entidad: 'cliente', entidadId: usuarioId, tipo: 'portal_nuevo_cambiado', actor: `admin:${por}`, datos: { activo } })
-  await alertaAdmin('actividad', `ℹ️ ${por} puso a <b>${(data as { nombre: string }).nombre}</b> ${activo === true ? 'en el portal nuevo' : activo === false ? 'en el portal viejo' : 'a seguir el interruptor general del portal'}.`, { categoria: 'portal_nuevo', entidad: { tipo: 'cliente', id: usuarioId, nombre: (data as { nombre: string }).nombre } })
+  await alertaAdmin('actividad', `${por} puso a <b>${(data as { nombre: string }).nombre}</b> ${activo === true ? 'en el portal nuevo' : activo === false ? 'en el portal viejo' : 'a seguir el interruptor general del portal'}.`, { categoria: 'portal_nuevo', entidad: { tipo: 'cliente', id: usuarioId, nombre: (data as { nombre: string }).nombre } })
   return true
 }

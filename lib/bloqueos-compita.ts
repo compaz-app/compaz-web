@@ -77,17 +77,17 @@ export async function reportarCliente(compita: Compita, usuarioId: string, d: Da
     if (error && error.code !== '23505') console.error('[bloqueos] no se pudo guardar el bloqueo:', error.message)
   }
   const detalle = [
-    `🚩 <b>Reporte de ${esc(compita.nombre)}</b> sobre <b>${esc(nombreCli)}</b>: ${esc(texto)}.`,
+    `<b>Reporte de ${esc(compita.nombre)}</b> sobre <b>${esc(nombreCli)}</b>: ${esc(texto)}.`,
     cuando ? `Cuándo: ${CUANDO[cuando]}.` : '',
-    pideAyuda ? '⚠️ <b>Dijo que necesita ayuda.</b>' : d.estaBien ? 'Dijo que está bien.' : '',
+    pideAyuda ? '<b>Dijo que necesita ayuda.</b>' : d.estaBien ? 'Dijo que está bien.' : '',
     d.reincidente === undefined ? '' : d.reincidente ? 'Ya le había pasado antes con este cliente.' : 'Es la primera vez con este cliente.',
     d.noVolver ? 'Pidió <b>no volver con este cliente</b>: ya no se le asignará. Revisa si hay solicitudes o visitas abiertas entre ambos.' : 'No pidió dejar de trabajar con este cliente.',
-    plazo ? `📞 <b>Llamar al compita antes de</b> ${plazo.toLocaleString('es-VE', { timeZone: 'America/Caracas', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', hour12: true })} (hora de Venezuela). Pidió que lo llamemos o el motivo lo requiere.` : 'No pidió llamada.',
+    plazo ? `<b>Llamar al compita antes de</b> ${plazo.toLocaleString('es-VE', { timeZone: 'America/Caracas', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', hour12: true })} (hora de Venezuela). Pidió que lo llamemos o el motivo lo requiere.` : 'No pidió llamada.',
   ].filter(Boolean).join('\n')
   const urgente = motivo === 'inseguro' || pideAyuda
   // Solo hay trabajo para el equipo si hay que llamar o es un riesgo; lo demás queda en el registro de Actividad, sin tarea.
   await alertaAdmin(urgente ? 'urgente' : llamar ? 'tarea' : 'actividad', detalle, {
-    categoria: 'reporte_cliente', clave: `reporte:${reporteId}`, entidad: { tipo: 'compita', id: compita.id, nombre: `🚩 Reporte: ${compita.nombre} / ${nombreCli}` }, critica: urgente,
+    categoria: 'reporte_cliente', clave: `reporte:${reporteId}`, entidad: { tipo: 'compita', id: compita.id, nombre: `Reporte: ${compita.nombre} / ${nombreCli}` }, critica: urgente,
   })
   return { resultado: 'ok', llamar, plazo }
 }
@@ -136,7 +136,7 @@ export async function escalarLlamadasVencidas(ahora: Date = new Date()): Promise
     const x = reclamo as { compita_id: string; usuario_id: string }
     const [{ data: c }, { data: u }] = await Promise.all([admin.from('compitas').select('nombre').eq('id', x.compita_id).maybeSingle(), admin.from('usuarios').select('nombre').eq('id', x.usuario_id).maybeSingle()])
     const nombre = (c as { nombre: string } | null)?.nombre ?? 'un compita'
-    await alertaAdmin('urgente', `📞 <b>Llamada vencida</b>\n\nSe pasó el plazo para llamar a <b>${esc(nombre)}</b> por su reporte sobre <b>${esc((u as { nombre: string } | null)?.nombre ?? 'un cliente')}</b>. El compita está esperando la llamada que se le prometió.`, { categoria: 'reporte_llamada_vencida', clave: `reporte_vencido:${r.id}`, entidad: { tipo: 'compita', id: x.compita_id, nombre: `📞 Llamada vencida: ${nombre}` } })
+    await alertaAdmin('urgente', `<b>Llamada vencida</b>\n\nSe pasó el plazo para llamar a <b>${esc(nombre)}</b> por su reporte sobre <b>${esc((u as { nombre: string } | null)?.nombre ?? 'un cliente')}</b>. El compita está esperando la llamada que se le prometió.`, { categoria: 'reporte_llamada_vencida', clave: `reporte_vencido:${r.id}`, entidad: { tipo: 'compita', id: x.compita_id, nombre: `Llamada vencida: ${nombre}` } })
     n++
   }
   return n

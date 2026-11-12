@@ -114,7 +114,7 @@ describe('lo vencido ya no cuenta', () => {
 })
 
 describe('por el bot, ninguna cuenta se queda sin respuesta', () => {
-  const tocar = async (chat: string) => { const antes = tgPara(chat).length; await webhook(tgText(chat, '❓ ¿Qué me toca?')); return tgPara(chat).slice(antes) }
+  const tocar = async (chat: string) => { const antes = tgPara(chat).length; await webhook(tgText(chat, '¿Qué me toca?')); return tgPara(chat).slice(antes) }
   test('compita activa: responde', async () => { mundo(); assert.ok((await tocar(CHAT)).length >= 1) })
   test('cuenta en revisión (sin verificar): le dice qué pasa y qué hacer', async () => {
     mundo({ verificado: false }); const r = await tocar(CHAT)

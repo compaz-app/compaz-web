@@ -65,7 +65,7 @@ function Inner() {
         <select value={zona} onChange={(e) => setZona(e.target.value)} aria-label="Zona" className="min-h-12 rounded-xl border border-[var(--border-muted)] bg-white px-2 text-base">{ZONAS.map((z) => <option key={z}>{z}</option>)}</select>
         <select value={orden} onChange={(e) => setOrden(e.target.value)} aria-label="Ordenar" className="min-h-12 rounded-xl border border-[var(--border-muted)] bg-white px-2 text-base"><option value="rating">Mejor calificados</option><option value="visitas">Con más visitas</option></select>
       </div>
-      <button onClick={() => setSoloVideo(soloVideo === '1' ? '0' : '1')} aria-pressed={soloVideo === '1'} className={`mt-2 min-h-10 rounded-full px-4 text-sm font-bold ${soloVideo === '1' ? 'bg-[var(--purple)] text-white' : 'border border-[var(--border-muted)] bg-white'}`}>🎥 Con video de presentación</button>
+      <button onClick={() => setSoloVideo(soloVideo === '1' ? '0' : '1')} aria-pressed={soloVideo === '1'} className={`mt-2 min-h-10 rounded-full px-4 text-sm font-bold ${soloVideo === '1' ? 'bg-[var(--purple)] text-white' : 'border border-[var(--border-muted)] bg-white'}`}>Con video de presentación</button>
 
       <ul className="mt-4 divide-y divide-[var(--border-muted)] overflow-hidden rounded-2xl border border-[var(--border-muted)] bg-white">
         {lista.map((x) => (
@@ -75,7 +75,7 @@ function Inner() {
               <div className="min-w-0 flex-1">
                 <div className="text-lg font-extrabold">{etq(x)}</div>
                 <div className="truncate text-sm text-[var(--text-mid)]">{x.zona} · {x.visitas} visitas</div>
-                <div className="text-sm font-bold"><span className="text-[var(--orange)]">★</span> {x.rating.toFixed(1)} <span className="font-normal text-[var(--text-light)]">({x.resenas})</span>{x.video && ' · 🎥'}</div>
+                <div className="text-sm font-bold"><span className="text-[var(--orange)]">★</span> {x.rating.toFixed(1)} <span className="font-normal text-[var(--text-light)]">({x.resenas})</span>{x.video && ' ·'}</div>
               </div>
               {enviadas.includes(x.id) ? <span className="shrink-0 rounded-full bg-[var(--yellow)] px-2 py-0.5 text-xs font-bold">Pedida</span> : <span className="text-2xl text-[var(--text-light)]">›</span>}
             </button>
@@ -101,7 +101,7 @@ function Inner() {
               <>
                 <p className="mt-4 text-lg leading-relaxed text-[var(--text-mid)]">{p.descripcion}</p>
                 <div className="mt-3 flex flex-wrap gap-2">{p.servicios.map((s) => <span key={s} className="rounded-full bg-[var(--warm-gray)] px-3 py-1 text-sm font-bold">{s}</span>)}</div>
-                {p.video && <ConInfo que="Ver video de presentación" texto="Reproduce el video corto con el que se presenta este compita. No envía nada ni cuesta nada."><button className="mt-3 min-h-12 w-full rounded-xl border-2 border-[var(--purple)] font-extrabold text-[var(--purple)]">🎥 Ver video de presentación</button></ConInfo>}
+                {p.video && <ConInfo que="Ver video de presentación" texto="Reproduce el video corto con el que se presenta este compita. No envía nada ni cuesta nada."><button className="mt-3 min-h-12 w-full rounded-xl border-2 border-[var(--purple)] font-extrabold text-[var(--purple)]">Ver video de presentación</button></ConInfo>}
                 <div className="mt-4 rounded-2xl bg-[var(--warm-gray)] p-3 text-base"><b>Reseñas de familias</b><p className="mt-1 text-[var(--text-mid)]">“Mi mamá la adora, siempre puntual.” · “Muy cariñosa y atenta.”</p></div>
                 {yaPedida ? (
                   <p className="mt-4 rounded-2xl bg-[var(--yellow)] p-3 text-center text-lg font-extrabold">Ya le escribiste a {p.nombre}</p>

@@ -19,7 +19,7 @@ function leer(req: NextRequest) {
 export async function GET(req: NextRequest) {
   const p = leer(req)
   if (!p) return pagina('Enlace inválido', 'Este enlace no es válido o ya expiró.', 400)
-  return puertaConfirmacion(req, `${'⭐'.repeat(p.valor)} Confirmar calificación`, `Vas a calificar la visita con ${p.valor} de 5 estrellas.`, 'Enviar calificación')
+  return puertaConfirmacion(req, `${'★'.repeat(p.valor)} Confirmar calificación`, `Vas a calificar la visita con ${p.valor} de 5 estrellas.`, 'Enviar calificación')
 }
 
 const MENSAJES: Record<number, string> = {
@@ -27,7 +27,7 @@ const MENSAJES: Record<number, string> = {
   2: 'Gracias por contarnos. Tu opinión nos ayuda a mejorar el servicio.',
   3: 'Gracias por tu calificación.',
   4: 'Nos alegra saber que estuvo bien. ¡Hasta la próxima!',
-  5: '¡Nos alegra mucho saberlo! Tu compita está haciendo un gran trabajo. 💙',
+  5: '¡Nos alegra mucho saberlo! Tu compita está haciendo un gran trabajo.',
 }
 
 export async function POST(req: NextRequest) {

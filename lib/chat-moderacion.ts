@@ -45,14 +45,14 @@ export async function moderarMensaje({
   // 2. Crear flag en Atención (entidad: visita)
   const quien = origen === 'cliente' ? clienteNombre : compitaNombre
   const nota =
-    `⚠️ Intento de contacto externo detectado en chat.\n` +
+    `Intento de contacto externo detectado en chat.\n` +
     `Quien envió: ${quien} (${origen})\n` +
     `Mensaje original: "${textoOriginal.slice(0, 200)}"`
 
   await admin.from('admin_flags').insert({
     entidad_tipo: 'visita',
     entidad_id: visitaId,
-    entidad_nombre: `🚨 Contacto externo — ${compitaNombre} / ${clienteNombre}`,
+    entidad_nombre: `Contacto externo — ${compitaNombre} / ${clienteNombre}`,
     nota,
     reportado_por: 'moderación automática',
     resuelto: false,
@@ -60,7 +60,7 @@ export async function moderarMensaje({
 
   // 3. Alerta Telegram al admin
   const msg =
-    `⚠️ <b>Contacto externo detectado</b>\n\n` +
+    `<b>Contacto externo detectado</b>\n\n` +
     `Visita: <code>${visitaId.slice(0, 8)}</code>\n` +
     `Quien: ${quien} (${origen})\n` +
     `Compita: ${compitaNombre} · Cliente: ${clienteNombre}\n\n` +
@@ -90,16 +90,16 @@ export async function reportarContactoEnTexto(p: {
     await admin.from('admin_flags').insert({
       entidad_tipo: p.entidadTipo,
       entidad_id: p.entidadId,
-      entidad_nombre: `🚨 Contacto externo — ${p.quien} (${p.origen})`,
+      entidad_nombre: `Contacto externo — ${p.quien} (${p.origen})`,
       nota:
-        `⚠️ Intento de contacto externo detectado en ${p.donde}.\n` +
+        `Intento de contacto externo detectado en ${p.donde}.\n` +
         `Quien lo escribió: ${p.quien} (${p.origen})\n` +
         `Texto original: "${p.textoOriginal.slice(0, 200)}"`,
       reportado_por: 'moderación automática',
       resuelto: false,
     })
     await alertaAdmin('actividad', 
-      `⚠️ <b>Contacto externo detectado</b>\n\n` +
+      `<b>Contacto externo detectado</b>\n\n` +
       `Dónde: ${p.donde}\n` +
       `Quien: ${p.quien} (${p.origen})\n\n` +
       `Texto: <i>${p.textoOriginal.slice(0, 300)}</i>`,

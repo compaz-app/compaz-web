@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (avisados.length > 0) {
-    await alertaAdmin('actividad', `💳 <b>Renovaciones pendientes (${avisados.length})</b>\n\nSe avisó a: ${avisados.map(esc).join(', ')}.\n\nCuando paguen por Zelle o transferencia, regístralo en el panel: Clientes, Pagos y plan.`)
+    await alertaAdmin('actividad', `<b>Renovaciones pendientes (${avisados.length})</b>\n\nSe avisó a: ${avisados.map(esc).join(', ')}.\n\nCuando paguen por Zelle o transferencia, regístralo en el panel: Clientes, Pagos y plan.`)
   }
 
   await latido('recordatorio-pago')

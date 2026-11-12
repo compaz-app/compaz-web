@@ -78,7 +78,7 @@ export async function forzarCierreVisita(visitaId: string, actorCorreo: string):
   if (!visita) return mal(404, 'Visita no encontrada o ya cerrada')
   // Avisar al compita por Telegram
   if (visita.compita?.telegram_chat_id) {
-    sendTelegramMessage(visita.compita.telegram_chat_id, 'ℹ️ El equipo cerró la visita manualmente. Si tienes preguntas, escríbenos a hola@micompaz.com.', TECLADO_SIN_VISITA)
+    sendTelegramMessage(visita.compita.telegram_chat_id, 'El equipo cerró la visita manualmente. Si tienes preguntas, escríbenos a hola@micompaz.com.', TECLADO_SIN_VISITA)
       .catch((e) => console.error('[forzar-cierre] telegram compita:', e))
   }
   await anotarAccion(actorCorreo, `cerró a la fuerza la visita de ${esc(visita.usuario?.nombre ?? '—')} con ${esc(visita.compita?.nombre ?? '—')}`, { tipo: 'visita', id: visitaId, nombre: visita.usuario?.nombre ?? undefined })
@@ -166,7 +166,7 @@ export async function avisarCompitaVerificada(compitaId: string): Promise<'teleg
   if (c.telegram_chat_id) {
     try {
       await sendTelegramMessage(c.telegram_chat_id,
-        `✅ <b>¡Tu cuenta fue verificada, ${esc(c.nombre)}!</b>\n\nYa apareces ante las familias. Cuando una quiera conocerte, te llegará aquí un mensaje con los horarios para elegir. Si quieres mejorar tu perfil, escribe /perfil. Para ver todo lo que puedes hacer, escribe /menu.`, TECLADO_SIN_VISITA)
+        `<b>¡Tu cuenta fue verificada, ${esc(c.nombre)}!</b>\n\nYa apareces ante las familias. Cuando una quiera conocerte, te llegará aquí un mensaje con los horarios para elegir. Si quieres mejorar tu perfil, escribe /perfil. Para ver todo lo que puedes hacer, escribe /menu.`, TECLADO_SIN_VISITA)
       return 'telegram'
     } catch (e) { console.error('[verificar] Telegram a la compita falló:', e) }
   }
@@ -221,10 +221,10 @@ export async function asignarPorEnlace(token: string): Promise<ResultadoAsignaci
       if (cliente.familiar_notas) perfil.push(`<b>Notas:</b> ${esc(cliente.familiar_notas)}`)
       try {
         await sendTelegramMessage(compita.telegram_chat_id, [
-          `🎉 <b>¡Tienes un nuevo cliente!</b>`, ``, `<b>${esc(cliente.nombre)}</b> fue asignado a tu cuenta.`,
-          ...(perfil.length ? [``, `🧓 <b>Sobre el familiar que vas a atender:</b>`, ...perfil] : []), ``,
-          `👋 <b>Saluda a ${esc(cliente.nombre.split(' ')[0])}</b> desde este chat para arrancar la coordinación. Ellos lo verán en su portal.`, ``,
-          `💙 Toda la comunicación debe mantenerse dentro de Compaz.`,
+          `<b>¡Tienes un nuevo cliente!</b>`, ``, `<b>${esc(cliente.nombre)}</b> fue asignado a tu cuenta.`,
+          ...(perfil.length ? [``, `<b>Sobre el familiar que vas a atender:</b>`, ...perfil] : []), ``,
+          `<b>Saluda a ${esc(cliente.nombre.split(' ')[0])}</b> desde este chat para arrancar la coordinación. Ellos lo verán en su portal.`, ``,
+          `Toda la comunicación debe mantenerse dentro de Compaz.`,
         ].join('\n'))
       } catch (e) { console.error('Telegram asignar-rapido compita:', e) }
     }

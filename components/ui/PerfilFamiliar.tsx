@@ -73,7 +73,7 @@ export default function PerfilFamiliar({ usuario, readonly = false }: Props) {
     <div style={{ background: 'white', border: '2px solid #E8E0D4', borderRadius: '16px', padding: '24px', marginBottom: '24px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
         <h3 style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '16px', color: '#1A0A3C', margin: 0 }}>
-          👤 Perfil del familiar
+          Perfil del familiar
         </h3>
         {!readonly && !editando && (
           <button

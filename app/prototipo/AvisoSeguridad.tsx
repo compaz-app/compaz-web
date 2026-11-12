@@ -6,7 +6,6 @@ export const TEXTO_COMPITA = 'Compaz nunca te pedirá por teléfono o mensaje di
 export default function AvisoSeguridad({ para = 'cliente', fuerte = false }: { para?: 'cliente' | 'compita'; fuerte?: boolean }) {
   return (
     <div role="note" className={`mt-5 flex gap-3 rounded-2xl p-4 text-sm leading-relaxed ${fuerte ? 'border-2 border-[#D93A3A] bg-[#FEF2F2] text-[#991B1B]' : 'border border-[#F5B800] bg-[#FFFBEB] text-[#7a5b00]'}`}>
-      <span aria-hidden className="text-xl">🛡️</span>
       <p><b>Cuidado con los fraudes.</b> {para === 'cliente' ? TEXTO_CLIENTE : TEXTO_COMPITA}</p>
     </div>
   )

@@ -143,7 +143,6 @@ export default function PrimerAccesoModal() {
 
           <Section title="Sobre TU FAMILIAR">
             <div style={{ background: '#FFF3E8', border: '2px solid #FFD0B5', borderRadius: '12px', padding: '12px 16px', display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-              <span style={{ fontSize: '20px', flexShrink: 0 }}>👴</span>
               <p style={{ margin: 0, fontSize: '13px', lineHeight: 1.6, color: '#7C3A00' }}>
                 Lo que sigue es sobre <strong>TU FAMILIAR</strong> — la persona que recibirá el cuidado.<br />
                 <strong>No pongas tus propios datos aquí.</strong>

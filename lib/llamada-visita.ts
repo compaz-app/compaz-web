@@ -34,11 +34,11 @@ export async function iniciarLlamadaDeVisita(usuarioId: string, soloAudio: boole
   if ((await reclamarVentana(`llamada_aviso:${visita.id}`, VENTANA_AVISO_LLAMADA_MS)).ok) {
     const minutos = await minutosLlamadaVisita()
     if (visita.compita?.telegram_chat_id) {
-      const tipo = soloAudio ? '📞 El cliente quiere hacer una llamada de voz' : '📹 El cliente quiere hacer una videollamada'
+      const tipo = soloAudio ? 'El cliente quiere hacer una llamada de voz' : 'El cliente quiere hacer una videollamada'
       try { await sendTelegramMessage(visita.compita.telegram_chat_id, `${tipo}. Dura ${minutos} min.\n\nEntra aquí: ${SITE_URL}${enlaceDeLlamada(room.url, 'compita')}`) }
       catch (e) { console.error('[llamada-visita] Telegram:', e) }
     }
-    await alertaAdmin('actividad', `${soloAudio ? '📞' : '📹'} <b>${esc(visita.usuario?.nombre ?? 'Un cliente')}</b> inició una ${soloAudio ? 'llamada de voz' : 'videollamada'} con <b>${esc(visita.compita?.nombre ?? 'su compita')}</b>.\n\n<a href="${SITE_URL}${rutaLlamada(room.url)}">Unirse →</a>`)
+    await alertaAdmin('actividad', `<b>${esc(visita.usuario?.nombre ?? 'Un cliente')}</b> inició una ${soloAudio ? 'llamada de voz' : 'videollamada'} con <b>${esc(visita.compita?.nombre ?? 'su compita')}</b>.\n\n<a href="${SITE_URL}${rutaLlamada(room.url)}">Unirse →</a>`)
   }
   return { ok: true, url: room.url, roomName: room.name }
 }

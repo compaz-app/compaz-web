@@ -48,7 +48,7 @@ export default function DireccionVisita() {
       {!editando && (
         <>
           {estado.registrada && estado.actual
-            ? <p style={{ margin: `${spacing.xs} 0`, color: colors.textoMedio, fontSize: '14px', lineHeight: 1.5 }}>📍 <strong>{estado.actual.direccion}</strong>{estado.actual.indicaciones ? ` · ${estado.actual.indicaciones}` : ''}</p>
+            ? <p style={{ margin: `${spacing.xs} 0`, color: colors.textoMedio, fontSize: '14px', lineHeight: 1.5 }}><strong>{estado.actual.direccion}</strong>{estado.actual.indicaciones ? ` · ${estado.actual.indicaciones}` : ''}</p>
             : <p role="alert" style={{ margin: `${spacing.xs} 0`, background: colors.amarilloClaro, borderRadius: radius.md, padding: spacing.sm, color: colors.moradoProfundo, fontSize: '14px', fontWeight: 700 }}>Todavía falta registrar la dirección. Sin ella tu compita no puede llegar.</p>}
           {listo && <p role="status" style={{ color: colors.verde, fontWeight: 700, fontSize: '14px' }}>{listo.entregada ? 'Listo. Tu compita ya recibió la dirección.' : 'Listo. Tu compita la recibe por Telegram unas horas antes de la visita.'}</p>}
           <button type="button" onClick={abrir} style={{ minHeight: '44px', padding: `0 ${spacing.md}`, borderRadius: radius.pill, border: `1px solid ${colors.gris200}`, background: colors.blanco, fontWeight: 700, cursor: 'pointer', color: colors.textoOscuro }}>{estado.registrada ? 'Cambiar la dirección' : 'Registrar la dirección'}</button>

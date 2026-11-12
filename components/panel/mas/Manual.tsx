@@ -32,7 +32,7 @@ export default function Manual({ actor, q, sec, abierta, enlace, como, paramsFor
         <h3>
           <Link href={enlace({ man_abierta: abiertaAhora ? null : e.id })} aria-expanded={abiertaAhora} scroll={false} className="flex min-h-11 w-full items-center gap-2 px-3 py-2 text-left">
             <span className="flex-1 text-sm font-extrabold">{e.titulo}</span>
-            {!ok && <span className="shrink-0 rounded bg-gris100 px-1.5 text-[11px] font-bold">🔒 Sin permiso</span>}
+            {!ok && <span className="shrink-0 rounded bg-gris100 px-1.5 text-[11px] font-bold">Sin permiso</span>}
             <span aria-hidden className="text-texto-sutil">{abiertaAhora ? '▾' : '▸'}</span>
           </Link>
         </h3>

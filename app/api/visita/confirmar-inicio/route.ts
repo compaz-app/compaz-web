@@ -40,12 +40,12 @@ export async function POST(req: Request) {
     if (usuario.familiar_edad) perfilLineas.push(`<b>Edad:</b> ${esc(String(usuario.familiar_edad))} años`)
     if (usuario.familiar_condicion) perfilLineas.push(`<b>Condición:</b> ${esc(usuario.familiar_condicion)}`)
     if (usuario.familiar_notas) perfilLineas.push(`<b>Notas:</b> ${esc(usuario.familiar_notas)}`)
-    const perfilTexto = perfilLineas.length > 0 ? `\n\n👤 <b>Perfil del familiar:</b>\n${perfilLineas.join('\n')}` : ''
+    const perfilTexto = perfilLineas.length > 0 ? `\n\n<b>Perfil del familiar:</b>\n${perfilLineas.join('\n')}` : ''
 
     try {
       await sendTelegramMessage(
         compita.telegram_chat_id,
-        `✅ <b>¡${esc(usuario.nombre)} confirmó tu llegada!</b>\n\nLa visita está activa.${perfilTexto}\n\n📸 Puedes mandar fotos y mensajes desde aquí — la familia los verá en tiempo real.\n\nCuando termines, toca el botón 🔴 de tu teclado. 👇`,
+        `<b>¡${esc(usuario.nombre)} confirmó tu llegada!</b>\n\nLa visita está activa.${perfilTexto}\n\nPuedes mandar fotos y mensajes desde aquí — la familia los verá en tiempo real.\n\nCuando termines, toca el botón de tu teclado.`,
         TECLADO_DURANTE_VISITA,
       )
     } catch (e) { console.error('[confirmar-inicio] Telegram compita:', e) }
@@ -54,11 +54,11 @@ export async function POST(req: Request) {
   try { await sendVisitaInicio(usuario, compita as Parameters<typeof sendVisitaInicio>[1], visita) }
   catch (e) {
     console.error('[confirmar-inicio] email inicio:', e)
-    await alertaAdmin('tarea', `⚠️ No se pudo enviar el correo de inicio de visita a <b>${esc(usuario.nombre)}</b> (${esc(usuario.email)}).`)
+    await alertaAdmin('tarea', `No se pudo enviar el correo de inicio de visita a <b>${esc(usuario.nombre)}</b> (${esc(usuario.email)}).`)
   }
 
   const horaInicio = new Date(ahora).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Caracas', hour12: true })
-  await alertaAdmin('actividad', `▶️ <b>Visita iniciada</b>\n\n<b>Compita:</b> ${esc(compita.nombre)}\n<b>Cliente:</b> ${esc(usuario.nombre)}\n<b>Hora:</b> ${horaInicio}`)
+  await alertaAdmin('actividad', `<b>Visita iniciada</b>\n\n<b>Compita:</b> ${esc(compita.nombre)}\n<b>Cliente:</b> ${esc(usuario.nombre)}\n<b>Hora:</b> ${horaInicio}`)
 
   return ok({ iniciada: true })
 }

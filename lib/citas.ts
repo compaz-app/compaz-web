@@ -42,22 +42,22 @@ export async function anunciarCitaConfirmada(visitaId: string, usuarioId: string
     try {
       const mensajeConfirmacion = esInminente
         ? [
-            `⚡ <b>¡Visita agendada para ahora!</b>`,
+            `<b>¡Visita agendada para ahora!</b>`,
             ``,
             `${esc(cliente?.nombre ?? 'El cliente')} registró el horario:`,
             ``,
-            `📅 <b>${esc(fechaFormateada)}</b>`,
-            `🕐 <b>${esc(horarioLabel)}</b>`,
+            `<b>${esc(fechaFormateada)}</b>`,
+            `<b>${esc(horarioLabel)}</b>`,
             ``,
-            `La visita empieza pronto. Cuando llegues, toca el botón ▶️ de tu teclado.`,
+            `La visita empieza pronto. Cuando llegues, toca el botón de tu teclado.`,
           ].join('\n')
         : [
-            `✅ <b>¡Visita confirmada!</b>`,
+            `<b>¡Visita confirmada!</b>`,
             ``,
             `${esc(cliente?.nombre ?? 'El cliente')} registró el horario de la visita:`,
             ``,
-            `📅 <b>${esc(fechaFormateada)}</b>`,
-            `🕐 <b>${esc(horarioLabel)}</b>`,
+            `<b>${esc(fechaFormateada)}</b>`,
+            `<b>${esc(horarioLabel)}</b>`,
             ``,
             `Recibirás un recordatorio antes de la visita. Si necesitas reagendar, escríbenos.`,
           ].join('\n')
@@ -73,10 +73,10 @@ export async function anunciarCitaConfirmada(visitaId: string, usuarioId: string
     try {
       await sendEmail({
         to: cliente.email,
-        subject: `✅ Visita confirmada: ${fechaFormateada}`,
+        subject: `Visita confirmada: ${fechaFormateada}`,
         html: `
           <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px">
-            <h2 style="color:#2D1464;font-size:22px;margin-bottom:12px">✅ Visita confirmada</h2>
+            <h2 style="color:#2D1464;font-size:22px;margin-bottom:12px">Visita confirmada</h2>
             <p style="color:#4A3B6B;font-size:15px;line-height:1.6">
               La visita de <strong>${esc(compita?.nombre ?? 'tu compita')}</strong> con tu familiar está agendada.
             </p>
@@ -107,8 +107,8 @@ export async function hayChoque(compitaId: string, fecha: string, inicio: string
 }
 
 const tecladoCita = (visitaId: string, propuestaEn: string) => makeInlineKeyboard([
-  [{ text: '✅ Confirmo la cita', callback_data: `cita:ok:${visitaId}:${versionCita(propuestaEn)}` }],
-  [{ text: '🕒 No puedo a esa hora', callback_data: `cita:no:${visitaId}:${versionCita(propuestaEn)}` }],
+  [{ text: 'Confirmo la cita', callback_data: `cita:ok:${visitaId}:${versionCita(propuestaEn)}` }],
+  [{ text: 'No puedo a esa hora', callback_data: `cita:no:${visitaId}:${versionCita(propuestaEn)}` }],
 ])
 
 export type ResultadoPropuesta = 'pendiente' | 'sin_telegram'
@@ -129,7 +129,7 @@ export async function proponerCita(p: { visitaId: string; usuarioId: string; com
   const { error } = await admin.from('visitas').update({ cita_propuesta_fecha: p.fecha, cita_propuesta_inicio: p.inicio, cita_propuesta_fin: p.fin, cita_propuesta_en: propuestaEn, cita_recordada_en: null, cita_escalada_en: null }).eq('id', p.visitaId)
   if (error) { console.error('[citas] no se pudo guardar la propuesta:', error.message); return 'sin_telegram' }
   try {
-    await sendTelegramMessage(chat, `📅 <b>${esc((u as { nombre: string } | null)?.nombre ?? 'El cliente')} eligió el horario de la visita</b>\n\n${esc(textoCita(p))}\n\nConfirma si puedes. Si no puedes a esa hora, el cliente elige otra sin costo.`, tecladoCita(p.visitaId, propuestaEn))
+    await sendTelegramMessage(chat, `<b>${esc((u as { nombre: string } | null)?.nombre ?? 'El cliente')} eligió el horario de la visita</b>\n\n${esc(textoCita(p))}\n\nConfirma si puedes. Si no puedes a esa hora, el cliente elige otra sin costo.`, tecladoCita(p.visitaId, propuestaEn))
   } catch (e) {
     // No se pudo avisar al compita: no se deja una propuesta que nadie vio.
     await admin.from('visitas').update({ cita_propuesta_fecha: null, cita_propuesta_inicio: null, cita_propuesta_fin: null, cita_propuesta_en: null }).eq('id', p.visitaId)
@@ -201,7 +201,7 @@ export async function escalarCitasSinRespuesta(ahora: Date = new Date()): Promis
       if (!rec) continue
       const [{ data: c }, { data: u }] = await Promise.all([admin.from('compitas').select('nombre').eq('id', v.compita_id).maybeSingle(), admin.from('usuarios').select('nombre').eq('id', v.usuario_id).maybeSingle()])
       const nc = (c as { nombre: string } | null)?.nombre ?? 'El compita'; const nu = (u as { nombre: string } | null)?.nombre ?? 'el cliente'
-      await alertaAdmin('tarea', `📅 <b>${esc(nc)} no confirma la cita</b>\n\n${esc(nu)} propuso ${esc(textoCita(p))} hace ${Math.floor(horas)} horas y ${esc(nc)} no responde. Escríbele por Telegram (no llames) o ayuda al cliente a elegir otra hora.`, { categoria: 'cita_sin_confirmar', clave: `cita:${v.id}:${versionCita(v.cita_propuesta_en)}`, entidad: { tipo: 'compita', id: v.compita_id, nombre: `📅 Cita sin confirmar: ${nc} / ${nu}` } })
+      await alertaAdmin('tarea', `<b>${esc(nc)} no confirma la cita</b>\n\n${esc(nu)} propuso ${esc(textoCita(p))} hace ${Math.floor(horas)} horas y ${esc(nc)} no responde. Escríbele por Telegram (no llames) o ayuda al cliente a elegir otra hora.`, { categoria: 'cita_sin_confirmar', clave: `cita:${v.id}:${versionCita(v.cita_propuesta_en)}`, entidad: { tipo: 'compita', id: v.compita_id, nombre: `Cita sin confirmar: ${nc} / ${nu}` } })
       await notificar({ plantilla: 'cita_sin_respuesta_cliente', canal: 'correo', destinatario: { tipo: 'cliente', id: v.usuario_id }, variables: { compitaId: v.compita_id, cuando: textoCita(p) }, entidad: 'visita', entidadId: v.id, paso: 11, claveUnica: `cita_sin_respuesta:${v.id}:${versionCita(v.cita_propuesta_en)}` })
       escaladas++
     } else if (!v.cita_recordada_en && horas >= Number(a.cita_recordatorio_horas)) {
@@ -209,7 +209,7 @@ export async function escalarCitasSinRespuesta(ahora: Date = new Date()): Promis
       if (!rec) continue
       const { data: c } = await admin.from('compitas').select('telegram_chat_id').eq('id', v.compita_id).maybeSingle()
       const chat = (c as { telegram_chat_id: string | null } | null)?.telegram_chat_id
-      if (chat) await sendTelegramMessage(chat, `⏰ <b>Falta tu respuesta</b>\n\nEl cliente espera que confirmes: ${esc(textoCita(p))}.`, tecladoCita(v.id, v.cita_propuesta_en)).catch(() => {})
+      if (chat) await sendTelegramMessage(chat, `<b>Falta tu respuesta</b>\n\nEl cliente espera que confirmes: ${esc(textoCita(p))}.`, tecladoCita(v.id, v.cita_propuesta_en)).catch(() => {})
       recordadas++
     }
   }

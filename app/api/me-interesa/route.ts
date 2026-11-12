@@ -68,13 +68,13 @@ export async function POST(req: NextRequest) {
   const adminTelegramId = process.env.TELEGRAM_ADMIN_CHAT_ID
 
   const mensajeTelegram = [
-    `🔔 <b>Interés en Compita</b>`,
+    `<b>Interés en Compita</b>`,
     ``,
     `<b>Cliente:</b> ${esc(clienteNombre)} (${esc(user.email)})`,
     `<b>Compita:</b> ${esc(compita_nombre)}`,
     ``,
     asignarUrl
-      ? `✅ <a href="${asignarUrl}">Asignar ${esc(compita_nombre)} a ${esc(clienteNombre)} →</a>`
+      ? `<a href="${asignarUrl}">Asignar ${esc(compita_nombre)} a ${esc(clienteNombre)} →</a>`
       : `Ve al panel admin para asignar.`,
   ].join('\n')
 

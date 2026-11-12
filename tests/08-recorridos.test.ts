@@ -66,7 +66,7 @@ describe('RECORRIDO 1: de la invitación de la compita hasta la valoración, tod
     await webhook(tgText(2000, codigoDe('lucia@mail.test')))
     assert.equal(lucia.telegram_chat_id, '2000')
     assert.deepEqual((await (await (cobertura as any)()).json()).data.zonas, [], 'vinculada pero sin verificar: no visible')
-    await webhook(tgText(2000, '▶️ Iniciar visita'))
+    await webhook(tgText(2000, 'Iniciar visita'))
     assert.match(ultimoTg(2000)!.text, /en revisión/)
 
     // ── 4. Edita su perfil desde el enlace de Telegram
@@ -132,14 +132,14 @@ describe('RECORRIDO 1: de la invitación de la compita hasta la valoración, tod
 
     // ── 11. El día de la visita: inicia, conversan, foto, termina, cuestionario
     visita.fecha_programada = hoyVEstr()
-    await webhook(tgText(2000, '▶️ Iniciar visita')); await webhook(tgText(2000, '✅ Sí, iniciar')); await confirmarLlegada()
+    await webhook(tgText(2000, 'Iniciar visita')); await webhook(tgText(2000, 'Sí, iniciar')); await confirmarLlegada()
     assert.equal(visita.estado, 'en_curso')
     await webhook(tgText(2000, 'Llegué, la señora está bien'))
     await webhook(tgFoto(2000))
     como(carlos)
     assert.equal((await sendMessage(req('/api/send-message', { json: { contenido: 'Gracias, ¿tomó su pastilla?' } }))).status, 200)
     assert.match(ultimoTg(2000)!.text, /pastilla/)
-    await webhook(tgText(2000, '🔴 Terminar visita')); await webhook(tgText(2000, '✅ Sí, terminar'))
+    await webhook(tgText(2000, 'Terminar visita')); await webhook(tgText(2000, 'Sí, terminar'))
     for (const r of ['rr:5', 'rr:5', 'rr:4', 'rr:5']) await webhook(tgBtn(2000, r))
     await webhook(tgText(2000, 'Comió muy bien y salió a caminar'))
     assert.equal(db.rows('reportes_visita').length, 1)
@@ -246,10 +246,10 @@ describe('RECORRIDO 3: el admin interviene a mitad de los flujos', () => {
 
   test('bloquean a la compita con la visita en curso: ya no puede escribir, terminar ni usar emergencia', async () => {
     const { lucia, v } = await mundoContratado()
-    await webhook(tgText(2200, '▶️ Iniciar visita')); await webhook(tgText(2200, '✅ Sí, iniciar')); await confirmarLlegada()
+    await webhook(tgText(2200, 'Iniciar visita')); await webhook(tgText(2200, 'Sí, iniciar')); await confirmarLlegada()
     admin(); await bloquearCompita(req('/api/admin/bloquear-compita', { json: { compita_id: lucia.id, bloquear: true } }))
     net.tg = []
-    for (const t of ['hola', '🔴 Terminar visita']) await webhook(tgText(2200, t))
+    for (const t of ['hola', 'Terminar visita']) await webhook(tgText(2200, t))
     await webhook(tgBtn(2200, 'emergencia'))
     assert.ok(tgPara(2200).every((m) => /no está vinculada|Comenzar|suspendida/i.test(m.text)))
     assert.equal(db.rows('mensajes').filter((m) => m.origen === 'compita').length, 0)
@@ -258,13 +258,13 @@ describe('RECORRIDO 3: el admin interviene a mitad de los flujos', () => {
 
   test('eliminar al cliente con una visita activa se rechaza: el bot no se rompe y la compita queda utilizable', async () => {
     const { lucia, carlos, v } = await mundoContratado()
-    await webhook(tgText(2200, '▶️ Iniciar visita')); await webhook(tgText(2200, '✅ Sí, iniciar')); await confirmarLlegada()
+    await webhook(tgText(2200, 'Iniciar visita')); await webhook(tgText(2200, 'Sí, iniciar')); await confirmarLlegada()
     admin()
     // Con una visita en curso no se puede eliminar la cuenta: no queda nada a medias y el bot sigue coherente.
     assert.equal((await eliminarCliente(req('/api/admin/eliminar-cliente', { method: 'DELETE', json: { usuario_id: carlos.id } }))).status, 409)
     assert.equal(db.rows('usuarios').length, 1)
     net.tg = []
-    for (const t of ['hola', '▶️ Iniciar visita', '🔴 Terminar visita']) { const r = await webhook(tgText(2200, t)); assert.equal(r.status, 200) }
+    for (const t of ['hola', 'Iniciar visita', 'Terminar visita']) { const r = await webhook(tgText(2200, t)); assert.equal(r.status, 200) }
     assert.ok(ultimoTg(2200), 'la compita sigue recibiendo respuestas coherentes (sin crash)')
     void lucia; void v
   })
@@ -325,8 +325,8 @@ describe('RECORRIDO 4: varios usuarios a la vez sobre la misma plataforma', () =
     assert.equal(carlos.compita_id, lucia.id); assert.equal(pedro.compita_id, ana.id)
     for (const v of db.rows('visitas')) { v.estado = 'programada'; v.fecha_programada = hoyVEstr(); v.hora_inicio_programada = '10:00'; v.hora_fin_programada = '11:00' }
     // Visitas simultáneas: lo que escribe cada compita va a su propio cliente
-    await webhook(tgText(2300, '▶️ Iniciar visita')); await webhook(tgText(2300, '✅ Sí, iniciar')); await confirmarLlegada()
-    await webhook(tgText(2301, '▶️ Iniciar visita')); await webhook(tgText(2301, '✅ Sí, iniciar')); await confirmarLlegada()
+    await webhook(tgText(2300, 'Iniciar visita')); await webhook(tgText(2300, 'Sí, iniciar')); await confirmarLlegada()
+    await webhook(tgText(2301, 'Iniciar visita')); await webhook(tgText(2301, 'Sí, iniciar')); await confirmarLlegada()
     net.emails = []
     await webhook(tgText(2300, 'mensaje de Lucía para Carlos')); await webhook(tgText(2301, 'mensaje de Ana para Pedro'))
     const vCarlos = db.rows('visitas').find((v) => v.usuario_id === carlos.id)!; const vPedro = db.rows('visitas').find((v) => v.usuario_id === pedro.id)!
@@ -340,8 +340,8 @@ describe('RECORRIDO 4: varios usuarios a la vez sobre la misma plataforma', () =
     assert.ok(tgPara(2300).some((m) => m.text.includes('desde Carlos')) && !tgPara(2300).some((m) => m.text.includes('desde Pedro')))
     assert.ok(tgPara(2301).some((m) => m.text.includes('desde Pedro')) && !tgPara(2301).some((m) => m.text.includes('desde Carlos')))
     // Terminan a la vez: un resumen por cliente, y cada cuestionario va a su visita
-    await Promise.all([webhook(tgText(2300, '🔴 Terminar visita')), webhook(tgText(2301, '🔴 Terminar visita'))])
-    await Promise.all([webhook(tgText(2300, '✅ Sí, terminar')), webhook(tgText(2301, '✅ Sí, terminar'))])
+    await Promise.all([webhook(tgText(2300, 'Terminar visita')), webhook(tgText(2301, 'Terminar visita'))])
+    await Promise.all([webhook(tgText(2300, 'Sí, terminar')), webhook(tgText(2301, 'Sí, terminar'))])
     assert.equal(emailsA('carlos@mail.test').filter((e) => e.subject.startsWith('Resumen')).length, 1)
     assert.equal(emailsA('pedro@mail.test').filter((e) => e.subject.startsWith('Resumen')).length, 1)
     for (const chat of [2300, 2301]) { for (const r of ['rr:5', 'rr:4', 'rr:3', 'rr:2']) await webhook(tgBtn(chat, r)); await webhook(tgBtn(chat, 'rn:skip')) }

@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
   if (!r.ok) return err(r.error)
   const s = r.solicitud
   const que = s.tipo === 'plan' ? `plan ${PLANES[s.plan as PlanId].nombre}` : `visita extra de ${s.horas} h`
-  await avisarAdmin(`💳 <b>${esc(String(cli.user_metadata?.nombre ?? cli.email ?? 'Cliente'))}</b> quiere pagar: ${esc(que)} ($${s.monto_usd}) por ${esc(ETIQUETA_METODO[s.metodo])}. Referencia ${referenciaDe(s.id)}. Cuando llegue el dinero, confírmalo aquí o en el panel.`, { inline_keyboard: [[{ text: 'Confirmar pago recibido', callback_data: `pagoconf:${s.id}` }]] }).catch(() => false)
+  await avisarAdmin(`<b>${esc(String(cli.user_metadata?.nombre ?? cli.email ?? 'Cliente'))}</b> quiere pagar: ${esc(que)} ($${s.monto_usd}) por ${esc(ETIQUETA_METODO[s.metodo])}. Referencia ${referenciaDe(s.id)}. Cuando llegue el dinero, confírmalo aquí o en el panel.`, { inline_keyboard: [[{ text: 'Confirmar pago recibido', callback_data: `pagoconf:${s.id}` }]] }).catch(() => false)
   await emailAdminPago('Un cliente quiere pagar en Compaz', `${String(cli.user_metadata?.nombre ?? cli.email ?? 'Un cliente')} quiere pagar ${que} ($${s.monto_usd}) por ${ETIQUETA_METODO[s.metodo]}. Referencia ${referenciaDe(s.id)}. Confirma el pago en el panel cuando llegue el dinero.`)
   return ok({ solicitud: s, referencia: referenciaDe(s.id), instrucciones: instruccionesPago(s.metodo as MetodoDirecto) })
 }

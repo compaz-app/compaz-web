@@ -44,7 +44,6 @@ export default function HoraForm({ solicitudId, compitaNombre, reservadaInicial 
     return (
       <main style={envoltura}>
         <div style={{ ...caja, background: colors.blanco, border: `2px solid ${colors.naranja}`, borderRadius: radius.lg, padding: spacing.lg, textAlign: 'center' }}>
-          <div style={{ fontSize: '32px' }}>⏳</div>
           <h1 style={{ fontFamily: fonts.display, fontSize: '24px', color: colors.textoOscuro, margin: '4px 0 8px' }}>Hora reservada</h1>
           <p style={{ color: colors.textoMedio, fontSize: '17px', lineHeight: 1.6, margin: 0 }}>{compitaNombre} recibe tu hora por Telegram y la confirma. Si no la confirma antes de las {hasta(venceEn)} (hora de Caracas), se libera y te avisamos para que elijas otra.</p>
           <p style={{ color: colors.textoSutil, fontSize: '15px', margin: `${spacing.sm} 0 ${spacing.md}` }}>No tienes que quedarte esperando: te escribimos por correo apenas responda.</p>

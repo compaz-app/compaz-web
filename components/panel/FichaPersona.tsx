@@ -67,7 +67,7 @@ export default function FichaPersona({ ficha, cerrarHref, pideMotivo, puedeConta
         {(ficha.etapa || (chatHref && ficha.compita)) && (
           <div className="flex flex-wrap items-center gap-2">
             {ficha.etapa && <span className="rounded-full bg-amarillo-claro px-3 py-1 text-xs font-bold text-ambar-oscuro">Paso: {ficha.etapa}{ficha.compita ? ` · con ${ficha.compita}` : ''}</span>}
-            {chatHref && ficha.compita && <Boton tamano="compacto" variante="secundario" navegacion href={chatHref}>💬 Ver chat</Boton>}
+            {chatHref && ficha.compita && <Boton tamano="compacto" variante="secundario" navegacion href={chatHref}>Ver chat</Boton>}
           </div>
         )}
         {ficha.canc && ficha.canc.total > 0 && (

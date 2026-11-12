@@ -33,7 +33,7 @@ test('SIN CALLEJÓN: registrada → vincula Telegram → "en revisión" → el a
   await webhook(tgText(7000, '/start')); await webhook(tgText(7000, 'Rosa Díaz'))
   await webhook(tgText(7000, codigoDe('rosa@mail.test')))
   assert.equal(rosa.telegram_chat_id, '7000')
-  await webhook(tgText(7000, '▶️ Iniciar visita'))
+  await webhook(tgText(7000, 'Iniciar visita'))
   assert.match(ultimoTg(7000)!.text, /en revisión/)
 
   const r = await verificar(rosa.id)
@@ -44,7 +44,7 @@ test('SIN CALLEJÓN: registrada → vincula Telegram → "en revisión" → el a
   // ya puede operar: con una visita programada para hoy, inicia sin el aviso de "en revisión"
   const cli = mkCliente({ email: 'cli@mail.test', compita_id: rosa.id })
   const v = mkVisita(cli, rosa, { estado: 'programada', fecha_programada: hoyVEstr(), hora_inicio_programada: '10:00', hora_fin_programada: '12:00' })
-  await webhook(tgText(7000, '▶️ Iniciar visita')); await webhook(tgText(7000, '✅ Sí, iniciar')); await confirmarLlegada()
+  await webhook(tgText(7000, 'Iniciar visita')); await webhook(tgText(7000, 'Sí, iniciar')); await confirmarLlegada()
   assert.equal(v.estado, 'en_curso')
 })
 

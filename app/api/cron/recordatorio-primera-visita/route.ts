@@ -45,12 +45,12 @@ export async function POST(req: NextRequest) {
         await sendTelegramMessage(
           compita.telegram_chat_id,
           [
-            `🗓️ <b>Recordatorio: visita mañana</b>`, ``,
+            `<b>Recordatorio: visita mañana</b>`, ``,
             `Mañana tienes visita con <b>${esc(cliente?.nombre ?? 'el cliente')}</b>.`, ``,
-            `📅 <b>${esc(fechaFormateada)}</b>`,
-            horarioLabel ? `🕐 <b>${esc(horarioLabel)}</b>` : '', ``,
+            `<b>${esc(fechaFormateada)}</b>`,
+            horarioLabel ? `<b>${esc(horarioLabel)}</b>` : '', ``,
             `Recuerda llegar puntual, presentarte con una sonrisa y revisar las notas del familiar. ¡Éxito!`, ``,
-            `🔄 <b>Si surge algún imprevisto:</b> toca el botón de abajo para reagendar y le avisaremos al cliente automáticamente.`,
+            `<b>Si surge algún imprevisto:</b> toca el botón de abajo para reagendar y le avisaremos al cliente automáticamente.`,
           ].filter(Boolean).join('\n'),
           INLINE_REAGENDAR_VISITA,
         )
@@ -64,11 +64,11 @@ export async function POST(req: NextRequest) {
           subject: `Recordatorio: mañana es la visita de ${compita?.nombre ?? 'tu compita'}`,
           html: `
             <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px">
-              <h2 style="color:#2D1464;font-size:22px;margin-bottom:12px">🗓️ Visita mañana</h2>
+              <h2 style="color:#2D1464;font-size:22px;margin-bottom:12px">Visita mañana</h2>
               <p style="color:#4A3B6B;font-size:15px;line-height:1.6">Mañana es la visita de <strong>${esc(compita?.nombre ?? 'tu compita')}</strong> con tu familiar.</p>
               <div style="background:#F5F0FF;border:2px solid #7C4DFF;border-radius:12px;padding:16px 20px;margin:16px 0;text-align:center">
                 <p style="color:#2D1464;font-size:18px;font-weight:800;margin:0 0 4px;text-transform:capitalize">${esc(fechaFormateada)}</p>
-                ${horarioLabel ? `<p style="color:#2D1464;font-size:16px;font-weight:700;margin:0">🕐 ${esc(horarioLabel)}</p>` : ''}
+                ${horarioLabel ? `<p style="color:#2D1464;font-size:16px;font-weight:700;margin:0">${esc(horarioLabel)}</p>` : ''}
               </div>
               <p style="color:#4A3B6B;font-size:14px;line-height:1.6">Si necesitas hacer algún cambio, entra al dashboard y comunícaselo a ${esc(compita?.nombre ?? 'tu compita')} por el chat. También puedes reagendar desde allí si surge algún imprevisto.</p>
               <a href="${SITE_URL}/dashboard" style="display:inline-block;background:#FF6B2B;color:white;padding:12px 24px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:14px;margin-top:8px">Ver en el dashboard →</a>
@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
       await admin.from('mensajes').insert({ visit_id: visita.id, origen: 'admin', tipo: 'texto', contenido: marcador })
       enviados++
     } else {
-      await alertaAdmin('tarea', `⚠️ No se pudo enviar el recordatorio de la visita de mañana (<b>${esc(compita?.nombre ?? '—')}</b> con <b>${esc(cliente?.nombre ?? '—')}</b>).`)
+      await alertaAdmin('tarea', `No se pudo enviar el recordatorio de la visita de mañana (<b>${esc(compita?.nombre ?? '—')}</b> con <b>${esc(cliente?.nombre ?? '—')}</b>).`)
     }
   }
   await latido('recordatorio-primera-visita')

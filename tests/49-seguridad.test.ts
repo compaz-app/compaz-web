@@ -24,15 +24,15 @@ function mundo(estado = 'en_curso', finEnMin = -20) {
   const visita = mkVisita(cliente, compita, { estado, fecha_programada: fin.fecha, hora_inicio_programada: ini.hora, hora_fin_programada: fin.hora, inicio: new Date(Date.now() - 100 * 60_000).toISOString(), contacto_nombre: 'Rosa Linares', contacto_tel: '+58 414 555 0101', created_at: new Date(Date.now() - 3600_000).toISOString() })
   return { compita, cliente, visita }
 }
-const seguro = () => webhook(tgText(CHAT, '🛡️ No me siento seguro'))
+const seguro = () => webhook(tgText(CHAT, 'No me siento seguro'))
 const flags = (tipo: string) => db.rows('admin_flags').filter((f) => f.tipo === tipo)
 const botones = (m: any) => (m?.markup?.inline_keyboard ?? []).flat().map((b: any) => b.callback_data)
 
 describe('"No me siento seguro"', () => {
   test('está en los teclados de la visita, y la emergencia en TODOS los teclados', () => {
     const textos = (t: any) => t.keyboard.flat().map((b: any) => b.text)
-    assert.ok(textos(TECLADO_INICIO).includes('🛡️ No me siento seguro')); assert.ok(textos(TECLADO_DURANTE_VISITA).includes('🛡️ No me siento seguro'))
-    for (const t of [TECLADO_SIN_VISITA, TECLADO_INICIO, TECLADO_DURANTE_VISITA]) assert.ok(textos(t).includes('🚨 Emergencia'))
+    assert.ok(textos(TECLADO_INICIO).includes('No me siento seguro')); assert.ok(textos(TECLADO_DURANTE_VISITA).includes('No me siento seguro'))
+    for (const t of [TECLADO_SIN_VISITA, TECLADO_INICIO, TECLADO_DURANTE_VISITA]) assert.ok(textos(t).includes('Emergencia'))
   })
 
   test('actúa de inmediato, sin pedir confirmación: la visita se interrumpe y el compita sabe qué sigue', async () => {
@@ -90,7 +90,7 @@ describe('"No me siento seguro"', () => {
   })
 
   test('la emergencia ya funciona también con la visita confirmando inicio', async () => {
-    mundo('confirmando_inicio', 60); await webhook(tgText(CHAT, '🚨 Emergencia'))
+    mundo('confirmando_inicio', 60); await webhook(tgText(CHAT, 'Emergencia'))
     assert.ok(avisosAdmin().some((m) => /EMERGENCIA/.test(m.text) && /Carolina Pérez/.test(m.text)))
   })
 })

@@ -220,7 +220,7 @@ export default function SolicitarForm({ compitaId, compitaNombre, precioMandado,
               </div>
             ) : (
               <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '48px', borderRadius: radius.md, border: `2px dashed ${colors.gris200}`, color: colors.textoMedio, fontWeight: 700, fontSize: '16px', cursor: subiendoFoto ? 'not-allowed' : 'pointer' }}>
-                {subiendoFoto ? 'Subiendo…' : '📷 Agregar mi foto'}
+                {subiendoFoto ? 'Subiendo…' : 'Agregar mi foto'}
                 <input type="file" accept="image/*" disabled={subiendoFoto} onChange={(e) => { void elegirFoto(e.target.files?.[0]); e.target.value = '' }} style={{ display: 'none' }} />
               </label>
             )}

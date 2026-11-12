@@ -80,7 +80,7 @@ function Novedades() {
         {items.map((n) => (
           <li key={n.h} className="rounded-2xl bg-[var(--warm-gray)] p-3">
             <div className="text-xs font-bold text-[var(--text-light)]">{n.h}</div>
-            {n.foto && <div className="mt-2 flex h-36 items-center justify-center rounded-xl bg-[var(--border-muted)] text-[var(--text-mid)]">📷 Foto</div>}
+            {n.foto && <div className="mt-2 flex h-36 items-center justify-center rounded-xl bg-[var(--border-muted)] text-[var(--text-mid)]">Foto</div>}
             <p className="mt-1 text-base">{n.t}</p>
           </li>
         ))}
@@ -113,7 +113,7 @@ function ChatMock() {
         ))}
       </div>
       {aviso && <p className="mt-3 rounded-xl bg-[#FEF2F2] p-3 text-sm font-bold text-[#991B1B]">Por seguridad no se pueden compartir teléfonos ni correos. Compaz conecta todo dentro de la plataforma. El equipo fue avisado.</p>}
-      <p className="mt-3 text-xs font-bold text-[#7a5b00]">🛡️ Nadie de Compaz te pedirá dinero ni datos por este chat. No compartas teléfonos ni correos: quien lo haga puede ser penalizado.</p>
+      <p className="mt-3 text-xs font-bold text-[#7a5b00]">Nadie de Compaz te pedirá dinero ni datos por este chat. No compartas teléfonos ni correos: quien lo haga puede ser penalizado.</p>
       <div className="mt-3 flex gap-2">
         <input value={txt} onChange={(e) => setTxt(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') enviar() }} placeholder="Escribe un mensaje" className="min-h-12 min-w-0 flex-1 rounded-xl border border-[var(--border-muted)] px-3 text-base" />
         <button onClick={enviar} className="min-h-12 rounded-xl bg-[var(--orange)] px-4 font-extrabold text-white">Enviar</button>
@@ -130,7 +130,7 @@ function Reporte() {
     <>
       <section className="mt-5 rounded-3xl border border-[var(--border-muted)] bg-white p-4">
         <h2 className="text-lg font-extrabold">Reporte de bienestar</h2>
-        <div className="mt-3 grid grid-cols-3 gap-2">{[1, 2, 3].map((n) => <div key={n} className="flex h-20 items-center justify-center rounded-xl bg-[var(--border-muted)] text-sm text-[var(--text-mid)]">📷 Foto {n}</div>)}</div>
+        <div className="mt-3 grid grid-cols-3 gap-2">{[1, 2, 3].map((n) => <div key={n} className="flex h-20 items-center justify-center rounded-xl bg-[var(--border-muted)] text-sm text-[var(--text-mid)]">Foto {n}</div>)}</div>
         <div className="mt-3 grid gap-2">
           {filas.map(([n, v]) => (
             <div key={n} className="flex items-center gap-3 text-base"><span className="w-32">{n}</span><div className="h-3 flex-1 overflow-hidden rounded-full bg-[var(--warm-gray)]"><div className="h-full bg-[var(--orange)]" style={{ width: `${(v / 5) * 100}%` }} /></div><b>{v}/5</b></div>
@@ -211,7 +211,7 @@ function FichaForm({ siguiente, etiqueta }: { siguiente: string; etiqueta: strin
           {nadie && <p role="status" className="mt-2 rounded-2xl bg-[#FEF3C7] p-3 text-sm font-bold text-[#92400E]">Anotado: el compita estará a solas con tu familiar. Esto cambia lo que dijiste en la solicitud (1 familiar y 1 vecina), así que le avisamos al compita antes de la visita.</p>}
         </div>
       </>}
-      <button className="min-h-14 rounded-2xl border-2 border-dashed border-[var(--border-muted)] text-base font-bold text-[var(--text-mid)]">📷 Foto de tu familiar (opcional)</button>
+      <button className="min-h-14 rounded-2xl border-2 border-dashed border-[var(--border-muted)] text-base font-bold text-[var(--text-mid)]">Foto de tu familiar (opcional)</button>
       <label className="flex items-start gap-3 text-base"><input type="checkbox" onChange={(e) => setOk(e.target.checked)} className="mt-1 h-6 w-6 shrink-0" /><span>Acepto que Compaz guarde estos datos y se los entregue solo al compita que me visita. Las fotos se borran a los 90 días de cerrada la visita. No contactaré al compita fuera de Compaz, y una visita en la que nadie abre se cuenta como usada.</span></label>
       <details className="rounded-2xl bg-[var(--warm-gray)] p-4 text-sm text-[var(--text-mid)]"><summary className="cursor-pointer font-bold text-[var(--text-dark)]">Leer los términos</summary><ol className="mt-2 list-decimal space-y-1 pl-5"><li>Guardamos los datos y las fotos de tu familiar y las tuyas solo para prestar el servicio.</li><li>Solo las ve el compita que te visita, y la dirección exacta solo 3 horas antes de la cita.</li><li>Las fotos de llegada se borran 90 días después de cerrada la visita.</li><li>No se contacta al compita fuera de Compaz.</li><li>Si el compita llega y nadie abre en 30 minutos, la visita se cuenta como usada.</li><li>Cambios y cancelaciones gratis hasta 24 horas antes.</li></ol></details>
       <p className={`text-sm ${ok ? 'font-bold text-green-700' : 'text-[var(--text-light)]'}`}>{ok ? '✓ Listo para guardar' : 'Para continuar tienes que aceptar.'}</p>
@@ -246,7 +246,7 @@ function Llegada() {
   return (
     <section className="mt-5 rounded-3xl border border-[var(--border-muted)] bg-white p-4">
       <h2 className="text-lg font-extrabold">Foto de llegada</h2>
-      <div className="mt-3 flex h-44 items-center justify-center rounded-2xl bg-[var(--border-muted)] text-[var(--text-mid)]">📷 Puerta del edificio · 9:58 am</div>
+      <div className="mt-3 flex h-44 items-center justify-center rounded-2xl bg-[var(--border-muted)] text-[var(--text-mid)]">Puerta del edificio · 9:58 am</div>
       <p className="mt-2 text-sm text-[var(--text-mid)]">La foto se guarda de forma privada y se borra 90 días después de cerrada la visita.</p>
     </section>
   )
@@ -272,7 +272,7 @@ function Video() {
       <p className="mt-1 text-base text-[var(--text-mid)]">Sin costo y sin descontar de tus visitas. Sin números de teléfono: todo pasa por Compaz.</p>
       {r ? <p className="mt-3 rounded-xl bg-[var(--warm-gray)] p-3 font-bold">✓ {r}</p> : (
         <div className="mt-3 grid gap-2">
-          {[['🎬 Mensaje de video', 'Enviado. María lo recibe por Telegram.'], ['📞 Llamada de voz', 'Le preguntamos a María si puede ahora. Te avisamos.'], ['🎥 Videollamada', 'Le preguntamos a María a qué hora puede. Máximo 20 minutos, sin grabar.']].map(([t, m]) => <button key={t} onClick={() => setR(m)} className="min-h-12 rounded-xl border-2 border-[var(--purple)] font-extrabold text-[var(--purple)]">{t}</button>)}
+          {[['Mensaje de video', 'Enviado. María lo recibe por Telegram.'], ['Llamada de voz', 'Le preguntamos a María si puede ahora. Te avisamos.'], ['Videollamada', 'Le preguntamos a María a qué hora puede. Máximo 20 minutos, sin grabar.']].map(([t, m]) => <button key={t} onClick={() => setR(m)} className="min-h-12 rounded-xl border-2 border-[var(--purple)] font-extrabold text-[var(--purple)]">{t}</button>)}
         </div>
       )}
     </section>
@@ -414,7 +414,7 @@ function CoordinarVisita() {
     <section className="mt-3 rounded-3xl border-2 border-[var(--purple)] bg-white p-4">
       <h2 className="text-lg font-extrabold">Ponte de acuerdo con María</h2>
       <p className="mt-1 text-sm text-[var(--text-mid)]">Abrimos este chat para que acuerden el día y la hora de la próxima visita.</p>
-      <p role="note" className="mt-3 rounded-2xl border border-[#F5B800] bg-[#FFFBEB] p-3 text-sm font-bold text-[#92400E]">🛡️ {RECORDATORIO_CHAT}</p>
+      <p role="note" className="mt-3 rounded-2xl border border-[#F5B800] bg-[#FFFBEB] p-3 text-sm font-bold text-[#92400E]">{RECORDATORIO_CHAT}</p>
       <div className="mt-3 grid gap-2">
         {msgs.map((m, i) => <div key={i} className={`max-w-[85%] rounded-2xl px-3 py-2 text-base ${m.de === 'Tú' ? 'justify-self-end bg-[var(--purple)] text-white' : 'bg-[var(--warm-gray)]'}`}>{m.t}</div>)}
       </div>
@@ -463,8 +463,8 @@ const momentoDe = (estado: string) => (SIN_PAGO.includes(estado) ? 'sin_pago' : 
 
 // Cómo ha estado el familiar a lo largo de las visitas: los mismos cuatro indicadores del reporte de cada visita, con la flecha respecto a la anterior.
 const INDICADORES = [
-  { n: 'Ánimo', e: '😊', v: [3, 4, 5] }, { n: 'Condición física', e: '💪', v: [3, 3, 4] },
-  { n: 'Participación', e: '🤝', v: [3, 4, 5] }, { n: 'Ambiente y entorno', e: '🏠', v: [4, 4, 5] },
+  { n: 'Ánimo', e: '', v: [3, 4, 5] }, { n: 'Condición física', e: '', v: [3, 3, 4] },
+  { n: 'Participación', e: '', v: [3, 4, 5] }, { n: 'Ambiente y entorno', e: '', v: [4, 4, 5] },
 ] as const
 const ESCALA = ['', 'Muy bajo', 'Bajo', 'Regular', 'Bueno', 'Excelente']
 function Tendencia() {
@@ -503,7 +503,7 @@ function Visitas() {
       <>
         <Cabecera t="Mis visitas" />
         <section className="mt-4 rounded-3xl border border-dashed border-[var(--border-muted)] bg-white p-6 text-center">
-          <div className="text-3xl" aria-hidden>📅</div>
+          <div className="text-3xl" aria-hidden></div>
           <h2 className="mt-2 text-xl font-extrabold">Aún no tienes visitas</h2>
           <p className="mt-1 text-base text-[var(--text-mid)]">{momento === 'revision' ? 'Apenas confirmemos tu pago podrás agendar tu primera visita.' : 'Cuando elijas a tu compita y confirmemos tu pago, podrás agendar tu primera visita aquí.'}</p>
           <Link href={`/prototipo/cliente?estado=${estado}`} className="mt-4 flex min-h-12 items-center justify-center rounded-2xl border-2 border-[var(--purple)] font-extrabold text-[var(--purple)]">Volver al inicio</Link>
@@ -640,7 +640,7 @@ function Inner() {
     <main className={`mx-auto max-w-xl px-4 pt-4 lg:max-w-2xl ${embebido ? 'flex min-h-full flex-col pb-0' : 'pb-28 lg:pb-12'}`}>
       {!embebido && (
         <nav className="mb-2 hidden gap-1 rounded-2xl border border-[var(--border-muted)] bg-white p-1 lg:flex" aria-label="Secciones del portal">
-          {[['inicio', '🏠', 'Inicio'], ['visitas', '📅', 'Visitas'], ['familiar', '👵', 'Mi familiar'], ['plan', '💳', 'Mi plan']].map(([id, i, t]) => (
+          {[['inicio', '', 'Inicio'], ['visitas', '', 'Visitas'], ['familiar', '', 'Mi familiar'], ['plan', '', 'Mi plan']].map(([id, i, t]) => (
             <button key={id} onClick={() => setSec(id)} aria-current={sec === id ? 'page' : undefined} className={`flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl text-base font-bold ${sec === id ? 'bg-[var(--purple)] text-white' : 'text-[var(--text-mid)] hover:bg-[var(--warm-gray)]'}`}><span aria-hidden>{i}</span>{t}</button>
           ))}
         </nav>
@@ -743,7 +743,7 @@ function Inner() {
 
       {embebido && <div className="min-h-6 flex-1" />}
       <nav className={`${embebido ? 'sticky -mx-4' : 'fixed inset-x-0 lg:hidden'} bottom-0 z-30 grid grid-cols-4 border-t border-[var(--border-muted)] bg-white`} aria-label="Secciones del portal">
-        {[['inicio', '🏠', 'Inicio'], ['visitas', '📅', 'Visitas'], ['familiar', '👵', 'Mi familiar'], ['plan', '💳', 'Mi plan']].map(([id, i, t]) => (
+        {[['inicio', '', 'Inicio'], ['visitas', '', 'Visitas'], ['familiar', '', 'Mi familiar'], ['plan', '', 'Mi plan']].map(([id, i, t]) => (
           <button key={id} onClick={() => setSec(id)} aria-current={sec === id ? 'page' : undefined} className={`flex min-h-16 flex-col items-center justify-center text-xs font-bold ${sec === id ? 'text-[var(--orange-dark)]' : 'text-[var(--text-mid)]'}`}>
             <span className="text-2xl">{i}</span>{t}
           </button>

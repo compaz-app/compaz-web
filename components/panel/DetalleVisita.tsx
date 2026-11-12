@@ -20,7 +20,7 @@ export default function DetalleVisita({ d, ahora, cerrarHref, fichaClienteHref, 
         <EncabezadoLateral etiqueta="Visita" titulo={<>{v.cliente}<span className="font-bold text-texto-medio"> con {v.compita}</span></>} detalle={`${etiquetaVisita(v.ts, ahora)}${v.zona ? ` · ${v.zona}` : ''}`} cerrarHref={cerrarHref} />
         <section className="space-y-2 rounded-xl border border-borde p-3">
           <div className="flex flex-wrap items-center gap-2"><span className="rounded-full bg-gris100 px-2 py-0.5 text-xs font-bold text-texto-medio">{v.estado}</span>{v.rating !== null && <span className={`text-sm font-bold ${v.rating <= 3 ? 'text-rojo-oscuro' : 'text-texto-medio'}`}>{'★'.repeat(v.rating)}</span>}</div>
-          {v.motivo && <p className="text-sm font-bold text-rojo-oscuro">⚠ {v.motivo}</p>}
+          {v.motivo && <p className="text-sm font-bold text-rojo-oscuro">{v.motivo}</p>}
           {hacer ? <Aviso tamano="compacto" tono={v.motivo ? 'advertencia' : 'info'}>{hacer}</Aviso> : <p className="text-sm text-texto-sutil">No hay nada que hacer con esta visita.</p>}
         </section>
         <section className="space-y-2">
@@ -28,7 +28,7 @@ export default function DetalleVisita({ d, ahora, cerrarHref, fichaClienteHref, 
           <div className="flex flex-wrap gap-2">
             <Boton tamano="compacto" variante="secundario" navegacion href={fichaClienteHref}>Ficha del cliente</Boton>
             <Boton tamano="compacto" variante="secundario" navegacion href={fichaCompitaHref}>Ficha del compita</Boton>
-            {chatHref && <Boton tamano="compacto" variante="secundario" navegacion href={chatHref}>💬 Chat</Boton>}
+            {chatHref && <Boton tamano="compacto" variante="secundario" navegacion href={chatHref}>Chat</Boton>}
           </div>
         </section>
         {puedeAtender && v.estado === 'En curso' && (

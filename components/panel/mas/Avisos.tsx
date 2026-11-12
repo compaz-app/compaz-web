@@ -29,12 +29,12 @@ export default function Avisos({ filas, ver, pagina, enlace, puedeReintentar }: 
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-x-2 text-sm"><b>{a.para}</b><span className="rounded bg-gris100 px-1.5 text-[11px] font-bold text-texto-medio">{ROL[a.rol]}</span><span className="text-xs text-texto-sutil">{a.canal === 'telegram' ? 'Telegram' : 'Correo'} · {cuandoLinea(a.creado)}</span></div>
               <div className="text-sm text-texto-medio">{nombreDePlantilla(a.plantilla)}</div>
-              {a.estado === 'fallido' && <div className="text-xs font-bold text-rojo-oscuro">⚠ {a.error ?? 'No se pudo entregar'} · {a.intentos} {a.intentos === 1 ? 'intento' : 'intentos'}</div>}
+              {a.estado === 'fallido' && <div className="text-xs font-bold text-rojo-oscuro">{a.error ?? 'No se pudo entregar'} · {a.intentos} {a.intentos === 1 ? 'intento' : 'intentos'}</div>}
             </div>
             {a.estado === 'fallido' && puedeReintentar && <BotonReintentar avisoId={a.id} />}
           </li>
         ))}
-        {!lista.length && <li className="p-6 text-center text-texto-sutil">{ver === 'fallidos' ? 'No hay avisos fallidos. 🎉' : 'Todavía no se ha enviado ningún aviso.'}</li>}
+        {!lista.length && <li className="p-6 text-center text-texto-sutil">{ver === 'fallidos' ? 'No hay avisos fallidos.' : 'Todavía no se ha enviado ningún aviso.'}</li>}
       </ul>
       <Paginador resumen={`${lista.length} ${lista.length === 1 ? 'aviso' : 'avisos'}`} pag={p.pag} paginas={p.paginas} hrefAnterior={p.pag > 1 ? enlace({ av_pag: p.pag - 1 > 1 ? String(p.pag - 1) : null }) : null} hrefSiguiente={p.pag < p.paginas ? enlace({ av_pag: String(p.pag + 1) }) : null} />
     </section>

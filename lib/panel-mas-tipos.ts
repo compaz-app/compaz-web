@@ -4,7 +4,7 @@ import type { ActorVista } from '@/lib/panel-secciones'
 export type SubMas = 'resenas' | 'invitar' | 'postulaciones' | 'pagos' | 'avisos' | 'cobertura' | 'umbrales' | 'equipo' | 'ajustes' | 'actividad' | 'limites' | 'manual' | 'registro' | 'estado'
 
 export interface DefMas {
-  id: SubMas; icono: string; texto: string; descripcion: string
+  id: SubMas; texto: string; descripcion: string
   /** Quién la ve (el panel viejo y el servidor siguen comprobando lo suyo; esto solo decide qué se muestra). */
   visible: (a: ActorVista) => boolean
   /** true = ya se hace en el panel nuevo; false = por ahora se sigue haciendo en el panel actual. */
@@ -16,20 +16,20 @@ const con = (p: keyof ActorVista['permisos']) => (a: ActorVista) => a.rol === 'a
 const soloAdmin = (a: ActorVista) => a.rol === 'admin'
 
 export const HUB: DefMas[] = [
-  { id: 'resenas', icono: '⭐', texto: 'Reseñas por aprobar', descripcion: 'Aprueba u oculta lo que el cliente escribe antes de que se vea en el perfil del compita.', visible: con('atender'), listo: true },
-  { id: 'invitar', icono: '✉️', texto: 'Invitar', descripcion: 'Suma a un cliente por correo o genera un enlace de registro para un compita.', visible: con('invitar'), listo: true },
-  { id: 'postulaciones', icono: '📥', texto: 'Postulaciones y origen (CMC)', descripcion: 'Quién se postuló, desde qué página o campaña llegó y si calificó.', visible: soloAdmin, listo: true },
-  { id: 'pagos', icono: '💵', texto: 'Pagos', descripcion: 'Pagos registrados, con la opción de anular uno si hubo un error.', visible: con('pagos'), listo: true },
-  { id: 'avisos', icono: '📨', texto: 'Avisos enviados', descripcion: 'Qué se le mandó a cada persona, por qué canal y si llegó. Aquí se reintentan los fallidos.', visible: con('monitorear'), listo: true },
-  { id: 'cobertura', icono: '🗺️', texto: 'Cobertura y demanda', descripcion: 'Por zona: compitas disponibles frente a solicitudes del mes. Dónde falta reclutar.', visible: con('monitorear'), listo: true },
-  { id: 'umbrales', icono: '🚦', texto: 'Ajustes del semáforo', descripcion: 'Cuántas horas son normales en cada etapa antes de pasar a amarillo y rojo.', visible: (a) => a.rol === 'admin' || a.permisos.ajustes_ver === true || a.permisos.ajustes_editar === true, listo: true },
-  { id: 'equipo', icono: '🧑‍🤝‍🧑', texto: 'Equipo y permisos', descripcion: 'Quién entra al panel, con qué rol y qué puede hacer cada uno.', visible: soloAdmin, listo: true },
-  { id: 'ajustes', icono: '🎛️', texto: 'Ajustes', descripcion: 'Precios, plazos, topes y umbrales. Se cambian aquí, con registro de quién y cuándo; no hay que tocar el código.', visible: (a) => a.rol === 'admin' || a.permisos.ajustes_ver === true || a.permisos.ajustes_editar === true, listo: true },
-  { id: 'actividad', icono: '📜', texto: 'Actividad', descripcion: 'Todo lo que pasó en el sistema, en orden. Aquí no suena nada: se consulta cuando hace falta.', visible: con('monitorear'), listo: true },
-  { id: 'limites', icono: '⏳', texto: 'Límites y esperas', descripcion: 'Lo que el sistema frena a propósito (plazos entre envíos, máximos) y por qué. Para responder "¿por qué no deja hacerlo otra vez?".', visible: con('monitorear'), listo: true },
-  { id: 'manual', icono: '📖', texto: 'Manual', descripcion: 'Cómo funciona todo el sistema y qué hacer en cada situación. Se busca con tus palabras.', visible: todos, listo: true },
-  { id: 'registro', icono: '🗂️', texto: 'Registro de accesos', descripcion: 'Quién del equipo vio un teléfono, un correo o un chat, cuándo y por qué.', visible: con('telefonos'), listo: true },
-  { id: 'estado', icono: '🩺', texto: 'Estado del sistema', descripcion: 'Procesos automáticos y avisos fallidos: si algo dejó de funcionar, se ve aquí.', visible: con('monitorear'), listo: true },
+  { id: 'resenas', texto: 'Reseñas por aprobar', descripcion: 'Aprueba u oculta lo que el cliente escribe antes de que se vea en el perfil del compita.', visible: con('atender'), listo: true },
+  { id: 'invitar', texto: 'Invitar', descripcion: 'Suma a un cliente por correo o genera un enlace de registro para un compita.', visible: con('invitar'), listo: true },
+  { id: 'postulaciones', texto: 'Postulaciones y origen (CMC)', descripcion: 'Quién se postuló, desde qué página o campaña llegó y si calificó.', visible: soloAdmin, listo: true },
+  { id: 'pagos', texto: 'Pagos', descripcion: 'Pagos registrados, con la opción de anular uno si hubo un error.', visible: con('pagos'), listo: true },
+  { id: 'avisos', texto: 'Avisos enviados', descripcion: 'Qué se le mandó a cada persona, por qué canal y si llegó. Aquí se reintentan los fallidos.', visible: con('monitorear'), listo: true },
+  { id: 'cobertura', texto: 'Cobertura y demanda', descripcion: 'Por zona: compitas disponibles frente a solicitudes del mes. Dónde falta reclutar.', visible: con('monitorear'), listo: true },
+  { id: 'umbrales', texto: 'Ajustes del semáforo', descripcion: 'Cuántas horas son normales en cada etapa antes de pasar a amarillo y rojo.', visible: (a) => a.rol === 'admin' || a.permisos.ajustes_ver === true || a.permisos.ajustes_editar === true, listo: true },
+  { id: 'equipo', texto: 'Equipo y permisos', descripcion: 'Quién entra al panel, con qué rol y qué puede hacer cada uno.', visible: soloAdmin, listo: true },
+  { id: 'ajustes', texto: 'Ajustes', descripcion: 'Precios, plazos, topes y umbrales. Se cambian aquí, con registro de quién y cuándo; no hay que tocar el código.', visible: (a) => a.rol === 'admin' || a.permisos.ajustes_ver === true || a.permisos.ajustes_editar === true, listo: true },
+  { id: 'actividad', texto: 'Actividad', descripcion: 'Todo lo que pasó en el sistema, en orden. Aquí no suena nada: se consulta cuando hace falta.', visible: con('monitorear'), listo: true },
+  { id: 'limites', texto: 'Límites y esperas', descripcion: 'Lo que el sistema frena a propósito (plazos entre envíos, máximos) y por qué. Para responder "¿por qué no deja hacerlo otra vez?".', visible: con('monitorear'), listo: true },
+  { id: 'manual', texto: 'Manual', descripcion: 'Cómo funciona todo el sistema y qué hacer en cada situación. Se busca con tus palabras.', visible: todos, listo: true },
+  { id: 'registro', texto: 'Registro de accesos', descripcion: 'Quién del equipo vio un teléfono, un correo o un chat, cuándo y por qué.', visible: con('telefonos'), listo: true },
+  { id: 'estado', texto: 'Estado del sistema', descripcion: 'Procesos automáticos y avisos fallidos: si algo dejó de funcionar, se ve aquí.', visible: con('monitorear'), listo: true },
 ]
 
 export const hubVisible = (a: ActorVista): DefMas[] => HUB.filter((h) => h.visible(a))

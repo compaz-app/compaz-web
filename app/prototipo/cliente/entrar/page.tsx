@@ -42,7 +42,7 @@ function EntrarInner() {
 
       {paso === 'enviado' && (
         <section className="mt-6 rounded-3xl border border-[var(--border-muted)] bg-white p-6">
-          <div className="text-4xl">📬</div>
+          <div className="text-4xl"></div>
           <h1 className="mt-2 text-2xl font-extrabold">Revisa tu correo</h1>
           <p className="mt-2 text-lg text-[var(--text-mid)]">Te enviamos un enlace a <b>{correo}</b>. Tócalo y entras.</p>
           <div className="mt-4 rounded-2xl bg-[var(--warm-gray)] p-4 text-base">

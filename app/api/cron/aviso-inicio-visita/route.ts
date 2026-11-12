@@ -1,5 +1,5 @@
 // POST /api/cron/aviso-inicio-visita — cada 15 min
-// 1. 30 min antes de la hora programada le envía al compita el botón ▶️ Iniciar visita.
+// 1. 30 min antes de la hora programada le envía al compita el botón Iniciar visita.
 // 2. Auto-confirma visitas en estado 'confirmando_inicio' que llevan más de 5 min sin
 //    confirmación del cliente (para no bloquear al compita si el cliente no responde).
 import { NextRequest, NextResponse } from 'next/server'
@@ -42,16 +42,16 @@ export async function POST(req: NextRequest) {
       try {
         await sendTelegramMessage(
           compita.telegram_chat_id,
-          [`⏰ <b>Tu visita empieza en ~30 minutos</b>`, ``, `Cuando llegues donde <b>${esc(cliente?.nombre ?? 'el cliente')}</b> y vayas a comenzar, toca el botón <b>▶️ Iniciar visita</b> de tu teclado.`].join('\n'),
+          [`<b>Tu visita empieza en ~30 minutos</b>`, ``, `Cuando llegues donde <b>${esc(cliente?.nombre ?? 'el cliente')}</b> y vayas a comenzar, toca el botón <b>Iniciar visita</b> de tu teclado.`].join('\n'),
           TECLADO_INICIO,
         )
         enviados++
       } catch (e) {
         console.error('[aviso-inicio-visita] Telegram falló:', e)
-        await alertaAdmin('tarea', `⚠️ No se pudo enviar el aviso de inicio a <b>${esc(compita.nombre)}</b> para la visita con <b>${esc(cliente?.nombre ?? '—')}</b> a las <b>${esc(visita.hora_inicio_programada!)}</b>. Contáctala manualmente.`)
+        await alertaAdmin('tarea', `No se pudo enviar el aviso de inicio a <b>${esc(compita.nombre)}</b> para la visita con <b>${esc(cliente?.nombre ?? '—')}</b> a las <b>${esc(visita.hora_inicio_programada!)}</b>. Contáctala manualmente.`)
       }
     } else {
-      await alertaAdmin('tarea', `⚠️ <b>${esc(compita?.nombre ?? '—')}</b> no tiene Telegram registrado. Su visita con <b>${esc(cliente?.nombre ?? '—')}</b> empieza a las <b>${esc(visita.hora_inicio_programada!)}</b>. Avísale tú.`)
+      await alertaAdmin('tarea', `<b>${esc(compita?.nombre ?? '—')}</b> no tiene Telegram registrado. Su visita con <b>${esc(cliente?.nombre ?? '—')}</b> empieza a las <b>${esc(visita.hora_inicio_programada!)}</b>. Avísale tú.`)
     }
   }
 
@@ -86,12 +86,12 @@ export async function POST(req: NextRequest) {
       if (usuario.familiar_edad) perfilLineas.push(`<b>Edad:</b> ${esc(String(usuario.familiar_edad))} años`)
       if (usuario.familiar_condicion) perfilLineas.push(`<b>Condición:</b> ${esc(usuario.familiar_condicion)}`)
       if (usuario.familiar_notas) perfilLineas.push(`<b>Notas:</b> ${esc(usuario.familiar_notas)}`)
-      const perfilTexto = perfilLineas.length > 0 ? `\n\n👤 <b>Perfil del familiar:</b>\n${perfilLineas.join('\n')}` : ''
+      const perfilTexto = perfilLineas.length > 0 ? `\n\n<b>Perfil del familiar:</b>\n${perfilLineas.join('\n')}` : ''
 
       try {
         await sendTelegramMessage(
           compita.telegram_chat_id,
-          `✅ <b>¡Visita iniciada automáticamente!</b>\n\nEl cliente no confirmó a tiempo, pero la visita arrancó igual.${perfilTexto}\n\n📸 Puedes mandar fotos y mensajes desde aquí.\n\nCuando termines, toca el botón 🔴 de tu teclado. 👇`,
+          `<b>¡Visita iniciada automáticamente!</b>\n\nEl cliente no confirmó a tiempo, pero la visita arrancó igual.${perfilTexto}\n\nPuedes mandar fotos y mensajes desde aquí.\n\nCuando termines, toca el botón de tu teclado.`,
           TECLADO_DURANTE_VISITA,
         )
       } catch (e) { console.error('[aviso-inicio-visita] Telegram auto-confirma:', e) }
@@ -101,7 +101,7 @@ export async function POST(req: NextRequest) {
     catch (e) { console.error('[aviso-inicio-visita] email auto-confirma:', e) }
 
     const horaInicio = new Date(ahora).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Caracas', hour12: true })
-    await alertaAdmin('actividad', `▶️ <b>Visita auto-iniciada</b> (cliente no confirmó)\n\n<b>Compita:</b> ${esc(compita.nombre)}\n<b>Cliente:</b> ${esc(usuario.nombre)}\n<b>Hora:</b> ${horaInicio}`)
+    await alertaAdmin('actividad', `<b>Visita auto-iniciada</b> (cliente no confirmó)\n\n<b>Compita:</b> ${esc(compita.nombre)}\n<b>Cliente:</b> ${esc(usuario.nombre)}\n<b>Hora:</b> ${horaInicio}`)
     autoConfirmados++
   }
 

@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { ZONAS_MUNICIPIOS as ZONAS } from '@/lib/venezuela'
 import { colors } from '@/lib/design'
-import { OpcionesProximamenteCompita } from '@/components/ui/Proximamente'
+import { OpcionesProximamenteCompita, SeccionCuidadorMascotas } from '@/components/ui/Proximamente'
 
 // ── Servicios ─────────────────────────────────────────────────────────────────
 
@@ -344,7 +344,7 @@ function OnboardingForm() {
           )}
           <div style={{ background: '#FFF3E8', border: '2px solid #FF6B2B', borderRadius: '14px', padding: '16px 20px', marginBottom: '24px' }}>
             <p style={{ color: '#C84B0E', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif', fontSize: '15px', margin: '0 0 6px' }}>
-              ⚠️ Tu perfil no aparece para los clientes todavía
+              Tu perfil no aparece para los clientes todavía
             </p>
             <p style={{ color: '#7A3A0A', fontSize: '14px', lineHeight: '1.6', margin: 0 }}>
               Para que los clientes puedan encontrarte y contactarte, debes conectar Telegram. Sin eso, tu perfil permanece invisible en el sistema.
@@ -385,7 +385,7 @@ function OnboardingForm() {
               </li>
             </ol>
             <div style={{ marginTop: '16px', padding: '14px 16px', background: '#FFF3CD', borderLeft: '4px solid #FF6B2B', borderRadius: '8px' }}>
-              <p style={{ fontSize: '13px', fontWeight: 700, color: '#1A0A3C', margin: '0 0 4px 0' }}>🚨 Alerta de fraude</p>
+              <p style={{ fontSize: '13px', fontWeight: 700, color: '#1A0A3C', margin: '0 0 4px 0' }}>Alerta de fraude</p>
               <p style={{ fontSize: '13px', color: '#1A0A3C', margin: 0 }}>El código llega únicamente por correo. Compaz nunca te llamará por teléfono. No compartas este código con nadie.</p>
             </div>
           </div>
@@ -409,7 +409,6 @@ function OnboardingForm() {
         </p>
         {tieneBorrador && (
           <div style={{ background: '#EDE8FF', border: '2px solid rgba(45,20,100,0.2)', borderRadius: '12px', padding: '10px 16px', marginBottom: '32px', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: '#2D1464', fontWeight: 600 }}>
-            <span style={{ fontSize: '16px' }}>💾</span>
             Continuamos donde lo dejaste — tus datos están guardados en este dispositivo.
           </div>
         )}
@@ -555,6 +554,7 @@ function OnboardingForm() {
           </div>
 
           <OpcionesProximamenteCompita />
+          <SeccionCuidadorMascotas />
 
           {/* Foto */}
           <div>
@@ -567,7 +567,7 @@ function OnboardingForm() {
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src="/images/ejemplo-foto-perfil.webp" alt="Ejemplo foto buena" style={{ width: '100%', maxHeight: '160px', objectFit: 'contain', display: 'block', background: '#f5f5f5' }} />
                 <div style={{ padding: '8px 10px' }}>
-                  <p style={{ fontSize: '11px', color: '#2E7D32', fontWeight: 700, margin: '0 0 2px' }}>✅ Así sí</p>
+                  <p style={{ fontSize: '11px', color: '#2E7D32', fontWeight: 700, margin: '0 0 2px' }}>Así sí</p>
                   <p style={{ fontSize: '11px', color: '#4A3B6B', margin: 0, lineHeight: '1.4' }}>Rostro centrado, fondo claro, buena luz</p>
                 </div>
               </div>
@@ -575,7 +575,7 @@ function OnboardingForm() {
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src="/images/ejemplo-foto-perfil.webp" alt="Ejemplo foto mala" style={{ width: '100%', maxHeight: '160px', objectFit: 'contain', display: 'block', background: '#111', filter: 'brightness(0.25) contrast(0.8)' }} />
                 <div style={{ padding: '8px 10px' }}>
-                  <p style={{ fontSize: '11px', color: '#C62828', fontWeight: 700, margin: '0 0 2px' }}>❌ Así no</p>
+                  <p style={{ fontSize: '11px', color: '#C62828', fontWeight: 700, margin: '0 0 2px' }}>Así no</p>
                   <p style={{ fontSize: '11px', color: '#4A3B6B', margin: 0, lineHeight: '1.4' }}>Oscura, cara sin ver, fondo desordenado</p>
                 </div>
               </div>
@@ -669,7 +669,7 @@ function OnboardingForm() {
             )}
             {horarioError && (
               <p style={{ marginTop: '8px', color: '#B91C1C', fontSize: '13px', background: '#FEF2F2', border: '1px solid #FCA5A5', borderRadius: '8px', padding: '8px 12px', lineHeight: '1.5' }}>
-                ⚠️ {horarioError}
+                {horarioError}
               </p>
             )}
           </div>
@@ -686,21 +686,19 @@ function OnboardingForm() {
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src="/images/ejemplo-video.webp" alt="Ejemplo video vertical" style={{ width: '100%', maxHeight: '200px', objectFit: 'contain', display: 'block', background: '#f0ece8' }} />
                 <div style={{ padding: '8px 10px' }}>
-                  <p style={{ fontSize: '11px', color: '#2E7D32', fontWeight: 700, margin: '0 0 2px' }}>✅ Así sí — vertical, buena luz</p>
+                  <p style={{ fontSize: '11px', color: '#2E7D32', fontWeight: 700, margin: '0 0 2px' }}>Así sí — vertical, buena luz</p>
                   <p style={{ fontSize: '11px', color: '#4A3B6B', margin: 0, lineHeight: '1.4' }}>Teléfono parado, cara visible, fondo simple</p>
                 </div>
               </div>
               <div style={{ flex: 1, background: '#F8F8F8', border: '2px solid #FFCDD2', borderRadius: '12px', overflow: 'hidden' as const }}>
                 <div style={{ height: '160px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#222' }}>
                   <div style={{ width: '140px', height: '80px', background: '#444', borderRadius: '6px', border: '2px solid #666', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' as const }}>
-                    <span style={{ fontSize: '28px' }}>😊</span>
                     <div style={{ position: 'absolute' as const, top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <span style={{ color: 'white', fontSize: '24px' }}>❌</span>
                     </div>
                   </div>
                 </div>
                 <div style={{ padding: '8px 10px' }}>
-                  <p style={{ fontSize: '11px', color: '#C62828', fontWeight: 700, margin: '0 0 2px' }}>❌ Así no — horizontal</p>
+                  <p style={{ fontSize: '11px', color: '#C62828', fontWeight: 700, margin: '0 0 2px' }}>Así no — horizontal</p>
                   <p style={{ fontSize: '11px', color: '#4A3B6B', margin: 0, lineHeight: '1.4' }}>Sale con barras negras arriba y abajo</p>
                 </div>
               </div>
@@ -778,7 +776,7 @@ function OnboardingForm() {
         <div style={{ maxWidth: '640px', margin: '0 auto' }}>
           {errorForm && (
             <p style={{ color: '#B91C1C', fontSize: '13px', fontWeight: 600, marginBottom: '8px', textAlign: 'center' as const }}>
-              ⚠️ {errorForm}
+              {errorForm}
             </p>
           )}
           <button

@@ -95,28 +95,28 @@ const INFO_BOTON_TAREA: Record<string, string> = {
   'Responderle por Telegram': 'Abre el chat para que le respondas al compita su duda por Telegram. Nunca se resuelve por llamada.',
 }
 
-type Tarea = { id: string; tipo: string; icono: string; clienteId: string; compitaId: string; que: string; hace: string; boton: string; resuelta: string }
+type Tarea = { id: string; tipo: string; clienteId: string; compitaId: string; que: string; hace: string; boton: string; resuelta: string }
 const TAREAS: Tarea[] = [
-  { id: 't0', tipo: 'Emergencia', icono: '🚨', clienteId: 'p4', compitaId: 'p6', que: 'El compita activó el botón de emergencia durante una visita en curso', hace: 'hace 2 min', boton: 'Marcar atendida', resuelta: 'Atendida ✓' },
-  { id: 't1', tipo: 'Pago', icono: '💵', clienteId: 'p1', compitaId: 'p6', que: 'URGENTE: el cliente insistió hace 8 min. Dice que ya pagó $75. Referencia COMPAZ-4F7K2Q', hace: 'hace 3 h', boton: 'Confirmar pago', resuelta: 'Pago confirmado ✓' },
-  { id: 't2', tipo: 'Decisión', icono: '⏳', clienteId: 'p2', compitaId: 'p7', que: 'La entrevista terminó y el cliente no ha decidido si contrata', hace: 'hace 3 h', boton: 'Recordar al cliente', resuelta: 'Recordatorio enviado ✓' },
-  { id: 't3', tipo: 'Aviso fallido', icono: '⚠️', clienteId: 'p5', compitaId: 'p7', que: 'Telegram no entregó al compita el aviso de nueva solicitud', hace: 'hace 25 min', boton: 'Reintentar aviso', resuelta: 'Reintento enviado ✓' },
-  { id: 't5', tipo: 'Contacto bloqueado', icono: '🔒', clienteId: 'p2', compitaId: 'p7', que: 'Un mensaje del chat intentó compartir un teléfono o correo y fue censurado', hace: 'hace 40 min', boton: 'Marcar revisada', resuelta: 'Revisada ✓' },
-  { id: 't4', tipo: 'Sin respuesta', icono: '🔔', clienteId: 'p3', compitaId: 'p8', que: 'El cliente envió una solicitud y el compita no ha respondido', hace: 'hace 5 h', boton: 'Insistir al compita', resuelta: 'Aviso reenviado ✓' },
+  { id: 't0', tipo: 'Emergencia', clienteId: 'p4', compitaId: 'p6', que: 'El compita activó el botón de emergencia durante una visita en curso', hace: 'hace 2 min', boton: 'Marcar atendida', resuelta: 'Atendida ✓' },
+  { id: 't1', tipo: 'Pago', clienteId: 'p1', compitaId: 'p6', que: 'URGENTE: el cliente insistió hace 8 min. Dice que ya pagó $75. Referencia COMPAZ-4F7K2Q', hace: 'hace 3 h', boton: 'Confirmar pago', resuelta: 'Pago confirmado ✓' },
+  { id: 't2', tipo: 'Decisión', clienteId: 'p2', compitaId: 'p7', que: 'La entrevista terminó y el cliente no ha decidido si contrata', hace: 'hace 3 h', boton: 'Recordar al cliente', resuelta: 'Recordatorio enviado ✓' },
+  { id: 't3', tipo: 'Aviso fallido', clienteId: 'p5', compitaId: 'p7', que: 'Telegram no entregó al compita el aviso de nueva solicitud', hace: 'hace 25 min', boton: 'Reintentar aviso', resuelta: 'Reintento enviado ✓' },
+  { id: 't5', tipo: 'Contacto bloqueado', clienteId: 'p2', compitaId: 'p7', que: 'Un mensaje del chat intentó compartir un teléfono o correo y fue censurado', hace: 'hace 40 min', boton: 'Marcar revisada', resuelta: 'Revisada ✓' },
+  { id: 't4', tipo: 'Sin respuesta', clienteId: 'p3', compitaId: 'p8', que: 'El cliente envió una solicitud y el compita no ha respondido', hace: 'hace 5 h', boton: 'Insistir al compita', resuelta: 'Aviso reenviado ✓' },
 ]
 
 // Tareas nuevas de los puntos 2 a 5: la escalera las abre sola cuando algo no se resuelve por el camino automático.
 const NUEVAS: Tarea[] = [
-  { id: 'n1', tipo: 'Nadie abre', icono: '🚪', clienteId: 'p4', compitaId: 'p6', que: 'El compita llegó (foto enviada) y nadie abre. Van 15 de 30 minutos. Ya se le escribió al contacto en el sitio a los 5 minutos', hace: 'hace 15 min', boton: 'Escribir al contacto otra vez', resuelta: 'Mensaje enviado ✓' },
-  { id: 'n2', tipo: 'No me siento seguro', icono: '🛑', clienteId: 'p2', compitaId: 'p7', que: 'El compita salió de la visita por seguridad. El cliente recibió un aviso neutro. Decide si cobra la visita', hace: 'hace 6 min', boton: 'Llamar al compita y decidir', resuelta: 'Atendida ✓' },
-  { id: 'n3', tipo: 'Visita alargada', icono: '⏱️', clienteId: 'p3', compitaId: 'p8', que: 'La visita pasó 25 minutos de su hora de fin y el compita no respondió "¿Todo bien?" en 10 minutos', hace: 'hace 10 min', boton: 'Contactar al compita', resuelta: 'Contactado ✓' },
-  { id: 'n4', tipo: 'Ficha incompleta', icono: '📋', clienteId: 'p9', compitaId: 'p6', que: 'Pagó hace 2 días y aún no completa la ficha del familiar. No puede agendar su primera cita', hace: 'hace 2 d', boton: 'Recordarle por correo', resuelta: 'Recordatorio enviado ✓' },
-  { id: 'n5', tipo: 'Reporte de un compita', icono: '🚩', clienteId: 'p5', compitaId: 'p7', que: 'El compita reportó un problema con este cliente: quiso arreglar pagos fuera de Compaz, durante la visita, y ya había pasado antes. Marcó no volver con él y pidió que lo llamemos. Llamar antes de mañana 4:00 pm', hace: 'hace 1 h', boton: 'Registrar la llamada', resuelta: 'Llamada registrada ✓' },
-  { id: 'n6', tipo: 'Cancelación tardía', icono: '📆', clienteId: 'p2', compitaId: 'p8', que: 'El compita canceló con menos de 24 horas. Es su segunda en 30 días: se abre revisión. La cita se reprograma sin costo', hace: 'hace 4 h', boton: 'Hablar con el compita', resuelta: 'Revisada ✓' },
-  { id: 'n9', tipo: 'Duda sin resolver', icono: '❓', clienteId: 'p4', compitaId: 'p7', que: 'El compita preguntó por la dirección y por cómo entrar, y el bot no pudo resolverlo en 2 intentos. Responder por Telegram, nunca por llamada', hace: 'hace 20 min', boton: 'Responderle por Telegram', resuelta: 'Respondida ✓' },
-  { id: 'n10', tipo: 'Contacto bloqueado', icono: '🔒', clienteId: 'p4', compitaId: 'p7', que: 'Segunda detección en 30 días: este COMPITA compartió un teléfono con un cliente. Su disponibilidad quedó en pausa, sin fecha de fin, y sus visitas programadas en espera. Decide: reactivar, dar otra oportunidad o bloquear', hace: 'hace 35 min', boton: 'Decidir sobre el compita', resuelta: 'Decidido ✓' },
-  { id: 'n8', tipo: 'Cambio en el lugar', icono: '👥', clienteId: 'p4', compitaId: 'p6', que: 'El cliente cambió quién estará en la visita (agregó a 1 amigo) y el compita no responde si sigue. La visita es en 20 horas, ya pasó la espera de 5 horas. El cliente ya le escribió por el chat', hace: 'hace 3 h', boton: 'Insistir al compita', resuelta: 'Aviso reenviado ✓' },
-  { id: 'n7', tipo: 'Contacto bloqueado', icono: '🔒', clienteId: 'p3', compitaId: 'p7', que: 'Segunda detección en 30 días: este cliente volvió a intentar compartir un teléfono. Su cuenta quedó EN PAUSA, sin fecha de fin, y tiene 1 visita programada (jueves 10:00 am) sobre la que decides. Decide: reactivar, dar otra oportunidad o bloquear', hace: 'hace 50 min', boton: 'Decidir sobre la cuenta', resuelta: 'Decidido ✓' },
+  { id: 'n1', tipo: 'Nadie abre', clienteId: 'p4', compitaId: 'p6', que: 'El compita llegó (foto enviada) y nadie abre. Van 15 de 30 minutos. Ya se le escribió al contacto en el sitio a los 5 minutos', hace: 'hace 15 min', boton: 'Escribir al contacto otra vez', resuelta: 'Mensaje enviado ✓' },
+  { id: 'n2', tipo: 'No me siento seguro', clienteId: 'p2', compitaId: 'p7', que: 'El compita salió de la visita por seguridad. El cliente recibió un aviso neutro. Decide si cobra la visita', hace: 'hace 6 min', boton: 'Llamar al compita y decidir', resuelta: 'Atendida ✓' },
+  { id: 'n3', tipo: 'Visita alargada', clienteId: 'p3', compitaId: 'p8', que: 'La visita pasó 25 minutos de su hora de fin y el compita no respondió "¿Todo bien?" en 10 minutos', hace: 'hace 10 min', boton: 'Contactar al compita', resuelta: 'Contactado ✓' },
+  { id: 'n4', tipo: 'Ficha incompleta', clienteId: 'p9', compitaId: 'p6', que: 'Pagó hace 2 días y aún no completa la ficha del familiar. No puede agendar su primera cita', hace: 'hace 2 d', boton: 'Recordarle por correo', resuelta: 'Recordatorio enviado ✓' },
+  { id: 'n5', tipo: 'Reporte de un compita', clienteId: 'p5', compitaId: 'p7', que: 'El compita reportó un problema con este cliente: quiso arreglar pagos fuera de Compaz, durante la visita, y ya había pasado antes. Marcó no volver con él y pidió que lo llamemos. Llamar antes de mañana 4:00 pm', hace: 'hace 1 h', boton: 'Registrar la llamada', resuelta: 'Llamada registrada ✓' },
+  { id: 'n6', tipo: 'Cancelación tardía', clienteId: 'p2', compitaId: 'p8', que: 'El compita canceló con menos de 24 horas. Es su segunda en 30 días: se abre revisión. La cita se reprograma sin costo', hace: 'hace 4 h', boton: 'Hablar con el compita', resuelta: 'Revisada ✓' },
+  { id: 'n9', tipo: 'Duda sin resolver', clienteId: 'p4', compitaId: 'p7', que: 'El compita preguntó por la dirección y por cómo entrar, y el bot no pudo resolverlo en 2 intentos. Responder por Telegram, nunca por llamada', hace: 'hace 20 min', boton: 'Responderle por Telegram', resuelta: 'Respondida ✓' },
+  { id: 'n10', tipo: 'Contacto bloqueado', clienteId: 'p4', compitaId: 'p7', que: 'Segunda detección en 30 días: este COMPITA compartió un teléfono con un cliente. Su disponibilidad quedó en pausa, sin fecha de fin, y sus visitas programadas en espera. Decide: reactivar, dar otra oportunidad o bloquear', hace: 'hace 35 min', boton: 'Decidir sobre el compita', resuelta: 'Decidido ✓' },
+  { id: 'n8', tipo: 'Cambio en el lugar', clienteId: 'p4', compitaId: 'p6', que: 'El cliente cambió quién estará en la visita (agregó a 1 amigo) y el compita no responde si sigue. La visita es en 20 horas, ya pasó la espera de 5 horas. El cliente ya le escribió por el chat', hace: 'hace 3 h', boton: 'Insistir al compita', resuelta: 'Aviso reenviado ✓' },
+  { id: 'n7', tipo: 'Contacto bloqueado', clienteId: 'p3', compitaId: 'p7', que: 'Segunda detección en 30 días: este cliente volvió a intentar compartir un teléfono. Su cuenta quedó EN PAUSA, sin fecha de fin, y tiene 1 visita programada (jueves 10:00 am) sobre la que decides. Decide: reactivar, dar otra oportunidad o bloquear', hace: 'hace 50 min', boton: 'Decidir sobre la cuenta', resuelta: 'Decidido ✓' },
 ]
 
 // Lo que el admin marca en esta sesión queda en el Registro de actividad (en el sistema real se guarda en la base).
@@ -313,13 +313,13 @@ function ChatAdmin({ clienteId, compitaId, onClose }: { clienteId: string; compi
           </div>
           <button onClick={onClose} className="min-h-10 rounded-xl border border-[var(--border-muted)] px-3 font-bold" aria-label="Cerrar chat">Cerrar</button>
         </div>
-        <p className="mt-3 rounded-xl bg-[#FFFBEB] p-3 text-sm font-bold text-[#92400E]">🔒 Solo el equipo ve esta conversación. Quedó anotado en el Registro de actividad que la abriste{rol === 'colaborador' ? ` (motivo: ${motivo})` : ''}.</p>
+        <p className="mt-3 rounded-xl bg-[#FFFBEB] p-3 text-sm font-bold text-[#92400E]">Solo el equipo ve esta conversación. Quedó anotado en el Registro de actividad que la abriste{rol === 'colaborador' ? ` (motivo: ${motivo})` : ''}.</p>
         <ol className="mt-4 grid gap-2" aria-label="Mensajes">
           {msgs.map((m, i) => (
             <li key={i} className={`rounded-2xl border p-3 ${color[m.de]} ${m.de === 'Cliente' ? 'ml-6' : m.de === 'Compita' ? 'mr-6' : ''}`}>
               <div className="flex items-center justify-between gap-2 text-xs font-extrabold uppercase tracking-wider text-[var(--text-mid)]"><span>{m.de}</span><span className="font-normal normal-case text-[var(--text-light)]">{m.cuando}</span></div>
               <div className="mt-1 text-base">{m.t}</div>
-              {m.censurado && <div className="mt-1 text-xs font-bold text-[#991B1B]">⚠ Se intentó compartir un contacto. Se borró antes de llegar a la otra persona.</div>}
+              {m.censurado && <div className="mt-1 text-xs font-bold text-[#991B1B]">Se intentó compartir un contacto. Se borró antes de llegar a la otra persona.</div>}
             </li>
           ))}
         </ol>
@@ -359,10 +359,10 @@ function ContactoCompita({ p, etiqueta = false }: { p: Persona; etiqueta?: boole
   return (
     <span className="inline-flex shrink-0 items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
       <button type="button" onClick={() => pedir('whatsapp')} className={base} title={`Escribirle a ${p.nombre} por WhatsApp`} aria-label={`Escribirle a ${p.nombre} por WhatsApp`}>
-        <span aria-hidden>💬</span>{etiqueta && <span>WhatsApp</span>}
+{etiqueta && <span>WhatsApp</span>}
       </button>
       <button type="button" onClick={() => pedir('correo')} className={base} title={`Escribirle a ${p.nombre} por correo`} aria-label={`Escribirle a ${p.nombre} por correo`}>
-        <span aria-hidden>✉️</span>{etiqueta && <span>Correo</span>}
+{etiqueta && <span>Correo</span>}
       </button>
       <InfoBoton que="Escribirle por WhatsApp o correo" texto="Abre WhatsApp o tu correo para escribirle a esta persona. Es un dato sensible: si no eres administrador te pide un motivo, y queda anotado en Actividad junto con tu nombre. Compaz no guarda la conversación." />
       {pidiendo && <MotivoDialog titulo={`¿Por qué le escribes a ${p.nombre}?`} texto="Es un dato de contacto sensible. Debes indicar un motivo. Queda anotado junto con tu nombre." onListo={(m) => abrirCanal(pidiendo, m)} onCancelar={() => setPidiendo(null)} />}
@@ -404,7 +404,7 @@ function Ficha({ p, onClose }: { p: Persona; onClose: () => void }) {
         </div>
         {p.tipo === 'Compita' && <div className="mt-3"><ContactoCompita p={p} etiqueta /></div>}
         {p.etapa && <div className="mt-3 inline-block rounded-full bg-[var(--yellow)] px-3 py-1 text-sm font-bold">Etapa: {p.etapa}{p.compita ? ` · con ${p.compita}` : ''}</div>}
-        {compitaDe && puede('chats') && <div className="mt-4 flex items-center gap-1"><button onClick={() => { onClose(); verChat(p.id, compitaDe.id) }} className="min-h-12 flex-1 rounded-xl border-2 border-[var(--purple)] font-extrabold text-[var(--purple)]">💬 Ver el chat con {compitaDe.nombre}</button><InfoBoton que="Ver el chat" texto="Abre la conversación privada entre este cliente y su compita. Es solo lectura y queda anotado en el Registro de actividad que la abriste." /></div>}
+        {compitaDe && puede('chats') && <div className="mt-4 flex items-center gap-1"><button onClick={() => { onClose(); verChat(p.id, compitaDe.id) }} className="min-h-12 flex-1 rounded-xl border-2 border-[var(--purple)] font-extrabold text-[var(--purple)]">Ver el chat con {compitaDe.nombre}</button><InfoBoton que="Ver el chat" texto="Abre la conversación privada entre este cliente y su compita. Es solo lectura y queda anotado en el Registro de actividad que la abriste." /></div>}
         {pidiendoTel && <MotivoDialog titulo="¿Por qué necesitas ver el teléfono?" texto={`Es un dato sensible de ${p.nombre}. Debes indicar un motivo. Queda anotado junto con tu nombre.`} onListo={revelarTel} onCancelar={() => setPidiendoTel(false)} />}
         <h3 className="mt-6 text-sm font-extrabold uppercase tracking-wider text-[var(--text-light)]">Línea de tiempo</h3>
         <ol className="mt-3 border-l-2 border-[var(--border-muted)] pl-4">
@@ -450,7 +450,7 @@ function LlamadaReporte({ cliente, compita, onListo, onCancelar }: { cliente: st
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center" onClick={onCancelar}>
       <div onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Registrar la llamada" className="max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-white p-5 sm:rounded-3xl">
         <h2 className="text-xl font-extrabold">Llamada a {compita}</h2>
-        <p className="mt-1 rounded-xl bg-[#FEF3C7] p-3 text-sm font-bold text-[#92400E]">📞 Llamar antes de mañana 4:00 pm. Es el plazo que se le prometió (24 horas). Si pasa sin llamada, el sistema te vuelve a avisar.</p>
+        <p className="mt-1 rounded-xl bg-[#FEF3C7] p-3 text-sm font-bold text-[#92400E]">Llamar antes de mañana 4:00 pm. Es el plazo que se le prometió (24 horas). Si pasa sin llamada, el sistema te vuelve a avisar.</p>
         <p className="mt-2 text-sm text-[var(--text-mid)]">Reporte sobre {cliente}: quiso arreglar pagos fuera de Compaz. Recuerda: no le pidas datos por teléfono; escucha y decide.</p>
         <div className="mt-3 rounded-2xl border border-[var(--border-muted)] p-3 text-sm">
           <div className="font-extrabold">Sigue abierto con este cliente</div>
@@ -527,11 +527,11 @@ function Bandeja({ abrir }: { abrir: (id: string) => void }) {
   return (
     <section>
       <h1 className="text-2xl font-extrabold">Requiere tu atención</h1>
-      <p className="text-[var(--text-mid)]">{activas.length ? `${activas.length} cosas esperando` : 'Todo al día 🎉'}</p>
+      <p className="text-[var(--text-mid)]">{activas.length ? `${activas.length} cosas esperando` : 'Todo al día'}</p>
 
       {activas.some((t) => t.tipo === 'Emergencia') && (
         <div role="alert" className="mt-3 rounded-xl border-2 border-[#D93A3A] bg-[#FEF2F2] px-4 py-3 font-extrabold text-[#991B1B]">
-          🚨 {activas.filter((t) => t.tipo === 'Emergencia').length} emergencia activa. Atiéndela antes que cualquier otra tarea.
+          {activas.filter((t) => t.tipo === 'Emergencia').length} emergencia activa. Atiéndela antes que cualquier otra tarea.
         </div>
       )}
 
@@ -553,7 +553,6 @@ function Bandeja({ abrir }: { abrir: (id: string) => void }) {
           const cmp = PERSONAS.find((x) => x.id === t.compitaId)!
           return (
             <li key={t.id} className={`flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2 ${t.tipo === 'Emergencia' ? 'border-l-4 border-[#D93A3A] bg-[#FEF2F2]' : ''}`}>
-              <span className="text-xl" aria-hidden>{t.icono}</span>
               <div className="min-w-[12rem] flex-1">
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm">
                   <button onClick={() => abrir(cli.id)} className="flex min-w-0 items-center gap-1 font-extrabold hover:underline">
@@ -571,12 +570,12 @@ function Bandeja({ abrir }: { abrir: (id: string) => void }) {
                 </div>
                 <div className="line-clamp-2 text-sm text-[var(--text-mid)]">{t.que}</div>
               </div>
-              {puede('chats') && <button onClick={() => verChat(cli.id, cmp.id)} aria-label={`Ver el chat de ${cli.nombre} y ${cmp.nombre}`} className="min-h-10 shrink-0 rounded-xl border border-[var(--border-muted)] bg-white px-3 text-sm font-bold text-[var(--text-mid)]">💬 Chat</button>}
+              {puede('chats') && <button onClick={() => verChat(cli.id, cmp.id)} aria-label={`Ver el chat de ${cli.nombre} y ${cmp.nombre}`} className="min-h-10 shrink-0 rounded-xl border border-[var(--border-muted)] bg-white px-3 text-sm font-bold text-[var(--text-mid)]">Chat</button>}
               <span className="flex shrink-0 items-center"><button disabled={bloqueada(t)} title={bloqueada(t) ? 'No tienes este permiso. Pídeselo a un administrador.' : undefined} onClick={() => (/^Decidir|^Registrar la llamada/.test(t.boton) ? setDecidiendo(t.id) : setHechas((h) => ({ ...h, [t.id]: true })))} className="min-h-10 shrink-0 rounded-xl bg-[var(--orange)] disabled:opacity-40 px-3 text-sm font-extrabold text-white active:bg-[var(--orange-dark)]">{t.boton}</button><InfoBoton que={t.boton} texto={INFO_BOTON_TAREA[t.boton] ?? 'Hace lo que dice el botón y deja anotado quién lo hizo y cuándo.'} alineado="izquierda" /></span>
             </li>
           )
         })}
-        {!lista.length && <li className="p-6 text-center text-[var(--text-light)]">Nada pendiente en esta categoría 🎉</li>}
+        {!lista.length && <li className="p-6 text-center text-[var(--text-light)]">Nada pendiente en esta categoría</li>}
       </ul>
 
       {lista.length > mostrar && (
@@ -912,9 +911,9 @@ function Visitas({ abrir }: { abrir: (id: string) => void }) {
                   </button>
                   <ContactoCompita p={cmp} />
                 </div>
-                {motivoProblema(v) ? <div className="truncate text-xs font-bold text-[#D93A3A]">⚠ {motivoProblema(v)}</div> : <div className="truncate text-xs text-[var(--text-light)]">{v.zona}</div>}
+                {motivoProblema(v) ? <div className="truncate text-xs font-bold text-[#D93A3A]">{motivoProblema(v)}</div> : <div className="truncate text-xs text-[var(--text-light)]">{v.zona}</div>}
               </div>
-              {puede('chats') && <button onClick={() => verChat(cli.id, cmp.id)} aria-label={`Ver el chat de ${cli.nombre} y ${cmp.nombre}`} className="min-h-10 shrink-0 rounded-xl border border-[var(--border-muted)] bg-white px-3 text-sm font-bold text-[var(--text-mid)]">💬 Chat</button>}
+              {puede('chats') && <button onClick={() => verChat(cli.id, cmp.id)} aria-label={`Ver el chat de ${cli.nombre} y ${cmp.nombre}`} className="min-h-10 shrink-0 rounded-xl border border-[var(--border-muted)] bg-white px-3 text-sm font-bold text-[var(--text-mid)]">Chat</button>}
               <div className="shrink-0 text-right">
                 <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${CHIP_ESTADO[v.estado]}`}>{v.estado}</span>
                 {v.rating !== null && <div className={`mt-1 text-xs font-bold ${v.rating <= 3 ? 'text-[#D93A3A]' : 'text-[var(--text-mid)]'}`}>{'★'.repeat(v.rating)}</div>}
@@ -939,19 +938,19 @@ function Visitas({ abrir }: { abrir: (id: string) => void }) {
 // ── Más ──────────────────────────────────────────────────────────────────────
 type Madurez = 'existe' | 'base'
 const HUB: { id: string; i: string; t: string; d: string; m: Madurez; sub: boolean }[] = [
-  { id: 'resenas', i: '⭐', t: 'Reseñas por aprobar', d: 'Aprueba u oculta lo que el cliente escribe antes de que se vea en el perfil del compita.', m: 'existe', sub: true },
-  { id: 'postulaciones', i: '📥', t: 'Postulaciones y origen', d: 'Quién se postuló, desde qué página o campaña llegó y si calificó.', m: 'existe', sub: true },
-  { id: 'pagos', i: '💵', t: 'Pagos', d: 'Pagos registrados, con la opción de anular uno si hubo un error.', m: 'existe', sub: true },
-  { id: 'avisos', i: '📨', t: 'Avisos enviados', d: 'Qué se le mandó a cada persona, por qué canal y si llegó. Aquí se reintentan los fallidos.', m: 'base', sub: true },
-  { id: 'cobertura', i: '🗺️', t: 'Cobertura y demanda', d: 'Por zona: compitas disponibles frente a solicitudes del mes. Dónde falta reclutar.', m: 'existe', sub: true },
-  { id: 'umbrales', i: '🚦', t: 'Ajustes del semáforo', d: 'Cuántas horas son normales en cada etapa antes de pasar a amarillo y rojo.', m: 'base', sub: true },
-  { id: 'equipo', i: '🧑‍🤝‍🧑', t: 'Equipo y permisos', d: 'Quién entra al panel, con qué rol y qué puede hacer cada uno.', m: 'base', sub: true },
-  { id: 'ajustes', i: '🎛️', t: 'Ajustes', d: 'Precios, plazos, topes y umbrales. Se cambian aquí, con registro de quién y cuándo; no hay que tocar el código.', m: 'base', sub: true },
-  { id: 'actividad', i: '📜', t: 'Actividad', d: 'Todo lo que pasó en el sistema, en orden. Aquí no suena nada: se consulta cuando hace falta.', m: 'base', sub: true },
-  { id: 'limites', i: '⏳', t: 'Límites y esperas', d: 'Lo que el sistema frena a propósito (plazos entre envíos, máximos) y por qué. Para responder "¿por qué no deja hacerlo otra vez?".', m: 'base', sub: true },
-  { id: 'manual', i: '📖', t: 'Manual', d: 'Cómo funciona todo el sistema y qué hacer en cada situación. Se busca con tus palabras.', m: 'base', sub: true },
-  { id: 'registro', i: '🗂️', t: 'Registro de actividad', d: 'Quién del equipo vio un teléfono o dato sensible, cuándo y por qué.', m: 'base', sub: true },
-  { id: 'estado', i: '🩺', t: 'Estado del sistema', d: 'Procesos automáticos, avisos fallidos y salud de Telegram, correo y videollamadas.', m: 'base', sub: true },
+  { id: 'resenas', i: '', t: 'Reseñas por aprobar', d: 'Aprueba u oculta lo que el cliente escribe antes de que se vea en el perfil del compita.', m: 'existe', sub: true },
+  { id: 'postulaciones', i: '', t: 'Postulaciones y origen', d: 'Quién se postuló, desde qué página o campaña llegó y si calificó.', m: 'existe', sub: true },
+  { id: 'pagos', i: '', t: 'Pagos', d: 'Pagos registrados, con la opción de anular uno si hubo un error.', m: 'existe', sub: true },
+  { id: 'avisos', i: '', t: 'Avisos enviados', d: 'Qué se le mandó a cada persona, por qué canal y si llegó. Aquí se reintentan los fallidos.', m: 'base', sub: true },
+  { id: 'cobertura', i: '', t: 'Cobertura y demanda', d: 'Por zona: compitas disponibles frente a solicitudes del mes. Dónde falta reclutar.', m: 'existe', sub: true },
+  { id: 'umbrales', i: '', t: 'Ajustes del semáforo', d: 'Cuántas horas son normales en cada etapa antes de pasar a amarillo y rojo.', m: 'base', sub: true },
+  { id: 'equipo', i: '', t: 'Equipo y permisos', d: 'Quién entra al panel, con qué rol y qué puede hacer cada uno.', m: 'base', sub: true },
+  { id: 'ajustes', i: '', t: 'Ajustes', d: 'Precios, plazos, topes y umbrales. Se cambian aquí, con registro de quién y cuándo; no hay que tocar el código.', m: 'base', sub: true },
+  { id: 'actividad', i: '', t: 'Actividad', d: 'Todo lo que pasó en el sistema, en orden. Aquí no suena nada: se consulta cuando hace falta.', m: 'base', sub: true },
+  { id: 'limites', i: '', t: 'Límites y esperas', d: 'Lo que el sistema frena a propósito (plazos entre envíos, máximos) y por qué. Para responder "¿por qué no deja hacerlo otra vez?".', m: 'base', sub: true },
+  { id: 'manual', i: '', t: 'Manual', d: 'Cómo funciona todo el sistema y qué hacer en cada situación. Se busca con tus palabras.', m: 'base', sub: true },
+  { id: 'registro', i: '', t: 'Registro de actividad', d: 'Quién del equipo vio un teléfono o dato sensible, cuándo y por qué.', m: 'base', sub: true },
+  { id: 'estado', i: '', t: 'Estado del sistema', d: 'Procesos automáticos, avisos fallidos y salud de Telegram, correo y videollamadas.', m: 'base', sub: true },
 ]
 
 function Volver({ onClick }: { onClick: () => void }) {
@@ -1075,11 +1074,10 @@ function VistaAvisos() {
       <Lista>
         {lista.map((d) => (
           <li key={d.id} className="flex items-center gap-3 px-3 py-2">
-            <span aria-hidden>{d.canal === 'Telegram' ? '✈️' : '✉️'}</span>
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2 text-sm"><b>{d.para}</b><span className={`rounded px-1 text-[10px] font-extrabold uppercase ${d.rol === 'Compita' ? 'bg-[var(--orange)]/15 text-[var(--orange-dark)]' : 'bg-[var(--purple)]/10 text-[var(--purple)]'}`}>{d.rol}</span><span className="text-xs text-[var(--text-light)]">{d.cuando}</span></div>
               <div className="truncate text-sm text-[var(--text-mid)]">{d.tipo}</div>
-              {!d.ok && <div className="text-xs font-bold text-[#D93A3A]">⚠ {d.motivo}</div>}
+              {!d.ok && <div className="text-xs font-bold text-[#D93A3A]">{d.motivo}</div>}
             </div>
             {d.ok ? <span className="shrink-0 text-sm font-bold text-green-700">Entregado</span> : rein[d.id] ? <span className="shrink-0 text-sm font-bold text-green-700">{d.hecho}</span> : (
               <span className="flex shrink-0 items-center"><button onClick={() => setRein((r) => ({ ...r, [d.id]: true }))} className="min-h-10 rounded-xl bg-[var(--orange)] px-3 text-sm font-extrabold text-white">{d.accion}</button><InfoBoton que={d.accion ?? "Reintentar"} texto={`Hace "${d.accion}" para este aviso por el canal que sí funcione. Si vuelve a fallar, la tarea sigue abierta con el motivo.`} alineado="izquierda" /></span>
@@ -1298,7 +1296,7 @@ function VistaEquipo() {
                 <Interruptor activo={c.permisos[pm.id]} etiqueta={`${pm.t}, ${c.nombre}`} onCambia={(v) => { cambiar(c.id, pm.id, v); setGuardado(`✓ Guardado: ${v ? 'activaste' : 'desactivaste'} "${pm.t}" para ${c.nombre}`) }} />
               </li>
             ))}
-            <li className="flex items-center justify-between gap-3 py-3 opacity-70"><div><div className="text-base font-bold">Gestionar el equipo y sus permisos</div><div className="text-sm text-[var(--text-mid)]">Solo los administradores pueden hacerlo.</div></div><span className="text-sm font-bold">🔒 No</span></li>
+            <li className="flex items-center justify-between gap-3 py-3 opacity-70"><div><div className="text-base font-bold">Gestionar el equipo y sus permisos</div><div className="text-sm text-[var(--text-mid)]">Solo los administradores pueden hacerlo.</div></div><span className="text-sm font-bold">No</span></li>
           </ul>
           <div className="mt-3 flex items-center gap-1"><button onClick={() => { restablecer(c.id); setGuardado(`✓ Los permisos de ${c.nombre} volvieron a lo recomendado`) }} className="min-h-12 flex-1 rounded-xl border border-[var(--border-muted)] font-bold text-[var(--text-mid)]">Volver a lo recomendado</button><InfoBoton que="Volver a lo recomendado" texto="Deja los permisos de este colaborador como vienen por defecto. Queda anotado en el historial del equipo." /></div>
         </section>
@@ -1360,7 +1358,7 @@ const ACTIVIDAD: { n: NivelAct; t: string; h: string; d: number }[] = [
   { n: 'actividad', t: 'Tarea resuelta por equipo@compaz.com: Pago de Marta', h: '4:10 pm', d: 3 },
   { n: 'actividad', t: 'Pago confirmado: Marta, plan Compañía', h: '4:09 pm', d: 3 },
 ]
-const NIV_ACT: Record<NivelAct, { i: string; t: string }> = { urgente: { i: '🔴', t: 'Urgente' }, tarea: { i: '🟠', t: 'Tarea' }, actividad: { i: '⚪', t: 'Informativo' } }
+const NIV_ACT: Record<NivelAct, { i: string; t: string }> = { urgente: { i: '', t: 'Urgente' }, tarea: { i: '', t: 'Tarea' }, actividad: { i: '', t: 'Informativo' } }
 function VistaActividad() {
   const [nivel, setNivel] = useUrlState('act_nivel', '')
   const [dias, setDias] = useUrlState('act_dias', '2')
@@ -1372,7 +1370,7 @@ function VistaActividad() {
     <>
       <div className="flex flex-wrap items-center gap-2">
         <InfoBoton que="Qué es Actividad" texto="Todo lo que pasó en el sistema, en orden. Aquí no suena nada: lo urgente te llega por Telegram, con un tope por hora, y lo que debes hacer está en la Bandeja." alineado="izquierda" />
-        {([['', 'Todo'], ['urgente', '🔴 Urgentes'], ['tarea', '🟠 Tareas'], ['actividad', '⚪ Informativo']] as const).map(([v, t]) => <button key={v} aria-pressed={nivel === v} onClick={() => setNivel(v)} className={chip(nivel === v)}>{t}</button>)}
+        {([['', 'Todo'], ['urgente', 'Urgentes'], ['tarea', 'Tareas'], ['actividad', 'Informativo']] as const).map(([v, t]) => <button key={v} aria-pressed={nivel === v} onClick={() => setNivel(v)} className={chip(nivel === v)}>{t}</button>)}
         <InfoBoton que="Filtrar por tipo" texto="Muestra solo un tipo de actividad: urgente, tarea o informativo. Todo vuelve a mostrar todo. No cambia ni resuelve nada." alineado="izquierda" />
       </div>
       <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -1461,7 +1459,7 @@ function VistaManual() {
       <li key={e.id} className={`overflow-hidden rounded-2xl border bg-white ${abiertaAhora ? 'border-[var(--purple)]' : 'border-[var(--border-muted)]'} ${ok ? '' : 'opacity-70'}`}>
         <button onClick={() => setAbierta(abiertaAhora ? '' : e.id)} aria-expanded={abiertaAhora} className="flex min-h-14 w-full items-center gap-2 px-4 py-2 text-left">
           <span className="flex-1 font-extrabold">{e.titulo}</span>
-          {!ok && <span className="shrink-0 rounded-full bg-[var(--warm-gray)] px-2 py-0.5 text-xs font-bold">🔒</span>}
+          {!ok && <span className="shrink-0 rounded-full bg-[var(--warm-gray)] px-2 py-0.5 text-xs font-bold"></span>}
           <span aria-hidden className="text-[var(--text-light)]">{abiertaAhora ? '▾' : '▸'}</span>
         </button>
         {abiertaAhora && (
@@ -1519,7 +1517,7 @@ function VistaManual() {
           <h2 className="text-lg font-extrabold">Siempre al día</h2>
           <p className="text-sm text-[var(--text-mid)]">Estas dos listas se arman solas desde el sistema.</p>
           <details className="rounded-2xl border border-[var(--border-muted)] bg-white px-4 py-3"><summary className="cursor-pointer font-extrabold">Qué puede hacer cada permiso</summary>
-            <ul className="mt-2 grid gap-1 text-sm">{permisosDelManual().map((p) => <li key={p.id} className="flex items-center justify-between gap-2"><span>{p.titulo}</span><span aria-label={permisos[p.id] ? 'Lo tienes' : 'No lo tienes'}>{permisos[p.id] ? '✅' : '🔒'}</span></li>)}</ul></details>
+            <ul className="mt-2 grid gap-1 text-sm">{permisosDelManual().map((p) => <li key={p.id} className="flex items-center justify-between gap-2"><span>{p.titulo}</span><span aria-label={permisos[p.id] ? 'Lo tienes' : 'No lo tienes'}></span></li>)}</ul></details>
           <details className="rounded-2xl border border-[var(--border-muted)] bg-white px-4 py-3"><summary className="cursor-pointer font-extrabold">Límites y esperas del sistema</summary>
             <ul className="mt-2 grid gap-2 text-sm">{limitesDelManual().map((l) => <li key={l.id}><div className="font-bold">{l.titulo}</div><div className="text-[var(--text-mid)]">{l.texto}</div></li>)}</ul></details>
         </section>
@@ -1603,11 +1601,11 @@ function Pendiente({ titulo, texto }: { titulo: string; texto: string }) {
 }
 
 const MENU = [
-  { id: 'bandeja', t: 'Bandeja', i: '🔔' },
-  { id: 'seguimiento', t: 'Seguimiento', i: '🧭' },
-  { id: 'personas', t: 'Personas', i: '👥' },
-  { id: 'visitas', t: 'Visitas', i: '🏠' },
-  { id: 'herramientas', t: 'Más', i: '⚙️' },
+  { id: 'bandeja', t: 'Bandeja', i: '' },
+  { id: 'seguimiento', t: 'Seguimiento', i: '' },
+  { id: 'personas', t: 'Personas', i: '' },
+  { id: 'visitas', t: 'Visitas', i: '' },
+  { id: 'herramientas', t: 'Más', i: '' },
 ]
 
 function Inner() {

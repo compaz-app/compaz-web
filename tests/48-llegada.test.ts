@@ -27,7 +27,7 @@ function mundo() {
 }
 const fila = () => db.rows('visitas')[0]
 const botones = (m: any) => (m?.markup?.inline_keyboard ?? []).flat().map((b: any) => b.callback_data)
-const iniciar = () => webhook(tgText(CHAT, '▶️ Iniciar visita'))
+const iniciar = () => webhook(tgText(CHAT, 'Iniciar visita'))
 async function conLlegada() {
   const m = mundo(); await iniciar(); await webhook(tgFoto(CHAT))
   assert.ok(fila().llegada_en, 'quedó registrada la llegada')
@@ -44,11 +44,11 @@ describe('llegada con foto obligatoria', () => {
     assert.equal(fila().estado, 'programada')
     // Una confirmación que ya estaba pendiente (el compita tocó Iniciar antes de que la foto fuera obligatoria):
     db.seed('telegram_estados', { chat_id: `conf:${CHAT}`, pendiente_accion: `iniciar:${fila().id}`, pendiente_expira: new Date(Date.now() + 300_000).toISOString() })
-    await webhook(tgText(CHAT, '✅ Sí, iniciar'))
+    await webhook(tgText(CHAT, 'Sí, iniciar'))
     assert.equal(fila().estado, 'programada', 'sin foto no se inicia')
     assert.match(tgPara(CHAT).at(-1)!.text, /envía una foto/)
     // Y sin ninguna confirmación pendiente tampoco hace nada:
-    await webhook(tgText(CHAT, '✅ Sí, iniciar')); assert.equal(fila().estado, 'programada')
+    await webhook(tgText(CHAT, 'Sí, iniciar')); assert.equal(fila().estado, 'programada')
   })
 
   test('con la foto: se copia al almacenamiento privado, queda la llegada, el cliente se entera y el compita elige qué pasó', async () => {
@@ -61,7 +61,7 @@ describe('llegada con foto obligatoria', () => {
     assert.ok(emailsA('caro@mail.test').some((e) => /llegó/.test(e.subject) && /dashboard/.test(e.html)))
     assert.ok(db.rows('eventos').some((e) => e.tipo === 'llegada_registrada'))
     const m = tgPara(CHAT).at(-1)!; assert.match(m.text, /Llegada registrada/)
-    assert.deepEqual(botones(m), ['✅ Sí, iniciar', `nadie:${fila().id}`, 'seguro', 'reagendar_visita'])
+    assert.deepEqual(botones(m), ['Sí, iniciar', `nadie:${fila().id}`, 'seguro', 'reagendar_visita'])
   })
 
   test('una foto que NO se pidió no cuenta como llegada (tiene que ser después de tocar Iniciar)', async () => {
@@ -85,13 +85,13 @@ describe('llegada con foto obligatoria', () => {
 
   test('después de la foto: "Sí, iniciar" arranca la visita como siempre', async () => {
     mundo(); await iniciar(); await webhook(tgFoto(CHAT))
-    await webhook(tgBtn(CHAT, '✅ Sí, iniciar')); await confirmarLlegada()
+    await webhook(tgBtn(CHAT, 'Sí, iniciar')); await confirmarLlegada()
     assert.equal(fila().estado, 'en_curso')
   })
 
   test('el ajuste en 0 devuelve el flujo anterior (sin foto)', async () => {
     await setAjuste({ clave: 'llegada_foto_obligatoria', valor: 0, actor: 'admin:a' }); limpiarCacheAjustes()
-    mundo(); await iniciar(); await webhook(tgText(CHAT, '✅ Sí, iniciar')); await confirmarLlegada()
+    mundo(); await iniciar(); await webhook(tgText(CHAT, 'Sí, iniciar')); await confirmarLlegada()
     assert.equal(fila().estado, 'en_curso')
   })
 

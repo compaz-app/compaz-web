@@ -27,7 +27,7 @@ const ultimo = () => tgPara(CHAT).at(-1)!
 
 describe('el flujo en el bot', () => {
   test('Tengo una duda ofrece reportar un problema con un cliente', async () => {
-    mundo(); await webhook(tgText(CHAT, '🙋 Tengo una duda'))
+    mundo(); await webhook(tgText(CHAT, 'Tengo una duda'))
     assert.ok(botones(ultimo()).includes('xp'))
   })
   test('paso a paso con un motivo de riesgo: cliente, motivo, cuándo, ¿estás bien?, ¿antes?, no volver; llamada AUTOMÁTICA con plazo', async () => {

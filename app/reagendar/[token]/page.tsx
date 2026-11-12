@@ -160,7 +160,6 @@ export default function ReagendarPage({ params }: { params: Promise<{ token: str
     return (
       <div style={{ minHeight: '100vh', background: '#FDFAF6', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
         <div style={{ background: 'white', border: '2px solid #E8E0D4', borderRadius: '24px', padding: '40px 32px', maxWidth: '480px', width: '100%', textAlign: 'center' }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px' }}>🗓️</div>
           <h2 style={{ color: '#1A0A3C', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '22px', marginBottom: '12px' }}>
             ¡Horarios enviados!
           </h2>
@@ -190,7 +189,7 @@ export default function ReagendarPage({ params }: { params: Promise<{ token: str
             Elige hasta 3 horarios. {info?.compita_nombre} confirmará el que mejor le quede.
           </p>
           <p style={{ color: '#9B8AB8', fontFamily: 'Inter, sans-serif', fontSize: '12px', margin: 0 }}>
-            🕐 Horarios en hora de Venezuela (UTC−4) — ahora son las {new Date().toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Caracas' })} VET
+            Horarios en hora de Venezuela (UTC−4) — ahora son las {new Date().toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Caracas' })} VET
           </p>
         </div>
 
@@ -221,7 +220,7 @@ export default function ReagendarPage({ params }: { params: Promise<{ token: str
                 }}
               >
                 <span style={{ textTransform: 'capitalize' }}>
-                  {tieneElegido ? '✅ ' : ''}{diaLabel}
+                  {diaLabel}
                 </span>
                 <span style={{ color: '#9B8AB8', fontSize: '12px', fontWeight: 400 }}>
                   {abierto ? '▲' : '▼'}

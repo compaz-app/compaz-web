@@ -22,7 +22,7 @@ export async function reportarError(e: unknown, donde?: string): Promise<void> {
     if (!(await reclamarVentana(clave, VENTANA_ERROR_MS)).ok) return
     // Tope global: aunque los mensajes sean distintos, como mucho 2 alertas de error por minuto (una ruta pública no puede inflar la actividad).
     if (!(await reclamarVentana('error_srv_global', 30_000)).ok) return
-    await alertaAdmin('actividad', `⚠️ Error del servidor${donde ? ` en ${donde}` : ''}: ${resumen}`, { categoria: 'error_servidor' })
+    await alertaAdmin('actividad', `Error del servidor${donde ? ` en ${donde}` : ''}: ${resumen}`, { categoria: 'error_servidor' })
   } catch (x) {
     console.error('[errores] no se pudo anotar el error:', x instanceof Error ? x.message : x)
   }

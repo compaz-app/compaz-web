@@ -7,18 +7,17 @@ export type SeccionPanel = 'bandeja' | 'seguimiento' | 'personas' | 'visitas' | 
 
 export interface DefSeccion {
   id: SeccionPanel
-  icono: string
   texto: string
   /** Permiso para entrar; 'cualquiera' = basta con poder entrar al panel. */
   permiso: PermisoRequerido | 'cualquiera'
 }
 
 export const SECCIONES_PANEL: DefSeccion[] = [
-  { id: 'bandeja', icono: '🔔', texto: 'Bandeja', permiso: 'atender' },
-  { id: 'seguimiento', icono: '🧭', texto: 'Seguimiento', permiso: 'monitorear' },
-  { id: 'personas', icono: '👥', texto: 'Personas', permiso: 'monitorear' },
-  { id: 'visitas', icono: '📅', texto: 'Visitas', permiso: 'monitorear' },
-  { id: 'mas', icono: '☰', texto: 'Más', permiso: 'cualquiera' },
+  { id: 'bandeja', texto: 'Bandeja', permiso: 'atender' },
+  { id: 'seguimiento', texto: 'Seguimiento', permiso: 'monitorear' },
+  { id: 'personas', texto: 'Personas', permiso: 'monitorear' },
+  { id: 'visitas', texto: 'Visitas', permiso: 'monitorear' },
+  { id: 'mas', texto: 'Más', permiso: 'cualquiera' },
 ]
 
 export const esSeccionPanel = (v: unknown): v is SeccionPanel => typeof v === 'string' && SECCIONES_PANEL.some((s) => s.id === v)

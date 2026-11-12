@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
   // ── Sin pasarela de pago: no se contrata gratis. Se registra el interés y se avisa al admin. ──
   if (!pagoSimuladoActivo()) {
     await alertaAdmin('actividad', [
-      `💳 <b>Cliente quiere contratar (pago pendiente)</b>`, ``,
+      `<b>Cliente quiere contratar (pago pendiente)</b>`, ``,
       `<b>Cliente:</b> ${esc(clienteNombre)} (${esc(sol.usuarios?.email ?? '')})`,
       `<b>Compita:</b> ${esc(sol.compitas?.nombre ?? '')}`,
       `<b>Plan:</b> ${esc(planInfo.nombre)}`, ``,
@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
   const pago = await registrarPago({ usuarioId: sol.cliente_id, tipo: 'plan', plan, metodo: 'otro', referencia: 'pago simulado', registradoPor: 'sistema' })
   if (!pago.ok) {
     console.error('[pago/confirmar] no se pudo registrar el pago:', pago.error)
-    await alertaAdmin('urgente', `⚠️ <b>${esc(clienteNombre)}</b> contrató el plan <b>${esc(planInfo.nombre)}</b> pero no se pudo registrar el pago (sin límite de visitas). Ejecuta la migración de pagos y regístralo desde el panel.`)
+    await alertaAdmin('urgente', `<b>${esc(clienteNombre)}</b> contrató el plan <b>${esc(planInfo.nombre)}</b> pero no se pudo registrar el pago (sin límite de visitas). Ejecuta la migración de pagos y regístralo desde el panel.`)
   }
 
   // La visita de coordinación: buscar cualquier visita activa del cliente (el constraint es por cliente, no por compita).
@@ -109,28 +109,28 @@ export async function POST(req: NextRequest) {
     if (u?.familiar_edad) perfilLineas.push(`<b>Edad:</b> ${esc(u.familiar_edad)} años`)
     if (u?.familiar_condicion) perfilLineas.push(`<b>Condición:</b> ${esc(u.familiar_condicion)}`)
     if (u?.familiar_notas) perfilLineas.push(`<b>Notas:</b> ${esc(u.familiar_notas)}`)
-    const perfilBloque = perfilLineas.length > 0 ? [``, `🧓 <b>Sobre el familiar que vas a atender:</b>`, ...perfilLineas] : []
+    const perfilBloque = perfilLineas.length > 0 ? [``, `<b>Sobre el familiar que vas a atender:</b>`, ...perfilLineas] : []
     try {
       await sendTelegramMessage(
         sol.compitas.telegram_chat_id,
         [
-          `🎉 <b>¡Te contrataron!</b>`, ``,
+          `<b>¡Te contrataron!</b>`, ``,
           `<b>${esc(clienteNombre)}</b> acaba de contratarte con el plan <b>${esc(planInfo.nombre)}</b>.`, ``,
-          `📋 <b>En qué consiste:</b> ${esc(planInfo.descripcion)}`,
+          `<b>En qué consiste:</b> ${esc(planInfo.descripcion)}`,
           ...perfilBloque, ``,
-          `👋 <b>Empieza saludando a ${esc(clienteNombre.split(' ')[0])}</b>`, ``,
+          `<b>Empieza saludando a ${esc(clienteNombre.split(' ')[0])}</b>`, ``,
           `Escríbele desde este mismo chat: un simple "¡Hola! Soy tu compita, ¿cuándo te queda bien para la primera visita?" es suficiente. Ellos lo verán en su dashboard y te responderán aquí.`, ``,
           `Una vez que queden de acuerdo, el cliente registra la fecha en el sistema y tú podrás iniciar la visita desde aquí.`, ``,
-          `💙 Toda la comunicación con tu cliente debe mantenerse dentro de Compaz. Coordinar por fuera va contra nuestras condiciones de uso y puede resultar en la suspensión de tu cuenta.`,
+          `Toda la comunicación con tu cliente debe mantenerse dentro de Compaz. Coordinar por fuera va contra nuestras condiciones de uso y puede resultar en la suspensión de tu cuenta.`,
         ].join('\n'),
         TECLADO_SIN_VISITA,
       )
     } catch (e) {
       console.error('Telegram compita contratado:', e)
-      await alertaAdmin('tarea', `⚠️ No se pudo avisar a <b>${esc(sol.compitas.nombre)}</b> que fue contratada por <b>${esc(clienteNombre)}</b>. Contáctala.`)
+      await alertaAdmin('tarea', `No se pudo avisar a <b>${esc(sol.compitas.nombre)}</b> que fue contratada por <b>${esc(clienteNombre)}</b>. Contáctala.`)
     }
   } else {
-    await alertaAdmin('tarea', `⚠️ <b>${esc(sol.compitas?.nombre ?? 'La compita')}</b> fue contratada por <b>${esc(clienteNombre)}</b> pero no tiene Telegram vinculado.`)
+    await alertaAdmin('tarea', `<b>${esc(sol.compitas?.nombre ?? 'La compita')}</b> fue contratada por <b>${esc(clienteNombre)}</b> pero no tiene Telegram vinculado.`)
   }
 
   if (u?.email) {
@@ -141,7 +141,7 @@ export async function POST(req: NextRequest) {
         subject: `¡Contratación confirmada! Coordina tu primera visita`,
         html: `
           <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px">
-            <h2 style="color:#2D1464;font-size:22px;margin-bottom:12px">🎉 ¡Todo listo, ${esc(clienteNombre.split(' ')[0])}!</h2>
+            <h2 style="color:#2D1464;font-size:22px;margin-bottom:12px">¡Todo listo, ${esc(clienteNombre.split(' ')[0])}!</h2>
             <p style="color:#4A3B6B;font-size:15px;line-height:1.6">Acabas de contratar a <strong>${esc(sol.compitas?.nombre ?? 'tu compita')}</strong> con el plan <strong>${esc(planInfo.nombre)}</strong>.</p>
             <p style="color:#4A3B6B;font-size:15px;line-height:1.6">Le enviamos una notificación a ${corto} para que te escriba pronto. También puedes escribirle tú desde el dashboard para coordinar la fecha de la primera visita.</p>
             <div style="background:#F5F0FF;border:2px solid #7C4DFF;border-radius:12px;padding:16px 20px;margin:20px 0">

@@ -88,15 +88,15 @@ export async function pausarPersona(p: { rol: RolPausa; personaId: string; nombr
   else {
     const { data: c } = await admin.from('compitas').select('telegram_chat_id').eq('id', p.personaId).maybeSingle()
     const chat = (c as { telegram_chat_id: string | null } | null)?.telegram_chat_id
-    if (chat) await sendTelegramMessage(chat, `⏸️ <b>Tu cuenta está en pausa</b>\n\nDetectamos varios intentos de compartir datos de contacto. Mientras el equipo lo revisa no recibirás solicitudes nuevas ni podrás escribir en el chat. El equipo se comunica contigo por aquí. Si estás en una visita, sigue con normalidad.`).catch(() => {})
+    if (chat) await sendTelegramMessage(chat, `<b>Tu cuenta está en pausa</b>\n\nDetectamos varios intentos de compartir datos de contacto. Mientras el equipo lo revisa no recibirás solicitudes nuevas ni podrás escribir en el chat. El equipo se comunica contigo por aquí. Si estás en una visita, sigue con normalidad.`).catch(() => {})
   }
 
   // Lo programado con esta persona, para que el equipo decida con la información completa.
   const { data: vs } = await admin.from('visitas').select('id').eq(p.rol === 'cliente' ? 'usuario_id' : 'compita_id', p.personaId).in('estado', ['pre_visita', 'programada'])
   const n = (vs ?? []).length
   await alertaAdmin('tarea',
-    `⏸️ <b>Cuenta en pausa por compartir contactos</b>\n\n<b>${esc(p.nombre)}</b> (${p.rol}) compartió datos de contacto por ${Number(aj.detecciones_umbral)}.ª vez en ${Number(aj.detecciones_ventana_dias)} días${p.donde ? ` (último: ${esc(p.donde)})` : ''}. Quedó en pausa y no tiene fecha de fin hasta que decidas: reactivar, dar otra oportunidad o bloquear.${reincidente ? '\n\n⚠️ Ya había recibido otra oportunidad: lo recomendable es bloquear.' : ''}${n ? `\n\nTiene ${n} visita(s) programada(s) o por agendar con esta persona.` : ''}`,
-    { categoria: 'cuenta_pausada', clave: `pausa:${p.rol}:${p.personaId}`, entidad: { tipo: p.rol, id: p.personaId, nombre: `⏸️ Cuenta en pausa: ${p.nombre}` } },
+    `<b>Cuenta en pausa por compartir contactos</b>\n\n<b>${esc(p.nombre)}</b> (${p.rol}) compartió datos de contacto por ${Number(aj.detecciones_umbral)}.ª vez en ${Number(aj.detecciones_ventana_dias)} días${p.donde ? ` (último: ${esc(p.donde)})` : ''}. Quedó en pausa y no tiene fecha de fin hasta que decidas: reactivar, dar otra oportunidad o bloquear.${reincidente ? '\n\nYa había recibido otra oportunidad: lo recomendable es bloquear.' : ''}${n ? `\n\nTiene ${n} visita(s) programada(s) o por agendar con esta persona.` : ''}`,
+    { categoria: 'cuenta_pausada', clave: `pausa:${p.rol}:${p.personaId}`, entidad: { tipo: p.rol, id: p.personaId, nombre: `Cuenta en pausa: ${p.nombre}` } },
   )
   return true
 }
@@ -130,7 +130,7 @@ export async function decidirPausa(pausaId: string, decision: DecisionPausa, por
   else {
     const { data: c } = await admin.from('compitas').select('telegram_chat_id').eq('id', x.persona_id).maybeSingle()
     const chat = (c as { telegram_chat_id: string | null } | null)?.telegram_chat_id
-    if (chat) await sendTelegramMessage(chat, decision === 'reactivar' ? '▶️ <b>Tu cuenta se reactivó.</b> Ya vuelves a recibir solicitudes y puedes usar el chat con normalidad.' : '▶️ <b>Tu cuenta se reactivó, con una advertencia.</b> Compartir datos de contacto fuera de Compaz va contra las reglas: si vuelve a ocurrir, tu cuenta se bloqueará.').catch(() => {})
+    if (chat) await sendTelegramMessage(chat, decision === 'reactivar' ? '<b>Tu cuenta se reactivó.</b> Ya vuelves a recibir solicitudes y puedes usar el chat con normalidad.' : '<b>Tu cuenta se reactivó, con una advertencia.</b> Compartir datos de contacto fuera de Compaz va contra las reglas: si vuelve a ocurrir, tu cuenta se bloqueará.').catch(() => {})
   }
   await admin.from('admin_flags').update({ resuelto: true }).eq('tipo', 'cuenta_pausada').eq('entidad_id', x.persona_id).eq('resuelto', false)
   await registrarEvento({ entidad: x.rol, entidadId: x.persona_id, tipo: 'cuenta_pausa_decidida', actor: `admin:${por}`.slice(0, 120) as `admin:${string}`, datos: { decision } })

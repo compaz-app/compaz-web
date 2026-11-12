@@ -160,7 +160,7 @@ export default async function PanelPage({ searchParams }: { searchParams: Promis
       cuerpo = (
         <div className="space-y-3">
           <Link href={enlace({ ...sinSub })} className="inline-flex min-h-9 items-center rounded-lg border border-borde bg-blanco px-3 text-sm font-bold">‹ Volver a Más</Link>
-          <Encabezado titulo={<><span aria-hidden>{subMas.icono}</span> {subMas.texto}</>} />
+          <Encabezado titulo={subMas.texto} />
           {vista}
         </div>
       )

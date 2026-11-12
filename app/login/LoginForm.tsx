@@ -117,7 +117,6 @@ export default function LoginForm({ returnTo = '', error: errorInicial, motivo }
         <div style={{ background: 'white', border: '2px solid #E8E0D4', borderRadius: '16px', padding: '32px' }}>
           {enviado ? (
             <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '40px', marginBottom: '16px' }}>✉️</div>
               <h2 style={{ color: '#2D1464', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, marginBottom: '12px' }}>
                 Revisa tu correo
               </h2>

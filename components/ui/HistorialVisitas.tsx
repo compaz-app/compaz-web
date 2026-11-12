@@ -25,10 +25,10 @@ const ESCALA: Record<number, { label: string; color: string }> = {
 }
 
 const INDICADORES = [
-  { key: 'animo' as const, label: 'Ánimo', emoji: '😊' },
-  { key: 'fisico' as const, label: 'Condición física', emoji: '💪' },
-  { key: 'participacion' as const, label: 'Participación', emoji: '🤝' },
-  { key: 'entorno' as const, label: 'Entorno', emoji: '🏠' },
+  { key: 'animo' as const, label: 'Ánimo', },
+  { key: 'fisico' as const, label: 'Condición física', },
+  { key: 'participacion' as const, label: 'Participación', },
+  { key: 'entorno' as const, label: 'Entorno', },
 ]
 
 function FotoVisita({ url }: { url: string }) {
@@ -107,13 +107,13 @@ export default function HistorialVisitas({ visitas, compitaId, compitaNombre }: 
 
                   {v.reporte && (
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '8px', marginBottom: '14px' }}>
-                      {INDICADORES.map(({ key, label, emoji }) => {
+                      {INDICADORES.map(({ key, label }) => {
                         const val = v.reporte![key] as number | null
                         if (val === null) return null
                         const meta = ESCALA[val]
                         return (
                           <div key={key} style={{ background: '#FDFAF6', border: '1px solid #E8E0D4', borderRadius: '8px', padding: '10px 12px' }}>
-                            <div style={{ fontSize: '11px', color: '#9B8AB8', marginBottom: '4px' }}>{emoji} {label}</div>
+                            <div style={{ fontSize: '11px', color: '#9B8AB8', marginBottom: '4px' }}>{label}</div>
                             <div style={{ fontSize: '15px', fontWeight: 800, fontFamily: 'Bricolage Grotesque, sans-serif', color: meta?.color ?? '#1A0A3C' }}>{val}/5</div>
                             <div style={{ fontSize: '11px', color: '#6B5C90' }}>{meta?.label}</div>
                           </div>

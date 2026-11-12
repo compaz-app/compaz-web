@@ -153,11 +153,11 @@ describe('orden, privacidad y aislamiento', () => {
 
 describe('en el bot', () => {
   test('el botón está en TODOS los teclados', () => {
-    for (const t of [TECLADO_SIN_VISITA, TECLADO_INICIO, TECLADO_DURANTE_VISITA]) assert.ok(t.keyboard.flat().some((b: any) => b.text === '❓ ¿Qué me toca?'))
+    for (const t of [TECLADO_SIN_VISITA, TECLADO_INICIO, TECLADO_DURANTE_VISITA]) assert.ok(t.keyboard.flat().some((b: any) => b.text === '¿Qué me toca?'))
   })
   test('al tocarlo responde la situación real (y con botones si hay algo que hacer); también por callback', async () => {
     const { compita, cliente } = base(); const sol = mkSolicitud(cliente, compita, { tipo: 'directa', slots_propuestos: [] })
-    await webhook(tgText(CHAT, '❓ ¿Qué me toca?'))
+    await webhook(tgText(CHAT, '¿Qué me toca?'))
     let m = tgPara(CHAT).at(-1)!; assert.match(m.text, /quiere contratarte directamente/)
     assert.deepEqual((m.markup?.inline_keyboard ?? []).flat().map((b: any) => b.callback_data), [`directa:${sol.token_respuesta}`, `rechazar:${sol.token_respuesta}`])
     db.rows('solicitudes').length = 0
@@ -165,6 +165,6 @@ describe('en el bot', () => {
     assert.ok(m.markup?.keyboard, 'sin nada que hacer vuelve el teclado normal')
   })
   test('quien no es compita no obtiene nada', async () => {
-    await webhook(tgText('5550001', '❓ ¿Qué me toca?')); assert.ok(!tgPara('5550001').some((m) => /Te toca a ti|Nada pendiente/.test(m.text)))
+    await webhook(tgText('5550001', '¿Qué me toca?')); assert.ok(!tgPara('5550001').some((m) => /Te toca a ti|Nada pendiente/.test(m.text)))
   })
 })

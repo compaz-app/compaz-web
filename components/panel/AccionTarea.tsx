@@ -102,7 +102,7 @@ function DialogoLlamada({ reporte, onCerrar, onHecho }: { reporte: ReporteLlamad
   }
   return (
     <DialogoPanel titulo={`Llamada a ${reporte.compita_nombre}`} onCerrar={onCerrar}>
-      <div className="mt-2"><Aviso tamano="compacto" tono={reporte.vencido ? 'peligro' : 'advertencia'}>📞 {reporte.vencido ? 'Plazo vencido: era antes del' : 'Llamar antes del'} {cuandoLinea(reporte.plazo_llamada)} · si pasa sin llamada, el sistema te vuelve a avisar.</Aviso></div>
+      <div className="mt-2"><Aviso tamano="compacto" tono={reporte.vencido ? 'peligro' : 'advertencia'}>{reporte.vencido ? 'Plazo vencido: era antes del' : 'Llamar antes del'} {cuandoLinea(reporte.plazo_llamada)} · si pasa sin llamada, el sistema te vuelve a avisar.</Aviso></div>
       <p className="mt-2 text-sm text-texto-medio">Reporte sobre <b>{reporte.cliente_nombre}</b>: {reporte.motivo}. No le pidas datos por teléfono; escucha y decide.</p>
       {(cancelables > 0 || enVivo > 0) && (
         <div className="mt-3 rounded-xl border border-borde p-3 text-sm">
