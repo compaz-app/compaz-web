@@ -30,7 +30,7 @@ export default function Manual({ actor, q, sec, abierta, enlace, como, paramsFor
     return (
       <li key={e.id} className={`overflow-hidden rounded-xl border bg-blanco ${abiertaAhora ? 'border-morado-medio' : 'border-borde'} ${ok ? '' : 'opacity-70'}`}>
         <h3>
-          <Link href={enlace({ man_abierta: abiertaAhora ? null : e.id })} aria-expanded={abiertaAhora} scroll={false} className="flex min-h-11 w-full items-center gap-2 px-3 py-2 text-left">
+          <Link prefetch={false} href={enlace({ man_abierta: abiertaAhora ? null : e.id })} aria-expanded={abiertaAhora} scroll={false} className="flex min-h-11 w-full items-center gap-2 px-3 py-2 text-left">
             <span className="flex-1 text-sm font-extrabold">{e.titulo}</span>
             {!ok && <span className="shrink-0 rounded bg-gris100 px-1.5 text-[11px] font-bold">Sin permiso</span>}
             <span aria-hidden className="text-texto-sutil">{abiertaAhora ? '▾' : '▸'}</span>
@@ -60,8 +60,8 @@ export default function Manual({ actor, q, sec, abierta, enlace, como, paramsFor
         <InfoBoton que="Qué es el manual" texto="Responde las preguntas más comunes del equipo y se mantiene al día con el sistema. Busca con tus palabras o elige una sección. Las preguntas con candado necesitan un permiso que no tienes." />
       </form>
       <div className="flex gap-1.5 overflow-x-auto pb-1" role="group" aria-label="Secciones del manual">
-        <Link href={enlace({ man_sec: null, man_abierta: null })} aria-pressed={sec === ''} className={clasesChip(sec === '', 'shrink-0 whitespace-nowrap')}>Todo</Link>
-        {SECCIONES.map((x) => <Link key={x.id} href={enlace({ man_sec: x.id, man_abierta: null })} aria-pressed={sec === x.id} className={clasesChip(sec === x.id, 'shrink-0 whitespace-nowrap')}>{x.titulo}</Link>)}
+        <Link prefetch={false} href={enlace({ man_sec: null, man_abierta: null })} aria-pressed={sec === ''} className={clasesChip(sec === '', 'shrink-0 whitespace-nowrap')}>Todo</Link>
+        {SECCIONES.map((x) => <Link prefetch={false} key={x.id} href={enlace({ man_sec: x.id, man_abierta: null })} aria-pressed={sec === x.id} className={clasesChip(sec === x.id, 'shrink-0 whitespace-nowrap')}>{x.titulo}</Link>)}
       </div>
       {lista.length === 0 && <p role="status" className="rounded-xl border border-dashed border-borde bg-blanco p-5 text-center text-sm text-texto-medio">No encontré nada con esas palabras. Prueba con otras, o quita el filtro de sección.</p>}
       {q && lista.length > 0 && (

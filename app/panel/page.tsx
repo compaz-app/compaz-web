@@ -5,8 +5,9 @@
 import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import { requireAuth } from '@/lib/auth'
-import { actorDePagina } from '@/lib/permisos'
-import { actorComo, puedeEntrarAlPanel, seccionActiva } from '@/lib/panel-secciones'
+import { actorDePagina, type Actor } from '@/lib/permisos'
+import { actorComo, puedeEntrarAlPanel, seccionActiva, type SeccionPanel, type ActorVista } from '@/lib/panel-secciones'
+import EsqueletoPanel from '@/components/panel/EsqueletoPanel'
 import { cargarBandeja, TOPE_BANDEJA } from '@/lib/panel-bandeja'
 import AvisoTope from '@/components/panel/AvisoTope'
 import MarcoPanel from '@/components/panel/MarcoPanel'
@@ -72,6 +73,8 @@ export default async function PanelPage({ searchParams }: { searchParams: Promis
   const real = await actorDePagina()
   if (!real) redirect('/dashboard')
   const sp = await searchParams
+  // Al cambiar cualquier parámetro de la dirección, el contenido se vuelve a pedir y mientras tanto se ve el esqueleto (el marco no se mueve).
+  const clave = JSON.stringify(sp)
   const un = (k: string) => { const v = sp[k]; return typeof v === 'string' ? v : '' }
   const { actor, comoColaborador } = actorComo(real, un('como'))
   // Quien no tiene ningún permiso de trabajo vuelve a su cuenta, igual que en el panel viejo.
@@ -80,6 +83,21 @@ export default async function PanelPage({ searchParams }: { searchParams: Promis
   // Viendo como colaborador, los datos se recortan como se le recortarían a él (así el administrador ve lo mismo que el equipo).
   const comoActor = { ...real, rol: actor.rol, permisos: actor.permisos }
 
+  return (
+    <MarcoPanel actor={actor} actual={actual} comoColaborador={comoColaborador} puedeElegirVista={real.rol === 'admin'} correo={real.correo}>
+      {comoColaborador && <div className="mb-4"><Aviso tamano="compacto" tono="advertencia">Estás viendo el panel como un colaborador con los permisos base. Es solo la pantalla: tus permisos reales no cambian.</Aviso></div>}
+      <Suspense key={clave} fallback={<EsqueletoPanel />}>
+        <ContenidoPanel sp={sp} actual={actual} actor={actor} comoActor={comoActor} comoColaborador={comoColaborador} />
+      </Suspense>
+    </MarcoPanel>
+  )
+}
+
+/** Lo que depende de la base: se calcula aparte para que el marco del panel (menú y encabezado) salga al instante y esto llegue después. */
+async function ContenidoPanel({ sp, actual, actor, comoActor, comoColaborador }: {
+  sp: Record<string, string | string[] | undefined>; actual: SeccionPanel; actor: ActorVista; comoActor: Actor; comoColaborador: boolean
+}) {
+  const un = (k: string) => { const v = sp[k]; return typeof v === 'string' ? v : '' }
   // Cada enlace parte de la dirección actual y cambia solo lo suyo.
   const enlace = (cambios: Record<string, string | null>) => {
     const q = new URLSearchParams({ sec: actual, ...(comoColaborador ? { como: 'colaborador' } : {}) })
@@ -159,7 +177,7 @@ export default async function PanelPage({ searchParams }: { searchParams: Promis
       }
       cuerpo = (
         <div className="space-y-3">
-          <Link href={enlace({ ...sinSub })} className="inline-flex min-h-9 items-center rounded-lg border border-borde bg-blanco px-3 text-sm font-bold">‹ Volver a Más</Link>
+          <Link prefetch={false} href={enlace({ ...sinSub })} className="inline-flex min-h-9 items-center rounded-lg border border-borde bg-blanco px-3 text-sm font-bold">‹ Volver a Más</Link>
           <Encabezado titulo={subMas.texto} />
           {vista}
         </div>
@@ -177,8 +195,7 @@ export default async function PanelPage({ searchParams }: { searchParams: Promis
   const caso = casoId ? await casoDeCliente(comoActor, casoId) : null
 
   return (
-    <MarcoPanel actor={actor} actual={actual} comoColaborador={comoColaborador} puedeElegirVista={real.rol === 'admin'} correo={real.correo}>
-      {comoColaborador && <div className="mb-4"><Aviso tamano="compacto" tono="advertencia">Estás viendo el panel como un colaborador con los permisos base. Es solo la pantalla: tus permisos reales no cambian.</Aviso></div>}
+    <>
       {cuerpo}
       {detalle && (
         <DetalleVisita puedeAtender={actor.permisos.atender === true} d={detalle} ahora={Date.now()} cerrarHref={enlace({ visita: null })} fichaClienteHref={enlace({ persona: `cliente:${detalle.fila.clienteId}` })} fichaCompitaHref={enlace({ persona: `compita:${detalle.fila.compitaId}` })}
@@ -195,6 +212,6 @@ export default async function PanelPage({ searchParams }: { searchParams: Promis
       )}
       {chat && <VerChat key={`${chat.clienteId}:${chat.compitaId}`} clienteId={chat.clienteId} compitaId={chat.compitaId} cerrarHref={enlace({ chat: null })} pideMotivo={actor.rol !== 'admin'}
         fichaClienteHref={enlace({ chat: null, persona: `cliente:${chat.clienteId}` })} fichaCompitaHref={enlace({ chat: null, persona: `compita:${chat.compitaId}` })} />}
-    </MarcoPanel>
+    </>
   )
 }

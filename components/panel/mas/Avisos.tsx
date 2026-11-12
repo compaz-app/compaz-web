@@ -19,8 +19,8 @@ export default function Avisos({ filas, ver, pagina, enlace, puedeReintentar }: 
     <section className="max-w-3xl space-y-3">
       <div className="flex flex-wrap items-center gap-1.5">
         <InfoBoton que="Qué es esta pantalla" texto="Cada aviso queda guardado con su resultado. Si falla, se reintenta solo cuando el fallo es pasajero; los que no tienen arreglo (por ejemplo, un compita sin Telegram vinculado) quedan aquí como Fallidos para que los reintentes o le escribas directamente." />
-        <Link href={enlace({ av_ver: null, av_pag: null })} aria-pressed={ver === 'todos'} className={clasesChip(ver === 'todos')}>Todos <span className="ml-1 opacity-70">{filas.length}</span></Link>
-        <Link href={enlace({ av_ver: 'fallidos', av_pag: null })} aria-pressed={ver === 'fallidos'} className={clasesChip(ver === 'fallidos')}>Fallidos <span className="ml-1 opacity-70">{fallidos.length}</span></Link>
+        <Link prefetch={false} href={enlace({ av_ver: null, av_pag: null })} aria-pressed={ver === 'todos'} className={clasesChip(ver === 'todos')}>Todos <span className="ml-1 opacity-70">{filas.length}</span></Link>
+        <Link prefetch={false} href={enlace({ av_ver: 'fallidos', av_pag: null })} aria-pressed={ver === 'fallidos'} className={clasesChip(ver === 'fallidos')}>Fallidos <span className="ml-1 opacity-70">{fallidos.length}</span></Link>
       </div>
       <ul className={CLASE_LISTA}>
         {lista.slice(p.desde, p.hasta).map((a) => (

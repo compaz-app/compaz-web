@@ -36,3 +36,22 @@ describe('una sola comprobación de sesión', () => {
     assert.match(readFileSync('lib/auth.ts', 'utf8'), /export const usuarioVerificado = cache\(/)
   })
 })
+
+describe('el panel se siente inmediato', () => {
+  test('el marco sale primero y los datos llegan después, con un esqueleto mientras tanto', () => {
+    const p = readFileSync('app/panel/page.tsx', 'utf8')
+    assert.match(p, /<Suspense key=\{clave\} fallback=\{<EsqueletoPanel \/>\}>/)
+    assert.match(p, /async function ContenidoPanel\(/)
+    // las consultas pesadas viven dentro del contenido, no antes de devolver el marco
+    const antes = p.slice(0, p.indexOf('async function ContenidoPanel('))
+    for (const q of ['cargarBandeja(', 'listarCompitas(', 'listarSeguimiento(', 'listarVisitas(', 'estadoDelSistema(']) assert.ok(!antes.includes(q), `${q} debe estar en ContenidoPanel`)
+    assert.match(readFileSync('app/panel/loading.tsx', 'utf8'), /EsqueletoPanel/)
+  })
+  test('los enlaces del panel no precargan (cada precarga ejecutaba la pantalla entera en el servidor)', () => {
+    const { readdirSync, statSync } = require('node:fs')
+    const archivos = (d: string): string[] => readdirSync(d).flatMap((n: string) => { const f = `${d}/${n}`; return statSync(f).isDirectory() ? archivos(f) : f.endsWith('.tsx') ? [f] : [] })
+    const malos: string[] = []
+    for (const f of [...archivos('components/panel'), 'app/panel/page.tsx']) for (const l of readFileSync(f, 'utf8').split('\n')) if (/<Link\b/.test(l) && !/prefetch=\{false\}/.test(l)) malos.push(`${f}: ${l.trim().slice(0, 70)}`)
+    assert.deepEqual(malos, [])
+  })
+})

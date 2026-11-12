@@ -21,7 +21,7 @@ export default function CasoSeguimiento({ caso, cerrarHref, fichaClienteHref, fi
   return (
     <div className="fixed inset-0 z-40 flex justify-end bg-negro/30">
       <CerrarConEscape href={cerrarHref} />
-      <Link href={cerrarHref} replace scroll={false} aria-label="Cerrar el caso" className="absolute inset-0 cursor-default" />
+      <Link prefetch={false} href={cerrarHref} replace scroll={false} aria-label="Cerrar el caso" className="absolute inset-0 cursor-default" />
       <aside role="dialog" aria-label={`Seguimiento de ${caso.nombre}`} className="relative h-full w-full max-w-md space-y-5 overflow-y-auto bg-blanco p-5 shadow-2xl">
         <EncabezadoLateral etiqueta="Seguimiento del caso" titulo={<>{caso.nombre || 'Sin nombre'}{caso.compita && <span className="font-bold text-texto-medio"> con {caso.compita}</span>}</>} cerrarHref={cerrarHref} />
 

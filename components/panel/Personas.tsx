@@ -34,9 +34,9 @@ function FiltroEstado({ estados, estado, enlace }: { estados: Estados; estado: s
         <span className="font-normal text-texto-medio">Estado</span>{estado || 'Todos'}<span aria-hidden className="text-texto-sutil">▾</span>
       </summary>
       <div className="absolute left-0 z-20 mt-1 max-h-72 w-64 overflow-y-auto rounded-xl border border-borde bg-blanco p-1 shadow-lg">
-        <Link href={enlace({ estado: null, pag: null })} className={`${item} ${!estado ? 'font-extrabold' : ''}`}>Todos</Link>
+        <Link prefetch={false} href={enlace({ estado: null, pag: null })} className={`${item} ${!estado ? 'font-extrabold' : ''}`}>Todos</Link>
         {estados.map((e) => (
-          <Link key={e.estado} href={enlace({ estado: e.estado, pag: null })} aria-current={estado === e.estado ? 'true' : undefined} className={`${item} ${estado === e.estado ? 'bg-fondo-lavanda font-extrabold' : ''}`}>
+          <Link prefetch={false} key={e.estado} href={enlace({ estado: e.estado, pag: null })} aria-current={estado === e.estado ? 'true' : undefined} className={`${item} ${estado === e.estado ? 'bg-fondo-lavanda font-extrabold' : ''}`}>
             <span className="truncate">{e.estado}</span><span className="text-xs text-texto-sutil">{e.n}</span>
           </Link>
         ))}
@@ -61,7 +61,7 @@ function Paginas({ pag, paginas, total, enlace }: { pag: number; paginas: number
 
 export function Selector({ lista, enlace }: { lista: 'compitas' | 'clientes'; enlace: Enlace }) {
   const t = (id: 'compitas' | 'clientes', texto: string) => (
-    <Link href={enlace({ lista: id, pag: null, q: null, vista: null, orden: null, dir: null, estado: null, persona: null })} aria-current={lista === id ? 'page' : undefined}
+    <Link prefetch={false} href={enlace({ lista: id, pag: null, q: null, vista: null, orden: null, dir: null, estado: null, persona: null })} aria-current={lista === id ? 'page' : undefined}
       className={`flex min-h-9 items-center justify-center rounded-lg px-4 text-sm ${lista === id ? 'bg-morado-medio font-extrabold text-blanco' : 'font-bold text-morado-claro hover:bg-fondo-claro'}`}>{texto}</Link>
   )
   return <div className="flex w-fit gap-1 rounded-xl border border-borde bg-blanco p-1">{t('compitas', 'Compitas')}{t('clientes', 'Clientes')}</div>
@@ -99,7 +99,7 @@ export function TablaCompitas({ d, enlace, params }: { d: DatosCompitas; enlace:
             <tr>
               {COLUMNAS_COMPITA.map((c) => (
                 <th key={c.id} scope="col" title={c.ayuda} className={`whitespace-nowrap p-0 font-extrabold ${c.clase}`}>
-                  <Link href={enlace({ orden: c.id, dir: d.orden === c.id && d.dir === 'asc' ? 'desc' : 'asc', pag: null })} className="flex min-h-9 items-center px-2.5">
+                  <Link prefetch={false} href={enlace({ orden: c.id, dir: d.orden === c.id && d.dir === 'asc' ? 'desc' : 'asc', pag: null })} className="flex min-h-9 items-center px-2.5">
                     {c.t}{d.orden === c.id ? (d.dir === 'asc' ? ' ▲' : ' ▼') : ''}
                   </Link>
                 </th>
@@ -110,7 +110,7 @@ export function TablaCompitas({ d, enlace, params }: { d: DatosCompitas; enlace:
             {d.fila.map((p) => (
               <tr key={p.id} className="hover:bg-lavanda-sutil">
                 <td className="w-full min-w-44 max-w-0 px-2.5 py-2">
-                  <Link href={enlace({ persona: `compita:${p.id}` })} className="flex items-center gap-2.5" title={p.nombre}>
+                  <Link prefetch={false} href={enlace({ persona: `compita:${p.id}` })} className="flex items-center gap-2.5" title={p.nombre}>
                     <PuntoUrgencia u={puntoCompita(p)} />
                     <span className="min-w-0"><span className="block truncate font-bold">{p.nombre}</span>
                       <span className="block truncate text-xs text-texto-medio @2xl:hidden">{p.zona} · {p.estado}{p.tardias > 0 && <b className="text-ambar-oscuro"> · {p.tardias} cancelación{p.tardias > 1 ? 'es' : ''} tardía{p.tardias > 1 ? 's' : ''}</b>}</span></span>
@@ -148,7 +148,7 @@ export function TablaClientes({ d, enlace, params }: { d: DatosClientes; enlace:
       <ul className={CLASE_LISTA}>
         {d.fila.map((c) => (
           <li key={c.id}>
-            <Link href={enlace({ persona: `cliente:${c.id}` })} className="flex min-h-12 flex-wrap items-center gap-x-3 gap-y-0.5 px-3 py-2 hover:bg-lavanda-sutil">
+            <Link prefetch={false} href={enlace({ persona: `cliente:${c.id}` })} className="flex min-h-12 flex-wrap items-center gap-x-3 gap-y-0.5 px-3 py-2 hover:bg-lavanda-sutil">
               <span className="min-w-40 flex-1"><span className="block truncate text-sm font-bold">{c.nombre || 'Sin nombre'}</span><span className="block truncate text-xs text-texto-medio">{c.zona || 'Sin zona'}{c.compita ? ` · con ${c.compita}` : ' · sin compita todavía'}</span></span>
               {c.bloqueado && <span className="rounded bg-rojo-claro px-1.5 text-[11px] font-extrabold text-rojo-oscuro">Bloqueado</span>}
               {c.plan && <Rol>{c.plan}</Rol>}

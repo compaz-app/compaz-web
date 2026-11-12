@@ -15,8 +15,8 @@ export default function Resenas({ filas, ver, enlace, puedeActuar }: { filas: Fi
     <section className="max-w-3xl space-y-3">
       <div className="flex flex-wrap items-center gap-1.5">
         <InfoBoton que="Qué es esta pantalla" texto="Lo que el cliente escribe sobre su compita no se ve en el perfil hasta que lo apruebas. Por aprobar son las que esperan; Publicadas son las que ya se ven. Ocultar una publicada la devuelve a Por aprobar." />
-        <Link href={enlace({ res_ver: null })} aria-pressed={ver === 'pendientes'} className={clasesChip(ver === 'pendientes')}>Por aprobar <span className="ml-1 opacity-70">{pend.length}</span></Link>
-        <Link href={enlace({ res_ver: 'publicadas' })} aria-pressed={ver === 'publicadas'} className={clasesChip(ver === 'publicadas')}>Publicadas <span className="ml-1 opacity-70">{pub.length}</span></Link>
+        <Link prefetch={false} href={enlace({ res_ver: null })} aria-pressed={ver === 'pendientes'} className={clasesChip(ver === 'pendientes')}>Por aprobar <span className="ml-1 opacity-70">{pend.length}</span></Link>
+        <Link prefetch={false} href={enlace({ res_ver: 'publicadas' })} aria-pressed={ver === 'publicadas'} className={clasesChip(ver === 'publicadas')}>Publicadas <span className="ml-1 opacity-70">{pub.length}</span></Link>
       </div>
       <ul className={CLASE_LISTA}>
         {lista.map((r) => (

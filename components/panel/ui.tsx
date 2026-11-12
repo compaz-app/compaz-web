@@ -28,7 +28,7 @@ export function Filtros({ info, infoQue = 'Qué significa cada filtro', children
   return <div role="group" className="flex flex-wrap items-center gap-1.5">{info && <InfoBoton que={infoQue} texto={info} />}{children}</div>
 }
 export function ChipLink({ href, activo, children, extra }: { href: string; activo: boolean; children: React.ReactNode; extra?: string }) {
-  return <Link href={href} aria-pressed={activo} className={clasesChip(activo, extra)}>{children}</Link>
+  return <Link prefetch={false} href={href} aria-pressed={activo} className={clasesChip(activo, extra)}>{children}</Link>
 }
 export function ChipBoton({ activo, onClick, children }: { activo: boolean; onClick: () => void; children: React.ReactNode }) {
   return <button type="button" aria-pressed={activo} onClick={onClick} className={clasesChip(activo)}>{children}</button>
@@ -43,9 +43,9 @@ export function Paginador({ resumen, pag, paginas, hrefAnterior, hrefSiguiente }
     <div className="flex items-center justify-between gap-2 text-sm">
       <span className="text-texto-medio">{resumen}</span>
       <div className="flex items-center gap-2">
-        {hrefAnterior ? <Link href={hrefAnterior} className={BOTON_PAG}>‹ Anterior</Link> : <span className={`${BOTON_PAG} opacity-40`}>‹ Anterior</span>}
+        {hrefAnterior ? <Link prefetch={false} href={hrefAnterior} className={BOTON_PAG}>‹ Anterior</Link> : <span className={`${BOTON_PAG} opacity-40`}>‹ Anterior</span>}
         <span className="px-1 font-bold">{pag} / {paginas}</span>
-        {hrefSiguiente ? <Link href={hrefSiguiente} className={BOTON_PAG}>Siguiente ›</Link> : <span className={`${BOTON_PAG} opacity-40`}>Siguiente ›</span>}
+        {hrefSiguiente ? <Link prefetch={false} href={hrefSiguiente} className={BOTON_PAG}>Siguiente ›</Link> : <span className={`${BOTON_PAG} opacity-40`}>Siguiente ›</span>}
       </div>
     </div>
   )
