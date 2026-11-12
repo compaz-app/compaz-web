@@ -2,6 +2,9 @@
 // de la base de datos; no hace llamadas de prueba a Telegram, al correo ni a las videollamadas.
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { ESPERADOS } from '@/lib/cron'
+import type { Actor } from '@/lib/permisos'
+import { recortarTexto } from '@/lib/panel-datos'
+import { detectarContacto } from '@/lib/chat-moderacion'
 import { estadoProceso, type FilaProceso } from '@/lib/panel-mas-tipos'
 import { DUDAS, resumenAyuda, type TipoDuda } from '@/lib/ayuda'
 
@@ -17,7 +20,7 @@ async function dudasDeLaSemana(ahora: Date): Promise<ResumenDudas> {
   return { dias: r.dias, total: tipos.reduce((s, t) => s + t.n, 0), noResueltas: vals.reduce((s, d) => s + d.no_resueltas, 0), escaladas: vals.reduce((s, d) => s + d.escaladas, 0), tareasAbiertas: r.tareasAbiertas, tipos }
 }
 
-export async function estadoDelSistema(ahora: number = Date.now()): Promise<EstadoSistema> {
+export async function estadoDelSistema(ahora: number = Date.now(), actor?: Actor): Promise<EstadoSistema> {
   const db = createAdminSupabase()
   const [latidos, fallidos, pendientes, lista, airtable, dudas] = await Promise.all([
     db.from('telegram_estados').select('chat_id, updated_at').like('chat_id', 'cron:%'),
@@ -34,6 +37,6 @@ export async function estadoDelSistema(ahora: number = Date.now()): Promise<Esta
   })
   return {
     dudas, procesos, fallidos: fallidos.count ?? 0, pendientes: pendientes.count ?? 0, airtablePendientes: airtable.count ?? 0,
-    ultimosFallidos: (lista.data ?? []).map((a) => ({ id: String(a.id), plantilla: String(a.plantilla), canal: String(a.canal), error: a.error ?? null, intentos: Number(a.intentos ?? 0), ultimo: a.ultimo_intento_en ?? null })),
+    ultimosFallidos: (lista.data ?? []).map((a) => ({ id: String(a.id), plantilla: String(a.plantilla), canal: String(a.canal), error: a.error ? (actor ? recortarTexto(actor, String(a.error)) : detectarContacto(String(a.error)).textoCensurado) : null, intentos: Number(a.intentos ?? 0), ultimo: a.ultimo_intento_en ?? null })),
   }
 }

@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { requierePermiso } from '@/lib/permisos'
 import { ok, err, serverError } from '@/lib/api'
 import { bloquearCompita, desbloquearCompita } from '@/lib/compitas'
+import { anotarAccion } from '@/lib/acciones-equipo'
 
 export async function POST(req: NextRequest) {
   const g = await requierePermiso('cuentas'); if (!g.ok) return g.res
@@ -15,6 +16,7 @@ export async function POST(req: NextRequest) {
     } else {
       await desbloquearCompita(compita_id)
     }
+    await anotarAccion(g.actor.correo, bloquear ? 'bloqueó a un compita' : 'desbloqueó a un compita', { tipo: 'compita', id: String(compita_id) })
     return ok(null)
   } catch (e) {
     return serverError(e)

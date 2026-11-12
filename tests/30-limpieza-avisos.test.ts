@@ -9,7 +9,7 @@ beforeEach(limpiar)
 const hace = (dias: number) => ahoraMas(-dias * 24 * 60)
 const aviso = (estado: string, dias: number) =>
   db.seed('avisos', { destinatario_tipo: 'admin', canal: 'telegram', plantilla: 'x', estado, creado_en: hace(dias) })
-const estados = () => db.rows('telegram_estados').map((e) => e.chat_id as string)
+const estados = () => db.rows('telegram_estados').map((e) => e.chat_id as string).filter((c) => c !== 'cron:limpieza') // el propio latido de la limpieza no cuenta
 
 describe('retención de avisos (90 días)', () => {
   test('borra los avisos terminados de más de 90 días y conserva el resto', async () => {

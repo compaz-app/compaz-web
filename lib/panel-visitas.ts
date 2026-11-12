@@ -4,7 +4,7 @@ import { puede, type Actor } from '@/lib/permisos'
 import { recortarTexto } from '@/lib/panel-datos'
 import { clasificarVisita, type FilaVisita, type VisitaCruda } from '@/lib/panel-visitas-tipos'
 
-const MAX_VISITAS = 1000
+export const MAX_VISITAS = 1000
 type Fila = Omit<VisitaCruda, 'cliente' | 'compita' | 'zona'> & { usuario: { nombre: string } | null; compita: { nombre: string; apellido: string | null; zona: string | null; es_demo?: boolean } | null }
 
 /** Las 1000 visitas más recientes, clasificadas. Las de compitas de demostración no cuentan. */

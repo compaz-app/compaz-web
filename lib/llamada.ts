@@ -20,13 +20,15 @@ export async function segundosDeAviso(tipo: 'entrevista' | 'visita'): Promise<nu
   return Math.max(30, Math.round((corte - Number(aviso)) * 60))
 }
 
+export { DURACION_ENTREVISTA_MIN, textoDuracionLlamada } from '@/lib/llamada-ruta'
+
 export interface InfoSala { url: string; finEpoch: number | null; tipo: 'entrevista' | 'visita' }
 
 /** Datos de una sala en Daily (enlace y momento en que se cierra). null si no existe o no es de Compaz. */
 export async function infoDeSala(nombre: string): Promise<InfoSala | null> {
   if (!nombreDeSalaValido(nombre)) return null
   try {
-    const res = await fetch(`https://api.daily.co/v1/rooms/${encodeURIComponent(nombre)}`, { headers: { Authorization: `Bearer ${process.env.DAILY_API_KEY}` }, cache: 'no-store' })
+    const res = await fetch(`https://api.daily.co/v1/rooms/${encodeURIComponent(nombre)}`, { headers: { Authorization: `Bearer ${process.env.DAILY_API_KEY}` }, cache: 'no-store', signal: AbortSignal.timeout(8000) })
     if (!res.ok) return null
     const j = await res.json() as { url?: string; config?: { exp?: number } }
     if (!j.url) return null

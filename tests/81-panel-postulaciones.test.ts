@@ -55,8 +55,8 @@ describe('postulaciones y origen', () => {
 })
 
 describe('la sesión del panel no se corta', () => {
-  test('el middleware renueva la sesión también en /panel (si no, el acceso caduca al cumplirse la hora del token)', () => {
-    const m = readFileSync('middleware.ts', 'utf8')
+  test('el proxy (antes middleware) renueva la sesión también en /panel (si no, el acceso caduca al cumplirse la hora del token)', () => {
+    const m = readFileSync('proxy.ts', 'utf8')
     assert.match(m, /pathname\.startsWith\('\/panel'\)/); assert.match(m, /'\/panel\/:path\*'/)
   })
 })

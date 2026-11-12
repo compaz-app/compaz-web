@@ -1,44 +1,13 @@
 import { NextRequest } from 'next/server'
 import { requierePermiso } from '@/lib/permisos'
-import { createAdminSupabase } from '@/lib/supabase-server'
-import { avisarAdmin, sendTelegramMessage, TECLADO_SIN_VISITA } from '@/lib/telegram'
-import { alertaAdmin } from '@/lib/alertas-admin'
-import { esc } from '@/lib/html'
-import { ok, err, notFound, serverError } from '@/lib/api'
-import type { Visita, Compita, Usuario } from '@/types'
+import { forzarCierreVisita } from '@/lib/acciones-equipo'
+import { ok, err } from '@/lib/api'
 
+// POST /api/admin/forzar-cierre-visita { visita_id } — termina a la fuerza una visita en curso que quedó abierta y avisa al compita.
 export async function POST(req: NextRequest) {
   const g = await requierePermiso('atender'); if (!g.ok) return g.res
-
-  const { visita_id } = (await req.json().catch(() => ({})) as { visita_id: string })
-  if (!visita_id) return err('visita_id requerido')
-
-  const supabase = createAdminSupabase()
-  const fin = new Date().toISOString()
-
-  const { data: visita, error } = await supabase
-    .from('visitas')
-    .update({ estado: 'terminada', fin, room_url: null, llamada_solicitada_at: null })
-    .eq('id', visita_id)
-    .in('estado', ['en_curso', 'confirmando_inicio'])
-    .select('*, compita:compitas(id, nombre, telegram_chat_id), usuario:usuarios(nombre, email)')
-    .maybeSingle() as { data: (Visita & { compita: Compita; usuario: Usuario }) | null; error: unknown }
-
-  if (error) return serverError(error)
-  if (!visita) return notFound()
-
-  // Notificar al compita por Telegram
-  if (visita.compita?.telegram_chat_id) {
-    sendTelegramMessage(
-      visita.compita.telegram_chat_id,
-      `ℹ️ El administrador cerró la visita manualmente. Si tienes preguntas, escríbenos a hola@micompaz.com.`,
-      TECLADO_SIN_VISITA,
-    ).catch(e => console.error('[forzar-cierre] telegram compita:', e))
-  }
-
-  await alertaAdmin('actividad', 
-    `🔴 <b>Visita cerrada manualmente (admin)</b>\n\n<b>Compita:</b> ${esc(visita.compita?.nombre ?? '—')}\n<b>Cliente:</b> ${esc(visita.usuario?.nombre ?? '—')}`,
-  )
-
-  return ok({ visita_id })
+  const { visita_id } = (await req.json().catch(() => ({}))) as { visita_id?: unknown }
+  if (typeof visita_id !== 'string' || !visita_id) return err('visita_id requerido')
+  const r = await forzarCierreVisita(visita_id, g.actor.correo)
+  return r.ok ? ok(r.data) : err(r.error, r.status)
 }

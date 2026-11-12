@@ -22,6 +22,8 @@ export async function latido(nombre: string): Promise<void> {
 export const ESPERADOS: Record<string, number> = {
   recordatorios: 5, seguimiento: 5, 'escalera-avisos': 5, 'recordatorio-cuestionario': 10, 'cierre-rechazo': 30, 'recordatorio-visita': 30,
   'reintentar-airtable': 15, 'conciliar-airtable': 60,
+  // Los que antes nadie vigilaba (S-09). Minutos entre ejecuciones; se alerta pasado el triple.
+  limpieza: 1440, 'recordatorio-pago': 1440, 'recordatorio-primera-visita': 1440, 'aviso-inicio-visita': 15, 'noshow-alerta': 15, 'churn-alerta': 10080,
 }
 
 /** Alerta al admin (máx. 1 vez por hora y cron) si un cron dejó de ejecutarse. */
@@ -42,6 +44,18 @@ export async function vigilarLatidos(): Promise<string[]> {
     caidos.push(nombre)
   }
   return caidos
+}
+
+/**
+ * Ventana de espera por clave: la primera vez (o pasada la ventana) deja pasar y anota el momento; antes de que pase la ventana dice cuándo fue la
+ * última vez. Es el límite de frecuencia de las rutas que mandan mensajes a terceros.
+ */
+export async function reclamarVentana(clave: string, ventanaMs: number): Promise<{ ok: true } | { ok: false; desde: string }> {
+  const admin = createAdminSupabase()
+  const { data: previo } = await admin.from('telegram_estados').select('updated_at').eq('chat_id', clave).maybeSingle()
+  if (previo && Date.now() - new Date(previo.updated_at as string).getTime() < ventanaMs) return { ok: false, desde: previo.updated_at as string }
+  await admin.from('telegram_estados').upsert({ chat_id: clave, registro_pendiente: false, updated_at: new Date().toISOString() }, { onConflict: 'chat_id' })
+  return { ok: true }
 }
 
 /** Clave de idempotencia de una sola vez (true si es la primera vez que se reclama). */

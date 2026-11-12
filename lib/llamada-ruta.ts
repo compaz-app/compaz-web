@@ -12,3 +12,9 @@ export const nombreDeSalaValido = (n: string) => /^(ent|cmp)-[A-Za-z0-9-]{4,80}$
 
 /** Ruta relativa de la página de llamada para una sala. */
 export const rutaLlamada = (roomUrl: string) => `/llamada/${encodeURIComponent(nombreDeSala(roomUrl))}`
+
+/** Cuánto dura la conversación de la entrevista: los bloques que ve la familia son de 20 minutos. */
+export const DURACION_ENTREVISTA_MIN = 20
+
+/** La frase que TODOS los correos, mensajes y pantallas usan para decir cuánto dura la llamada y cuándo se cierra la sala (C-01). */
+export const textoDuracionLlamada = (corteMin: number) => `La llamada dura ${DURACION_ENTREVISTA_MIN} minutos y la sala se cierra sola a los ${corteMin} min.`

@@ -8,7 +8,6 @@
 // 4. Un colaborador desactivado equivale a no estar en el equipo.
 
 import type { NextResponse } from 'next/server'
-import { createServerSupabase } from '@/lib/supabase-server'
 import { isAdminEmail, usuarioVerificado } from '@/lib/auth'
 import { obtenerColaborador } from '@/lib/equipo'
 import { err, unauthorized, forbidden } from '@/lib/api'
@@ -44,8 +43,7 @@ export type Guardia = { ok: true; actor: Actor } | { ok: false; res: NextRespons
  */
 export async function requierePermiso(permiso: PermisoRequerido): Promise<Guardia> {
   try {
-    const supabase = await createServerSupabase()
-    const { data: { user } } = await supabase.auth.getUser()
+    const { data: { user } } = await usuarioVerificado()
     if (!user?.email) return { ok: false, res: unauthorized() }
     const correo = user.email.toLowerCase()
     const fila = isAdminEmail(correo) ? null : await obtenerColaborador(correo)

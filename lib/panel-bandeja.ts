@@ -15,6 +15,7 @@ import {
   type AccionTarea, type TareaBandeja,
 } from '@/lib/panel-bandeja-tipos'
 
+export const TOPE_BANDEJA = 500
 const TIPOS_ENTIDAD = ['visita', 'compita', 'cliente'] as const
 
 /** Tareas abiertas, ya ordenadas, con su acción y sin teléfonos ni correos si quien mira no tiene el permiso 'telefonos'. */
@@ -24,7 +25,7 @@ export async function cargarBandeja(actor: Actor): Promise<TareaBandeja[]> {
     .select('id, entidad_tipo, entidad_id, entidad_nombre, nota, reportado_por, created_at, tipo, prioridad')
     .eq('resuelto', false)
     .order('created_at', { ascending: true })
-    .limit(500)
+    .limit(TOPE_BANDEJA)
   if (error) throw new Error(`No se pudo leer la bandeja: ${error.message}`)
   const filas = (data ?? []).map((f): TareaBandeja => ({
     id: String(f.id),

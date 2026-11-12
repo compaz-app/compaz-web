@@ -12,6 +12,7 @@ export async function getOrCreateDailyRoom(visitId: string, existingRoom?: strin
     const nombreSala = existingRoom.split('?')[0].replace(/\/+$/, '').split('/').pop() ?? existingRoom
     const res = await fetch(`${DAILY_API}/rooms/${nombreSala}`, {
       headers: { Authorization: `Bearer ${process.env.DAILY_API_KEY}` },
+      signal: AbortSignal.timeout(8000),
     })
     if (res.ok) {
       const room = await res.json() as DailyRoom & { config?: { exp?: number } }
@@ -23,6 +24,7 @@ export async function getOrCreateDailyRoom(visitId: string, existingRoom?: strin
   const name = `cmp-${visitId.slice(0, 8)}-${randomBytes(8).toString('hex')}`
   const res = await fetch(`${DAILY_API}/rooms`, {
     method: 'POST',
+    signal: AbortSignal.timeout(8000), // Daily no puede dejar la petición colgada
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${process.env.DAILY_API_KEY}`,
@@ -66,6 +68,7 @@ export async function createEntrevistaRoom(solicitudId: string, slotConfirmado: 
 
   const res = await fetch(`${DAILY_API}/rooms`, {
     method: 'POST',
+    signal: AbortSignal.timeout(8000), // Daily no puede dejar la petición colgada
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${process.env.DAILY_API_KEY}`,
@@ -96,6 +99,7 @@ export async function createEntrevistaRoom(solicitudId: string, slotConfirmado: 
 export async function deleteDailyRoom(roomName: string): Promise<void> {
   const res = await fetch(`${DAILY_API}/rooms/${roomName}`, {
     method: 'DELETE',
+    signal: AbortSignal.timeout(8000),
     headers: { Authorization: `Bearer ${process.env.DAILY_API_KEY}` },
   })
   if (!res.ok) {

@@ -1,21 +1,13 @@
 import { NextRequest } from 'next/server'
 import { requierePermiso } from '@/lib/permisos'
-import { createAdminSupabase } from '@/lib/supabase-server'
-import { ok, serverError } from '@/lib/api'
+import { completarSolicitud } from '@/lib/acciones-equipo'
+import { ok, err } from '@/lib/api'
 
+// POST /api/admin/completar-solicitud { id } — cierra como completada una solicitud aceptada (la llamada ya ocurrió).
 export async function POST(req: NextRequest) {
   const g = await requierePermiso('atender'); if (!g.ok) return g.res
-  const admin = { email: g.actor.correo }
-
-  const { id } = await req.json() as { id: string }
-  const supabase = createAdminSupabase()
-
-  const { error } = await supabase
-    .from('solicitudes')
-    .update({ estado: 'completada' })
-    .eq('id', id)
-    .eq('estado', 'aceptada')
-
-  if (error) return serverError(error)
-  return ok(null)
+  const { id } = (await req.json().catch(() => ({}))) as { id?: unknown }
+  if (typeof id !== 'string' || !id) return err('id requerido')
+  const r = await completarSolicitud(id, g.actor.correo)
+  return r.ok ? ok(null) : err(r.error, r.status)
 }

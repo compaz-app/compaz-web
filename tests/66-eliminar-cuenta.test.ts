@@ -103,7 +103,7 @@ describe('reactivar y borrado definitivo', () => {
   test('al cumplirse el plazo se vacían los datos personales y se conservan pagos y visitas anónimos', async () => {
     const c = mkCliente({ familiar_notas: 'toma pastillas', zona: 'Madrid' }); const m = mkCompita()
     const v = mkVisita(c, m, { estado: 'terminada', direccion: 'Calle 1, casa 2' })
-    db.seed('mensajes', { visita_id: v.id, contenido: 'hola, mi número es...' })
+    db.seed('mensajes', { visit_id: v.id, contenido: 'hola, mi número es...' })
     db.seed('pagos_plan', { usuario_id: c.id, plan: 'quincenal', estado: 'activo' })
     db.seed('fotos_privadas', { usuario_id: c.id, tipo: 'cliente' })
     await solicitarEliminacion(c.id); await confirmarEliminacion(tokenDelCorreo(c.email))

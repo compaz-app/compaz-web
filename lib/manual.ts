@@ -371,7 +371,7 @@ export const ENTRADAS: EntradaManual[] = [
       'Visita que quedó abierta: ábrela en Visitas y toca "Cerrar la visita ahora". Se le avisa al compita por Telegram.',
       'Solicitud con llamada: en Seguimiento abre el caso. "Reenviar enlace de llamada" vuelve a mandar el enlace a la familia y al compita; "Marcar como completada" cierra la solicitud cuando la llamada ya ocurrió.',
     ],
-    despues: 'Cada acción pide confirmar y queda anotada con tu nombre.',
+    despues: 'Cada acción pide confirmar y queda anotada con tu nombre. El enlace de una llamada se puede reenviar como máximo una vez cada 5 minutos por solicitud, y solo mientras la solicitud siga aceptada.',
     permiso: 'atender', pantalla: 'visitas', busca: ['cerrar visita', 'enlace de llamada', 'completar solicitud', 'forzar'],
   },
   {

@@ -1,6 +1,6 @@
 // POST /api/webhooks/daily
 // Recibe eventos de Daily.co. Al terminar una sala de entrevista ("ent-"), dispara el flujo post-llamada.
-// Firma: HMAC de Daily (X-Webhook-Signature + X-Webhook-Timestamp) o, por compatibilidad, secreto estático.
+// Firma: HMAC de Daily (X-Webhook-Signature + X-Webhook-Timestamp). El secreto estático solo se acepta con DAILY_WEBHOOK_LEGACY=1.
 import { NextRequest, NextResponse } from 'next/server'
 import { createHmac, timingSafeEqual } from 'crypto'
 import { getSolicitudPorRoomUrl, reclamarFlag } from '@/lib/solicitudes'
@@ -28,8 +28,9 @@ function firmaValida(req: NextRequest, rawBody: string): boolean {
     }
     return false
   }
-  // Compatibilidad con configuración anterior (cabecera propia con el secreto)
-  return secretoValido(req.headers.get('x-daily-signature'), SECRET)
+  // Secreto estático en cabecera: solo si se activa a propósito (DAILY_WEBHOOK_LEGACY=1). El webhook que crea /api/setup-daily-webhook ya viene firmado.
+  if (process.env.DAILY_WEBHOOK_LEGACY === '1') return secretoValido(req.headers.get('x-daily-signature'), SECRET)
+  return false
 }
 
 export async function POST(req: NextRequest) {

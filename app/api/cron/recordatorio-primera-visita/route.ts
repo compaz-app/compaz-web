@@ -5,7 +5,7 @@ import { alertaAdmin } from '@/lib/alertas-admin'
 import { sendEmail, SITE_URL } from '@/lib/email'
 import { esc } from '@/lib/html'
 import { hoyVE, formatFechaVE } from '@/lib/format'
-import { cronAutorizado } from '@/lib/cron'
+import { cronAutorizado, latido } from '@/lib/cron'
 
 // POST /api/cron/recordatorio-visita-manana — diario 10:00 VE
 // Recordatorio 24 h antes de toda visita 'programada'. El marcador incluye la fecha, así que
@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
     .eq('estado', 'programada')
     .eq('fecha_programada', mananaStr)
   if (error) console.error('[recordatorio-primera-visita] consulta falló:', error)
-  if (!visitas || visitas.length === 0) return NextResponse.json({ ok: true, recordatorios: 0 })
+  if (!visitas || visitas.length === 0) { await latido('recordatorio-primera-visita'); return NextResponse.json({ ok: true, recordatorios: 0 }) }
 
   let enviados = 0
   for (const visita of visitas) {
@@ -86,5 +86,6 @@ export async function POST(req: NextRequest) {
       await alertaAdmin('tarea', `⚠️ No se pudo enviar el recordatorio de la visita de mañana (<b>${esc(compita?.nombre ?? '—')}</b> con <b>${esc(cliente?.nombre ?? '—')}</b>).`)
     }
   }
+  await latido('recordatorio-primera-visita')
   return NextResponse.json({ ok: true, recordatorios: enviados })
 }

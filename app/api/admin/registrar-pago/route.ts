@@ -3,7 +3,7 @@
 // Cada pago crea un paquete de visitas que vence a los 60 días.
 import { NextRequest } from 'next/server'
 import { requierePermiso } from '@/lib/permisos'
-import { createAdminSupabase } from '@/lib/supabase-server'
+import { nombreDelCliente } from '@/lib/acciones-equipo'
 import { registrarPago } from '@/lib/pagos'
 import { cupoDelPlan } from '@/lib/visitas'
 import { notificar } from '@/lib/avisos'
@@ -31,13 +31,13 @@ export async function POST(req: NextRequest) {
   if (!r.ok) return err(r.error, r.error.startsWith('Cliente no') ? 404 : 400)
 
   // Confirmación al cliente, con registro y reintento posible (antes un fallo del correo solo quedaba en el log).
-  const { data: cli } = await createAdminSupabase().from('usuarios').select('nombre').eq('id', b.usuario_id).maybeSingle()
+  const nombreCliente = await nombreDelCliente(b.usuario_id)
   const aviso = await notificar({
     plantilla: 'pago_confirmado', canal: 'correo', destinatario: { tipo: 'cliente', id: b.usuario_id },
     variables: { pagoId: r.pago.id, origen: 'registro' }, entidad: 'pago', entidadId: r.pago.id, paso: 12,
   })
   const correoEnviado = aviso.ok || aviso.error === 'sin correo registrado'
 
-  await emailAdminPago('Pago registrado en Compaz', `Se registró un pago de $${r.pago.monto_usd} de ${cli?.nombre ?? 'un cliente'} (${ETIQUETA_METODO[r.pago.metodo as MetodoPago]}) por ${admin.email ?? 'admin'}.`)
+  await emailAdminPago('Pago registrado en Compaz', `Se registró un pago de $${r.pago.monto_usd} de ${nombreCliente ?? 'un cliente'} (${ETIQUETA_METODO[r.pago.metodo as MetodoPago]}) por ${admin.email ?? 'admin'}.`)
   return ok({ pago: r.pago, cupo: await cupoDelPlan(b.usuario_id), correo_enviado: correoEnviado })
 }

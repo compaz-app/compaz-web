@@ -226,3 +226,11 @@ Actualiza campos editables del perfil de una compita. Solo admin.
 
 ### GET /api/precios
 Pública. Devuelve los precios vigentes (`hora`, `mandado`, `planes.{carta,quincenal,semanal}`) tomados de Ajustes. Solo para mostrar: al cobrar, el servidor recalcula el importe con `lib/precios.ts` y nunca acepta uno del navegador.
+
+### Cambios tras la auditoría (2026-11-12)
+- `GET /api/admin/resenas` **ya no existe** (devolvía el correo de cada cliente a quien tuviera `atender`); `PATCH` sigue. El listado lo lee el panel desde el servidor.
+- `POST /api/admin/enviar-link-llamada { solicitud_id }`: máximo uno cada 5 minutos por solicitud (429 con explicación) y solo si la solicitud sigue aceptada.
+- `DELETE /api/admin/eliminar-cliente` y `eliminar-compita` aceptan `borrar_datos: true` (la persona pidió borrar sus datos): solo entonces se anonimiza; sin él se conserva la información con la marca "(cuenta eliminada)".
+- `POST /api/admin/anular-pago { pago_id, motivo }`: el motivo es obligatorio.
+- `GET /api/llamada/info?sala=` y `/llamada/<sala>`: piden enlace firmado, administrador o el cliente de esa visita; la sala de Daily es privada.
+- `asignar-rapido` lleva el token en la URL a propósito (un solo uso, vence, confirmación por POST).

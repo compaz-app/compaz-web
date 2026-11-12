@@ -24,6 +24,7 @@ export async function catalogoEsperas(): Promise<FilaLimite[]> {
     postulacion_conexion: '50 postulaciones por hora por conexión',
     postulacion_correo: 'Una por correo',
     insistir_aviso: 'Uno cada 30 minutos y 3 por aviso',
+    enlace_llamada_equipo: 'Uno cada 5 minutos por solicitud',
   }
   return (Object.keys(CATALOGO) as ClaveEspera[]).map((clave) => ({ clave, ...CATALOGO[clave], valor: valores[clave] }))
 }

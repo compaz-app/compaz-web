@@ -313,3 +313,44 @@ Qué haría distinto un equipo profesional que construyera este CRM hoy, en orde
 7. Configuración de Supabase Auth (confirmación de correo, registro abierto) y de Netlify (variables, cabeceras efectivas): requiere acceso a esos paneles.
 8. Accesibilidad y uso a 375 px del panel: no se hizo recorrido visual; solo lectura de código.
 9. Código fuera del diff no revisado a fondo: `app/sala/[token]`, `lib/telegram.ts`, `app/api/auth/*`, el resto de `lib/` y `app/dashboard/page.tsx` más allá de lo citado.
+
+---
+
+## 8. Estado de cada hallazgo después de las correcciones (2026-11-12)
+
+Leyenda: **Hecho** = corregido en código y con prueba; **Tú** = depende de algo que solo puede hacer el dueño en un servicio externo; **Decisión** = se dejó así a propósito y se explica.
+
+| Id | Estado | Qué se hizo |
+|---|---|---|
+| S-01 | Hecho | Ruta `cliente-preview` borrada. |
+| S-02 | Hecho | `requireAuth` devuelve el usuario verificado; la vista previa del portal anota el acceso antes de mostrarlo. |
+| S-03 | Hecho | Salas privadas, nombre aleatorio y pase de Daily por participante. |
+| E-01 | Hecho | `cargarFotos` y `cuposDelPlan` por lotes: de 89 a unas 15 consultas para 7 clientes. |
+| E-02 | Hecho | `AutoRefresh` no refresca en pestañas ocultas y es lento en reposo. |
+| D-01 | Hecho | Pagos sin duplicados; anular exige motivo y deja evento y alerta. |
+| O-01 | Parcial: **Tú** | Añadido `.github/workflows/ci.yml` (tipos, pruebas y compilación en cada cambio). Siguen siendo tuyos: proyecto Supabase de pruebas separado y copias de seguridad con una restauración ensayada (CLAUDE.md, sección 6). |
+| S-04 | Hecho | `registrarAcceso` falla cerrado y no mutila el motivo. |
+| S-05 | Hecho | La línea de tiempo oculta los accesos a quien no tiene `telefonos`. Se mantiene que `atender` abre la ficha: la Bandeja lo necesita. |
+| S-06 | Hecho | Precios, retención y textos solo para el administrador; el lote de ajustes es todo o nada (con reversión). |
+| S-07 | Hecho | Reenviar el enlace de llamada: una vez cada 5 minutos por solicitud (con explicación en Límites) y solo si la solicitud sigue aceptada; el aviso al compita por "Llamar" sale como mucho una vez por minuto. |
+| S-08 | Hecho | Al anonimizar se borran las notas internas y el nombre sale de Actividad y de las tareas. Además se corrigió un error real: al anonimizar no se borraban los mensajes (la columna es `visit_id`, no `visita_id`). |
+| S-09 | Hecho | `limpieza`, `recordatorio-pago`, `recordatorio-primera-visita`, `aviso-inicio-visita`, `noshow-alerta` y `churn-alerta` están vigilados y marcan su latido. |
+| S-10 | Parcial: **Decisión** | Filtros y paginación siguen en memoria (con 4 compitas y 8 clientes no importa); ahora cada pantalla avisa cuando llega al tope de filas cargadas (5.000 personas, 1.000 visitas, 500 tareas), para que ningún conteo parezca completo sin serlo. Pasar a paginación en la base es el cambio correcto al acercarse a ~1.000 clientes: exige guardar la urgencia y la etapa como columnas. |
+| E-03 | Hecho: **Tú aplicas** | Migración `20261113_indices_panel.sql` (solo agrega índices y `pg_trgm`). |
+| E-04 | Hecho | Todas las funciones de sesión usan la comprobación cacheada. |
+| E-05 | Hecho | `daily-js` se carga solo cuando hay una llamada. |
+| A-01 | Hecho | Todas las rutas de `/api/admin` tienen pantalla, salvo cuatro de lectura (`bloqueos-compita`, `dudas`, `esperas`, `pagos`) que se conservan como API probada; una prueba impide que aparezcan rutas huérfanas nuevas. |
+| A-02 | Hecho en `/api/admin` y `create-call` | Sin consultas dentro de las rutas del equipo (prueba de guardia). Las otras 49 rutas antiguas quedan con un trinquete: no pueden sumar consultas directas. |
+| C-01 | Hecho | Una sola frase (`textoDuracionLlamada`) con el corte de Ajustes. |
+| O-02 | Parcial: **Decisión** | Toda acción del equipo (bloquear, verificar, activar, asignar, editar perfil, portal nuevo, invitar, registrar, cerrar visita, completar, reseñas) queda anotada con quién (`anotarAccion`). Un servicio de errores (Sentry u otro) requiere abrir una cuenta y elegir proveedor: queda como decisión tuya. |
+| S-11 | Parcial: **Decisión** | Quitados Airtable y Telegram de `connect-src`. `'unsafe-inline'` en scripts se mantiene: los scripts de analítica y el modo de Next lo requieren; quitarlo exige nonces por petición (renderizado dinámico de todo el sitio). |
+| S-12 | Hecho | El secreto estático del webhook de Daily ya no se acepta salvo `DAILY_WEBHOOK_LEGACY=1`. |
+| S-13 | Hecho | Los errores de avisos fallidos se muestran sin teléfonos ni correos si no hay permiso. |
+| S-14 | Decisión | El token de `asignar-rapido` viaja en la URL a propósito: es de un solo uso, vence y se confirma por POST. Queda documentado aquí. |
+| S-15 | **Tú** | Comprobar en Supabase, Authentication, Providers, que "Confirm email" está activo y que no se permiten registros por contraseña. Si no, quien registre el correo de un colaborador sin verificarlo heredaría sus permisos. |
+| E-06 | Hecho | `/api/precios` manda `Cache-Control`. La memoria corta sigue siendo por instancia y no se trata como caché real. |
+| E-07 | Parcial | Toda llamada a Daily tiene tiempo máximo de 8 s. Dos peticiones simultáneas todavía pueden crear dos salas; la última que se guarda gana, y la otra expira sola. |
+| A-03 | Hecho | `/prototipo` devuelve 404 en producción (se enciende con `PROTOTIPO_VISIBLE=1`). |
+| A-04 | Hecho | `middleware.ts` pasó a `proxy.ts`. |
+| I-01 | Decisión | Las pruebas usan una base falsa y no emulan RLS ni permisos de columnas: por eso lo de `resenas` solo se vio en vivo. La compensación es hacer una pasada en vivo antes de abrir al público. |
+| I-02 | Hecho | `@daily-co/daily-js` fijado a `0.95.0`. |

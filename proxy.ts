@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { isAdminEmail } from '@/lib/auth'
 import { urlPublica } from '@/lib/site'
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl
 
   // Red de seguridad: si Supabase devuelve el enlace mágico a la raíz (?code=...) porque la URL de

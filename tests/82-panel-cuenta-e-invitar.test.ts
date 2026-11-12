@@ -63,7 +63,7 @@ describe('eliminar cuenta: se anonimiza solo si la persona pidió borrar sus dat
     const lucia = mkCompita({ nombre: 'Lucía' })
     const c = mkCliente({ email: 'ana@mail.test', nombre: 'Ana Pérez', telefono: '+58 412 1', familiar_nombre: 'Doña Rosa', compita_id: lucia.id })
     const v = db.seed('visitas', { usuario_id: c.id, compita_id: lucia.id, estado: 'terminada', direccion: 'Calle 1' })
-    db.seed('mensajes', { visita_id: v.id, contenido: 'hola' }); db.seed('pagos_plan', { usuario_id: c.id, plan: 'quincenal', estado: 'activo' })
+    db.seed('mensajes', { visit_id: v.id, contenido: 'hola' }); db.seed('pagos_plan', { usuario_id: c.id, plan: 'quincenal', estado: 'activo' })
     admin(); assert.equal((await eliminarCliente(del('/api/admin/eliminar-cliente', { usuario_id: c.id }))).status, 200)
     const u = db.rows('usuarios').find((x) => x.id === c.id)!
     assert.equal(u.nombre, 'Ana Pérez (cuenta eliminada)'); assert.equal(u.telefono, '+58 412 1'); assert.equal(u.familiar_nombre, 'Doña Rosa')

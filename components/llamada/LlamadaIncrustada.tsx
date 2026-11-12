@@ -1,7 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import SalaDaily from '@/components/llamada/SalaDaily'
+import dynamic from 'next/dynamic'
+
+// daily-js pesa unos 590 KB: solo se descarga cuando de verdad hay una llamada, no con cada carga del portal.
+const SalaDaily = dynamic(() => import('@/components/llamada/SalaDaily'), { ssr: false })
 
 interface Info { url: string; token: string; finEpoch: number | null; ahoraEpoch: number; avisoSeg: number; tipo: 'entrevista' | 'visita' }
 

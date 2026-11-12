@@ -48,7 +48,7 @@ export async function pedirPase(sala: string, rol: RolLlamada, finEpoch: number 
   try {
     const exp = finEpoch ?? Math.floor(Date.now() / 1000) + 3600
     const res = await fetch('https://api.daily.co/v1/meeting-tokens', {
-      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.DAILY_API_KEY}` },
+      method: 'POST', signal: AbortSignal.timeout(8000), headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.DAILY_API_KEY}` },
       body: JSON.stringify({ properties: { room_name: sala, exp, is_owner: rol === 'admin', eject_at_token_exp: true } }),
     })
     if (!res.ok) { console.error('[llamada] Daily no entregó el pase:', res.status); return null }

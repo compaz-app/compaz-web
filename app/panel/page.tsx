@@ -7,7 +7,8 @@ import { redirect } from 'next/navigation'
 import { requireAuth } from '@/lib/auth'
 import { actorDePagina } from '@/lib/permisos'
 import { actorComo, puedeEntrarAlPanel, seccionActiva } from '@/lib/panel-secciones'
-import { cargarBandeja } from '@/lib/panel-bandeja'
+import { cargarBandeja, TOPE_BANDEJA } from '@/lib/panel-bandeja'
+import AvisoTope from '@/components/panel/AvisoTope'
 import MarcoPanel from '@/components/panel/MarcoPanel'
 import Bandeja from '@/components/panel/Bandeja'
 import Aviso from '@/components/ui/base/Aviso'
@@ -45,12 +46,12 @@ import { estadoDelSistema } from '@/lib/panel-estado'
 import { retencionDelSistema } from '@/lib/retencion'
 import { getAjustes } from '@/lib/ajustes'
 import { Selector, TablaClientes, TablaCompitas } from '@/components/panel/Personas'
-import { fichaDePersona, listarClientes, listarCompitas } from '@/lib/panel-personas'
+import { fichaDePersona, listarClientes, listarCompitas, LIMITE as LIMITE_PERSONAS } from '@/lib/panel-personas'
 import { consultarClientes, consultarCompitas, DESCRIPCION_PERSONAS, INFO_PERSONAS, leerChatUrl, leerPersonaUrl } from '@/lib/panel-personas-tipos'
 import { Encabezado } from '@/components/panel/ui'
 import { listarSeguimiento } from '@/lib/panel-seguimiento'
 import { consultarSeguimiento, umbralesDeAjustes } from '@/lib/panel-seguimiento-tipos'
-import { detalleDeVisita, listarVisitas } from '@/lib/panel-visitas'
+import { detalleDeVisita, listarVisitas, MAX_VISITAS } from '@/lib/panel-visitas'
 import DetalleVisita from '@/components/panel/DetalleVisita'
 import { consultarVisitas, leerVisitaUrl } from '@/lib/panel-visitas-tipos'
 
@@ -88,25 +89,30 @@ export default async function PanelPage({ searchParams }: { searchParams: Promis
   }
 
   let cuerpo: React.ReactNode = null
+  let avisoTope: React.ReactNode = null
   if (actual === 'bandeja') {
-    cuerpo = <Suspense><Bandeja tareas={await cargarBandeja(comoActor)} puedeAtender={actor.permisos.atender === true} pideMotivo={actor.rol !== 'admin'} /></Suspense>
+    const tareas = await cargarBandeja(comoActor)
+    cuerpo = <div className="space-y-3"><AvisoTope cargadas={tareas.length} tope={TOPE_BANDEJA} que="las tareas" /><Suspense><Bandeja tareas={tareas} puedeAtender={actor.permisos.atender === true} pideMotivo={actor.rol !== 'admin'} /></Suspense></div>
   } else if (actual === 'personas') {
     const baseForm: Record<string, string> = comoColaborador ? { como: 'colaborador' } : {}
     const lista = un('lista') === 'clientes' ? 'clientes' : 'compitas'
     if (lista === 'compitas') {
       const todas = await listarCompitas()
+      avisoTope = <AvisoTope cargadas={todas.length} tope={LIMITE_PERSONAS} que="los compitas" />
       const c = consultarCompitas(todas, { q: un('q'), vista: un('vista'), orden: un('orden'), dir: un('dir'), pag: un('pag'), estado: un('estado') })
       cuerpo = <TablaCompitas enlace={enlace} params={baseForm} d={{ fila: c.fila, total: c.total, paginas: c.paginas, pag: c.pag, conteos: c.conteos, vista: c.vista.id, orden: un('orden'), dir: un('dir') === 'desc' ? 'desc' : 'asc', q: un('q'), enTotal: todas.length, estados: c.estados, estado: c.estado }} />
     } else {
       const todos = await listarClientes()
+      avisoTope = <AvisoTope cargadas={todos.length} tope={LIMITE_PERSONAS} que="los clientes" />
       cuerpo = <TablaClientes enlace={enlace} params={baseForm} d={{ ...consultarClientes(todos, un('q'), un('pag'), un('estado')), q: un('q'), enTotal: todos.length }} />
     }
-    cuerpo = <div className="space-y-3"><Encabezado titulo="Personas" descripcion={DESCRIPCION_PERSONAS} info={INFO_PERSONAS} infoQue="Para qué sirve Personas" /><Selector lista={lista} enlace={enlace} />{cuerpo}</div>
+    cuerpo = <div className="space-y-3"><Encabezado titulo="Personas" descripcion={DESCRIPCION_PERSONAS} info={INFO_PERSONAS} infoQue="Para qué sirve Personas" /><Selector lista={lista} enlace={enlace} />{avisoTope}{cuerpo}</div>
   } else if (actual === 'seguimiento') {
     cuerpo = <Seguimiento enlace={enlace} d={{ ...consultarSeguimiento(await listarSeguimiento(), un('etapa'), un('pag')), umbrales: umbralesDeAjustes(await getAjustes()) }} />
   } else if (actual === 'visitas') {
     const ahora = Date.now()
-    cuerpo = <Visitas enlace={enlace} puedeChats={actor.permisos.chats === true} d={{ ...consultarVisitas(await listarVisitas(ahora), un('vv'), un('pv'), ahora), ahora }} />
+    const todasVisitas = await listarVisitas(ahora)
+    cuerpo = <div className="space-y-3"><AvisoTope cargadas={todasVisitas.length} tope={MAX_VISITAS} que="las visitas" /><Visitas enlace={enlace} puedeChats={actor.permisos.chats === true} d={{ ...consultarVisitas(todasVisitas, un('vv'), un('pv'), ahora), ahora }} /></div>
   } else {
     const subMas = subMasActiva(actor, un('mas'))
     const sinSub = Object.fromEntries(CLAVES.mas.map((k) => [k, null])) as Record<string, string | null>
@@ -138,7 +144,7 @@ export default async function PanelPage({ searchParams }: { searchParams: Promis
       } else if (subMas.id === 'pagos') {
         vista = <Pagos filas={await listarPagosRecientes()} ver={un('pag_ver') === 'anulados' ? 'anulados' : 'activos'} pagina={un('pag_pag')} enlace={enlace} />
       } else if (subMas.id === 'avisos') {
-        vista = <Avisos filas={await listarAvisos()} ver={un('av_ver') === 'fallidos' ? 'fallidos' : 'todos'} pagina={un('av_pag')} enlace={enlace} puedeReintentar={actor.permisos.atender === true} />
+        vista = <Avisos filas={await listarAvisos(comoActor)} ver={un('av_ver') === 'fallidos' ? 'fallidos' : 'todos'} pagina={un('av_pag')} enlace={enlace} puedeReintentar={actor.permisos.atender === true} />
       } else if (subMas.id === 'ajustes' || subMas.id === 'umbrales') {
         vista = <Ajustes d={await datosDeAjustes()} puedeEditar={actor.permisos.ajustes_editar === true} esAdmin={actor.rol === 'admin'} semaforo={subMas.id === 'umbrales'} />
       } else if (subMas.id === 'equipo') {
@@ -147,7 +153,7 @@ export default async function PanelPage({ searchParams }: { searchParams: Promis
         vista = <Cobertura filas={await cargarCobertura()} />
       } else if (subMas.id === 'estado') {
         const ahora = Date.now()
-        vista = <Estado e={await estadoDelSistema(ahora)} ahora={ahora} puedeReintentar={actor.permisos.atender === true} />
+        vista = <Estado e={await estadoDelSistema(ahora, comoActor)} ahora={ahora} puedeReintentar={actor.permisos.atender === true} />
       } else {
         vista = <Aviso tamano="compacto" tono="info">Esa herramienta no existe. Elige una del menú de Más.</Aviso>
       }

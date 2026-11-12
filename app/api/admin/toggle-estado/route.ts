@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { requierePermiso } from '@/lib/permisos'
 import { desactivarCompita, reactivarCompita } from '@/lib/compitas'
 import { ok, err, serverError } from '@/lib/api'
+import { anotarAccion } from '@/lib/acciones-equipo'
 
 export async function POST(req: NextRequest) {
   const g = await requierePermiso('cuentas'); if (!g.ok) return g.res
@@ -15,6 +16,7 @@ export async function POST(req: NextRequest) {
     } else {
       await reactivarCompita(compita_id)
     }
+    await anotarAccion(g.actor.correo, estado === 'inactivo' ? 'desactivó a un compita' : 'activó a un compita', { tipo: 'compita', id: compita_id })
     return ok({ compita_id, estado })
   } catch (e) {
     return serverError(e)

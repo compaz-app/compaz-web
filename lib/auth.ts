@@ -42,10 +42,10 @@ export function isAdminEmail(email: string): boolean {
 }
 
 export async function getUsuario(): Promise<Usuario | null> {
-  const supabase = await createServerSupabase()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user } } = await usuarioVerificado()
   if (!user) return null
 
+  const supabase = await createServerSupabase()
   const { data } = await supabase
     .from('usuarios')
     .select('*, compita:compitas(id, nombre, zona, estado, verificado, foto_url, descripcion, servicios, youtube_url, visitas_realizadas, rating_promedio, total_ratings, horarios_disponibles, created_at)')
@@ -60,8 +60,7 @@ export async function getUsuario(): Promise<Usuario | null> {
  * Única fuente de verdad: reemplaza las copias inline de isAdminEmail en cada ruta.
  */
 export async function getAdminUser() {
-  const supabase = await createServerSupabase()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user } } = await usuarioVerificado()
   if (!user || !isAdminEmail(user.email ?? '')) return null
   return user
 }
@@ -72,8 +71,7 @@ export async function getAdminUser() {
  * queda fuera al instante aunque su sesión siga vigente.
  */
 export async function getClienteActivo() {
-  const supabase = await createServerSupabase()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user } } = await usuarioVerificado()
   if (!user) return null
   if (isAdminEmail(user.email ?? '')) return user
   const { data } = await createAdminSupabase().from('usuarios').select('plan, eliminacion_programada_en, eliminada_en').eq('id', user.id).maybeSingle()

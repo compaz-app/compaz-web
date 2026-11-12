@@ -5,7 +5,7 @@
 export type ClaveEspera =
   | 'recordatorio_reciente' | 'recordatorio_limite' | 'pago_insistencia' | 'solicitudes_dia' | 'solicitud_mismo_compita'
   | 'codigo_fallos' | 'codigo_conexion' | 'acceso_conexion' | 'acceso_correo' | 'reconexion_llamada'
-  | 'chat_limite' | 'postulacion_conexion' | 'postulacion_correo' | 'ayuda_cliente' | 'eliminar_cuenta_enlace' | 'insistir_aviso'
+  | 'chat_limite' | 'postulacion_conexion' | 'postulacion_correo' | 'ayuda_cliente' | 'eliminar_cuenta_enlace' | 'insistir_aviso' | 'enlace_llamada_equipo'
 
 export interface Espera {
   clave: ClaveEspera
@@ -48,6 +48,7 @@ export const CATALOGO: Record<ClaveEspera, { quien: 'compita' | 'cliente' | 'equ
   postulacion_conexion: { quien: 'compita', limita: 'Postulaciones de compitas: un máximo por hora desde una misma conexión', porQue: 'Es una medida contra envíos automáticos que llenarían la bandeja de postulaciones falsas.' },
   postulacion_correo: { quien: 'compita', limita: 'Postulaciones de compitas: una por correo', porQue: 'Evita postulaciones duplicadas de la misma persona.' },
   insistir_aviso: { quien: 'equipo', limita: 'Insistir con un aviso desde la Bandeja: uno cada 30 minutos y un máximo de 3 por aviso', porQue: 'Mandar el mismo aviso muchas veces llena el Telegram o el correo de la persona y deja de leerse. Si ya insististe y sigue sin responder, conviene escribirle tú directamente o ofrecerle al cliente otro compita.' },
+  enlace_llamada_equipo: { quien: 'equipo', limita: 'Reenviar el enlace de la llamada de una solicitud: uno cada 5 minutos', porQue: 'Cada envío manda dos correos y un Telegram a la familia y al compita; repetirlo seguido solo los satura y puede confundirlos.' },
   reconexion_llamada: { quien: 'cliente', limita: 'Reconectar la sala de la entrevista: una cada 2 minutos', porQue: 'Cada reconexión crea una sala nueva de videollamada; limitarlas evita salas duplicadas y gastos innecesarios.' },
 }
 
@@ -105,6 +106,7 @@ export function explicarEspera(clave: ClaveEspera, p: ParamsEspera = {}): Espera
     codigo_conexion: ['Demasiados intentos desde tu conexión.', `Espera ${faltaTxt} o pide un enlace nuevo.`],
     acceso_conexion: ['Pediste muchos enlaces en la última hora.', `Espera ${faltaTxt}. Revisa también tu spam.`],
     acceso_correo: [`Ya te enviamos un correo ${hace}.`, `Úsalo, o pide otro en ${faltaTxt}.`],
+    enlace_llamada_equipo: [`Ya reenviaste el enlace de esta llamada ${hace}.`, `Podrás reenviarlo ${cuando}.`],
     reconexion_llamada: [`Acabas de reconectar la sala ${hace}.`, `Entra con el mismo enlace o espera ${faltaTxt}.`],
     ayuda_cliente: [`Ya avisamos al equipo ${hace}.`, `Te escribimos por correo. Podrás avisar de nuevo ${cuando}.`],
     eliminar_cuenta_enlace: [`Ya te enviamos el enlace ${hace}.`, `Revisa tu correo o pide otro en ${faltaTxt}.`],

@@ -69,7 +69,9 @@ describe('inventario de rutas del panel (prueba estática)', () => {
   test('las rutas por token no aceptan una sesión: siguen exigiendo el token', () => {
     for (const r of POR_TOKEN) {
       const src = readFileSync(join(dir, r, 'route.ts'), 'utf8')
-      assert.match(src, /action_tokens/, `${r} debe validar un token de un solo uso`)
+      // La validación del token vive en lib/acciones-equipo.ts (asignarPorEnlace); la ruta debe delegar en ella.
+      assert.match(src, /asignarPorEnlace/, `${r} debe delegar en la validación del token`)
+      assert.match(readFileSync('lib/acciones-equipo.ts', 'utf8'), /from\('action_tokens'\)[\s\S]*?\.eq\('usado', false\)/, 'el token se reclama de forma atómica (usado = false)')
     }
   })
 

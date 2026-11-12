@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { textoDuracionLlamada } from '@/lib/llamada-ruta'
 
 type Paso = 'antes' | 'en_llamada' | 'terminado' | 'problema_tecnico' | 'reconectando' | 'resultado'
 type Resultado = 'contratar' | 'reagendar' | 'no_contratar'
@@ -193,7 +194,7 @@ export default function SalaEntrevista({ token, quien, llamadaHref, compitaNombr
             </h2>
             <p style={{ color: '#4A3B6B', fontSize: '15px', lineHeight: 1.6, marginBottom: '8px' }}>{slotLabel}</p>
             <p style={{ color: '#C84B0E', background: '#FFF3E8', border: '2px solid #FF6B2B', borderRadius: '12px', padding: '12px', fontSize: '13px', margin: '16px 0' }}>
-              ⏱️ La llamada dura 20 minutos. La sala se cierra automáticamente a los {corteMin} min.
+              ⏱️ {textoDuracionLlamada(corteMin)}
             </p>
             {salaAbierta ? (
               <button onClick={() => abrirSala()} style={btnPrimario}>Entrar a la llamada →</button>

@@ -1,5 +1,6 @@
 // Datos de las herramientas de Más: reseñas, pagos, avisos enviados y cobertura (servidor). Las queries viven aquí.
 import { createAdminSupabase } from '@/lib/supabase-server'
+import { detectarContacto } from '@/lib/chat-moderacion'
 import { conCacheCorto } from '@/lib/cache-corto'
 import type { Actor } from '@/lib/permisos'
 import { recortarTexto } from '@/lib/panel-datos'
@@ -8,7 +9,7 @@ import { listarCompitas } from '@/lib/panel-personas'
 import { estadosDeZona } from '@/lib/panel-personas-tipos'
 import { coberturaPorEstado, type FilaAviso, type FilaCobertura, type FilaPago, type FilaResena } from '@/lib/panel-mas-tipos'
 
-const LIMITE = 500
+export const LIMITE = 500
 const nombreCompleto = (c: { nombre?: string | null; apellido?: string | null } | null | undefined) => [c?.nombre, c?.apellido].filter(Boolean).join(' ') || 'Sin nombre'
 
 /** Reseñas: las que esperan aprobación primero. Una reseña no se ve en el perfil del compita hasta que se aprueba. */
@@ -35,8 +36,11 @@ export async function listarPagosRecientes(): Promise<FilaPago[]> {
   }))
 }
 
+/** Sin el permiso de ver contactos (o sin saber quién mira), se tapan teléfonos y correos que el servicio de envío pudo repetir en su error. */
+const tapar = (actor: Actor | undefined, t: string) => (actor ? recortarTexto(actor, t) : detectarContacto(t).textoCensurado)
+
 /** Los avisos más recientes, con el nombre de a quién fueron. */
-export async function listarAvisos(): Promise<FilaAviso[]> {
+export async function listarAvisos(actor?: Actor): Promise<FilaAviso[]> {
   const db = createAdminSupabase()
   const { data, error } = await db.from('avisos').select('id, destinatario_tipo, destinatario_id, canal, plantilla, estado, error, intentos, programado_para').neq('plantilla', 'escalera_tarea').order('programado_para', { ascending: false }).limit(LIMITE)
   if (error) throw new Error(`No se pudo leer los avisos: ${error.message}`)
@@ -47,7 +51,7 @@ export async function listarAvisos(): Promise<FilaAviso[]> {
     de('compita').length ? db.from('compitas').select('id, nombre, apellido').in('id', de('compita')) : { data: [] },
   ])
   const nombres = new Map<string, string>([...((cli.data ?? []) as { id: string; nombre: string }[]).map((x): [string, string] => [x.id, x.nombre]), ...((cmp.data ?? []) as { id: string; nombre: string; apellido: string | null }[]).map((x): [string, string] => [x.id, nombreCompleto(x)])])
-  return filas.map((f): FilaAviso => ({ id: String(f.id), creado: String(f.programado_para), canal: f.canal, rol: f.destinatario_tipo, para: f.destinatario_tipo === 'admin' ? 'El equipo' : nombres.get(String(f.destinatario_id)) ?? 'Sin nombre', plantilla: String(f.plantilla), estado: f.estado, error: f.error ? String(f.error) : null, intentos: Number(f.intentos ?? 0) }))
+  return filas.map((f): FilaAviso => ({ id: String(f.id), creado: String(f.programado_para), canal: f.canal, rol: f.destinatario_tipo, para: f.destinatario_tipo === 'admin' ? 'El equipo' : nombres.get(String(f.destinatario_id)) ?? 'Sin nombre', plantilla: String(f.plantilla), estado: f.estado, error: f.error ? tapar(actor, String(f.error)) : null, intentos: Number(f.intentos ?? 0) }))
 }
 
 /** Compitas que pueden recibir solicitudes contra solicitudes del último mes, por estado. */

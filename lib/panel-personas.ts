@@ -17,7 +17,7 @@ import {
 } from '@/lib/panel-personas-tipos'
 
 const DIA = 86_400_000
-const LIMITE = 5000
+export const LIMITE = 5000
 const horasDesde = (iso: string | null | undefined, ahora: number) => (iso ? Math.max(0, Math.round((ahora - new Date(iso).getTime()) / 3_600_000)) : null)
 
 /** Todos los compitas con sus números de los últimos 30 días, en pocas consultas (no una por compita). */

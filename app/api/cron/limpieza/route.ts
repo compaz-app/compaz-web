@@ -2,7 +2,7 @@
 // Elimina tokens vencidos y filas sintéticas de control (idempotencia, cooldowns, latidos viejos).
 import { NextRequest } from 'next/server'
 import { createAdminSupabase } from '@/lib/supabase-server'
-import { cronAutorizado } from '@/lib/cron'
+import { cronAutorizado, latido } from '@/lib/cron'
 import { ok, err } from '@/lib/api'
 import { getAjuste } from '@/lib/ajustes'
 import { borrarFotosVencidas } from '@/lib/fotos-privadas'
@@ -56,5 +56,7 @@ export async function POST(req: NextRequest) {
   const admins = await sincronizarAdmins()
   if (!admins.ok) { console.error('[limpieza] administradores:', admins.error); fallos.push('lista de administradores') }
   else if (admins.agregados.length || admins.quitados.length) console.log('[limpieza] administradores sincronizados', admins.agregados.length, 'agregados,', admins.quitados.length, 'quitados')
+  // El latido se marca solo si todo salió bien: si la limpieza falla seguido, el equipo se entera por la vigilancia de procesos.
+  if (!fallos.length) await latido('limpieza')
   return fallos.length ? err(`Fallaron: ${fallos.join(', ')}`, 500) : ok(null)
 }
