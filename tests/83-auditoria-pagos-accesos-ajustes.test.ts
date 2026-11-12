@@ -370,3 +370,50 @@ describe('correos mal escritos no se aceptan (.coin en vez de .com)', () => {
     assert.equal(db.rows('usuarios').length, 0)
   })
 })
+
+import { POST as registrarCompita } from '@/app/api/onboarding/registrar/route'
+import { POST as corregirCompita } from '@/app/api/onboarding/corregir/route'
+import { POST as generarInvitacion } from '@/app/api/admin/generar-invite/route'
+
+describe('onboarding: corregir los datos (el correo mal escrito) antes de conectar Telegram', () => {
+  const datos = (o: any = {}) => ({ nombre: 'Lucía Fernández', email: 'lucia@mail.test', telefono: '0412 123 4567', zona: 'Zulia', descripcion: 'Cuidadora', servicios: ['Compañía'], ...o })
+  async function registrada() {
+    session.user = { id: 'adm', email: 'admin@compaz.test' } as any
+    const inv = await (await (generarInvitacion as any)()).json(); session.user = null as any
+    const r = await registrarCompita(req('/api/onboarding/registrar', { json: { token: inv.data.token, ...datos() } }))
+    assert.equal(r.status, 200); const j = await r.json(); assert.ok(j.data.edit_token); return { editToken: j.data.edit_token as string, id: db.rows('compitas')[0].id as string }
+  }
+  test('el registro devuelve un enlace de corrección y un correo mal escrito se rechaza desde el principio', async () => {
+    const { editToken } = await registrada(); assert.ok(editToken.length > 20)
+    session.user = { id: 'adm', email: 'admin@compaz.test' } as any
+    const inv = await (await (generarInvitacion as any)()).json(); session.user = null as any
+    const mal = await registrarCompita(req('/api/onboarding/registrar', { json: { token: inv.data.token, ...datos({ email: 'lucia@gmail.coin' }) } }))
+    assert.equal(mal.status, 400); assert.match((await mal.json()).error, /¿Quisiste decir lucia@gmail\.com\?/)
+  })
+  test('corregir el correo guarda el nuevo, manda la bienvenida al correo nuevo y entrega otro enlace', async () => {
+    const { editToken, id } = await registrada()
+    const { emailsA } = await import('./harness')
+    const r = await corregirCompita(req('/api/onboarding/corregir', { json: { edit_token: editToken, ...datos({ email: 'lucia.nueva@mail.test' }) } }))
+    assert.equal(r.status, 200); const j = await r.json(); assert.ok(j.data.edit_token); assert.notEqual(j.data.edit_token, editToken)
+    assert.equal(db.rows('compitas').find((c: any) => c.id === id)!.email, 'lucia.nueva@mail.test')
+    assert.ok(emailsA('lucia.nueva@mail.test').length >= 1)
+    const otra = await corregirCompita(req('/api/onboarding/corregir', { json: { edit_token: editToken, ...datos() } })) // el enlace anterior ya no sirve
+    assert.equal(otra.status, 410)
+  })
+  test('corregir con un correo mal escrito se rechaza y no cambia nada', async () => {
+    const { editToken, id } = await registrada()
+    const r = await corregirCompita(req('/api/onboarding/corregir', { json: { edit_token: editToken, ...datos({ email: 'lucia@gmial.com' }) } }))
+    assert.equal(r.status, 400); assert.match((await r.json()).error, /hotmail|gmail/)
+    assert.equal(db.rows('compitas').find((c: any) => c.id === id)!.email, 'lucia@mail.test')
+  })
+  test('una vez conectado Telegram ya no se puede cambiar el correo por este enlace', async () => {
+    const { editToken, id } = await registrada()
+    db.rows('compitas').find((c: any) => c.id === id)!.telegram_chat_id = '5555'
+    const r = await corregirCompita(req('/api/onboarding/corregir', { json: { edit_token: editToken, ...datos({ email: 'otro@mail.test' }) } }))
+    assert.equal(r.status, 409); assert.equal(db.rows('compitas').find((c: any) => c.id === id)!.email, 'lucia@mail.test')
+  })
+  test('sin enlace de corrección no hay acceso', async () => {
+    assert.equal((await corregirCompita(req('/api/onboarding/corregir', { json: datos() }))).status, 400)
+    assert.equal((await corregirCompita(req('/api/onboarding/corregir', { json: { edit_token: 'inventado', ...datos() } }))).status, 410)
+  })
+})

@@ -7,6 +7,7 @@ import { validarPerfil, revisarCorreo } from '@/lib/validar'
 import { avisarAdmin } from '@/lib/telegram'
 import { alertaAdmin } from '@/lib/alertas-admin'
 import { normalizarTelefono } from '@/lib/captacion'
+import { generarTokenPerfil } from '@/lib/compita-tokens'
 
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null)
@@ -63,7 +64,7 @@ export async function POST(req: NextRequest) {
     if (!claimed) return err('Token inválido o expirado')
   }
 
-  const { error } = await admin.from('compitas').insert({
+  const { data: creada, error } = await admin.from('compitas').insert({
     nombre,
     email: email || null,
     telefono,
@@ -76,13 +77,13 @@ export async function POST(req: NextRequest) {
     estado: 'activo',
     verificado: false,
     visitas_realizadas: 0,
-  })
+  }).select('id').single()
 
-  if (error) {
+  if (error || !creada) {
     // Liberar el token: la compita no debe quedarse sin invitación por un fallo nuestro
     if (!esAdmin && token) await admin.from('onboarding_tokens').update({ usado: false }).eq('token', token)
     await alertaAdmin('tarea', `🚨 <b>Error en registro de onboarding</b>\n\n<b>Nombre:</b> ${nombre ?? '—'}\n<b>Email:</b> ${email ?? '—'}\n<b>Error DB:</b> ${error.message ?? JSON.stringify(error)}`)
-    return serverError(error)
+    return serverError(error ?? new Error('No se pudo crear el compita'))
   }
 
   // Email de bienvenida con instrucciones de Telegram
@@ -93,5 +94,8 @@ export async function POST(req: NextRequest) {
     } catch (e) { console.error('Error enviando email bienvenida compita:', e) }
   }
 
-  return ok(null)
+  // Enlace de un solo uso para corregir los datos (por ejemplo un correo mal escrito) mientras no conecte Telegram.
+  let editToken: string | null = null
+  try { editToken = await generarTokenPerfil(String(creada.id)) } catch (e) { console.error('[onboarding] no se pudo crear el enlace de corrección:', e) }
+  return ok({ edit_token: editToken })
 }

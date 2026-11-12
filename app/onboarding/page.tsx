@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { ZONAS_MUNICIPIOS as ZONAS } from '@/lib/venezuela'
+import { colors } from '@/lib/design'
 
 // ── Servicios ─────────────────────────────────────────────────────────────────
 
@@ -123,6 +124,9 @@ function OnboardingForm() {
   const preview = searchParams.get('preview') === '1'
 
   const [step, setStep] = useState<'form' | 'telegram'>('form')
+  // Enlace de un solo uso para corregir los datos tras registrarse (si el correo estaba mal, el código del bot no llegaría).
+  const [editToken, setEditToken] = useState<string | null>(null)
+  const [corrigiendo, setCorrigiendo] = useState(false)
   const [tokenValido, setTokenValido] = useState<boolean | null>(null)
   const [loading, setLoading] = useState(false)
   const [errorForm, setErrorForm] = useState<string | null>(null)
@@ -285,14 +289,17 @@ function OnboardingForm() {
         if (uploadData.url) foto_url = uploadData.url
       }
 
-      const res = await fetch('/api/onboarding/registrar', {
+      const res = await fetch(corrigiendo ? '/api/onboarding/corregir' : '/api/onboarding/registrar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nombre: form.nombre, email: form.email, telefono: form.telefono, descripcion: form.descripcion, servicios: form.servicios, habilidades: form.habilidades, youtube_url: form.youtube_url, zona, foto_url, token, horarios_disponibles: horarios }),
+        body: JSON.stringify({ nombre: form.nombre, email: form.email, telefono: form.telefono, descripcion: form.descripcion, servicios: form.servicios, habilidades: form.habilidades, youtube_url: form.youtube_url, zona, foto_url, token, horarios_disponibles: horarios, ...(corrigiendo ? { edit_token: editToken } : {}) }),
       })
 
       if (res.ok) {
         try { localStorage.removeItem(BORRADOR_KEY) } catch { /* ignorar */ }
+        const d = await res.json().catch(() => null) as { data?: { edit_token?: string | null } } | null
+        setEditToken(d?.data?.edit_token ?? null)
+        setCorrigiendo(false)
         setStep('telegram')
       } else {
         const d = await res.json()
@@ -328,6 +335,12 @@ function OnboardingForm() {
           <p style={{ color: '#6B5C90', marginTop: '8px', marginBottom: '16px', lineHeight: '1.7' }}>
             Tu perfil fue creado exitosamente. Falta un paso importante:
           </p>
+          {editToken && (
+            <p style={{ color: colors.textoMedio, fontSize: '14px', lineHeight: '1.6', margin: '0 0 16px' }}>
+              ¿Te equivocaste en algún dato, por ejemplo el correo? El código de acceso llega a tu correo, así que debe estar bien escrito.{' '}
+              <button type="button" onClick={() => { setCorrigiendo(true); setStep('form') }} style={{ background: 'none', border: 'none', padding: 0, color: colors.naranjaOscuro, fontWeight: 700, textDecoration: 'underline', cursor: 'pointer', fontSize: '14px' }}>Corregir mis datos</button>
+            </p>
+          )}
           <div style={{ background: '#FFF3E8', border: '2px solid #FF6B2B', borderRadius: '14px', padding: '16px 20px', marginBottom: '24px' }}>
             <p style={{ color: '#C84B0E', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif', fontSize: '15px', margin: '0 0 6px' }}>
               ⚠️ Tu perfil no aparece para los clientes todavía
@@ -356,7 +369,7 @@ function OnboardingForm() {
 
           <div style={{ ...s.infoBox, marginBottom: '24px' }}>
             <p style={{ fontWeight: 700, color: '#1A0A3C', marginBottom: '16px', fontFamily: 'Bricolage Grotesque, sans-serif', fontSize: '15px' }}>Paso 2 — Abre el bot de Compaz</p>
-            <ol style={{ paddingLeft: '20px', color: '#4A3B6B', lineHeight: '1', margin: 0 }}>
+            <ol style={{ paddingLeft: '20px', color: '#4A3B6B', lineHeight: '1.6', margin: 0 }}>
               <li style={{ marginBottom: '14px' }}>
                 <strong>Toca el botón naranja de abajo.</strong> Te abrirá directamente el chat del bot dentro de Telegram.
               </li>
@@ -775,7 +788,7 @@ function OnboardingForm() {
               cursor: (loading || form.servicios.length === 0 || zonas.length === 0) ? 'not-allowed' : 'pointer',
             }}
           >
-            {loading ? 'Registrando…' : 'Crear mi perfil → paso 2 de 2'}
+            {loading ? (corrigiendo ? 'Guardando…' : 'Registrando…') : corrigiendo ? 'Guardar los cambios → volver al paso 2' : 'Crear mi perfil → paso 2 de 2'}
           </button>
         </div>
       </div>
