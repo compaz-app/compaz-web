@@ -45,7 +45,8 @@ describe('invitar y acciones de cuenta', () => {
     const c = readFileSync('components/panel/CuentaPersona.tsx', 'utf8')
     for (const r of ['bloquear-cliente', 'bloquear-compita', 'toggle-verificado', 'toggle-estado', 'portal-nuevo', 'asignar-compita']) assert.match(c, new RegExp(`/api/admin/${r}`))
     assert.match(c, /if \(!puedeCuentas && !hayAsignar && !puedeEliminar\) return null/)
-    assert.match(c, /\/api\/admin\/eliminar-cliente/); assert.match(c, /\/api\/admin\/eliminar-compita/); assert.match(c, /puedeEliminar/) // eliminar: solo el administrador y escribiendo ELIMINAR
+    assert.match(c, /\/api\/admin\/eliminar-cliente/); assert.match(c, /\/api\/admin\/eliminar-compita/); assert.match(c, /puedeEliminar/) // eliminar: solo el administrador y con una confirmación simple (sin escribir palabras)
+    assert.doesNotMatch(c, /escribir="ELIMINAR"/)
   })
   test('la ruta insegura de vista previa ya no existe', () => {
     assert.throws(() => readFileSync('app/api/admin/cliente-preview/route.ts', 'utf8'))

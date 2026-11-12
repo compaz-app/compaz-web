@@ -332,3 +332,31 @@ export async function eliminarCompitaPorEquipo(compitaId: string, actorCorreo: s
   await alertaAdmin('actividad', `🗑️ ${esc(actorCorreo)} eliminó la cuenta del compita <b>${opts.borrarDatos ? 'sin nombre' : esc(completo || 'sin nombre')}</b>.`, { categoria: 'cuenta_eliminada', entidad: { tipo: 'compita', id: compitaId, nombre: opts.borrarDatos ? 'Cuenta eliminada' : nombreDeCuentaEliminada(completo) } })
   return { ok: true }
 }
+
+// ── Eliminar varias cuentas a la vez (solo administrador raíz) ──────────────────────────────────────────────────────────────────────────────────────
+/** Tope por petición: eliminar es lento (cancela lo abierto y cierra el acceso de cada una) y no se debe poder lanzar por error cientos de golpe. */
+export const MAX_ELIMINAR_LOTE = 50
+export interface ResultadoLote { eliminadas: number; fallidas: { id: string; motivo: string }[] }
+const MOTIVO_LOTE: Record<string, string> = {
+  no_existe: 'ya no existe', ya_eliminada: 'ya estaba eliminada', visita_en_vivo: 'tiene una visita en curso', visitas_abiertas: 'tiene visitas abiertas', error: 'no se pudo eliminar',
+}
+
+/**
+ * Elimina una por una (en orden, sin paralelo, para no saturar la base) y NUNCA se detiene a mitad: cada cuenta usa las mismas reglas que eliminarla sola
+ * y, si una no se puede (por ejemplo, tiene una visita en curso), queda anotada con su motivo y se sigue con las demás.
+ */
+export async function eliminarEnLote(tipo: 'cliente' | 'compita', ids: string[], actorCorreo: string, opts: { borrarDatos?: boolean } = {}): Promise<ResultadoLote> {
+  const unicos = [...new Set(ids)].slice(0, MAX_ELIMINAR_LOTE)
+  const r: ResultadoLote = { eliminadas: 0, fallidas: [] }
+  for (const id of unicos) {
+    try {
+      const x = tipo === 'cliente' ? await eliminarClientePorEquipo(id, actorCorreo, opts) : await eliminarCompitaPorEquipo(id, actorCorreo, opts)
+      if (x.ok) r.eliminadas++
+      else r.fallidas.push({ id, motivo: MOTIVO_LOTE[x.motivo] ?? MOTIVO_LOTE.error })
+    } catch (e) {
+      console.error('[eliminar-lote]', id, e instanceof Error ? e.message : e)
+      r.fallidas.push({ id, motivo: MOTIVO_LOTE.error })
+    }
+  }
+  return r
+}

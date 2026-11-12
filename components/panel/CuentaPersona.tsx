@@ -57,16 +57,16 @@ export default function CuentaPersona({ ficha, puedeCuentas, puedeAtender, puede
           </>
         )}
         {puedeEliminar && (
-          <AccionCuenta peligro escribir="ELIMINAR" texto="Eliminar cuenta" url={ficha.tipo === 'cliente' ? '/api/admin/eliminar-cliente' : '/api/admin/eliminar-compita'} metodo="DELETE"
+          <AccionCuenta peligro texto="Eliminar cuenta" url={ficha.tipo === 'cliente' ? '/api/admin/eliminar-cliente' : '/api/admin/eliminar-compita'} metodo="DELETE"
             cuerpo={ficha.tipo === 'cliente' ? { usuario_id: ficha.id } : { compita_id: ficha.id }}
-            titulo={`Eliminar la cuenta de ${nombre}`}
+            titulo={`¿De verdad quieres eliminar a ${nombre}?`}
             mensaje={ficha.tipo === 'cliente'
               ? 'Se cierra su acceso para siempre y se cancelan sin costo sus visitas abiertas. Todo su historial (visitas, solicitudes, pagos, ficha y mensajes) se conserva y su nombre queda con la marca "(cuenta eliminada)". No se puede deshacer.'
               : 'Deja de existir para el sistema: sin acceso, sin Telegram y sin familias asignadas. Sus visitas y reportes pasados se conservan y su nombre queda con la marca "(cuenta eliminada)". No se puede hacer si tiene visitas abiertas. No se puede deshacer.'}
             opcion={{ clave: 'borrar_datos', texto: ficha.tipo === 'cliente'
               ? 'La persona pidió que se borren sus datos. Se anonimiza: se borran su nombre, correo, teléfono, ficha del familiar, dirección, fotos y mensajes. Quedan solo los pagos y las visitas, sin datos que la identifiquen.'
               : 'La persona pidió que se borren sus datos. Se anonimiza: se borran también su nombre, perfil, foto y contacto.' }}
-            info="Cierra la cuenta para siempre. Conserva la información salvo que marques que la persona pidió borrar sus datos. Solo la hace el administrador y pide escribir ELIMINAR." />
+            info="Cierra la cuenta para siempre. Conserva la información salvo que marques que la persona pidió borrar sus datos. Solo la hace el administrador y pide confirmar." />
         )}
         {hayAsignar && <AsignarCompita clienteId={ficha.id} actual={ficha.compitaId ?? null} opciones={ficha.asignables ?? []} />}
       </div>

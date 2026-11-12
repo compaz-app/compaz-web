@@ -4,6 +4,11 @@ La versión vigente está en `lib/version.ts` y se ve en el panel (menú lateral
 
 Reglas: mayor = cambio grande o lanzamiento; menor = función nueva; parche = arreglo. La etapa `beta` sale cuando el sistema corre una o dos semanas con uso real sin sorpresas.
 
+## 1.2.0-beta.1 (2026-11-12)
+Eliminar perfiles en lote y confirmación simple.
+1. En Personas, el administrador marca varias cuentas (casillas, con "marcar la página") y pulsa "Eliminar marcadas": hasta 50 por vez, una por una con las mismas reglas que eliminarlas solas. Si alguna no se puede (por ejemplo, tiene una visita abierta), se salta, se sigue con las demás y se dice cuál y por qué (`POST /api/admin/eliminar-lote`).
+2. Eliminar una cuenta ya no pide escribir la palabra ELIMINAR: solo una ventana "¿De verdad quieres eliminar a ...?" con el detalle de lo que pasa.
+
 ## 1.1.3-beta.1 (2026-11-12)
 Personas sin viajes al servidor.
 1. Personas recibe la lista completa una vez; ordenar, filtrar por vista o estado, buscar (letra por letra) y cambiar de página se resuelve en el navegador (`PersonasInteractivo`, `lib/panel-personas-cliente.ts`). La dirección se mantiene al día con `history.replaceState` (con un retraso corto): refrescar o compartir el enlace restaura el mismo estado. Abrir una ficha o un chat sigue yendo al servidor.

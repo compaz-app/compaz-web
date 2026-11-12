@@ -119,11 +119,11 @@ async function ContenidoPanel({ sp, actual, actor, comoActor, comoColaborador }:
     if (lista === 'compitas') {
       const todas = await listarCompitas()
       avisoTope = <AvisoTope cargadas={todas.length} tope={LIMITE_PERSONAS} que="los compitas" />
-      cuerpo = <PersonasInteractivo lista="compitas" compitas={todas} qsInicial={qsInicial} />
+      cuerpo = <PersonasInteractivo lista="compitas" compitas={todas} qsInicial={qsInicial} puedeEliminar={actor.rol === 'admin'} />
     } else {
       const todos = await listarClientes()
       avisoTope = <AvisoTope cargadas={todos.length} tope={LIMITE_PERSONAS} que="los clientes" />
-      cuerpo = <PersonasInteractivo lista="clientes" clientes={todos} qsInicial={qsInicial} />
+      cuerpo = <PersonasInteractivo lista="clientes" clientes={todos} qsInicial={qsInicial} puedeEliminar={actor.rol === 'admin'} />
     }
     cuerpo = <div className="space-y-3"><Encabezado titulo="Personas" descripcion={DESCRIPCION_PERSONAS} info={INFO_PERSONAS} infoQue="Para qué sirve Personas" /><Selector lista={lista} enlace={enlace} />{avisoTope}{cuerpo}</div>
   } else if (actual === 'seguimiento') {
