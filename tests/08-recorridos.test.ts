@@ -256,27 +256,30 @@ describe('RECORRIDO 3: el admin interviene a mitad de los flujos', () => {
     void v
   })
 
-  test('borrar al cliente con una visita activa: el bot no se rompe y la compita queda utilizable', async () => {
+  test('eliminar al cliente con una visita activa se rechaza: el bot no se rompe y la compita queda utilizable', async () => {
     const { lucia, carlos, v } = await mundoContratado()
     await webhook(tgText(2200, '▶️ Iniciar visita')); await webhook(tgText(2200, '✅ Sí, iniciar')); await confirmarLlegada()
     admin()
-    assert.equal((await eliminarCliente(req('/api/admin/eliminar-cliente', { method: 'DELETE', json: { usuario_id: carlos.id } }))).status, 200)
-    assert.equal(db.rows('usuarios').length, 0)
+    // Con una visita en curso no se puede eliminar la cuenta: no queda nada a medias y el bot sigue coherente.
+    assert.equal((await eliminarCliente(req('/api/admin/eliminar-cliente', { method: 'DELETE', json: { usuario_id: carlos.id } }))).status, 409)
+    assert.equal(db.rows('usuarios').length, 1)
     net.tg = []
     for (const t of ['hola', '▶️ Iniciar visita', '🔴 Terminar visita']) { const r = await webhook(tgText(2200, t)); assert.equal(r.status, 200) }
     assert.ok(ultimoTg(2200), 'la compita sigue recibiendo respuestas coherentes (sin crash)')
     void lucia; void v
   })
 
-  test('borrar a la compita con visitas pide confirmación (force) y el cliente no queda apuntando a una compita inexistente', async () => {
+  test('eliminar a la compita: con visitas abiertas se rechaza; ya sin ellas conserva el historial con la marca y el cliente no queda apuntando a ella', async () => {
     const { lucia, carlos } = await mundoContratado()
     admin()
     const r = await eliminarCompita(req('/api/admin/eliminar-compita', { method: 'DELETE', json: { compita_id: lucia.id } }))
     assert.equal(r.status, 409)
-    assert.equal((await eliminarCompita(req('/api/admin/eliminar-compita', { method: 'DELETE', json: { compita_id: lucia.id, force: true } }))).status, 200)
-    assert.equal(db.rows('compitas').length, 0)
+    db.rows('visitas').forEach((v) => { v.estado = 'terminada' })
+    assert.equal((await eliminarCompita(req('/api/admin/eliminar-compita', { method: 'DELETE', json: { compita_id: lucia.id, borrar_datos: true } }))).status, 200)
+    const eliminada = db.rows('compitas').find((c) => c.id === lucia.id)!
+    assert.match(eliminada.nombre, /\(cuenta eliminada\)$/); assert.equal(eliminada.telegram_chat_id, null); assert.equal(eliminada.telefono, null); assert.equal(eliminada.estado, 'bloqueado')
     assert.equal(db.rows('usuarios').find((u) => u.id === carlos.id)!.compita_id, null)
-    assert.equal(db.rows('visitas').length, 0)
+    assert.ok(db.rows('visitas').length > 0) // el historial se conserva
     // cron tras el borrado no se rompe
     assert.equal((await recordatorios(cron('r'))).status, 200)
     assert.equal((await seguimientoCron(cron('s'))).status, 200)

@@ -175,16 +175,16 @@ export default async function PanelPage({ searchParams }: { searchParams: Promis
       {comoColaborador && <div className="mb-4"><Aviso tamano="compacto" tono="advertencia">Estás viendo el panel como un colaborador con los permisos base. Es solo la pantalla: tus permisos reales no cambian.</Aviso></div>}
       {cuerpo}
       {detalle && (
-        <DetalleVisita d={detalle} ahora={Date.now()} cerrarHref={enlace({ visita: null })} fichaClienteHref={enlace({ persona: `cliente:${detalle.fila.clienteId}` })} fichaCompitaHref={enlace({ persona: `compita:${detalle.fila.compitaId}` })}
+        <DetalleVisita puedeAtender={actor.permisos.atender === true} d={detalle} ahora={Date.now()} cerrarHref={enlace({ visita: null })} fichaClienteHref={enlace({ persona: `cliente:${detalle.fila.clienteId}` })} fichaCompitaHref={enlace({ persona: `compita:${detalle.fila.compitaId}` })}
           chatHref={actor.permisos.chats === true ? enlace({ chat: `${detalle.fila.clienteId}:${detalle.fila.compitaId}` }) : null} />
       )}
       {caso && (
-        <CasoSeguimiento caso={caso} cerrarHref={enlace({ caso: null })} fichaClienteHref={enlace({ persona: `cliente:${caso.id}` })}
+        <CasoSeguimiento puedeAtender={actor.permisos.atender === true} caso={caso} cerrarHref={enlace({ caso: null })} fichaClienteHref={enlace({ persona: `cliente:${caso.id}` })}
           fichaCompitaHref={caso.compitaId ? enlace({ persona: `compita:${caso.compitaId}` }) : null}
           chatHref={actor.permisos.chats === true && caso.compitaId ? enlace({ chat: `${caso.id}:${caso.compitaId}` }) : null} />
       )}
       {datosFicha && (
-        <FichaPersona ficha={datosFicha} cerrarHref={enlace({ persona: null })} pideMotivo={actor.rol !== 'admin'} puedeContacto={actor.permisos.telefonos === true} puedeNotas={actor.permisos.atender === true} puedeCuentas={actor.permisos.cuentas === true}
+        <FichaPersona ficha={datosFicha} cerrarHref={enlace({ persona: null })} pideMotivo={actor.rol !== 'admin'} puedeContacto={actor.permisos.telefonos === true} puedeNotas={actor.permisos.atender === true} puedeCuentas={actor.permisos.cuentas === true} puedeEliminar={actor.rol === 'admin'}
           chatHref={actor.permisos.chats === true && datosFicha.tipo === 'cliente' && datosFicha.compitaId ? enlace({ persona: null, chat: `${datosFicha.id}:${datosFicha.compitaId}` }) : null} />
       )}
       {chat && <VerChat key={`${chat.clienteId}:${chat.compitaId}`} clienteId={chat.clienteId} compitaId={chat.compitaId} cerrarHref={enlace({ chat: null })} pideMotivo={actor.rol !== 'admin'}

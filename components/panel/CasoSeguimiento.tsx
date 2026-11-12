@@ -2,6 +2,7 @@ import Link from 'next/link'
 import Boton from '@/components/ui/base/Boton'
 import InfoBoton from '@/components/ui/InfoBoton'
 import { EncabezadoLateral, TituloBloque } from '@/components/panel/ui'
+import AccionCuenta from '@/components/panel/AccionCuenta'
 import CerrarConEscape from '@/components/panel/CerrarConEscape'
 import { PuntoUrgencia } from '@/components/panel/Personas'
 import { TEXTO_SEMAFORO, tiempoEnEtapa } from '@/lib/panel-seguimiento-tipos'
@@ -12,9 +13,11 @@ const TEXTO_TIEMPO = { verde: 'text-texto-sutil', amarillo: 'text-ambar-oscuro',
 
 // La ventana del CASO: la situación completa de un cliente y su compita, en un solo lugar. Desde aquí se va a cada ficha o al chat,
 // con botones que dicen a dónde llevan. Es lo que se abre al tocar una fila de Seguimiento.
-export default function CasoSeguimiento({ caso, cerrarHref, fichaClienteHref, fichaCompitaHref, chatHref }: {
-  caso: CasoCliente; cerrarHref: string; fichaClienteHref: string; fichaCompitaHref: string | null; chatHref: string | null
+export default function CasoSeguimiento({ caso, cerrarHref, fichaClienteHref, fichaCompitaHref, chatHref, puedeAtender }: {
+  caso: CasoCliente; cerrarHref: string; fichaClienteHref: string; fichaCompitaHref: string | null; chatHref: string | null; puedeAtender: boolean
 }) {
+  const sol = caso.solicitud
+  const hayAcciones = puedeAtender && !!sol && sol.estado === 'aceptada'
   return (
     <div className="fixed inset-0 z-40 flex justify-end bg-negro/30">
       <CerrarConEscape href={cerrarHref} />
@@ -32,6 +35,15 @@ export default function CasoSeguimiento({ caso, cerrarHref, fichaClienteHref, fi
           <p className={`text-xs font-extrabold uppercase tracking-wide ${caso.espera === 'equipo' ? 'text-rojo-oscuro' : 'text-texto-medio'}`}>{ETIQUETA_ESPERA[caso.espera]}</p>
         </section>
 
+        {hayAcciones && sol && (
+          <section className="space-y-2">
+            <div className="flex items-center gap-1"><TituloBloque>Acciones</TituloBloque><InfoBoton que="Qué hacen estas acciones" texto="Para destrabar un caso a mano. Reenviar el enlace de la llamada vuelve a mandar el enlace a la familia y al compita (útil si no les llegó). Marcar como completada cierra la solicitud cuando la llamada ya ocurrió y no hay nada más que esperar." /></div>
+            <div className="flex flex-wrap gap-2">
+              {sol.conLlamada && <AccionCuenta texto="Reenviar enlace de llamada" url="/api/admin/enviar-link-llamada" cuerpo={{ solicitud_id: sol.id }} titulo="Reenviar el enlace de la llamada" mensaje="Se manda de nuevo el enlace de la llamada a la familia y al compita, por correo y Telegram." info="Vuelve a enviar el enlace de la llamada de presentación a los dos. No crea una llamada nueva si ya hay una sala." />}
+              <AccionCuenta texto="Marcar como completada" url="/api/admin/completar-solicitud" cuerpo={{ id: sol.id }} titulo="Marcar la solicitud como completada" mensaje="La solicitud pasa a completada. Hazlo solo si la llamada ya ocurrió y no queda nada pendiente." info="Cierra esta solicitud como completada. Solo sirve si estaba aceptada." />
+            </div>
+          </section>
+        )}
         <section className="space-y-2">
           <div className="flex items-center gap-1"><TituloBloque>Abrir</TituloBloque><InfoBoton que="Qué abre cada botón" texto="Ficha del cliente: sus datos, contacto, notas y su historial. Ficha del compita: lo mismo del compita. Chat: la conversación entre ambos (necesita el permiso de chats, y queda anotado). Ninguno cambia nada." /></div>
           <div className="flex flex-wrap gap-2">

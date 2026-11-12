@@ -20,5 +20,6 @@ export async function casoDeCliente(actor: Actor, clienteId: string, ahora: Date
   return {
     id: clienteId, nombre: foto.nombre, compitaId: foto.compitaAsignado?.id ?? sol?.compitaId ?? null, compita: foto.compitaAsignado?.nombre ?? sol?.compitaNombre ?? null,
     etapa, horas, urgencia: urgenciaDe(etapa, horas, umbralesDeAjustes(await getAjustes())), ...SITUACION[estado.codigo], linea,
+    solicitud: sol ? { id: sol.id, estado: sol.estado, conLlamada: !!sol.slotConfirmado } : null,
   }
 }

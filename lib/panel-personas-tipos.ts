@@ -28,6 +28,7 @@ export interface FichaPersona {
   linea: EventoLinea[]
   /** Notas internas del equipo, la más nueva primero. */ notas: NotaPersona[]
   /** Estado de la cuenta, para los botones de la ficha. */ cuenta?: { bloqueado: boolean; verificado?: boolean; activo?: boolean; portalNuevo?: boolean | null }
+  /** Compita: su perfil público, para corregirlo (solo viaja a quien tiene el permiso de cuentas). */ perfil?: { zona: string; descripcion: string; servicios: string[]; youtube: string; fotoUrl: string | null }
   /** Cliente: compitas a los que se le puede asignar (verificados y activos). */ asignables?: { id: string; nombre: string }[]
   /** Solo compitas. */ canc?: { total: number; tardias: number; cuentanContra: number; nivel: 'normal' | 'revision' | 'pausa' }
 }

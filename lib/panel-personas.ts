@@ -4,6 +4,7 @@
 import { createAdminSupabase } from '@/lib/supabase-server'
 import type { Actor } from '@/lib/permisos'
 import { puede } from '@/lib/permisos'
+import { esCuentaEliminada } from '@/lib/cuenta-eliminar'
 import { recortarTexto } from '@/lib/panel-datos'
 import { alertaAdmin } from '@/lib/alertas-admin'
 import { compitasEnPausa, resumenCancelacionesCompita } from '@/lib/cancelaciones'
@@ -32,7 +33,7 @@ export async function listarCompitas(ahora: Date = new Date()): Promise<FilaComp
   ])
   for (const r of [compitas, clientes, visitas, solicitudes, cancelaciones]) if (r.error) throw new Error(`No se pudo leer Personas: ${r.error.message}`)
 
-  const lista = (compitas.data ?? []).filter((c) => !c.es_demo)
+  const lista = (compitas.data ?? []).filter((c) => !c.es_demo && !esCuentaEliminada([c.nombre, c.apellido].filter(Boolean).join(' ')))
   const ids = lista.map((c) => String(c.id))
   const [pausaCanc, pausaContacto] = await Promise.all([compitasEnPausa(ids, ahora), compitasPausadosPorContacto(ids)])
 
@@ -106,7 +107,9 @@ export async function fichaDePersona(actor: Actor, tipo: TipoPersona, id: string
     if (!c || c.es_demo) return null
     const [linea, canc, notas] = await Promise.all([lineaDe(actor, 'compita', id), resumenCancelacionesCompita(id), listarNotas(actor, 'compita', id)])
     return { tipo, id, nombre: [c.nombre, c.apellido].filter(Boolean).join(' '), zona: String(c.zona ?? ''), contacto: { correo: !!c.email, telefono: !!c.telefono }, linea, notas, canc,
-      cuenta: { bloqueado: c.estado === 'bloqueado', verificado: !!c.verificado, activo: c.estado === 'activo' } }
+      // Una cuenta eliminada se ve (por el historial) pero ya no tiene acciones.
+      perfil: puede(actor, 'cuentas') && !esCuentaEliminada(c.nombre) ? { zona: String(c.zona ?? ''), descripcion: String(c.descripcion ?? ''), servicios: Array.isArray(c.servicios) ? c.servicios.map(String) : [], youtube: String(c.youtube_url ?? ''), fotoUrl: c.foto_url ? String(c.foto_url) : null } : undefined,
+      cuenta: esCuentaEliminada(c.nombre) ? undefined : { bloqueado: c.estado === 'bloqueado', verificado: !!c.verificado, activo: c.estado === 'activo' } }
   }
   const { data: u } = await db.from('usuarios').select('id, nombre, zona, email, telefono, compita_id, eliminada_en, plan, portal_nuevo').eq('id', id).maybeSingle()
   if (!u || u.eliminada_en) return null

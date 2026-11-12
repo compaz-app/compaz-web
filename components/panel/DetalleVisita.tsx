@@ -2,13 +2,14 @@ import Link from 'next/link'
 import Boton from '@/components/ui/base/Boton'
 import Aviso from '@/components/ui/base/Aviso'
 import { EncabezadoLateral, TituloBloque } from '@/components/panel/ui'
+import AccionCuenta from '@/components/panel/AccionCuenta'
 import CerrarConEscape from '@/components/panel/CerrarConEscape'
 import { cuandoLinea } from '@/lib/panel-personas-tipos'
 import { etiquetaVisita, queHacerConVisita } from '@/lib/panel-visitas-tipos'
 import type { DetalleVisita as Detalle } from '@/lib/panel-visitas'
 
 // El detalle de UNA visita: cómo va, quiénes participan, su historia y qué conviene hacer. Desde aquí se abre la ficha de cada uno o el chat.
-export default function DetalleVisita({ d, ahora, cerrarHref, fichaClienteHref, fichaCompitaHref, chatHref }: { d: Detalle; ahora: number; cerrarHref: string; fichaClienteHref: string; fichaCompitaHref: string; chatHref: string | null }) {
+export default function DetalleVisita({ d, ahora, cerrarHref, fichaClienteHref, fichaCompitaHref, chatHref, puedeAtender }: { puedeAtender: boolean; d: Detalle; ahora: number; cerrarHref: string; fichaClienteHref: string; fichaCompitaHref: string; chatHref: string | null }) {
   const v = d.fila
   const hacer = queHacerConVisita(v)
   return (
@@ -30,6 +31,16 @@ export default function DetalleVisita({ d, ahora, cerrarHref, fichaClienteHref, 
             {chatHref && <Boton tamano="compacto" variante="secundario" navegacion href={chatHref}>💬 Chat</Boton>}
           </div>
         </section>
+        {puedeAtender && v.estado === 'En curso' && (
+          <section className="space-y-2">
+            <TituloBloque>Acciones</TituloBloque>
+            <div className="flex flex-wrap gap-2">
+              <AccionCuenta peligro texto="Cerrar la visita ahora" url="/api/admin/forzar-cierre-visita" cuerpo={{ visita_id: v.id }} titulo="Cerrar la visita ahora"
+                mensaje="La visita termina en este momento y se le avisa al compita por Telegram. Úsalo solo si quedó abierta y nadie la puede cerrar: el compita normalmente la termina desde Telegram."
+                info="Termina a la fuerza una visita en curso que quedó abierta. Avisa al compita y queda anotado." />
+            </div>
+          </section>
+        )}
         <section>
           <TituloBloque>Historia de la visita</TituloBloque>
           {d.linea.length === 0 ? <p className="mt-2 text-sm text-texto-sutil">Todavía no hay nada que contar.</p> : (

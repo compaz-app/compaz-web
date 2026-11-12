@@ -14,7 +14,7 @@ const TEXTO_CANAL: Record<CanalContacto, string> = { correo: 'Correo', telefono:
 
 // Ficha de una persona (cliente o compita) como panel lateral. Se abre con ?persona= y se cierra volviendo a la lista.
 // Los datos de contacto no vienen con la ficha: se piden uno a uno, con motivo si no eres administrador, y quedan en Actividad.
-export default function FichaPersona({ ficha, cerrarHref, pideMotivo, puedeContacto, puedeNotas, puedeCuentas, chatHref }: { ficha: Ficha; cerrarHref: string; pideMotivo: boolean; puedeContacto: boolean; puedeNotas: boolean; puedeCuentas: boolean; chatHref: string | null }) {
+export default function FichaPersona({ ficha, cerrarHref, pideMotivo, puedeContacto, puedeNotas, puedeCuentas, puedeEliminar, chatHref }: { ficha: Ficha; cerrarHref: string; pideMotivo: boolean; puedeContacto: boolean; puedeNotas: boolean; puedeCuentas: boolean; puedeEliminar: boolean; chatHref: string | null }) {
   const router = useRouter()
   const [valores, setValores] = useState<Partial<Record<CanalContacto, string>>>({})
   const [pidiendo, setPidiendo] = useState<CanalContacto | null>(null)
@@ -76,7 +76,7 @@ export default function FichaPersona({ ficha, cerrarHref, pideMotivo, puedeConta
           </Aviso>
         )}
 
-        <CuentaPersona ficha={ficha} puedeCuentas={puedeCuentas} puedeAtender={puedeNotas} />
+        <CuentaPersona ficha={ficha} puedeCuentas={puedeCuentas} puedeAtender={puedeNotas} puedeEliminar={puedeEliminar} />
 
         {puedeContacto && canales.length > 0 && (
           <section className="space-y-2">

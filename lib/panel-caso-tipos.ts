@@ -45,6 +45,8 @@ export interface CasoCliente {
   etapa: Etapa; urgencia: Urgencia; horas: number
   que: string; espera: Espera
   linea: EventoLinea[]
+  /** La solicitud más reciente: sobre ella actúan los botones del caso. */
+  solicitud: { id: string; estado: string; conLlamada: boolean } | null
 }
 
 /** El id del caso en la dirección (?caso=). Solo un id válido de cliente. */

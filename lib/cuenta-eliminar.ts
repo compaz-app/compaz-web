@@ -2,7 +2,7 @@
 //   1. solicitarEliminacion  → genera un enlace de UN solo uso (vence en 1 hora; en la base solo queda su huella).
 //   2. confirmarEliminacion  → la cuenta queda DESACTIVADA ya y se borra a los 7 días. Cancela lo abierto sin costo.
 //   3. reactivarCuenta       → si entra antes de los 7 días, todo sigue como estaba.
-//   4. borrarCuentasVencidas → (limpieza diaria) vacía los datos personales y deja pagos y visitas ANONIMIZADOS.
+//   4. borrarCuentasVencidas → (limpieza diaria) vacía los datos personales y conserva el nombre con la marca "(cuenta eliminada)" y el historial.
 // El saldo no se reembolsa solo (las visitas caducan a los 60 días): los reembolsos se tratan con el equipo.
 import { createHash, randomBytes } from 'node:crypto'
 import { createAdminSupabase } from '@/lib/supabase-server'
@@ -10,7 +10,7 @@ import { sendEmail, SITE_URL } from '@/lib/email'
 import { sendTelegramMessage } from '@/lib/telegram'
 import { borrarFotosDeUsuario, programarBorradoVisita } from '@/lib/fotos-privadas'
 import { registrarCancelacion } from '@/lib/cancelaciones'
-import { registrarEvento } from '@/lib/eventos'
+import { registrarEvento, type ActorEvento } from '@/lib/eventos'
 import { alertaAdmin } from '@/lib/alertas-admin'
 import { explicarEspera, type Espera } from '@/lib/esperas'
 
@@ -138,35 +138,107 @@ export async function estadoEliminacion(usuarioId: string): Promise<{ desactivad
   return { desactivada: !!u && (!!u.eliminacion_programada_en || !!u.eliminada_en), borraEl: u?.eliminacion_programada_en ?? null }
 }
 
+/** Marca que acompaña al nombre de una cuenta eliminada por el equipo: en todo registro pasado se lee "Ana Pérez (cuenta eliminada)". */
+export const MARCA_ELIMINADA = '(cuenta eliminada)'
+export const esCuentaEliminada = (nombre: string | null | undefined) => {
+  const n = (nombre ?? '').trim()
+  return n.endsWith(MARCA_ELIMINADA) || n === 'Cuenta eliminada'
+}
+export const nombreDeCuentaEliminada = (nombre: string | null | undefined) => {
+  const n = (nombre ?? '').trim()
+  if (esCuentaEliminada(n)) return n
+  return n ? `${n} ${MARCA_ELIMINADA}` : 'Cuenta eliminada'
+}
+
 /**
- * Limpieza diaria: borra de verdad las cuentas cuyo plazo se cumplió.
- * SE VACÍA: nombre, correo, teléfono, ficha del familiar y su dirección, notas, fotos (con su archivo) y mensajes.
- * SE CONSERVA, sin datos que identifiquen: pagos y registros de visitas (contabilidad y seguridad). El acceso se cierra.
+ * Cierra una cuenta de cliente. Dos modos (decidido 2026-11-11):
+ *  - anonimizar = true (la persona PIDIÓ que se borren sus datos): se vacían nombre, correo, teléfono, ficha del familiar, dirección, notas, fotos
+ *    (con su archivo) y mensajes. Quedan, sin datos que la identifiquen, los pagos y los registros de visitas (contabilidad y seguridad).
+ *  - anonimizar = false (la cierra el equipo sin que lo haya pedido): se CONSERVA la información (nombre con la marca "(cuenta eliminada)", ficha,
+ *    visitas, mensajes, fotos y pagos). Solo se cierra el acceso y se libera el correo; el correo anterior queda en el registro de eventos.
+ * En ambos modos el acceso se cierra para siempre.
  */
+async function cerrarCuentaCliente(id: string, ahora: Date, actor: ActorEvento, anonimizar: boolean): Promise<boolean> {
+  const admin = createAdminSupabase()
+  const { data: actual } = await admin.from('usuarios').select('nombre, email').eq('id', id).maybeSingle()
+  const antes = actual as { nombre?: string | null; email?: string | null } | null
+  const correoNuevo = `eliminada-${id}@compaz.invalid`
+  if (anonimizar) {
+    if ((await borrarFotosDeUsuario(id)) > 0) return false // si una foto no se pudo borrar no se sigue: se reintenta
+    const { data: vs } = await admin.from('visitas').select('id').eq('usuario_id', id)
+    const visitaIds = ((vs ?? []) as { id: string }[]).map((v) => v.id)
+    if (visitaIds.length) {
+      await admin.from('mensajes').delete().in('visita_id', visitaIds)
+      await admin.from('visitas').update({ direccion: null, ficha_personas: null }).eq('usuario_id', id)
+    }
+    await admin.from('solicitudes').update({ mensaje: '' }).eq('cliente_id', id)
+    await admin.from('usuarios').update({
+      nombre: 'Cuenta eliminada', email: correoNuevo, telefono: null, zona: null, pais: null, parentesco: null,
+      familiar_nombre: null, familiar_edad: null, familiar_condicion: null, familiar_notas: null, ficha_personas: null,
+      eliminada_en: ahora.toISOString(), eliminacion_programada_en: null, eliminar_enlace_hash: null, eliminar_enlace_vence: null,
+    }).eq('id', id)
+  } else {
+    await admin.from('usuarios').update({
+      nombre: nombreDeCuentaEliminada(antes?.nombre), email: correoNuevo,
+      eliminada_en: ahora.toISOString(), eliminacion_programada_en: null, eliminar_enlace_hash: null, eliminar_enlace_vence: null,
+    }).eq('id', id)
+  }
+  // Se cierra el acceso para siempre (el registro sigue por contabilidad e historial).
+  await admin.auth.admin.updateUserById(id, { email: correoNuevo, ban_duration: '876000h' })
+  await registrarEvento({ entidad: 'cliente', entidadId: id, tipo: 'cuenta_eliminada', actor, datos: { anonimizada: anonimizar, ...(anonimizar ? {} : { correo_anterior: antes?.email ?? null }) } })
+  return true
+}
+
+/** Limpieza diaria: borra las cuentas que pidieron eliminarse y cuyo plazo de 7 días se cumplió (siempre anonimiza: lo pidió la persona). */
 export async function borrarCuentasVencidas(ahora: Date = new Date()): Promise<{ borradas: number; fallos: number }> {
   const admin = createAdminSupabase()
   const { data } = await admin.from('usuarios').select('id').lte('eliminacion_programada_en', ahora.toISOString()).is('eliminada_en', null)
   let borradas = 0; let fallos = 0
   for (const { id } of (data ?? []) as { id: string }[]) {
-    try {
-      if ((await borrarFotosDeUsuario(id)) > 0) { fallos++; continue } // si una foto no se pudo borrar no se sigue: se reintenta mañana
-      const { data: vs } = await admin.from('visitas').select('id').eq('usuario_id', id)
-      const visitaIds = ((vs ?? []) as { id: string }[]).map((v) => v.id)
-      if (visitaIds.length) {
-        await admin.from('mensajes').delete().in('visita_id', visitaIds)
-        await admin.from('visitas').update({ direccion: null, ficha_personas: null }).eq('usuario_id', id)
-      }
-      await admin.from('solicitudes').update({ mensaje: '' }).eq('cliente_id', id)
-      await admin.from('usuarios').update({
-        nombre: 'Cuenta eliminada', email: `eliminada-${id}@compaz.invalid`, telefono: null, zona: null, pais: null, parentesco: null,
-        familiar_nombre: null, familiar_edad: null, familiar_condicion: null, familiar_notas: null, ficha_personas: null,
-        eliminada_en: ahora.toISOString(), eliminacion_programada_en: null, eliminar_enlace_hash: null, eliminar_enlace_vence: null,
-      }).eq('id', id)
-      // Se cierra el acceso para siempre (el registro anónimo sigue por contabilidad).
-      await admin.auth.admin.updateUserById(id, { email: `eliminada-${id}@compaz.invalid`, ban_duration: '876000h' })
-      await registrarEvento({ entidad: 'cliente', entidadId: id, tipo: 'cuenta_eliminada', actor: 'sistema' })
-      borradas++
-    } catch (e) { console.error('[cuenta-eliminar] no se pudo borrar', id, e); fallos++ }
+    try { if (await cerrarCuentaCliente(id, ahora, 'sistema', true)) borradas++; else fallos++ } catch (e) { console.error('[cuenta-eliminar] no se pudo borrar', id, e); fallos++ }
   }
   return { borradas, fallos }
+}
+
+export type ResultadoEliminacionEquipo = { ok: true; visitasCanceladas?: number } | { ok: false; motivo: 'no_existe' | 'ya_eliminada' | 'visita_en_vivo' | 'visitas_abiertas' | 'error' }
+
+/** El equipo (solo administrador raíz) elimina a un cliente YA: cancela lo abierto sin costo y cierra la cuenta. Con borrarDatos (la persona lo pidió) se anonimiza; sin él se conserva la información. */
+export async function eliminarClientePorEquipo(usuarioId: string, actorCorreo: string, opts: { borrarDatos?: boolean } = {}, ahora: Date = new Date()): Promise<ResultadoEliminacionEquipo> {
+  const admin = createAdminSupabase()
+  const { data } = await admin.from('usuarios').select('id, nombre, eliminada_en').eq('id', usuarioId).maybeSingle()
+  const u = data as { id: string; nombre: string | null; eliminada_en: string | null } | null
+  if (!u) return { ok: false, motivo: 'no_existe' }
+  if (u.eliminada_en) return { ok: false, motivo: 'ya_eliminada' }
+  if (await visitaEnVivo(u.id)) return { ok: false, motivo: 'visita_en_vivo' }
+  const visitasCanceladas = await cancelarAbiertas(u.id, ahora)
+  if (!(await cerrarCuentaCliente(u.id, ahora, `admin:${actorCorreo}`, opts.borrarDatos === true))) return { ok: false, motivo: 'error' }
+  await alertaAdmin('actividad', `🗑️ ${esc(actorCorreo)} eliminó la cuenta de <b>${esc(u.nombre ?? 'un cliente')}</b>${opts.borrarDatos ? ' (datos borrados a pedido de la persona)' : ' (información conservada)'}${visitasCanceladas ? ` y se cancelaron ${visitasCanceladas} visita(s) abiertas sin costo` : ''}.`, { categoria: 'cuenta_eliminada', entidad: { tipo: 'cliente', id: u.id, nombre: nombreDeCuentaEliminada(u.nombre) } })
+  return { ok: true, visitasCanceladas }
+}
+
+/**
+ * El equipo (solo administrador raíz) elimina a un compita: deja de existir para el sistema (sin acceso, sin Telegram, sin clientes asignados) y su
+ * nombre queda con la marca "(cuenta eliminada)" junto a todas sus visitas y reportes. Con borrarDatos (la persona lo pidió) además se borran su
+ * perfil y su contacto; sin él se conserva la información. No se puede mientras tenga visitas abiertas: primero se cancelan o se pasan a otro compita.
+ */
+export async function eliminarCompitaPorEquipo(compitaId: string, actorCorreo: string, opts: { borrarDatos?: boolean } = {}): Promise<ResultadoEliminacionEquipo> {
+  const admin = createAdminSupabase()
+  const { data } = await admin.from('compitas').select('id, nombre, apellido, telegram_chat_id').eq('id', compitaId).maybeSingle()
+  const c = data as { id: string; nombre: string | null; apellido: string | null; telegram_chat_id: string | null } | null
+  if (!c) return { ok: false, motivo: 'no_existe' }
+  const completo = [c.nombre, c.apellido].filter(Boolean).join(' ')
+  if (esCuentaEliminada(completo)) return { ok: false, motivo: 'ya_eliminada' }
+  const { data: abiertas } = await admin.from('visitas').select('id').eq('compita_id', compitaId).in('estado', ['pre_visita', 'programada', 'confirmando_inicio', 'en_curso']).limit(1)
+  if (((abiertas ?? []) as unknown[]).length > 0) return { ok: false, motivo: 'visitas_abiertas' }
+  await admin.from('usuarios').update({ compita_id: null }).eq('compita_id', compitaId)
+  await admin.from('compita_edit_tokens').delete().eq('compita_id', compitaId)
+  if (c.telegram_chat_id) await admin.from('telegram_estados').delete().eq('chat_id', c.telegram_chat_id)
+  const cierre = opts.borrarDatos
+    ? { nombre: nombreDeCuentaEliminada(completo), apellido: null, email: `eliminada-${compitaId}@compaz.invalid`, telefono: null, telegram_chat_id: null, foto_url: null, descripcion: null, youtube_url: null, estado: 'bloqueado', verificado: false }
+    : { nombre: nombreDeCuentaEliminada(completo), apellido: null, telegram_chat_id: null, estado: 'bloqueado', verificado: false }
+  const { error } = await admin.from('compitas').update(cierre).eq('id', compitaId)
+  if (error) return { ok: false, motivo: 'error' }
+  await registrarEvento({ entidad: 'compita', entidadId: compitaId, tipo: 'cuenta_eliminada', actor: `admin:${actorCorreo}`, datos: { anonimizada: opts.borrarDatos === true } })
+  await alertaAdmin('actividad', `🗑️ ${esc(actorCorreo)} eliminó la cuenta del compita <b>${esc(completo || 'sin nombre')}</b>.`, { categoria: 'cuenta_eliminada', entidad: { tipo: 'compita', id: compitaId, nombre: nombreDeCuentaEliminada(completo) } })
+  return { ok: true }
 }

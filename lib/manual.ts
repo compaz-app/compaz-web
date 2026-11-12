@@ -350,8 +350,29 @@ export const ENTRADAS: EntradaManual[] = [
       'Elige la acción. Bloquear a un cliente le impide entrar; bloquear a un compita lo saca del listado y le desvincula Telegram.',
       'La acción queda anotada con tu nombre.',
     ],
-    despues: 'Eliminar una cuenta por completo todavía no tiene botón en el panel nuevo: se está definiendo cómo hacerlo sin perder lo que la ley o las visitas pasadas exigen guardar. Bloquear ya impide todo uso.',
+    despues: 'Eliminar la cuenta (solo el administrador, escribiendo ELIMINAR) cierra el acceso para siempre y conserva todo el historial con el nombre y la marca "(cuenta eliminada)". Si la persona pidió que se borren sus datos, marca esa casilla y se anonimiza: se borran nombre, contacto, ficha, fotos y mensajes, y quedan solo pagos y visitas sin datos que la identifiquen. Una visita en curso o, en un compita, visitas abiertas, impiden eliminar.',
     permiso: 'cuentas', pantalla: 'personas', busca: ['bloqueo', 'suspender', 'eliminar'],
+  },
+  {
+    id: 'cta-compita-perfil', seccion: 'cuentas', titulo: '¿Cómo registro a un compita a mano o corrijo su perfil?',
+    paraQue: 'Para dar de alta a un compita sin esperar a que llene el formulario, o arreglar su zona, descripción, servicios, video o foto.',
+    pasos: [
+      'Para registrarlo: abre Más, Invitar y baja a "Registrar un compita a mano". Llena nombre, zona, descripción y al menos un servicio.',
+      'Para corregir un perfil: abre su ficha en Personas y toca "Editar perfil".',
+      'Un compita registrado a mano queda inactivo y sin verificar: verifícalo y actívalo desde su ficha.',
+    ],
+    despues: 'Si pusiste correo al registrarlo, recibe la bienvenida. La foto debe ser JPG, PNG o WEBP de máximo 5 MB.',
+    permiso: 'cuentas', pantalla: 'personas', busca: ['registrar compita', 'perfil', 'foto', 'editar'],
+  },
+  {
+    id: 'cta-destrabar', seccion: 'cuentas', titulo: '¿Cómo destrabo una visita o una solicitud a mano?',
+    paraQue: 'Para casos que quedaron a medias y nadie puede cerrar solo.',
+    pasos: [
+      'Visita que quedó abierta: ábrela en Visitas y toca "Cerrar la visita ahora". Se le avisa al compita por Telegram.',
+      'Solicitud con llamada: en Seguimiento abre el caso. "Reenviar enlace de llamada" vuelve a mandar el enlace a la familia y al compita; "Marcar como completada" cierra la solicitud cuando la llamada ya ocurrió.',
+    ],
+    despues: 'Cada acción pide confirmar y queda anotada con tu nombre.',
+    permiso: 'atender', pantalla: 'visitas', busca: ['cerrar visita', 'enlace de llamada', 'completar solicitud', 'forzar'],
   },
   {
     id: 'cta-invitar', seccion: 'cuentas', titulo: '¿Cómo invito a un cliente o registro a un compita?',

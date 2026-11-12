@@ -89,6 +89,7 @@ test('desbloquear le devuelve el acceso', async () => {
 test('un cliente ELIMINADO también queda fuera de inmediato y no puede pedir un enlace nuevo', async () => {
   const { carlos } = mundo(); como(carlos)
   assert.equal((await misSolicitudes()).status, 200)
+  db.rows('visitas').forEach((v) => { v.estado = 'terminada' }) // sin visita en curso: con una en vivo no se puede eliminar
   admin(); assert.equal((await eliminar(req('/api/admin/eliminar-cliente', { method: 'DELETE', json: { usuario_id: carlos.id } }))).status, 200)
   como(carlos)
   assert.equal((await misSolicitudes()).status, 401); assert.equal((await nueva()).status, 401)

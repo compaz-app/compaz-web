@@ -122,10 +122,10 @@ describe('el borrado es real', () => {
     assert.equal((await ver(sol.token_respuesta)).status, 404)
   })
 
-  test('al eliminar la cuenta se borra la foto', async () => {
+  test('al eliminar la cuenta a pedido de la persona se borra la foto', async () => {
     const c = mkCliente(); await subir(c)
     session.user = { id: 'adm', email: 'admin@compaz.test' }
-    const r = await eliminar(req('/api/admin/eliminar-cliente', { method: 'DELETE', json: { usuario_id: c.id } }))
+    const r = await eliminar(req('/api/admin/eliminar-cliente', { method: 'DELETE', json: { usuario_id: c.id, borrar_datos: true } }))
     assert.equal(r.status, 200)
     assert.equal(activas().length, 0); assert.equal(db.objetos.size, 0)
   })

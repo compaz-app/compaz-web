@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Boton from '@/components/ui/base/Boton'
 import InfoBoton from '@/components/ui/InfoBoton'
 import { Encabezado, TituloSeccion } from '@/components/panel/ui'
+import FormCompita from '@/components/panel/FormCompita'
 
 const INFO = 'Para sumar personas sin que se registren solas. A un cliente se le crea la cuenta y recibe un correo con su enlace de acceso. Para un compita se genera un enlace de registro que dura 7 días y que tú le mandas. Si el cliente ya está registrado no se le reinvita: que pida un enlace nuevo en la página de entrada.'
 const CAMPO = 'min-h-9 w-full rounded-lg border border-borde bg-blanco px-2 text-sm'
@@ -69,6 +70,11 @@ export default function Invitar() {
           )}
           {falloEnlace && <p role="alert" className="text-sm font-bold text-rojo-oscuro">{falloEnlace}</p>}
         </div>
+      </div>
+
+      <div className="space-y-2">
+        <div className="flex items-center gap-1"><TituloSeccion>Registrar un compita a mano</TituloSeccion><InfoBoton que="Cuándo usarlo" texto="Para dar de alta a un compita cuando ya tienes sus datos (por ejemplo, tras una entrevista) sin esperar a que llene el formulario. Queda inactivo y sin verificar: verifícalo y actívalo desde su ficha en Personas. Si pones su correo, recibe la bienvenida." /></div>
+        <div className="rounded-xl border border-borde bg-blanco p-3"><FormCompita modo="registrar" /></div>
       </div>
     </section>
   )
