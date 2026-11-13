@@ -21,6 +21,11 @@ export function PuntoUrgencia({ u, texto }: { u: Urgencia | 'neutro'; /** Nombre
 type Enlace = (cambios: Record<string, string | null>) => string
 
 type Estados = { estado: string; n: number }[]
+/** Selección de filas (solo el administrador, para eliminar en lote). Si no se da, las tablas son como siempre. */
+export interface Seleccion { marcadas: ReadonlySet<string>; alternar: (id: string) => void; paginaCompleta: boolean; alternarPagina: () => void }
+const Casilla = ({ marcada, alCambiar, etiqueta }: { marcada: boolean; alCambiar: () => void; etiqueta: string }) => (
+  <input type="checkbox" checked={marcada} onChange={alCambiar} aria-label={etiqueta} className="h-4 w-4 cursor-pointer accent-morado-medio" />
+)
 export interface DatosCompitas { fila: FilaCompita[]; total: number; paginas: number; pag: number; conteos: Record<string, number>; vista: string; orden: string; dir: string; q: string; enTotal: number; estados: Estados; estado: string }
 export interface DatosClientes { fila: FilaCliente[]; total: number; paginas: number; pag: number; q: string; enTotal: number; estados: Estados; estado: string }
 
@@ -74,7 +79,7 @@ export function Selector({ lista, enlace }: { lista: 'compitas' | 'clientes'; en
   return <div className="flex w-fit gap-1 rounded-xl border border-borde bg-blanco p-1">{t('compitas', 'Compitas')}{t('clientes', 'Clientes')}</div>
 }
 
-export function TablaCompitas({ d, enlace, params, alBuscar }: { d: DatosCompitas; enlace: Enlace; params: Record<string, string>; alBuscar?: (q: string) => void }) {
+export function TablaCompitas({ d, enlace, params, alBuscar, seleccion }: { d: DatosCompitas; enlace: Enlace; params: Record<string, string>; alBuscar?: (q: string) => void; seleccion?: Seleccion }) {
   const textoVistas = VISTAS_COMPITA.filter((v) => v.ayuda).map((v) => `${v.t}: ${v.ayuda}`).join(' ')
   const textoColumnas = COLUMNAS_COMPITA.filter((c) => c.ayuda).map((c) => `${c.t}: ${c.ayuda}`).join(' ')
   return (
@@ -104,6 +109,7 @@ export function TablaCompitas({ d, enlace, params, alBuscar }: { d: DatosCompita
         <table className="w-full text-left text-sm">
           <thead className="bg-fondo-claro text-xs text-texto-medio">
             <tr>
+              {seleccion && <th scope="col" className="w-10 px-2.5"><Casilla marcada={seleccion.paginaCompleta} alCambiar={seleccion.alternarPagina} etiqueta="Marcar o quitar todas las de esta página" /></th>}
               {COLUMNAS_COMPITA.map((c) => (
                 <th key={c.id} scope="col" title={c.ayuda} className={`whitespace-nowrap p-0 font-extrabold ${c.clase}`}>
                   <Link prefetch={false} href={enlace({ orden: c.id, dir: d.orden === c.id && d.dir === 'asc' ? 'desc' : 'asc', pag: null })} className="flex min-h-9 items-center px-2.5">
@@ -115,7 +121,8 @@ export function TablaCompitas({ d, enlace, params, alBuscar }: { d: DatosCompita
           </thead>
           <tbody className="divide-y divide-borde">
             {d.fila.map((p) => (
-              <tr key={p.id} className="hover:bg-lavanda-sutil">
+              <tr key={p.id} className={seleccion?.marcadas.has(p.id) ? 'bg-lavanda-sutil' : 'hover:bg-lavanda-sutil'}>
+                {seleccion && <td className="w-10 px-2.5"><Casilla marcada={seleccion.marcadas.has(p.id)} alCambiar={() => seleccion.alternar(p.id)} etiqueta={`Marcar a ${p.nombre}`} /></td>}
                 <td className="w-full min-w-44 max-w-0 px-2.5 py-2">
                   <Link prefetch={false} href={enlace({ persona: `compita:${p.id}` })} className="flex items-center gap-2.5" title={p.nombre}>
                     <PuntoUrgencia u={puntoCompita(p)} />
@@ -133,7 +140,7 @@ export function TablaCompitas({ d, enlace, params, alBuscar }: { d: DatosCompita
                 <td className="hidden whitespace-nowrap px-2.5 @4xl:table-cell">{p.inactivoH === null ? '·' : p.inactivoH < 1 ? 'ahora' : `${p.inactivoH} h`}</td>
               </tr>
             ))}
-            {!d.fila.length && <tr><td colSpan={COLUMNAS_COMPITA.length} className="p-6 text-center text-texto-sutil">Sin resultados</td></tr>}
+            {!d.fila.length && <tr><td colSpan={COLUMNAS_COMPITA.length + (seleccion ? 1 : 0)} className="p-6 text-center text-texto-sutil">Sin resultados</td></tr>}
           </tbody>
         </table>
       </div>
@@ -142,7 +149,7 @@ export function TablaCompitas({ d, enlace, params, alBuscar }: { d: DatosCompita
   )
 }
 
-export function TablaClientes({ d, enlace, params, alBuscar }: { d: DatosClientes; enlace: Enlace; params: Record<string, string>; alBuscar?: (q: string) => void }) {
+export function TablaClientes({ d, enlace, params, alBuscar, seleccion }: { d: DatosClientes; enlace: Enlace; params: Record<string, string>; alBuscar?: (q: string) => void; seleccion?: Seleccion }) {
   const alta = (iso: string) => new Intl.DateTimeFormat('es-VE', { timeZone: 'America/Caracas', day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(iso))
   return (
     <section className="max-w-3xl space-y-3">
@@ -154,8 +161,9 @@ export function TablaClientes({ d, enlace, params, alBuscar }: { d: DatosCliente
       </div>
       <ul className={CLASE_LISTA}>
         {d.fila.map((c) => (
-          <li key={c.id}>
-            <Link prefetch={false} href={enlace({ persona: `cliente:${c.id}` })} className="flex min-h-12 flex-wrap items-center gap-x-3 gap-y-0.5 px-3 py-2 hover:bg-lavanda-sutil">
+          <li key={c.id} className={`flex items-stretch ${seleccion?.marcadas.has(c.id) ? 'bg-lavanda-sutil' : ''}`}>
+            {seleccion && <span className="flex w-10 shrink-0 items-center justify-center"><Casilla marcada={seleccion.marcadas.has(c.id)} alCambiar={() => seleccion.alternar(c.id)} etiqueta={`Marcar a ${c.nombre || 'sin nombre'}`} /></span>}
+            <Link prefetch={false} href={enlace({ persona: `cliente:${c.id}` })} className="flex min-h-12 min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-0.5 px-3 py-2 hover:bg-lavanda-sutil">
               <span className="min-w-40 flex-1"><span className="block truncate text-sm font-bold">{c.nombre || 'Sin nombre'}</span><span className="block truncate text-xs text-texto-medio">{c.zona || 'Sin zona'}{c.compita ? ` · con ${c.compita}` : ' · sin compita todavía'}</span></span>
               {c.bloqueado && <span className="rounded bg-rojo-claro px-1.5 text-[11px] font-extrabold text-rojo-oscuro">Bloqueado</span>}
               {c.plan && <Rol>{c.plan}</Rol>}

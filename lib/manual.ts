@@ -351,7 +351,7 @@ export const ENTRADAS: EntradaManual[] = [
       'Elige la acción. Bloquear a un cliente le impide entrar; bloquear a un compita lo saca del listado y le desvincula Telegram.',
       'La acción queda anotada con tu nombre.',
     ],
-    despues: 'Eliminar la cuenta (solo el administrador, escribiendo ELIMINAR) cierra el acceso para siempre y conserva todo el historial con el nombre y la marca "(cuenta eliminada)". Si la persona pidió que se borren sus datos, marca esa casilla y se anonimiza: se borran nombre, contacto, ficha, fotos y mensajes, y quedan solo pagos y visitas sin datos que la identifiquen. Una visita en curso o, en un compita, visitas abiertas, impiden eliminar.',
+    despues: 'Para eliminar varias cuentas a la vez, el administrador marca las casillas de la lista de Personas (hasta 50 por vez) y pulsa Eliminar marcadas: las que no se puedan, por ejemplo con una visita abierta, se saltan y se explica por qué. Eliminar la cuenta (solo el administrador, confirmando en una ventana) cierra el acceso para siempre y conserva todo el historial con el nombre y la marca "(cuenta eliminada)". Si la persona pidió que se borren sus datos, marca esa casilla y se anonimiza: se borran nombre, contacto, ficha, fotos y mensajes, y quedan solo pagos y visitas sin datos que la identifiquen. Una visita en curso o, en un compita, visitas abiertas, impiden eliminar.',
     permiso: 'cuentas', pantalla: 'personas', busca: ['bloqueo', 'suspender', 'eliminar'],
   },
   {
