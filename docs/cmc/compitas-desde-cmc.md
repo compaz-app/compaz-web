@@ -99,3 +99,8 @@ En Supabase, nombre, email y zona (provisional) se escriben **solo al crear**. D
 - **Lucho Prueba 2**: desactivación preparada en `docs/cmc/operaciones/desactivar-lucho-prueba-2.sql`, sin ejecutar.
 - **COM-0274 y COM-0318**: ver la auditoría en `docs/cmc/operaciones/auditoria-ids-duplicados.md`. No se cambian los IDs. La publicación omite las filas «Duplicado confirmado» y la web pone en cuarentena cualquier COM- repetido.
 - **COM-1062** (PRUEBA): solo en pruebas automatizadas y simuladas. No se habilita ni se modifica.
+
+## Permisos de `cmc_sincronizaciones` (13-nov-2026)
+
+Al trasladar la base a `compaz-prod` (12-nov), `service_role` quedó con todos los privilegios sobre `cmc_sincronizaciones`. La migración `20261113b_cmc_sincronizaciones_permisos` devuelve lo aprobado: solo SELECT e INSERT (registro de solo anexado). Para comprobarlo: `psql "$DB_URL" -v ON_ERROR_STOP=1 -f tests/sql/cmc_sincronizaciones_permisos.sql`, que debe terminar en `OK`. `compaz-prod` no tiene historial de migraciones (`supabase_migrations`): las migraciones se aplican a mano con psql o con el editor SQL, y deben ser idempotentes.
+
