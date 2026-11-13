@@ -38,3 +38,28 @@ for op in "update public.cmc_sincronizaciones set motivo='x'" "delete from publi
 done
 if psql "$DB_URL" -v ON_ERROR_STOP=1 -q -c "set role anon; select 1 from public.cmc_sincronizaciones;" 2>/dev/null; then echo "anon pudo leer"; exit 1; fi
 echo "TODO OK"
+
+echo "5. Prueba funcional (con ROLLBACK): no deja filas"
+filas_antes=$(psql "$DB_URL" -At -c "select count(*) from public.cmc_sincronizaciones")
+psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f tests/sql/cmc_permisos_prueba_funcional.sql
+test "$(psql "$DB_URL" -At -c "select count(*) from public.cmc_sincronizaciones")" = "$filas_antes" || { echo "La prueba funcional dejó filas"; exit 1; }
+
+echo "6. La comprobación detecta CADA privilegio sobrante y la RLS desactivada"
+for priv in UPDATE DELETE TRUNCATE REFERENCES TRIGGER; do
+  q -c "grant $priv on public.cmc_sincronizaciones to service_role;"
+  if psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f tests/sql/cmc_sincronizaciones_permisos.sql 2>/dev/null; then echo "No detectó $priv en service_role"; exit 1; fi
+  q -c "revoke $priv on public.cmc_sincronizaciones from service_role;"
+done
+for rol in anon authenticated; do
+  q -c "grant select on public.cmc_sincronizaciones to $rol;"
+  if psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f tests/sql/cmc_sincronizaciones_permisos.sql 2>/dev/null; then echo "No detectó SELECT de $rol"; exit 1; fi
+  q -c "revoke select on public.cmc_sincronizaciones from $rol;"
+done
+q -c "revoke insert on public.cmc_sincronizaciones from service_role;"
+if psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f tests/sql/cmc_sincronizaciones_permisos.sql 2>/dev/null; then echo "No detectó la falta de INSERT"; exit 1; fi
+q -c "grant insert on public.cmc_sincronizaciones to service_role;"
+q -c "alter table public.cmc_sincronizaciones disable row level security;"
+if psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f tests/sql/cmc_sincronizaciones_permisos.sql 2>/dev/null; then echo "No detectó la RLS desactivada"; exit 1; fi
+q -c "alter table public.cmc_sincronizaciones enable row level security;"
+psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f tests/sql/cmc_sincronizaciones_permisos.sql
+echo "TODO OK (también las detecciones)"
