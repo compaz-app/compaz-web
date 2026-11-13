@@ -50,3 +50,12 @@ Pendiente de comprobar por una persona: entrar con enlace mágico, abrir el pane
 ## Vuelta atrás (si algo falla)
 1. Devolver `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` y `SUPABASE_SERVICE_ROLE_KEY` a los valores del proyecto viejo (`qrhkzlzblaknzsxqfney`, panel de Supabase, API Keys, legacy).
 2. Netlify, Deploys, redesplegar sin caché (o publicar el despliegue anterior `main@43145b3` de las 3:47 PM).
+
+## Permisos de service_role: 5 tablas por restaurar (2026-11-13)
+Comparadas las listas de permisos (ACL) tabla por tabla entre el proyecto de São Paulo (diseño original) y `compaz-prod`, solo difieren 5 tablas, siempre con MÁS permisos en producción: `eventos`, `personas` y `postulaciones` (debían ser solo SELECT), `chat_requests` (sin acceso a datos) y `admin_emails` (sin UPDATE). `anon`, `authenticated` y PUBLIC coinciden en las 38 combinaciones. En funciones, las diferencias de EXECUTE no cambian nada porque PUBLIC ya podía ejecutarlas en ambos proyectos.
+Corrección: migración `supabase/migrations/20261113c_restaurar_permisos_service_role.sql` (solo REVOKE). Validada sin tocar producción: en el proyecto archivado, dentro de una transacción con ROLLBACK, se reprodujo el estado de producción, se aplicó la migración dos veces y la comprobación pasó.
+Procedimiento (con el rol postgres, en el editor SQL de `compaz-prod`; nunca en el archivado):
+1. Ejecutar `tests/sql/permisos_service_role_5_tablas.sql`: hoy debe FALLAR y listar lo que sobra.
+2. Ejecutar la migración entera.
+3. Repetir el paso 1: debe terminar en `OK`.
+Vuelta atrás: los `grant` que aparecen al final del encabezado de la migración.
