@@ -1,7 +1,9 @@
 -- ══════════════════════════════════════════════════════════════════════════════
 -- Compaz · Permisos de cmc_sincronizaciones (corrección tras el traslado a compaz-prod)
 --
--- Estado: PENDIENTE DE APLICAR. Autorización de Luis necesaria; avisar a Juan.
+-- Estado: APLICADA en compaz-prod el 13-nov-2026 a las 19:27 UTC (autorización de Luis, aplicada por Claude
+-- con la herramienta apply_migration del conector de Supabase; registrada en supabase_migrations como
+-- 20261113192755). Comprobación posterior OK. Se puede volver a ejecutar sin efecto (idempotente).
 --
 -- Por qué:
 --   cmc_sincronizaciones es el registro de cada foto que envía el CMC (aplicada o
@@ -22,7 +24,7 @@
 -- Segura e idempotente:
 --   · Si la tabla no existe (base sin la migración 20261111), no hace nada y lo avisa.
 --   · Se puede ejecutar varias veces: REVOKE/GRANT/ENABLE RLS repetidos no cambian nada.
---   · No depende del historial de migraciones (compaz-prod no tiene supabase_migrations).
+--   · No depende del historial de migraciones.
 --   · Todo en una transacción: o se aplica entero o no se aplica.
 --
 -- Comprobación: tests/sql/cmc_sincronizaciones_permisos.sql (debe terminar en "OK").
