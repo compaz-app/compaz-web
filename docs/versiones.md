@@ -4,6 +4,11 @@ La versión vigente está en `lib/version.ts` y se ve en el panel (menú lateral
 
 Reglas: mayor = cambio grande o lanzamiento; menor = función nueva; parche = arreglo. La etapa `beta` sale cuando el sistema corre una o dos semanas con uso real sin sorpresas.
 
+## 1.1.5-beta.1 (2026-11-13)
+Permisos de service_role restaurados en 5 tablas (solo migración y pruebas SQL; no cambia código de la aplicación).
+1. Al copiar la base a `compaz-prod`, service_role quedó con más privilegios que en el proyecto de São Paulo en 5 tablas: `eventos`, `personas` y `postulaciones` (debían ser solo lectura), `chat_requests` (tabla en desuso, sin acceso a datos) y `admin_emails` (sin UPDATE). La migración `20261113c_restaurar_permisos_service_role.sql` solo quita lo que sobra.
+2. Comprobación de solo lectura `tests/sql/permisos_service_role_5_tablas.sql`: pasa en el proyecto archivado (el diseño original) y falla en producción hasta aplicar la migración.
+
 ## 1.1.4-beta.1 (2026-11-13)
 Permisos del registro de sincronizaciones del CMC (corrección tras el traslado a Virginia).
 1. Migración `20261113b_cmc_sincronizaciones_permisos`: `service_role` vuelve a tener solo lectura y alta sobre `cmc_sincronizaciones` (lo aprobado en la `20261111`). Al copiar la base a `compaz-prod` había quedado con todos los privilegios. Solo cambia privilegios: no toca datos, columnas, restricciones ni RLS. Es idempotente y no depende del historial de migraciones.
