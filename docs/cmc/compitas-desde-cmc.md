@@ -4,9 +4,12 @@ Integración unidireccional: el CMC (hoja `03 · Compitas`) publica cada hora la
 
 Aprobado por Luis el 10-nov-2026.
 
-**Estado (11-nov-2026, 03:49 UTC): etapa 1 aplicada.**
-- La migración `20261111_cmc_compitas` está en Supabase (versión 20261111034855).
-- Etapas 2 a 5 pendientes. El código sigue sin fusionar ni desplegar.
+**Estado (15-nov-2026, 18:28 UTC): etapas 1 a 4 hechas, salvo el disparador horario.**
+- Etapa 1: migración `20261111_cmc_compitas` aplicada (11-nov).
+- Etapa 2: web desplegada (PR #19, `main@53588c2`, 1.1.4-beta.1, 13-nov).
+- Etapa 3: Apps Script con `PublicarCompitas.gs` y simulación correcta (15-nov).
+- Etapa 4: `CMC_COMPITAS_MODO=aplicar` en Production y 2 publicaciones manuales (15-nov). **Falta** `instalarDisparadorPublicarCompitas()`: sin autorización todavía; hoy nada publica solo.
+- Etapa 5 pendiente.
 
 ## Reparto de autoridad
 
@@ -81,6 +84,11 @@ En Supabase, nombre, email y zona (provisional) se escriben **solo al crear**. D
 - Ejecutar `simularPublicacionCompitas()`.
 - Resultado esperado hoy: 2 altas (COM-0025, COM-0187), 0 actualizaciones, 0 conflictos (comprobado el 10-nov: ningún email, nombre ni código coincide), 2 bienvenidas previstas. Supabase sin cambios.
 - Reversión: borrar el archivo y las propiedades.
+- **Hecho el 14 y 15-nov.**
+  - Respaldo del proyecto: versión 32 («Respaldo antes de publicar-compitas.gs (etapa 3, simulacion) 2026-11-14»).
+  - `PublicarCompitas.gs` guardado tal cual: 7452 bytes, sha256 `6a2723891a8268cb3ab754ffb6e1e3b55a6ab06ba7042656eaf91b1bf87c95eb`. Los otros 6 archivos, sin cambios.
+  - Propiedades: `CMC_COMPITAS_URL` (Claude) y `CMC_ESCRITURA_TOKEN` (la introdujo Luis; nadie más la ha visto).
+  - `simularPublicacionCompitas()`, 15-nov 18:14 UTC: HTTP 200, `modo: simular`, 1007 filas leídas, 2 enviadas, altas COM-0025 y COM-0187, 0 actualizaciones, 0 conflictos, 0 en cuarentena, 0 errores. `compaz-prod` idéntica antes y después; 5 disparadores intactos.
 
 **Etapa 4 — Activación** (1 despliegue).
 - `CMC_COMPITAS_MODO=aplicar` en Netlify y redesplegar.
@@ -88,6 +96,14 @@ En Supabase, nombre, email y zona (provisional) se escriben **solo al crear**. D
 - Verificar: 2 Compitas inactivas en el dashboard con «CMC permite»; 2 correos de bienvenida; mensaje al admin; una 2.ª ejecución da 0 cambios.
 - Ejecutar `instalarDisparadorPublicarCompitas()`.
 - Reversión inmediata: `CMC_PUBLICAR_COMPITAS=no` o quitar `CMC_ESCRITURA_TOKEN` en Netlify (503). Datos: `cmc_sincronizaciones.cambios` guarda el antes y el después de cada fila; las altas se dejan inactivas, nunca se borran.
+- **Hecho el 15-nov, salvo el disparador** (autorización de Luis).
+  - Antes: 2 habilitadas en la 03 (simulación de control: COM-0025 y COM-0187); versión 32 presente; ningún disparador ni ejecución previa de `publicarCompitasWeb`; ningún otro llamador de `/api/cmc/compitas` en el código.
+  - Netlify: `CMC_COMPITAS_MODO=aplicar` solo en el contexto Production. Un único despliegue de `main@53588c2` (sin código nuevo). Después: POST sin token → 401; portada → 200.
+  - Apps Script: `CMC_PUBLICAR_COMPITAS=si`.
+  - 1.ª `publicarCompitasWeb()` (18:27 UTC): registro `aplicada`; altas COM-0025 (Mauricio Acacio) y COM-0187 (María Alejandra Navarro), las dos `inactivo`, `verificado=false`, `cmc_permite=true`, `cmc_estado` «Habilitado · Activo · Acepta: Sí»; 2 bienvenidas enviadas sin errores (`cmc_bienvenida_enviada_en` 18:27:06); 0 conflictos, 0 cuarentena, 0 errores; ningún aviso en Atención (no hay restricciones); la web envía al admin un aviso por Telegram con las altas (pendiente de que Luis confirme que lo recibió).
+  - 2.ª `publicarCompitasWeb()` (18:28 UTC): `aplicada`, 0 altas, 0 bienvenidas, 0 cambios, 2 gestionadas con permiso. Idempotente.
+  - Sin cambios en el resto: las 25 Compitas anteriores (Lorna, Reyna, demos, bloqueadas) con la misma huella fila a fila; postulaciones, avisos, eventos y solicitudes iguales; 0 COM- repetidos y 0 emails duplicados; 5 disparadores originales.
+  - Pendiente: `instalarDisparadorPublicarCompitas()`, con autorización aparte. Mientras no exista, el CMC no publica solo.
 
 **Etapa 5 — Activación operativa** (por Compita).
 - La Compita vincula Telegram (nombre + código por correo) y completa `/perfil`.
