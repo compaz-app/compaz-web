@@ -39,14 +39,14 @@ describe('qué bloques salen en la pestaña Visitas', () => {
 })
 
 describe('el menú', () => {
-  test('las 4 pestañas existen y esPestana rechaza lo demás', () => { assert.deepEqual(PESTANAS.map((p) => p.id), ['inicio', 'visitas', 'familiar', 'plan']); for (const x of ['', 'admin', 'x', null, 3, undefined]) assert.equal(esPestana(x), false) })
+  test('las 3 pestañas existen y esPestana rechaza lo demás', () => { assert.deepEqual(PESTANAS.map((p) => p.id), ['inicio', 'visitas', 'cuenta']); for (const x of ['', 'admin', 'x', null, 3, undefined]) assert.equal(esPestana(x), false) })
   test('los enlaces llevan ?sec=, Inicio no lleva nada, y la vista previa se conserva al cambiar de pestaña', () => {
     const h = renderToStaticMarkup(createElement(NavPortal, { actual: 'visitas', preview: 'abc-123' }))
-    assert.match(h, /href="\/portal\?preview=abc-123"/); assert.match(h, /href="\/portal\?sec=visitas&amp;preview=abc-123"/); assert.match(h, /href="\/portal\?sec=plan&amp;preview=abc-123"/)
+    assert.match(h, /href="\/portal\?preview=abc-123"/); assert.match(h, /href="\/portal\?sec=visitas&amp;preview=abc-123"/); assert.match(h, /href="\/portal\?sec=cuenta&amp;preview=abc-123"/)
     const sin = renderToStaticMarkup(createElement(NavPortal, { actual: 'inicio' })); assert.match(sin, /href="\/portal"/); assert.doesNotMatch(sin, /preview/)
   })
   test('marca la pestaña actual para lectores de pantalla y hay dos menús (arriba en escritorio, abajo en móvil)', () => {
-    const h = renderToStaticMarkup(createElement(NavPortal, { actual: 'plan' })); assert.equal((h.match(/aria-current="page"/g) ?? []).length, 2); assert.equal((h.match(/<nav /g) ?? []).length, 2); assert.match(h, /lg:hidden/); assert.match(h, /hidden[^"]*lg:flex/)
+    const h = renderToStaticMarkup(createElement(NavPortal, { actual: 'cuenta' })); assert.equal((h.match(/aria-current="page"/g) ?? []).length, 2); assert.equal((h.match(/<nav /g) ?? []).length, 2); assert.match(h, /lg:hidden/); assert.match(h, /hidden[^"]*lg:flex/)
   })
 })
 

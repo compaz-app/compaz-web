@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import { pestanaDeSec } from '@/lib/portal-secciones'
 import { getClienteActivo, requireAuth, getUsuario, isAdminEmail } from '@/lib/auth'
 import { createServerSupabase, createAdminSupabase } from '@/lib/supabase-server'
 import Chat from '@/components/ui/Chat'
@@ -34,7 +35,7 @@ import IconoPersona from '@/components/ui/IconoPersona'
 
 export const dynamic = 'force-dynamic'
 
-export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ preview?: string; contratado?: string }> }) {
+export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ preview?: string; contratado?: string; sec?: string }> }) {
   const session = await requireAuth()
   const params = await searchParams
   const previewUid = params.preview ?? null
@@ -45,7 +46,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   if (!isAdmin && !(await getClienteActivo())) redirect('/login?error=bloqueado')
 
   // El portal nuevo reemplaza a este por etapas: si a este cliente ya le toca, todos los enlaces viejos a /dashboard lo llevan allí.
-  if (!isAdmin && (await clienteVePortalNuevo(session.user.id))) redirect('/portal')
+  if (!isAdmin && (await clienteVePortalNuevo(session.user.id))) redirect(pestanaDeSec(params.sec) === 'inicio' ? '/portal' : `/portal?${new URLSearchParams({ sec: params.sec as string })}`)
 
   // Admin sin preview → redirigir al panel
   if (isAdmin && !previewUid) redirect('/panel')

@@ -56,7 +56,7 @@ describe('el equipo activa o desactiva por cliente', () => {
 
 describe('los dos portales no se mandan en círculo', () => {
   test('el portal viejo manda al nuevo y el nuevo manda al viejo con la MISMA decisión', () => {
-    assert.match(readFileSync('app/dashboard/page.tsx', 'utf8'), /clienteVePortalNuevo\(session\.user\.id\)\)\) redirect\('\/portal'\)/)
+    assert.match(readFileSync('app/dashboard/page.tsx', 'utf8'), /clienteVePortalNuevo\(session\.user\.id\)\)\) redirect\(pestanaDeSec\(params\.sec\) === 'inicio' \? '\/portal'/)
     assert.match(readFileSync('app/portal/page.tsx', 'utf8'), /clienteVePortalNuevo\(session\.user\.id\)/)
   })
 })

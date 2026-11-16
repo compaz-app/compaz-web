@@ -4,6 +4,14 @@ La versión vigente está en `lib/version.ts` y se ve en el panel (menú lateral
 
 Reglas: mayor = cambio grande o lanzamiento; menor = función nueva; parche = arreglo. La etapa `beta` sale cuando el sistema corre una o dos semanas con uso real sin sorpresas.
 
+## 1.2.8-beta.1 (2026-11-16)
+Portal del cliente, fase 3: Mi cuenta.
+1. Mi familiar y Mi plan pasan a una sola pestaña, Mi cuenta, con las dos partes plegables. Queda abierta la que se pidió; si no, la ficha cuando falta y si no el plan.
+2. Los enlaces viejos (?sec=familiar y ?sec=plan) siguen funcionando: llevan a Mi cuenta con esa parte abierta.
+3. «Pronto en Compaz» queda plegado en Inicio.
+4. El menú pasa de 4 a 3 pestañas: Inicio, Visitas, Mi cuenta.
+5. Sin migración.
+
 ## 1.2.7-beta.1 (2026-11-16)
 Portal del cliente, fase 2: recorrido de la visita y chat siempre abierto.
 1. En la pestaña Visitas, arriba, un recorrido de 5 pasos: dirección, día y hora, confirmación del compita, la visita, reporte y calificación. Lo hecho queda en una línea con ✓ verde, el paso de ahora se destaca y lo que falta queda tenue.

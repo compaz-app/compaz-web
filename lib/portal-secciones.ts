@@ -1,12 +1,16 @@
 // Qué BLOQUES muestra cada pestaña del portal según la situación del cliente. Función PURA (se prueba caso por caso); la pantalla solo dibuja
 // los bloques en este orden. Es la lógica que antes estaba dentro de las condiciones del portal viejo.
 
-export type PestanaPortal = 'inicio' | 'visitas' | 'familiar' | 'plan'
+export type PestanaPortal = 'inicio' | 'visitas' | 'cuenta'
 export const PESTANAS: { id: PestanaPortal; texto: string }[] = [
-  { id: 'inicio', texto: 'Inicio' }, { id: 'visitas', texto: 'Visitas' },
-  { id: 'familiar', texto: 'Mi familiar' }, { id: 'plan', texto: 'Mi plan' },
+  { id: 'inicio', texto: 'Inicio' }, { id: 'visitas', texto: 'Visitas' }, { id: 'cuenta', texto: 'Mi cuenta' },
 ]
 export const esPestana = (v: unknown): v is PestanaPortal => typeof v === 'string' && PESTANAS.some((p) => p.id === v)
+
+/** Mi familiar y Mi plan ahora viven juntos en Mi cuenta. Los enlaces viejos (?sec=familiar, ?sec=plan) siguen funcionando: llevan a Mi cuenta con esa parte abierta. */
+export type ParteCuenta = 'familiar' | 'plan'
+export const esParteCuenta = (v: unknown): v is ParteCuenta => v === 'familiar' || v === 'plan'
+export const pestanaDeSec = (v: unknown): PestanaPortal => (esPestana(v) ? v : esParteCuenta(v) ? 'cuenta' : 'inicio')
 
 export type BloqueVisitas =
   | 'video' | 'chat' | 'fecha' | 'acciones_coordinacion' | 'reagendar' | 'llegada' | 'direccion' | 'lugar'

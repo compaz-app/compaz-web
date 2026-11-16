@@ -9,8 +9,7 @@ import Aviso from '@/components/ui/base/Aviso'
 import TarjetaEstado from '@/components/portal/TarjetaEstado'
 import NavPortal from '@/components/portal/NavPortal'
 import SeccionVisitas from '@/components/portal/SeccionVisitas'
-import SeccionFamiliar from '@/components/portal/SeccionFamiliar'
-import SeccionPlan from '@/components/portal/SeccionPlan'
+import SeccionCuenta from '@/components/portal/SeccionCuenta'
 import AutoRefresh from '@/components/ui/AutoRefresh'
 import UnaSolaPestana from '@/components/ui/UnaSolaPestana'
 import NovedadesEnVivo from '@/components/ui/NovedadesEnVivo'
@@ -19,7 +18,7 @@ import VisitaWatcher from '@/components/ui/VisitaWatcher'
 import { cargarDatosPortal } from '@/lib/portal-datos'
 import { registrarAcceso } from '@/lib/alertas-admin'
 import { ventanaVigente, marcarVentana } from '@/lib/cron'
-import { esPestana } from '@/lib/portal-secciones'
+import { pestanaDeSec, esParteCuenta } from '@/lib/portal-secciones'
 import { contarNovedadesSinAbrir, marcarNovedadesAbiertas } from '@/lib/novedades'
 
 export const dynamic = 'force-dynamic'
@@ -28,7 +27,7 @@ export const metadata = { title: 'Mi portal', robots: { index: false, follow: fa
 export default async function PortalPage({ searchParams }: { searchParams: Promise<{ preview?: string; sec?: string }> }) {
   const session = await requireAuth()
   const { preview, sec } = await searchParams
-  const pestana = esPestana(sec) ? sec : 'inicio'
+  const pestana = pestanaDeSec(sec)
   const esAdmin = isAdminEmail(session.user.email ?? '')
   // Cliente bloqueado o eliminado: fuera, aunque su sesión siga vigente.
   if (!esAdmin && !(await getClienteActivo())) redirect('/login?error=bloqueado')
@@ -67,15 +66,14 @@ export default async function PortalPage({ searchParams }: { searchParams: Promi
         <>
           <Pasos pasos={portal.pasos} actual={portal.estado.paso} />
           <TarjetaEstado tarjeta={portal.tarjeta} compita={portal.compita} visitaId={portal.estado.visitaId} estado={portal.estado.codigo} vistaPrevia={esAdmin} />
-          <section aria-labelledby="pronto" className="space-y-2">
-            <h2 id="pronto" className="text-lg font-extrabold text-morado-profundo">Pronto en Compaz</h2>
-            <TarjetasProximamente grande={false} ids={['voluntariado', 'mascotas']} />
-          </section>
+          <details className="group rounded-2xl border border-borde bg-blanco px-4 py-1">
+            <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between text-base font-extrabold text-morado-claro [&::-webkit-details-marker]:hidden">Pronto en Compaz<span aria-hidden className="text-morado-sutil group-open:rotate-90">▸</span></summary>
+            <div className="pb-3"><TarjetasProximamente grande={false} ids={['voluntariado', 'mascotas']} /></div>
+          </details>
         </>
       )}
       {datos && pestana === 'visitas' && <SeccionVisitas d={datos} vistaPrevia={esAdmin} />}
-      {datos && pestana === 'familiar' && <SeccionFamiliar d={datos} vistaPrevia={esAdmin} />}
-      {datos && pestana === 'plan' && <SeccionPlan d={datos} vistaPrevia={esAdmin} />}
+      {datos && pestana === 'cuenta' && <SeccionCuenta d={datos} vistaPrevia={esAdmin} pedida={esParteCuenta(sec) ? sec : null} />}
       {!esAdmin && <VisitaWatcher usuarioId={uid} visitaActivaId={portal.estado.visitaId ?? null} compitaNombre={portal.compita ?? undefined} />}
       {!esAdmin && <UnaSolaPestana />}
       {!esAdmin && <NovedadesEnVivo usuarioId={uid} />}
