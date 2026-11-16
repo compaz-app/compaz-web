@@ -123,7 +123,8 @@ function DialogoLlamada({ reporte, onCerrar, onHecho }: { reporte: ReporteLlamad
       )}
       {msg && <p role="status" className="mt-2 text-sm font-bold text-verde-oscuro">{msg}</p>}
       <p className="mt-3 text-sm font-bold text-texto-medio">Después de llamar, registra qué decidiste:</p>
-      <Opciones opciones={OPCIONES_LLAMADA} valor={sel} onElige={setSel} />
+      {reporte.bloqueo && <div className="mt-2"><Aviso tamano="compacto" tono="advertencia">Hay un bloqueo activo entre ellos: el cliente no puede pedirle visitas a este compita. Para cerrar la llamada decide si lo mantienes o lo levantas.</Aviso></div>}
+      <Opciones opciones={reporte.bloqueo ? OPCIONES_LLAMADA.filter((o) => o.id === 'mantener_bloqueo' || o.id === 'levantar_bloqueo') : OPCIONES_LLAMADA} valor={sel} onElige={setSel} />
       {fallo && <div className="mt-3"><Aviso tamano="compacto" tono="peligro">{fallo}</Aviso></div>}
       <div className="mt-4 flex items-center justify-end gap-2">
         <Boton tamano="compacto" variante="fantasma" navegacion onClick={onCerrar}>Cerrar</Boton>

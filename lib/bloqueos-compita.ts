@@ -92,7 +92,7 @@ export async function reportarCliente(compita: Compita, usuarioId: string, d: Da
   return { resultado: 'ok', llamar, plazo }
 }
 
-export interface ReportePendiente { id: string; compita_id: string; compita_nombre: string; cliente_nombre: string; motivo: string; cuando: string | null; esta_bien: boolean | null; reincidente: boolean | null; no_volver: boolean; plazo_llamada: string; vencido: boolean; creado_en: string; abiertas: AbiertasDelPar }
+export interface ReportePendiente { id: string; compita_id: string; compita_nombre: string; cliente_nombre: string; motivo: string; cuando: string | null; esta_bien: boolean | null; reincidente: boolean | null; no_volver: boolean; plazo_llamada: string; vencido: boolean; creado_en: string; abiertas: AbiertasDelPar; /** Hay un bloqueo activo entre ese compita y ese cliente: la llamada tiene que decidirlo. */ bloqueo: boolean }
 
 /** Reportes con llamada pendiente, el más próximo a vencer primero. */
 export async function reportesPendientes(ahora: Date = new Date()): Promise<ReportePendiente[]> {
@@ -107,8 +107,19 @@ export async function reportesPendientes(ahora: Date = new Date()): Promise<Repo
   const c = new Map(((cs ?? []) as { id: string; nombre: string }[]).map((x) => [x.id, x.nombre]))
   const u = new Map(((us ?? []) as { id: string; nombre: string }[]).map((x) => [x.id, x.nombre]))
   const abiertas = await Promise.all(f.map((x) => abiertasDelPar(x.compita_id, x.usuario_id)))
-  return f.map((x, i) => ({ abiertas: abiertas[i], id: x.id, compita_id: x.compita_id, compita_nombre: c.get(x.compita_id) ?? '', cliente_nombre: u.get(x.usuario_id) ?? '', motivo: MOTIVOS_REPORTE[x.motivo as MotivoReporte] ?? x.motivo, cuando: x.cuando, esta_bien: x.esta_bien, reincidente: x.reincidente, no_volver: x.no_volver, plazo_llamada: x.plazo_llamada, vencido: new Date(x.plazo_llamada).getTime() < ahora.getTime(), creado_en: x.creado_en }))
+  const bloqueos = await Promise.all(f.map((x) => parBloqueado(x.compita_id, x.usuario_id)))
+  return f.map((x, i) => ({ abiertas: abiertas[i], bloqueo: bloqueos[i], id: x.id, compita_id: x.compita_id, compita_nombre: c.get(x.compita_id) ?? '', cliente_nombre: u.get(x.usuario_id) ?? '', motivo: MOTIVOS_REPORTE[x.motivo as MotivoReporte] ?? x.motivo, cuando: x.cuando, esta_bien: x.esta_bien, reincidente: x.reincidente, no_volver: x.no_volver, plazo_llamada: x.plazo_llamada, vencido: new Date(x.plazo_llamada).getTime() < ahora.getTime(), creado_en: x.creado_en }))
 }
+
+/** ¿Hay un bloqueo activo entre el compita y el cliente de este reporte? Si lo hay, la llamada no se puede cerrar sin decidirlo (mantener o levantar). */
+export async function bloqueoActivoDelReporte(reporteId: string): Promise<boolean> {
+  const { data } = await createAdminSupabase().from('reportes_compita').select('compita_id, usuario_id').eq('id', reporteId).maybeSingle()
+  const r = data as { compita_id: string; usuario_id: string } | null
+  return r ? parBloqueado(r.compita_id, r.usuario_id) : false
+}
+
+/** Con un bloqueo activo, solo estas dos decisiones cierran la llamada: «Resuelto» no cambia el bloqueo y lo dejaba escondido para siempre. */
+export const DECISIONES_CON_BLOQUEO = ['mantener_bloqueo', 'levantar_bloqueo'] as const
 
 export const RESULTADOS_LLAMADA = ['resuelto', 'hablar_cliente', 'mantener_bloqueo', 'levantar_bloqueo'] as const
 export type ResultadoLlamada = (typeof RESULTADOS_LLAMADA)[number]

@@ -69,7 +69,7 @@ async function conAcciones(actor: Actor, tareas: TareaBandeja[], reporteDe: Map<
         const r = reportes.find((x) => x.id === reporteDe.get(t.id))
         if (!r) return { ...t, accion: cerrar() }
         return { ...t, accion: { tipo: 'llamada', texto: 'Registrar la llamada', info: INFO_LLAMADA, reporte: {
-          id: r.id, compita_nombre: recortarTexto(actor, r.compita_nombre), cliente_nombre: recortarTexto(actor, r.cliente_nombre), motivo: r.motivo, plazo_llamada: r.plazo_llamada, vencido: r.vencido, abiertas: r.abiertas,
+          id: r.id, compita_nombre: recortarTexto(actor, r.compita_nombre), cliente_nombre: recortarTexto(actor, r.cliente_nombre), motivo: r.motivo, plazo_llamada: r.plazo_llamada, vencido: r.vencido, abiertas: r.abiertas, bloqueo: r.bloqueo,
         } } }
       }
       default: {

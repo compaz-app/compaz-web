@@ -84,6 +84,8 @@ export interface PausaDecision { id: string; rol: 'cliente' | 'compita'; nombre:
 export interface ReporteLlamada {
   id: string; compita_nombre: string; cliente_nombre: string; motivo: string; plazo_llamada: string; vencido: boolean
   abiertas: { visitas: { id: string; estado: string; fecha: string | null; cancelable: boolean }[]; solicitudes: { id: string; estado: string }[] }
+  /** Hay un bloqueo activo entre ellos: la llamada se cierra decidiendo mantenerlo o levantarlo. */
+  bloqueo: boolean
 }
 export type AccionTarea =
   | { tipo: 'cerrar'; texto: string; info: string }

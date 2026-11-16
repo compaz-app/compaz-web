@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Boton from '@/components/ui/base/Boton'
 import { EncabezadoLateral, TituloBloque } from '@/components/panel/ui'
 import Aviso from '@/components/ui/base/Aviso'
+import BloqueosPersona from '@/components/panel/BloqueosPersona'
 import InfoBoton from '@/components/ui/InfoBoton'
 import MotivoDialog from '@/components/panel/MotivoDialog'
 import CuentaPersona from '@/components/panel/CuentaPersona'
@@ -78,6 +79,8 @@ export default function FichaPersona({ ficha, cerrarHref, pideMotivo, puedeConta
         )}
 
         {ficha.cmc && <EstadoCmc cmc={ficha.cmc} />}
+
+        {puedeNotas && ficha.bloqueos && <BloqueosPersona tipo={ficha.tipo} bloqueos={ficha.bloqueos} />}
 
         <CuentaPersona ficha={ficha} puedeCuentas={puedeCuentas} puedeAtender={puedeNotas} puedeEliminar={puedeEliminar} />
 
