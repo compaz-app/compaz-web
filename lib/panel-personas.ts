@@ -12,6 +12,7 @@ import { registrarAcceso } from '@/lib/alertas-admin'
 import { compitasEnPausa, resumenCancelacionesCompita } from '@/lib/cancelaciones'
 import { compitasPausadosPorContacto } from '@/lib/pausas'
 import { listarNotas } from '@/lib/panel-notas'
+import { detalleDeCompita, detalleDeCliente } from '@/lib/panel-persona-detalle'
 import { cargarFoto, decidirEstado, PASOS_PORTAL } from '@/lib/estado-cliente'
 import {
   ETIQUETA_CANAL, SIN_MOTIVO_ADMIN, motivoValido,
@@ -110,18 +111,19 @@ export async function fichaDePersona(actor: Actor, tipo: TipoPersona, id: string
   if (tipo === 'compita') {
     const { data: c } = await db.from('compitas').select('*').eq('id', id).maybeSingle()
     if (!c || c.es_demo) return null
-    const [linea, canc, notas] = await Promise.all([lineaDe(actor, 'compita', id), resumenCancelacionesCompita(id), listarNotas(actor, 'compita', id)])
-    return { tipo, id, nombre: [c.nombre, c.apellido].filter(Boolean).join(' '), zona: String(c.zona ?? ''), contacto: { correo: !!c.email, telefono: !!c.telefono }, linea, notas, canc, cmc: estadoCmc(c as unknown as Compita),
+    const [linea, canc, notas, detalle] = await Promise.all([lineaDe(actor, 'compita', id), resumenCancelacionesCompita(id), listarNotas(actor, 'compita', id), puede(actor, 'cuentas') ? detalleDeCompita(actor, id) : Promise.resolve(null)])
+    return { tipo, id, nombre: [c.nombre, c.apellido].filter(Boolean).join(' '), zona: String(c.zona ?? ''), contacto: { correo: !!c.email, telefono: !!c.telefono }, linea, notas, canc, detalle: detalle ?? undefined, cmc: estadoCmc(c as unknown as Compita),
       // Una cuenta eliminada se ve (por el historial) pero ya no tiene acciones.
       perfil: puede(actor, 'cuentas') && !esCuentaEliminada(c.nombre) ? { zona: String(c.zona ?? ''), descripcion: String(c.descripcion ?? ''), servicios: Array.isArray(c.servicios) ? c.servicios.map(String) : [], youtube: String(c.youtube_url ?? ''), fotoUrl: c.foto_url ? String(c.foto_url) : null, intereses: Array.isArray(c.intereses_futuros) ? c.intereses_futuros.map(String) : [] } : undefined,
       cuenta: esCuentaEliminada(c.nombre) ? undefined : { bloqueado: c.estado === 'bloqueado', verificado: !!c.verificado, activo: c.estado === 'activo' } }
   }
   const { data: u } = await db.from('usuarios').select('id, nombre, zona, email, telefono, compita_id, eliminada_en, plan, portal_nuevo').eq('id', id).maybeSingle()
   if (!u || u.eliminada_en) return null
-  const [linea, foto, compita, notas] = await Promise.all([
+  const [linea, foto, compita, notas, detalle] = await Promise.all([
     lineaDe(actor, 'cliente', id), cargarFoto(id),
     u.compita_id ? db.from('compitas').select('nombre, apellido').eq('id', u.compita_id).maybeSingle() : Promise.resolve({ data: null }),
     listarNotas(actor, 'cliente', id),
+    puede(actor, 'cuentas') ? detalleDeCliente(actor, id) : Promise.resolve(null),
   ])
   const estado = decidirEstado(foto)
   // Solo quien puede asignar necesita la lista de compitas (no viaja a los demás).
@@ -131,7 +133,7 @@ export async function fichaDePersona(actor: Actor, tipo: TipoPersona, id: string
   return {
     tipo, id, nombre: String(u.nombre ?? ''), zona: String(u.zona ?? ''), etapa: PASOS_PORTAL[estado.paso],
     compita: compita.data ? [compita.data.nombre, compita.data.apellido].filter(Boolean).join(' ') : null, compitaId: u.compita_id ? String(u.compita_id) : null,
-    contacto: { correo: !!u.email, telefono: !!u.telefono }, linea, notas,
+    contacto: { correo: !!u.email, telefono: !!u.telefono }, linea, notas, detalle: detalle ?? undefined,
     cuenta: { bloqueado: u.plan === 'bloqueado', portalNuevo: (u.portal_nuevo as boolean | null) ?? null }, asignables,
   }
 }

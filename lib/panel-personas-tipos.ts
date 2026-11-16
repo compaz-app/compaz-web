@@ -20,6 +20,9 @@ export interface FilaCompita {
 export interface FilaCliente { id: string; nombre: string; zona: string; compita: string | null; plan: string | null; alta: string; bloqueado: boolean }
 
 export type TipoPersona = 'compita' | 'cliente'
+/** Una sección de «Todo de esta persona»: filas de texto simples, para que el equipo revise la calidad sin salir de la ficha. */
+export interface SeccionDetalle { titulo: string; info?: string; filas: { etiqueta?: string; texto: string; meta?: string }[]; vacio: string }
+export interface DetalleFicha { fotoUrl?: string | null; videoUrl?: string | null; secciones: SeccionDetalle[] }
 export interface EventoLinea { cuando: string; texto: string }
 export interface FichaPersona {
   tipo: TipoPersona; id: string; nombre: string; zona: string
@@ -33,6 +36,7 @@ export interface FichaPersona {
   /** Estado de la cuenta, para los botones de la ficha. */ cuenta?: { bloqueado: boolean; verificado?: boolean; activo?: boolean; portalNuevo?: boolean | null }
   /** Compita: su perfil público, para corregirlo (solo viaja a quien tiene el permiso de cuentas). */ perfil?: { zona: string; descripcion: string; servicios: string[]; youtube: string; fotoUrl: string | null; intereses: string[] }
   /** Cliente: compitas a los que se le puede asignar (verificados y activos). */ asignables?: { id: string; nombre: string }[]
+  /** Todo lo de la persona para revisar su calidad (solo quien tiene el permiso de cuentas). */ detalle?: DetalleFicha
   /** Solo compitas. */ canc?: { total: number; tardias: number; cuentanContra: number; nivel: 'normal' | 'revision' | 'pausa' }
 }
 

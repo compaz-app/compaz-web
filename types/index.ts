@@ -74,8 +74,6 @@ export interface Usuario {
   pais?: string | null
   parentesco?: string | null
   lugar_privado?: boolean | null
-  /** Seguridad del lugar privado (menores, permanencia, animales, precaución). */
-  datos_lugar?: { menores: boolean | null; permanencia: 'toda' | 'parte' | null; animales: boolean; precaucion: boolean } | null
   ficha_personas?: string | null
   ficha_sin_nadie?: boolean | null
   terminos_version?: string | null
@@ -176,6 +174,8 @@ export type SolicitudEstado = 'pendiente' | 'aceptada' | 'rechazada' | 'completa
 
 export interface Solicitud {
   id: string
+  /** Seguridad del lugar privado (menores, permanencia, animales, precaución). */
+  datos_lugar?: { menores: boolean | null; permanencia: 'toda' | 'parte' | null; animales: boolean; precaucion: boolean } | null
   cliente_id: string
   compita_id: string
   compita_nombre?: string
