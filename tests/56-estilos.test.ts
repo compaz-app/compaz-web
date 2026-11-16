@@ -13,7 +13,7 @@ import { colors } from '@/lib/design'
 const raiz = process.cwd()
 const BASE = join(raiz, 'tests/estilos-base.json')
 // Fuera del alcance: el prototipo (se descarta al terminar la migración) y los textos que van a correos o a Telegram, donde no existe CSS con variables.
-const EXCLUIDOS = [/^app\/prototipo\//, /^lib\/(resend|plantillas-aviso|design)\.ts$/, /^app\/api\//, /^app\/tokens\.generated\.css$/]
+const EXCLUIDOS = [/^app\/prototipo\//, /^lib\/(resend|plantillas-aviso|correo-portal|design)\.ts$/, /^app\/api\//, /^app\/tokens\.generated\.css$/]
 const HEX = /#[0-9A-Fa-f]{6}\b/g
 
 function archivos(dir: string, salida: string[] = []) {

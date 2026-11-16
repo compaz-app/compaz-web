@@ -1,6 +1,7 @@
 // Único punto de envío de emails. El SDK de Resend NO lanza excepciones: devuelve { error }.
 // Este wrapper convierte ese error en excepción para que los flags solo se marquen tras un envío real.
 import { Resend } from 'resend'
+import { conNotaPortalAbierto } from '@/lib/correo-portal'
 
 let cliente: Resend | null = null
 function getResend(): Resend {
@@ -12,6 +13,6 @@ export const FROM = process.env.EMAIL_FROM ?? 'Compaz <visitas@micompaz.com>'
 export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://micompaz.com'
 
 export async function sendEmail(p: { to: string | string[]; subject: string; html: string }): Promise<void> {
-  const { error } = await getResend().emails.send({ from: FROM, ...p })
+  const { error } = await getResend().emails.send({ from: FROM, ...p, html: conNotaPortalAbierto(p.html) })
   if (error) throw new Error(`Resend: ${error.name}: ${error.message}`)
 }

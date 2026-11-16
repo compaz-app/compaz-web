@@ -4,6 +4,12 @@ La versión vigente está en `lib/version.ts` y se ve en el panel (menú lateral
 
 Reglas: mayor = cambio grande o lanzamiento; menor = función nueva; parche = arreglo. La etapa `beta` sale cuando el sistema corre una o dos semanas con uso real sin sorpresas.
 
+## 1.1.18-beta.1 (2026-11-16)
+Los correos le dicen al cliente que no hace falta hacer clic si ya tiene el portal abierto (hallazgo 14 de la auditoría de flujos).
+1. Todo correo al cliente que trae un botón al portal ahora lleva debajo: «Si ya tienes tu portal abierto, no hace falta que hagas clic: se actualiza solo y lo verás ahí.» Así, cuando el cliente ya está viendo su portal y le llega «tu compita confirmó», sabe que no tiene que abrir otra pestaña.
+2. Se agrega en un solo lugar, `sendEmail` (el único punto por el que sale todo correo), con `lib/correo-portal.ts`: busca el primer enlace al portal (/dashboard o /portal), pone la nota justo debajo, una sola vez, y deja igual los correos sin botón al portal (sala de videollamada, panel del equipo, enlaces externos). Los correos nuevos la reciben solos.
+3. Complementa a «una sola pestaña del portal» (1.1.17). Sin migración.
+
 ## 1.1.17-beta.1 (2026-11-16)
 Una sola pestaña del portal (hallazgo 13 de la auditoría de flujos).
 1. Al abrir el portal desde el botón de un correo teniéndolo ya abierto, se creaba una segunda pestaña idéntica. Un navegador no permite que un enlace (ni una página) pase al frente otra pestaña, así que ahora: la pestaña que ya estaba abierta se actualiza sola (ve lo nuevo sin hacer nada) y la pestaña nueva se queda quieta con un aviso («Ya tienes Compaz abierto en otra pestaña»), intenta cerrarse sola (el navegador solo lo permite a veces) y ofrece «Usar esta pestaña» o «Cerrar esta pestaña».
