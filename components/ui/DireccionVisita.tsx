@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { colors, fonts, spacing, radius } from '@/lib/design'
+import CampoTelefono from '@/components/ui/CampoTelefono'
 
 interface Datos { direccion: string; indicaciones: string | null; quien_abre: string | null; contacto_nombre: string; contacto_tel: string }
 interface Estado { registrada: boolean; actual: Datos | null; anterior: Datos | null; programada: boolean }
@@ -14,6 +15,8 @@ export default function DireccionVisita() {
   const [estado, setEstado] = useState<Estado | null>(null)
   const [f, setF] = useState<Datos>({ direccion: '', indicaciones: '', quien_abre: '', contacto_nombre: '', contacto_tel: '' } as unknown as Datos)
   const [editando, setEditando] = useState(false)
+  // Cambia cuando el teléfono se llena desde fuera (abrir o «usar la anterior»), para que el campo se vuelva a armar con ese valor.
+  const [versionTel, setVersionTel] = useState(0)
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState('')
   const [listo, setListo] = useState<{ entregada: boolean } | null>(null)
@@ -26,11 +29,11 @@ export default function DireccionVisita() {
   if (!estado) return null
 
   function abrir() {
-    setError(''); setListo(null); setEditando(true)
+    setError(''); setListo(null); setEditando(true); setVersionTel((n) => n + 1)
     const base = estado!.actual
     setF({ direccion: base?.direccion ?? '', indicaciones: base?.indicaciones ?? '', quien_abre: base?.quien_abre ?? '', contacto_nombre: base?.contacto_nombre ?? '', contacto_tel: base?.contacto_tel ?? '' })
   }
-  function usarAnterior() { const a = estado!.anterior!; setF({ direccion: a.direccion, indicaciones: a.indicaciones ?? '', quien_abre: a.quien_abre ?? '', contacto_nombre: a.contacto_nombre, contacto_tel: a.contacto_tel }) }
+  function usarAnterior() { setVersionTel((n) => n + 1); const a = estado!.anterior!; setF({ direccion: a.direccion, indicaciones: a.indicaciones ?? '', quien_abre: a.quien_abre ?? '', contacto_nombre: a.contacto_nombre, contacto_tel: a.contacto_tel }) }
 
   async function guardar() {
     setGuardando(true); setError('')
@@ -64,7 +67,8 @@ export default function DireccionVisita() {
           <label style={etiqueta}>Cómo entrar <span style={{ fontWeight: 400, color: colors.textoSutil }}>(opcional)</span><input value={f.indicaciones ?? ''} onChange={(e) => set('indicaciones', e.target.value)} maxLength={200} style={campo} /></label>
           <label style={etiqueta}>Quién abre <span style={{ fontWeight: 400, color: colors.textoSutil }}>(opcional)</span><input value={f.quien_abre ?? ''} onChange={(e) => set('quien_abre', e.target.value)} maxLength={100} style={campo} /></label>
           <label style={etiqueta}>Nombre del contacto en el sitio<input value={f.contacto_nombre} onChange={(e) => set('contacto_nombre', e.target.value)} maxLength={100} style={campo} /></label>
-          <label style={etiqueta}>Teléfono del contacto en el sitio <span style={{ fontWeight: 400, color: colors.textoSutil }}>(solo lo ve el equipo de Compaz, nunca el compita)</span><input inputMode="tel" value={f.contacto_tel} onChange={(e) => set('contacto_tel', e.target.value)} maxLength={25} style={campo} /></label>
+          <label htmlFor="tel-sitio" style={etiqueta}>Teléfono del contacto en el sitio <span style={{ fontWeight: 400, color: colors.textoSutil }}>(solo lo ve el equipo de Compaz, nunca el compita)</span></label>
+          <div style={{ marginTop: spacing.xs }}><CampoTelefono key={versionTel} etiquetaId="tel-sitio" valorInicial={f.contacto_tel} onChange={(v) => set('contacto_tel', v)} /></div>
           {error && <p role="alert" style={{ color: colors.rojo, fontWeight: 700, fontSize: '14px', margin: `${spacing.xs} 0 0` }}>{error}</p>}
           <div style={{ display: 'flex', gap: spacing.xs, flexWrap: 'wrap', marginTop: spacing.sm }}>
             <button type="button" onClick={guardar} disabled={guardando} style={{ minHeight: '48px', padding: `0 ${spacing.lg}`, borderRadius: radius.pill, border: 'none', background: colors.naranja, color: colors.blanco, fontWeight: 800, fontSize: '15px', cursor: 'pointer', opacity: guardando ? 0.6 : 1 }}>{guardando ? 'Guardando…' : 'Guardar la dirección'}</button>

@@ -48,7 +48,7 @@ describe('el cliente registra la dirección', () => {
   test('se guarda en SU visita y se puede reutilizar en la siguiente', async () => {
     const { cliente } = mundo()
     assert.equal((await guardar(cliente, buena())).status, 200)
-    assert.equal(db.rows('visitas')[0].direccion, buena().direccion); assert.equal(db.rows('visitas')[0].contacto_tel, '+58 414 555 0101')
+    assert.equal(db.rows('visitas')[0].direccion, buena().direccion); assert.equal(db.rows('visitas')[0].contacto_tel, '+584145550101', 'se guarda en formato internacional, sin espacios')
     como(cliente); assert.equal((await (await dirGet()).json()).data.registrada, true)
     // Siguiente visita: puede reutilizar la anterior
     Object.assign(db.rows('visitas')[0], { estado: 'terminada' }); mkVisita(cliente, db.rows('compitas')[0], { estado: 'pre_visita' })

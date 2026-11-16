@@ -9,6 +9,7 @@ import { alertaAdmin } from '@/lib/alertas-admin'
 import { registrarEvento } from '@/lib/eventos'
 import { detectarContacto } from '@/lib/detectar-contacto'
 import { esc } from '@/lib/html'
+import { validarTelefono } from '@/lib/telefono'
 
 export interface DatosDireccion {
   direccion: string
@@ -35,8 +36,10 @@ export function validarDireccion(b: unknown): { ok: true; datos: DatosDireccion 
     if (valor && detectarContacto(valor).detectado) return { ok: false, error: `No pongas teléfonos ni correos en ${campo}. El contacto en el sitio tiene su propio campo y solo lo ve el equipo de Compaz.` }
   }
   if (contacto_nombre.length < 2 || contacto_nombre.length > 100) return { ok: false, error: 'Escribe el nombre de la persona de contacto en el sitio' }
-  if (!/^[+\d][\d\s().-]{6,24}$/.test(contacto_tel) || contacto_tel.replace(/\D/g, '').length < 7) return { ok: false, error: 'Escribe el teléfono de contacto con el código de país' }
-  return { ok: true, datos: { direccion, indicaciones: indicaciones || null, quien_abre: quien || null, contacto_nombre, contacto_tel } }
+  // El teléfono se valida por país y se guarda en formato internacional sin espacios (+584145550101): un error de tipeo no deja un número que no existe.
+  const tel = validarTelefono(contacto_tel)
+  if (!tel.ok) return { ok: false, error: tel.error }
+  return { ok: true, datos: { direccion, indicaciones: indicaciones || null, quien_abre: quien || null, contacto_nombre, contacto_tel: tel.e164 } }
 }
 
 export { faltaDireccion, MENSAJE_FALTA_DIRECCION } from '@/lib/direccion-tipos'

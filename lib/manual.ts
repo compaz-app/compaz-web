@@ -227,7 +227,7 @@ export const ENTRADAS: EntradaManual[] = [
     paraQue: 'Se abre una tarea con cuenta atrás de 30 minutos.',
     pasos: [
       'A los 5 y a los 15 minutos aparece una tarea para escribirle al contacto en el sitio (hoy se hace a mano).',
-      'Escríbele sin dar datos del compita. El contacto en el sitio es el que dejó el cliente al agendar.',
+      'Escríbele sin dar datos del compita. El contacto en el sitio es el que dejó el cliente al agendar; su teléfono está validado por país y guardado en formato internacional.',
       'Si alguien abre, el compita toca "Iniciar visita" y todo sigue normal.',
       'Si pasan los 30 minutos, el compita puede cerrar la visita: se cuenta como usada y el compita cobra el viaje.',
     ],
