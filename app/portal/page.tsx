@@ -22,6 +22,7 @@ import { ventanaVigente, marcarVentana } from '@/lib/cron'
 import { pestanaDeSec, esParteCuenta } from '@/lib/portal-secciones'
 import { contarNovedadesSinAbrir, marcarNovedadesAbiertas, listarAvisosPortal, type AvisoPortal } from '@/lib/novedades'
 import CampanaAvisos from '@/components/portal/CampanaAvisos'
+import { marcarReporteVisto } from '@/lib/reporte-visto'
 import { contarMensajesSinLeer, marcarChatLeido } from '@/lib/portal-mensajes'
 
 export const dynamic = 'force-dynamic'
@@ -40,6 +41,8 @@ export default async function PortalPage({ searchParams }: { searchParams: Promi
   if (acceso === 'viejo') redirect('/dashboard')
 
   const uid = esAdmin && preview ? preview : session.user.id
+  // Abrir Visitas con el reporte ya listo lo da por visto, ANTES de armar la tarjeta: así «¿cómo te fue?» pasa de una vez a agendar la siguiente.
+  if (!esAdmin && pestana === 'visitas') await marcarReporteVisto(uid)
   const portal = await cargarPortal(uid)
   // Ver el portal de otro cliente es un acceso a sus datos: queda anotado ANTES de mostrarlo y, si no se puede anotar, no se muestra.
   if (esAdmin && preview) {

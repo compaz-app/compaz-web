@@ -4,6 +4,13 @@ La versión vigente está en `lib/version.ts` y se ve en el panel (menú lateral
 
 Reglas: mayor = cambio grande o lanzamiento; menor = función nueva; parche = arreglo. La etapa `beta` sale cuando el sistema corre una o dos semanas con uso real sin sorpresas.
 
+## 1.3.4-beta.1 (2026-11-16)
+«Ver el reporte» ya no se queda: al ver el reporte, el portal pasa a agendar la siguiente visita.
+1. Causa real: tras terminar una visita, el portal decía «La visita terminó, ¿cómo te fue?» durante 12 horas SIN IMPORTAR si el cliente ya había abierto el reporte. Por eso el botón seguía ahí aunque ya lo estuviera viendo.
+2. Ahora, cuando el cliente abre su pestaña de Visitas y el reporte de esa visita ya está listo, queda anotado (`visitas.reporte_visto_en`) y el estado pasa de «¿cómo te fue?» a «Agenda tu próxima visita» (o «Tu plan se agotó» si no le quedan visitas). Si el reporte todavía no llegó, no se anota y el aviso sigue hasta que llegue. La vista previa del equipo no lo marca.
+3. Lo que hizo 1.3.3 sigue: la tarjeta oculta los botones que llevan a la misma pestaña.
+4. MIGRACIÓN `20261117b_reporte_visto.sql`: agrega `visitas.reporte_visto_en`. Solo agrega. APLICARLA ANTES de publicar: el código ya la consulta.
+
 ## 1.3.3-beta.1 (2026-11-16)
 Un botón de la tarjeta que lleva a donde ya estás ya no se muestra.
 1. Al terminar la visita, «Ver el reporte» llevaba a la pestaña Visitas, pero la tarjeta (que ahora sale en todas las pestañas) seguía mostrando el mismo botón encima del reporte: tocarlo recargaba la misma página, en círculo.

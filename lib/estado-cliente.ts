@@ -52,6 +52,8 @@ export interface VisitaFoto {
   id: string; estado: string; compitaNombre: string
   fechaProgramada: string | null; horaInicio: string | null
   llegadaEn: string | null; sinAccesoEn: string | null; fin: string | null; creadaEn: string
+  /** Cuándo el cliente abrió el reporte de esta visita. Con eso, «¿cómo te fue?» termina y el portal pasa a agendar la siguiente. */
+  reporteVistoEn?: string | null
   /** Hora que el cliente propuso y que el compita aún no confirma. */
   citaPropuesta?: { fecha: string; inicio: string } | null
 }
@@ -145,7 +147,7 @@ export function decidirEstado(f: FotoCliente): EstadoCliente {
   }
 
   // 4. La última visita terminó hace poco: "¿cómo te fue?".
-  const terminada = masReciente(f.visitas.filter((v) => v.estado === 'terminada' && ahora - new Date(v.fin ?? v.creadaEn).getTime() < VISITA_TERMINADA_H * HORA))
+  const terminada = masReciente(f.visitas.filter((v) => v.estado === 'terminada' && !v.reporteVistoEn && ahora - new Date(v.fin ?? v.creadaEn).getTime() < VISITA_TERMINADA_H * HORA))
   if (terminada) return e('visita_terminada', { visitaId: terminada.id, compitaNombre: terminada.compitaNombre })
 
   // 5. Pago: pedido, avisado como hecho, o falta pedirlo.
@@ -232,7 +234,7 @@ async function cargarTanda(ids: string[], ahora: Date): Promise<Map<string, Foto
   const [usR, solR, visR, cancR, pagoR, pausasR, cupos] = await Promise.all([
     admin.from('usuarios').select('*, compita:compitas(id, nombre)').in('id', ids),
     admin.from('solicitudes').select('id, cliente_id, estado, tipo, compita_id, slot_confirmado, slots_propuestos, seguimiento_enviado, token_respuesta, confirmacion_cliente, created_at, compitas(nombre)').in('cliente_id', ids).gte('created_at', hace30).order('created_at', { ascending: false }),
-    admin.from('visitas').select('id, usuario_id, estado, fecha_programada, hora_inicio_programada, llegada_en, sin_acceso_en, fin, created_at, cita_propuesta_fecha, cita_propuesta_inicio, compita:compitas(nombre)').in('usuario_id', ids).in('estado', ['pre_visita', 'programada', 'confirmando_inicio', 'en_curso', 'terminada']).order('created_at', { ascending: false }).limit(ids.length === 1 ? 20 : TOPE_FILAS_BASE),
+    admin.from('visitas').select('id, usuario_id, estado, fecha_programada, hora_inicio_programada, llegada_en, sin_acceso_en, fin, created_at, cita_propuesta_fecha, cita_propuesta_inicio, reporte_visto_en, compita:compitas(nombre)').in('usuario_id', ids).in('estado', ['pre_visita', 'programada', 'confirmando_inicio', 'en_curso', 'terminada']).order('created_at', { ascending: false }).limit(ids.length === 1 ? 20 : TOPE_FILAS_BASE),
     admin.from('cancelaciones').select('usuario_id, visita_id, cancelado_por, justificada_por, creado_en').in('usuario_id', ids).gte('creado_en', new Date(ahora.getTime() - AVISO_CANCELACION_H * HORA).toISOString()),
     admin.from('solicitudes_pago').select('id, usuario_id').in('usuario_id', ids).eq('estado', 'pendiente'),
     admin.from('pausas_contacto').select('persona_id').eq('rol', 'cliente').eq('activa', true).in('persona_id', ids),
@@ -288,11 +290,11 @@ async function cargarTanda(ids: string[], ahora: Date): Promise<Map<string, Foto
       cupo: cupo ? { restantes: cupo.restantes } : null,
       // Las 20 visitas más recientes de CADA cliente (la consulta ya viene ordenada de la más reciente a la más antigua).
       visitas: (visPorCliente.get(clienteId) ?? []).slice(0, 20).map((x) => {
-        const v = x as unknown as { id: string; estado: string; fecha_programada: string | null; hora_inicio_programada: string | null; llegada_en: string | null; sin_acceso_en: string | null; fin: string | null; created_at: string; cita_propuesta_fecha: string | null; cita_propuesta_inicio: string | null; compita: { nombre: string } | null }
+        const v = x as unknown as { id: string; estado: string; fecha_programada: string | null; hora_inicio_programada: string | null; llegada_en: string | null; sin_acceso_en: string | null; fin: string | null; created_at: string; cita_propuesta_fecha: string | null; cita_propuesta_inicio: string | null; reporte_visto_en?: string | null; compita: { nombre: string } | null }
         return {
           citaPropuesta: v.cita_propuesta_fecha && v.cita_propuesta_inicio ? { fecha: v.cita_propuesta_fecha, inicio: v.cita_propuesta_inicio } : null,
           id: v.id, estado: v.estado, compitaNombre: v.compita?.nombre ?? '', fechaProgramada: v.fecha_programada, horaInicio: v.hora_inicio_programada,
-          llegadaEn: v.llegada_en, sinAccesoEn: v.sin_acceso_en, fin: v.fin, creadaEn: v.created_at,
+          llegadaEn: v.llegada_en, sinAccesoEn: v.sin_acceso_en, fin: v.fin, creadaEn: v.created_at, reporteVistoEn: v.reporte_visto_en ?? null,
         }
       }),
       cancelaciones: (cancPorCliente.get(clienteId) ?? []).map((x) => {
