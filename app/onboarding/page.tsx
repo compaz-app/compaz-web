@@ -143,6 +143,7 @@ function OnboardingForm() {
     telefono: '',
     descripcion: '',
     servicios: [] as string[],
+    intereses_futuros: [] as string[],
     habilidades: '',
     youtube_url: '',
   })
@@ -293,7 +294,7 @@ function OnboardingForm() {
       const res = await fetch(corrigiendo ? '/api/onboarding/corregir' : '/api/onboarding/registrar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nombre: form.nombre, email: form.email, telefono: form.telefono, descripcion: form.descripcion, servicios: form.servicios, habilidades: form.habilidades, youtube_url: form.youtube_url, zona, foto_url, token, horarios_disponibles: horarios, ...(corrigiendo ? { edit_token: editToken } : {}) }),
+        body: JSON.stringify({ nombre: form.nombre, email: form.email, telefono: form.telefono, descripcion: form.descripcion, servicios: form.servicios, habilidades: form.habilidades, intereses_futuros: form.intereses_futuros, youtube_url: form.youtube_url, zona, foto_url, token, horarios_disponibles: horarios, ...(corrigiendo ? { edit_token: editToken } : {}) }),
       })
 
       if (res.ok) {
@@ -403,9 +404,9 @@ function OnboardingForm() {
     <div style={{ minHeight: '100vh', background: '#FDFAF6', fontFamily: 'Inter, sans-serif' }}>
       <BarraProgreso paso={1} />
       <div style={{ maxWidth: '640px', margin: '0 auto', padding: '40px 20px 100px' }}>
-        <h1 style={s.h1}>Bienvenida a Compaz</h1>
+        <h1 style={s.h1}>Bienvenido a Compaz</h1>
         <p style={{ color: '#6B5C90', marginBottom: tieneBorrador ? '12px' : '32px', lineHeight: '1.6' }}>
-          Completa tu perfil para empezar a recibir visitas. Solo toma unos minutos.
+          Completa tu perfil para empezar a recibir solicitudes. Solo toma unos minutos.
         </p>
         {tieneBorrador && (
           <div style={{ background: '#EDE8FF', border: '2px solid rgba(45,20,100,0.2)', borderRadius: '12px', padding: '10px 16px', marginBottom: '32px', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: '#2D1464', fontWeight: 600 }}>
@@ -553,8 +554,8 @@ function OnboardingForm() {
             />
           </div>
 
-          <OpcionesProximamenteCompita />
-          <SeccionCuidadorMascotas />
+          <OpcionesProximamenteCompita valor={form.intereses_futuros} onChange={(v) => setForm({ ...form, intereses_futuros: v })} />
+          <SeccionCuidadorMascotas valor={form.intereses_futuros} onChange={(v) => setForm({ ...form, intereses_futuros: v })} />
 
           {/* Foto */}
           <div>

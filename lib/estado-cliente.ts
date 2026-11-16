@@ -44,6 +44,8 @@ export interface SolicitudFoto {
   avisoEntregado: boolean
   /** Última reserva de hora de esta solicitud. */
   reserva: 'reservada' | 'confirmada' | 'rechazada' | 'liberada' | 'vencida' | null
+  /** Hora de esa reserva (ISO): la que el cliente eligió y el compita aún confirma. */
+  reservaInicio?: string | null
   creadaEn: string
 }
 export interface VisitaFoto {
@@ -170,7 +172,7 @@ export function decidirEstado(f: FotoCliente): EstadoCliente {
   }
   const sinHora = f.solicitudes.find((s) => s.estado === 'aceptada' && s.tipo === 'entrevista' && !s.slotConfirmado && s.slotsPropuestos === 0)
   if (sinHora) {
-    if (sinHora.reserva === 'reservada') return e('horario_pedido', { solicitudId: sinHora.id, compitaNombre: sinHora.compitaNombre })
+    if (sinHora.reserva === 'reservada') return e('horario_pedido', { solicitudId: sinHora.id, compitaNombre: sinHora.compitaNombre, ...(sinHora.reservaInicio ? { cuando: sinHora.reservaInicio } : {}) })
     if (sinHora.reserva === 'rechazada') return e('horario_rechazado', { solicitudId: sinHora.id, compitaNombre: sinHora.compitaNombre })
     return e('elegir_horario', { solicitudId: sinHora.id, compitaNombre: sinHora.compitaNombre })
   }
@@ -246,12 +248,13 @@ async function cargarTanda(ids: string[], ahora: Date): Promise<Map<string, Foto
   const pagoPorUsuario = new Map<string, string>(); for (const p of (pagoR.data ?? []) as { id: string; usuario_id: string }[]) if (!pagoPorUsuario.has(p.usuario_id)) pagoPorUsuario.set(p.usuario_id, p.id)
   const pagoIds = [...pagoPorUsuario.values()]
   const [{ data: reservas }, { data: avisos }, { data: motivos }, { data: insistencias }] = await Promise.all([
-    solIds.length ? admin.from('reservas_horario').select('solicitud_id, estado, creada_en').in('solicitud_id', solIds).order('creada_en', { ascending: false }) : Promise.resolve({ data: [] }),
+    solIds.length ? admin.from('reservas_horario').select('solicitud_id, estado, inicio, creada_en').in('solicitud_id', solIds).order('creada_en', { ascending: false }) : Promise.resolve({ data: [] }),
     solIds.length ? admin.from('avisos').select('entidad_id').eq('plantilla', 'solicitud_nueva').eq('estado', 'enviado').in('entidad_id', solIds) : Promise.resolve({ data: [] }),
     solIds.length ? admin.from('eventos').select('entidad_id').eq('tipo', 'motivo_no_contratar').in('entidad_id', solIds) : Promise.resolve({ data: [] }),
     pagoIds.length ? admin.from('eventos').select('entidad_id').eq('entidad', 'pago').eq('tipo', 'pago_insistido').in('entidad_id', pagoIds) : Promise.resolve({ data: [] }),
   ])
-  const reservaDe = new Map<string, string>(); for (const r of (reservas ?? []) as { solicitud_id: string; estado: string }[]) if (!reservaDe.has(r.solicitud_id)) reservaDe.set(r.solicitud_id, r.estado)
+  const reservaDe = new Map<string, string>(); const reservaInicioDe = new Map<string, string>()
+  for (const r of (reservas ?? []) as { solicitud_id: string; estado: string; inicio: string | null }[]) if (!reservaDe.has(r.solicitud_id)) { reservaDe.set(r.solicitud_id, r.estado); if (r.inicio) reservaInicioDe.set(r.solicitud_id, r.inicio) }
   const entregados = new Set(((avisos ?? []) as { entidad_id: string }[]).map((a) => a.entidad_id))
   const conMotivo = new Set(((motivos ?? []) as { entidad_id: string }[]).map((m) => m.entidad_id))
   const insistidos = new Set(((insistencias ?? []) as { entidad_id: string }[]).map((e) => e.entidad_id))
@@ -278,7 +281,7 @@ async function cargarTanda(ids: string[], ahora: Date): Promise<Map<string, Foto
           id: sr.id, estado: sr.estado, tipo: sr.tipo, compitaId: sr.compita_id, compitaNombre: sr.compitas?.nombre ?? '', slotConfirmado: sr.slot_confirmado,
           slotsPropuestos: (sr.slots_propuestos ?? []).length, seguimientoEnviado: !!sr.seguimiento_enviado, tokenRespuesta: !!sr.token_respuesta, token: sr.token_respuesta,
           clienteDijoNo: sr.confirmacion_cliente === false, motivoRegistrado: conMotivo.has(sr.id), avisoEntregado: entregados.has(sr.id),
-          reserva: (reservaDe.get(sr.id) as SolicitudFoto['reserva']) ?? null, creadaEn: sr.created_at,
+          reserva: (reservaDe.get(sr.id) as SolicitudFoto['reserva']) ?? null, reservaInicio: reservaInicioDe.get(sr.id) ?? null, creadaEn: sr.created_at,
         }
       }),
       pagoPendiente: pagoId ? { id: pagoId, insistido: insistidos.has(pagoId) } : null,

@@ -20,6 +20,7 @@ export default function PerfilPreview() {
             servicios: ['Acompañamiento', 'Cuidado de adultos mayores', 'Preparación de comida'],
             youtube_url: '',
             foto_url: '',
+            intereses_futuros: [],
             horarios_disponibles: [
               { dia: 'lunes', inicio: '08:00', fin: '16:00' },
               { dia: 'miércoles', inicio: '08:00', fin: '16:00' },

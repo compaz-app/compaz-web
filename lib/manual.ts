@@ -166,6 +166,7 @@ export const ENTRADAS: EntradaManual[] = [
       'Busca por nombre o zona, o filtra por Estado: el desplegable solo lista los estados donde hay gente. Toca un título de columna para ordenar. Rojo y amarillo piden atención; gris es nuevo o en pausa.',
       '"Con familias" es un compita activo que ya atiende al menos una familia; no hay un tope de cupo. "Respuesta" es el porcentaje de solicitudes respondidas en 30 días, y "Sin actividad" el tiempo desde su última respuesta o visita.',
       'Toca a la persona para abrir su ficha: paso o estado, cancelaciones, línea de tiempo y notas internas.',
+      'Con el permiso de cuentas, la ficha trae «Todo de este compita» o «Todo de este cliente»: perfil, calificaciones, solicitudes y visitas, y «Ver perfil público» para verlo como lo ve la familia. Es solo lectura, sin teléfono ni correo; la salud del familiar solo la ve un administrador.',
       'Si el compita viene del CMC (el Centro de Mando de selección), la ficha muestra su ID COM-, si el CMC lo permite y lo que le falta para recibir solicitudes. Lo que dice el CMC no se cambia desde aquí: si no lo permite, no se puede verificar ni activar hasta que el CMC lo habilite.',
       'Para ver un correo o teléfono, toca el botón en Contacto. Si no eres administrador te pide un motivo, y queda anotado en Actividad con tu nombre.',
       'Las notas internas las ve solo el equipo. Cada una guarda quién la escribió y cuándo, y no se puede editar ni borrar.',
@@ -283,7 +284,7 @@ export const ENTRADAS: EntradaManual[] = [
     paraQue: 'El bot responde solo a las dudas comunes. Pasa a una persona después de dos intentos sin resolver.',
     pasos: [
       'Lee la tarea: dice qué preguntó y por qué no se resolvió.',
-      'Respóndele por Telegram. Nunca por llamada.',
+      'Toca «Responder por Telegram» en la tarea, escribe la respuesta y envíala: le llega al Telegram del compita como mensaje del equipo y la tarea se cierra sola. Sin teléfonos ni correos. Nunca por llamada.',
       'Mira en Más, Estado del sistema, qué dudas son las más comunes: si una domina, arregla la causa (por ejemplo, el campo de indicaciones de la dirección).',
     ],
     permiso: 'atender', pantalla: 'estado', busca: ['ayuda', 'bot', 'duda sin resolver', 'atascado'],

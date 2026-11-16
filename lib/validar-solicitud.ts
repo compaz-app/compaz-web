@@ -15,6 +15,17 @@ export const MAX_NOTA = 300
 export const MAX_PERSONAS = 10
 export const DURACIONES_MANDADO_MIN = [15, 30, 60] as const
 
+/**
+ * Datos de seguridad del lugar privado, por opciones (sin texto libre ni nombres): lo que el compita necesita saber antes de aceptar.
+ * `menores` y `permanencia` solo aplican si estará alguien más; `precaucion` es opcional y avisa que hay alguien con quien el compita no debe quedarse a solas.
+ */
+export interface DatosLugar {
+  menores: boolean | null
+  permanencia: 'toda' | 'parte' | null
+  animales: boolean
+  precaucion: boolean
+}
+
 export interface SolicitudNueva {
   tipo: TipoSolicitud
   /** Texto corto que ve el compita: una opción rápida, o "Mandado" cuando es un mandado. */
@@ -26,6 +37,8 @@ export interface SolicitudNueva {
   personas_en_lugar: string[] | null
   /** Solo en mandados: lo que el cliente estima que tomará. */
   duracion_min: number | null
+  /** null si el lugar no es privado. */
+  datos_lugar: DatosLugar | null
 }
 
 export type ResultadoSolicitudNueva = { ok: true; valor: SolicitudNueva } | { ok: false; error: string }
@@ -80,7 +93,24 @@ export function validarSolicitudNueva(b: Record<string, unknown>): ResultadoSoli
     return falla('Solo se indica quién más estará cuando el lugar es privado')
   }
 
-  return { ok: true, valor: { tipo: t, que, nota, lugar_privado, personas_en_lugar, duracion_min } }
+  // Seguridad del lugar: con lugar privado hay que contestar si hay animales y, si estará alguien más, si habrá menores y cuánto tiempo estarán.
+  let datos_lugar: DatosLugar | null = null
+  if (lugar_privado) {
+    const d = (b.datos_lugar && typeof b.datos_lugar === 'object' ? b.datos_lugar : {}) as Record<string, unknown>
+    if (typeof d.animales !== 'boolean') return falla('Indica si hay animales en el lugar. Es por la seguridad del compita.')
+    if (d.precaucion !== undefined && typeof d.precaucion !== 'boolean') return falla('Dato de precaución inválido')
+    const hayOtros = (personas_en_lugar ?? []).length > 0
+    let menores: boolean | null = null
+    let permanencia: DatosLugar['permanencia'] = null
+    if (hayOtros) {
+      if (typeof d.menores !== 'boolean') return falla('Indica si habrá menores de edad. Es por la seguridad del compita.')
+      if (d.permanencia !== 'toda' && d.permanencia !== 'parte') return falla('Indica si esas personas estarán toda la visita o solo una parte')
+      menores = d.menores; permanencia = d.permanencia
+    }
+    datos_lugar = { menores, permanencia, animales: d.animales, precaucion: d.precaucion === true }
+  }
+
+  return { ok: true, valor: { tipo: t, que, nota, lugar_privado, personas_en_lugar, duracion_min, datos_lugar } }
 }
 
 /** Texto que se guarda en `solicitudes.mensaje` (columna obligatoria que ya leen las plantillas actuales). */

@@ -69,6 +69,7 @@ interface Props {
     youtube_url: string
     foto_url: string
     horarios_disponibles: HorarioItem[]
+    intereses_futuros: string[]
   }
 }
 
@@ -92,6 +93,7 @@ export default function EditarPerfil({ token, inicial }: Props) {
   const [fotoPreview, setFotoPreview] = useState<string | null>(inicial.foto_url || null)
 
   const [horarios, setHorarios] = useState<HorarioItem[]>(inicial.horarios_disponibles)
+  const [intereses, setIntereses] = useState<string[]>(inicial.intereses_futuros)
   const [horarioDia, setHorarioDia] = useState('')
   const [horarioInicio, setHorarioInicio] = useState('08:00')
   const [horarioFin, setHorarioFin] = useState('17:00')
@@ -191,7 +193,7 @@ export default function EditarPerfil({ token, inicial }: Props) {
       const res = await fetch('/api/compita/perfil', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, zona, descripcion, servicios, youtube_url: youtubeUrl || null, foto_url: fotoUrl || null, horarios_disponibles: horarios }),
+        body: JSON.stringify({ token, zona, descripcion, servicios, youtube_url: youtubeUrl || null, foto_url: fotoUrl || null, horarios_disponibles: horarios, intereses_futuros: intereses }),
       })
       const data = await res.json() as { guardado?: boolean; error?: string }
       if (!res.ok) throw new Error(data.error ?? 'Error al guardar')
@@ -302,8 +304,8 @@ export default function EditarPerfil({ token, inicial }: Props) {
         </div>
       </div>
 
-      <OpcionesProximamenteCompita />
-      <SeccionCuidadorMascotas />
+      <OpcionesProximamenteCompita valor={intereses} onChange={setIntereses} />
+      <SeccionCuidadorMascotas valor={intereses} onChange={setIntereses} />
 
       {/* Foto */}
       <div>

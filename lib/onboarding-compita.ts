@@ -24,12 +24,12 @@ export async function corregirRegistroCompita(editToken: string, body: Record<st
   if (!telefono) return { ok: false, status: 400, error: 'Teléfono inválido. Escríbelo con código de país, por ejemplo +58 412 123 4567' }
   const v = validarPerfil(body, { permitirNombre: true })
   if (!v.ok) return { ok: false, status: 400, error: v.error }
-  const { nombre, zona, descripcion, servicios, foto_url, youtube_url, horarios_disponibles } = v.datos
+  const { nombre, zona, descripcion, servicios, foto_url, youtube_url, horarios_disponibles, intereses_futuros } = v.datos
   const habil = typeof body.habilidades === 'string' ? body.habilidades.trim().slice(0, 500) : ''
 
   const { error } = await admin.from('compitas').update({
     nombre, email, telefono, zona, descripcion: habil ? `${descripcion}\n\nHabilidades especiales: ${habil}` : descripcion, servicios,
-    ...(foto_url ? { foto_url } : {}), youtube_url: youtube_url ?? null, horarios_disponibles: horarios_disponibles ?? [],
+    ...(foto_url ? { foto_url } : {}), youtube_url: youtube_url ?? null, horarios_disponibles: horarios_disponibles ?? [], intereses_futuros: intereses_futuros ?? [],
   }).eq('id', compitaId).is('telegram_chat_id', null)
   if (error) return { ok: false, status: 500, error: 'No se pudieron guardar los cambios' }
 

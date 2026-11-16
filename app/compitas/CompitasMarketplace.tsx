@@ -16,36 +16,8 @@ interface Props {
 }
 
 import type { Solicitud } from '@/types'
+import PerfilPublicoCompita from '@/components/ui/PerfilPublicoCompita'
 import IconoPersona from '@/components/ui/IconoPersona'
-
-type ResenaPublica = { id: string; texto: string; estrellas: number; created_at: string }
-
-function ResenasCompita({ compitaId }: { compitaId: string }) {
-  const [resenas, setResenas] = useState<ResenaPublica[] | null>(null)
-  useEffect(() => {
-    fetch(`/api/compita/resenas?compita_id=${compitaId}`)
-      .then(r => r.json())
-      .then(d => { if (Array.isArray(d.data)) setResenas(d.data) })
-      .catch(() => setResenas([]))
-  }, [compitaId])
-
-  if (!resenas || resenas.length === 0) return null
-  return (
-    <div style={{ marginBottom: '20px' }}>
-      <p style={{ fontWeight: 700, color: '#1A0A3C', fontFamily: 'Bricolage Grotesque, sans-serif', marginBottom: '12px' }}>Reseñas de clientes</p>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        {resenas.map((r) => (
-          <div key={r.id} style={{ background: '#F5F0FF', borderRadius: '12px', padding: '14px 16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
-              <span style={{ color: '#F59E0B', fontSize: '13px' }}>{'★'.repeat(r.estrellas)}{'☆'.repeat(5 - r.estrellas)}</span>
-            </div>
-            <p style={{ color: '#1A0A3C', fontSize: '14px', lineHeight: '1.6', margin: 0 }}>{r.texto}</p>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
 
 export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEmail, backHref = '/dashboard', backLabel = '← Mi portal' }: Props) {
   const router = useRouter()
@@ -566,114 +538,7 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
             <button onClick={() => { setSeleccionada(null); setMostrarFormulario(false); setSlotsElegidos([]); setFormMensaje(''); setReagendando(false) }} style={{ position: 'absolute', top: '16px', right: '16px', background: 'white', border: '2px solid #E8E0D4', borderRadius: '9999px', width: '32px', height: '32px', cursor: 'pointer', fontSize: '16px', zIndex: 10 }}>×</button>
 
             <div style={{ padding: '28px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '12px', paddingRight: '28px' }}>
-                {seleccionada.foto_url
-                  // eslint-disable-next-line @next/next/no-img-element
-                  ? <img src={seleccionada.foto_url} alt={seleccionada.nombre} style={{ width: '80px', height: '80px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-                  : <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: '#F0EBF8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '36px', flexShrink: 0 }}><IconoPersona /></div>
-                }
-                <div style={{ minWidth: 0 }}>
-                  <h2 style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '22px', color: '#1A0A3C', margin: '0 0 4px' }}>{seleccionada.nombre}</h2>
-                  {seleccionada.verificado && <span style={s.badge}>✓ Verificada</span>}
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' }}>
-                {seleccionada.rating_promedio != null && seleccionada.total_ratings > 0 && (
-                  <span style={{ fontSize: '14px', color: '#F59E0B', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '3px' }}>
-                    ★ <span style={{ color: '#1A0A3C' }}>{seleccionada.rating_promedio.toFixed(1)}</span>
-                    <span style={{ color: '#9B8AB8', fontWeight: 400, fontSize: '13px' }}>({seleccionada.total_ratings} {seleccionada.total_ratings === 1 ? 'calificación' : 'calificaciones'})</span>
-                  </span>
-                )}
-                <span style={{ color: '#6B5C90', fontSize: '13px' }}>{seleccionada.visitas_realizadas} visitas realizadas</span>
-                {seleccionada.tasa_aceptacion != null && (
-                  <span style={{
-                    fontSize: '12px', fontWeight: 700, borderRadius: '9999px', padding: '3px 10px',
-                    fontFamily: 'Bricolage Grotesque, sans-serif',
-                    background: seleccionada.tasa_aceptacion >= 80 ? '#DCFCE7' : seleccionada.tasa_aceptacion >= 60 ? '#FEF9C3' : '#FEE2E2',
-                    color: seleccionada.tasa_aceptacion >= 80 ? '#166534' : seleccionada.tasa_aceptacion >= 60 ? '#854D0E' : '#991B1B',
-                  }}>
-                    {seleccionada.tasa_aceptacion}% de aceptación
-                  </span>
-                )}
-              </div>
-
-              {seleccionada.descripcion && (
-                <div style={{ marginBottom: '20px' }}>
-                  <p style={{ fontWeight: 700, color: '#1A0A3C', fontFamily: 'Bricolage Grotesque, sans-serif', marginBottom: '8px' }}>Sobre mí</p>
-                  <p style={{ color: '#4A3B6B', fontSize: '15px', lineHeight: '1.7', whiteSpace: 'pre-line' }}>{seleccionada.descripcion}</p>
-                </div>
-              )}
-
-              {seleccionada.servicios && seleccionada.servicios.length > 0 && (
-                <div style={{ marginBottom: '20px' }}>
-                  <p style={{ fontWeight: 700, color: '#1A0A3C', fontFamily: 'Bricolage Grotesque, sans-serif', marginBottom: '10px' }}>Servicios</p>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                    {seleccionada.servicios.map((sv) => (
-                      <span key={sv} style={s.chip}>{sv}</span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {seleccionada.zona && (
-                <div style={{ marginBottom: '20px' }}>
-                  <p style={{ fontWeight: 700, color: '#1A0A3C', fontFamily: 'Bricolage Grotesque, sans-serif', marginBottom: '10px' }}>Zonas que cubre</p>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                    {seleccionada.zona.split(',').map((z) => (
-                      <span key={z} style={{ ...s.chip, background: '#EDE8FF', color: '#2D1464' }}>{z.trim()}</span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {seleccionada.horarios_disponibles && seleccionada.horarios_disponibles.length > 0 && (
-                <div style={{ marginBottom: '20px' }}>
-                  <p style={{ fontWeight: 700, color: '#1A0A3C', fontFamily: 'Bricolage Grotesque, sans-serif', marginBottom: '10px' }}>Disponibilidad</p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    {['lunes','martes','miércoles','jueves','viernes','sábado','domingo'].map((dia) => {
-                      const bloques = seleccionada.horarios_disponibles!.filter((h) => h.dia === dia)
-                      if (bloques.length === 0) return null
-                      return (
-                        <div key={dia} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', fontSize: '14px' }}>
-                          <span style={{ color: '#6B5C90', minWidth: '80px', textTransform: 'capitalize', fontWeight: 600 }}>{dia}</span>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                            {bloques.map((b, i) => (
-                              <span key={i} style={{ background: '#F5F0FF', color: '#2D1464', borderRadius: '9999px', padding: '2px 10px', fontSize: '13px' }}>
-                                {b.inicio} – {b.fin}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {seleccionada.youtube_url && (
-                <div style={{ marginBottom: '20px' }}>
-                  <p style={{ fontWeight: 700, color: '#1A0A3C', fontFamily: 'Bricolage Grotesque, sans-serif', marginBottom: '10px' }}>Video de presentación</p>
-                  <iframe
-                    src={(() => {
-                      const u = seleccionada.youtube_url
-                      try {
-                        const parsed = new URL(u)
-                        const v = parsed.searchParams.get('v')
-                        if (v) return `https://www.youtube.com/embed/${v}`
-                        const parts = parsed.pathname.split('/').filter(Boolean)
-                        const id = parts[parts.length - 1]
-                        return `https://www.youtube.com/embed/${id}`
-                      } catch { return u }
-                    })()}
-                    style={{ width: '100%', height: '200px', borderRadius: '12px', border: 'none' }}
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  />
-                </div>
-              )}
-
-              <ResenasCompita compitaId={seleccionada.id} />
+              <PerfilPublicoCompita compita={seleccionada} />
 
               {(seleccionada.id === compitaAsignadaId || compitasConHistorial.includes(seleccionada.id)) ? (
                 /* Cliente que ya tiene esta compita asignada — ir directo al agendamiento */

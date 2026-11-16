@@ -219,6 +219,7 @@ export type CamposEditablesCompita = {
   youtube_url?: string | null
   foto_url?: string | null
   horarios_disponibles?: { dia: string; inicio: string; fin: string }[]
+  intereses_futuros?: string[]
 }
 
 /**
@@ -226,7 +227,7 @@ export type CamposEditablesCompita = {
  * Solo admin puede llamar esto (verificado en la ruta API).
  */
 export const CAMPOS_EDITABLES_COMPITA = [
-  'nombre', 'zona', 'descripcion', 'servicios', 'youtube_url', 'foto_url', 'horarios_disponibles',
+  'nombre', 'zona', 'descripcion', 'servicios', 'youtube_url', 'foto_url', 'horarios_disponibles', 'intereses_futuros',
 ] as const
 
 export async function actualizarCompita(id: string, campos: CamposEditablesCompita): Promise<Compita> {

@@ -98,6 +98,41 @@ export default function FichaPersona({ ficha, cerrarHref, pideMotivo, puedeConta
           </section>
         )}
 
+        {ficha.detalle && (
+          <section className="space-y-2">
+            <div className="flex items-center gap-1"><TituloBloque>{ficha.tipo === 'compita' ? 'Todo de este compita' : 'Todo de este cliente'}</TituloBloque><InfoBoton que="Para qué sirve" texto={ficha.tipo === 'compita' ? 'Lo que necesitas para revisar su calidad: cómo lo ve la familia, calificaciones y reseñas, solicitudes y visitas. Solo lectura, sin teléfono ni correo.' : 'Lo que necesitas para revisar a este cliente: su ficha, plan, solicitudes, visitas y reseñas. Solo lectura. La condición y las notas de salud del familiar las ve solo un administrador.'} /></div>
+            {ficha.tipo === 'compita' && (
+              <div className="flex items-center gap-1">
+                <Boton tamano="compacto" variante="secundario" navegacion href={`/panel/perfil-publico/${ficha.id}`} info="Abre su perfil público tal como lo ve la familia, con lo que llenó. Sirve para revisar su calidad aunque todavía no esté verificado.">Ver perfil público</Boton>
+              </div>
+            )}
+            {(ficha.detalle.fotoUrl || ficha.detalle.videoUrl) && (
+              <div className="flex flex-wrap items-center gap-3">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                {ficha.detalle.fotoUrl && <img src={ficha.detalle.fotoUrl} alt={`Foto de ${ficha.nombre}`} className="h-28 w-28 rounded-xl border border-borde object-cover" />}
+                {ficha.detalle.videoUrl && <span className="inline-flex items-center gap-1"><a href={ficha.detalle.videoUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-9 items-center rounded-lg border border-borde px-3 text-sm font-bold text-morado-profundo">Ver su video</a><InfoBoton que="Ver su video" texto="Abre el video de presentación del compita en YouTube, en otra pestaña." /></span>}
+                {ficha.tipo === 'compita' && !ficha.detalle.fotoUrl && <span className="text-sm text-texto-sutil">Sin foto</span>}
+                {ficha.tipo === 'compita' && !ficha.detalle.videoUrl && <span className="text-sm text-texto-sutil">Sin video</span>}
+              </div>
+            )}
+            {ficha.detalle.secciones.map((s) => (
+              <details key={s.titulo} className="rounded-xl border border-borde px-3 py-2" open={s.titulo === 'Cómo lo ve el cliente' || s.titulo === 'Su familiar'}>
+                <summary className="flex min-h-9 cursor-pointer items-center gap-1 text-sm font-extrabold">{s.titulo}{s.info && <InfoBoton que={s.titulo} texto={s.info} />}</summary>
+                {s.filas.length === 0 ? <p className="mt-1 text-sm text-texto-sutil">{s.vacio}</p> : (
+                  <ul className="mt-1 space-y-1.5">
+                    {s.filas.map((fila, i) => (
+                      <li key={i} className="text-sm [overflow-wrap:anywhere]">
+                        {fila.etiqueta && <span className="font-bold">{fila.etiqueta}: </span>}{fila.texto}
+                        {fila.meta && <span className="block text-xs text-texto-sutil">{fila.meta}</span>}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </details>
+            ))}
+          </section>
+        )}
+
         <section>
           <TituloBloque>Línea de tiempo</TituloBloque>
           {ficha.linea.length === 0 ? <p className="mt-2 text-sm text-texto-sutil">Todavía no hay nada que contar.</p> : (
