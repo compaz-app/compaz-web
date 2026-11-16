@@ -19,6 +19,18 @@ const etiquetaDuracion = (m: number) => (m === 60 ? '1 hora' : `${m} minutos`)
 const campo = { width: '100%', boxSizing: 'border-box' as const, minHeight: '48px', border: `1px solid ${colors.gris200}`, borderRadius: radius.md, padding: `${spacing.sm} ${spacing.md}`, fontSize: '16px', fontFamily: fonts.body, color: colors.textoOscuro, background: colors.blanco }
 const chip = (on: boolean) => ({ minHeight: '44px', padding: `0 ${spacing.md}`, borderRadius: radius.pill, fontSize: '15px', fontWeight: 700, cursor: 'pointer', fontFamily: fonts.body, border: on ? 'none' : `1px solid ${colors.gris200}`, background: on ? colors.moradoProfundo : colors.blanco, color: on ? colors.blanco : colors.textoOscuro })
 
+/** Pregunta de opciones (botones grandes, 44 px de alto): sirve en el teléfono y en el escritorio. */
+function PreguntaOpciones({ titulo, valor, opciones, onElegir }: { titulo: string; valor: string | null; opciones: [string, string][]; onElegir: (v: string) => void }) {
+  return (
+    <div style={{ marginTop: spacing.md }}>
+      <div style={{ fontWeight: 700, fontSize: '16px', color: colors.textoOscuro }}>{titulo} <span style={{ background: colors.amarilloClaro, color: colors.moradoProfundo, borderRadius: '4px', padding: '1px 6px', fontSize: '11px', fontWeight: 800, textTransform: 'uppercase' }}>Obligatorio</span></div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: spacing.xs, marginTop: spacing.xs }}>
+        {opciones.map(([id, texto]) => <button key={id} type="button" aria-pressed={valor === id} onClick={() => onElegir(id)} style={{ ...chip(valor === id), flex: 1, minWidth: '120px' }}>{texto}</button>)}
+      </div>
+    </div>
+  )
+}
+
 export default function SolicitarForm({ compitaId, compitaNombre, precioMandado, antifraude, familiar, tieneFotoInicial }: { compitaId: string; compitaNombre: string; precioMandado: number; antifraude: string; familiar: string | null; tieneFotoInicial: boolean }) {
   const router = useRouter()
   const sp = useSearchParams()
@@ -32,6 +44,11 @@ export default function SolicitarForm({ compitaId, compitaNombre, precioMandado,
   const [privado, setPrivado] = useState<boolean | null>(null)
   const [personas, setPersonas] = useState<string[]>([])
   const [nadie, setNadie] = useState(false)
+  // Seguridad del lugar: null = sin contestar todavía (se exige antes de enviar).
+  const [menores, setMenores] = useState<boolean | null>(null)
+  const [permanencia, setPermanencia] = useState<'toda' | 'parte' | null>(null)
+  const [animales, setAnimales] = useState<boolean | null>(null)
+  const [precaucion, setPrecaucion] = useState(false)
   const [avisoContacto, setAvisoContacto] = useState(false)
   const [enviando, setEnviando] = useState(false)
   const [error, setError] = useState('')
@@ -72,8 +89,10 @@ export default function SolicitarForm({ compitaId, compitaNombre, precioMandado,
 
   const principalListo = esMandado ? nota.trim().length > 0 && duracion !== null : !!que
   const personasListas = privado === false || (privado === true && (nadie || personas.length > 0))
-  const listo = principalListo && privado !== null && personasListas
+  const lugarListo = privado !== true || (animales !== null && (nadie || (menores !== null && permanencia !== null)))
+  const listo = principalListo && privado !== null && personasListas && lugarListo
   const faltaPersonas = privado === true && !nadie && personas.length === 0 && principalListo
+  const faltaLugar = privado === true && principalListo && personasListas && !lugarListo
 
   function cambiarModo(nuevo: Modo) {
     const p = new URLSearchParams(sp.toString())
@@ -93,6 +112,7 @@ export default function SolicitarForm({ compitaId, compitaNombre, precioMandado,
         body: JSON.stringify({
           compita_id: compitaId, tipo: modo, que: esMandado ? 'Mandado' : que, nota: nota.trim() || null,
           lugar_privado: privado, personas_en_lugar: privado ? (nadie ? [] : personas) : null, nadie_mas: privado ? nadie : undefined,
+          datos_lugar: privado ? { menores: nadie ? null : menores, permanencia: nadie ? null : permanencia, animales, precaucion } : undefined,
           duracion_min: esMandado ? duracion : undefined, con_foto: tieneFoto,
         }),
       })
@@ -182,7 +202,7 @@ export default function SolicitarForm({ compitaId, compitaNombre, precioMandado,
             <div style={{ fontWeight: 700, fontSize: '16px', color: colors.textoOscuro }}>¿Tu familiar estará en una casa u otro lugar privado?</div>
             <div style={{ display: 'flex', gap: spacing.xs, marginTop: spacing.xs }}>
               {[true, false].map((v) => (
-                <button key={String(v)} type="button" aria-pressed={privado === v} onClick={() => { setPrivado(v); if (!v) { setPersonas([]); setNadie(false) } }} style={{ ...chip(privado === v), flex: 1 }}>{v ? 'Sí' : 'No'}</button>
+                <button key={String(v)} type="button" aria-pressed={privado === v} onClick={() => { setPrivado(v); if (!v) { setPersonas([]); setNadie(false); setMenores(null); setPermanencia(null); setAnimales(null); setPrecaucion(false) } }} style={{ ...chip(privado === v), flex: 1 }}>{v ? 'Sí' : 'No'}</button>
               ))}
             </div>
             {privado === true && (
@@ -200,6 +220,21 @@ export default function SolicitarForm({ compitaId, compitaNombre, precioMandado,
                 )}
                 <button type="button" aria-pressed={nadie} onClick={() => { setNadie((n) => !n); setPersonas([]) }} style={{ ...chip(nadie), marginTop: spacing.sm }}>Nadie más, solo mi familiar</button>
                 <p style={{ color: colors.textoMedio, fontSize: '14px', lineHeight: 1.5, margin: `${spacing.xs} 0 0` }}>El compita ve el tipo de cada persona antes de aceptar. Sus nombres los cuentas después, en la ficha.</p>
+                {!nadie && personas.length > 0 && (
+                  <>
+                    <PreguntaOpciones titulo="¿Habrá menores de edad?" valor={menores === null ? null : menores ? 'si' : 'no'} opciones={[['si', 'Sí'], ['no', 'No']]} onElegir={(v) => setMenores(v === 'si')} />
+                    <PreguntaOpciones titulo="¿Esas personas estarán durante toda la visita?" valor={permanencia} opciones={[['toda', 'Toda la visita'], ['parte', 'Solo una parte']]} onElegir={(v) => setPermanencia(v as 'toda' | 'parte')} />
+                  </>
+                )}
+              </div>
+            )}
+            {privado === true && (
+              <div style={{ marginTop: spacing.md }}>
+                <PreguntaOpciones titulo="¿Hay animales en el lugar (perros, gatos u otros)?" valor={animales === null ? null : animales ? 'si' : 'no'} opciones={[['si', 'Sí'], ['no', 'No']]} onElegir={(v) => setAnimales(v === 'si')} />
+                <label style={{ display: 'flex', alignItems: 'flex-start', gap: spacing.xs, marginTop: spacing.md, fontSize: '15px', color: colors.textoOscuro, cursor: 'pointer' }}>
+                  <input type="checkbox" checked={precaucion} onChange={(e) => setPrecaucion(e.target.checked)} style={{ width: '20px', height: '20px', marginTop: '2px', flexShrink: 0 }} />
+                  <span>Hay alguien con quien el compita no debe quedarse a solas <span style={{ color: colors.textoSutil }}>(opcional)</span></span>
+                </label>
               </div>
             )}
             <p style={{ color: colors.textoMedio, fontSize: '14px', lineHeight: 1.5, margin: `${spacing.xs} 0 0` }}>
@@ -239,8 +274,8 @@ export default function SolicitarForm({ compitaId, compitaNombre, precioMandado,
           </button>
           <p style={{ background: colors.amarilloClaro, color: colors.moradoProfundo, borderRadius: radius.md, padding: spacing.sm, fontSize: '13px', lineHeight: 1.5, margin: 0 }}><b>Cuidado con los fraudes.</b> {antifraude}</p>
           {!listo && (
-            <p style={{ textAlign: 'center', fontSize: '14px', margin: '-8px 0 0', color: faltaPersonas ? colors.moradoProfundo : colors.textoSutil, fontWeight: faltaPersonas ? 700 : 400 }}>
-              {faltaPersonas ? 'Falta indicar quién más estará en el lugar, o elegir «Nadie más». Es obligatorio por seguridad.' : esMandado ? 'Cuéntanos qué necesitas, cuánto tomaría y si es un lugar privado (y quién más estará).' : 'Elige qué necesita tu familiar, si es un lugar privado y, si lo es, quién más estará.'}
+            <p style={{ textAlign: 'center', fontSize: '14px', margin: '-8px 0 0', color: faltaPersonas || faltaLugar ? colors.moradoProfundo : colors.textoSutil, fontWeight: faltaPersonas || faltaLugar ? 700 : 400 }}>
+              {faltaLugar ? 'Faltan las preguntas de seguridad del lugar (menores, tiempo y animales). Son obligatorias.' : faltaPersonas ? 'Falta indicar quién más estará en el lugar, o elegir «Nadie más». Es obligatorio por seguridad.' : esMandado ? 'Cuéntanos qué necesitas, cuánto tomaría y si es un lugar privado (y quién más estará).' : 'Elige qué necesita tu familiar, si es un lugar privado y, si lo es, quién más estará.'}
             </p>
           )}
         </div>

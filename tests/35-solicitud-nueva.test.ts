@@ -12,18 +12,30 @@ import { GET as pagoInfo } from '@/app/api/pago/info/route'
 beforeEach(limpiar)
 
 const base = { tipo: 'directa', que: 'Compañía y conversación', lugar_privado: false }
-const privado = { ...base, lugar_privado: true, personas_en_lugar: ['Familiar', 'Vecino o vecina'] }
+const lugarOk = { menores: false, permanencia: 'toda', animales: false }
+const privado = { ...base, lugar_privado: true, personas_en_lugar: ['Familiar', 'Vecino o vecina'], datos_lugar: lugarOk }
 
 describe('validación del formulario nuevo', () => {
   const ok = (b: Record<string, unknown>) => { const r = validarSolicitudNueva(b); assert.equal(r.ok, true, JSON.stringify(r)); return (r as any).valor }
   const mal = (b: Record<string, unknown>, texto: RegExp) => { const r = validarSolicitudNueva(b); assert.equal(r.ok, false); assert.match((r as any).error, texto) }
 
   test('casos válidos: directa, entrevista, mandado, y lugar privado con personas o con "nadie más"', () => {
-    assert.deepEqual(ok(base), { tipo: 'directa', que: 'Compañía y conversación', nota: null, lugar_privado: false, personas_en_lugar: null, duracion_min: null })
+    assert.deepEqual(ok(base), { tipo: 'directa', que: 'Compañía y conversación', nota: null, lugar_privado: false, personas_en_lugar: null, duracion_min: null, datos_lugar: null })
     assert.equal(ok({ ...base, tipo: 'entrevista' }).tipo, 'entrevista')
     assert.deepEqual(ok(privado).personas_en_lugar, ['Familiar', 'Vecino o vecina'])
-    assert.deepEqual(ok({ ...base, lugar_privado: true, nadie_mas: true, personas_en_lugar: [] }).personas_en_lugar, [], 'lista vacía = nadie más')
-    assert.deepEqual(ok({ tipo: 'mandado', nota: 'Llevar unos papeles a Chacao', duracion_min: 30, lugar_privado: false }), { tipo: 'mandado', que: 'Mandado', nota: 'Llevar unos papeles a Chacao', lugar_privado: false, personas_en_lugar: null, duracion_min: 30 })
+    assert.deepEqual(ok({ ...base, lugar_privado: true, nadie_mas: true, personas_en_lugar: [], datos_lugar: { animales: true } }).personas_en_lugar, [], 'lista vacía = nadie más')
+    assert.deepEqual(ok({ tipo: 'mandado', nota: 'Llevar unos papeles a Chacao', duracion_min: 30, lugar_privado: false }), { tipo: 'mandado', que: 'Mandado', nota: 'Llevar unos papeles a Chacao', lugar_privado: false, personas_en_lugar: null, duracion_min: 30, datos_lugar: null })
+  })
+
+  test('seguridad del lugar: animales siempre; menores y permanencia si estará alguien más; precaución opcional', () => {
+    assert.deepEqual(ok({ ...privado, datos_lugar: { menores: true, permanencia: 'parte', animales: true, precaucion: true } }).datos_lugar, { menores: true, permanencia: 'parte', animales: true, precaucion: true })
+    assert.deepEqual(ok({ ...base, lugar_privado: true, nadie_mas: true, personas_en_lugar: [], datos_lugar: { animales: false, menores: true } }).datos_lugar, { menores: null, permanencia: null, animales: false, precaucion: false }, 'con nadie más no aplican menores ni permanencia')
+    mal({ ...privado, datos_lugar: undefined }, /animales/)
+    mal({ ...privado, datos_lugar: { menores: false, permanencia: 'toda' } }, /animales/)
+    mal({ ...privado, datos_lugar: { permanencia: 'toda', animales: false } }, /menores/)
+    mal({ ...privado, datos_lugar: { menores: false, animales: false } }, /toda la visita o solo una parte/)
+    mal({ ...privado, datos_lugar: { ...lugarOk, permanencia: 'siempre' } }, /toda la visita o solo una parte/)
+    mal({ ...privado, datos_lugar: { ...lugarOk, precaucion: 'si' } }, /precaución/)
   })
 
   test('tipo y "qué necesita" deben ser de la lista', () => {
@@ -109,6 +121,8 @@ describe('POST /api/solicitudes con el contrato nuevo', () => {
     assert.ok(!m.text.includes('Rojas'), 'no ve el apellido del cliente antes de pagar')
     assert.match(m.text, /Qué se hará:<\/b> Compañía y conversación/)
     assert.match(m.text, /Además de su familiar estarán: 1 familiar, 1 vecino o vecina/)
+    assert.match(m.text, /Menores de edad:<\/b> No/); assert.match(m.text, /estarán:<\/b> toda la visita/); assert.match(m.text, /Animales en el lugar:<\/b> No/)
+    assert.ok(!/Precaución/.test(m.text), 'sin precaución no hay advertencia')
     assert.ok(!/Horarios propuestos|llamada de 20/.test(m.text), 'una directa no lleva horarios')
     const botones = m.markup.inline_keyboard.flat().map((b: any) => b.callback_data)
     assert.equal(botones.length, 2)
@@ -119,8 +133,9 @@ describe('POST /api/solicitudes con el contrato nuevo', () => {
 
   test('"nadie más" se muestra como tal y un lugar que no es privado no menciona personas', async () => {
     const { compita } = mundo()
-    await pedir(compita, { ...base, lugar_privado: true, nadie_mas: true, personas_en_lugar: [] })
+    await pedir(compita, { ...base, lugar_privado: true, nadie_mas: true, personas_en_lugar: [], datos_lugar: { animales: true, precaucion: true } })
     assert.match(tgPara(9300)[0].text, /Nadie más, solo su familiar/)
+    assert.match(tgPara(9300)[0].text, /Animales en el lugar:<\/b> Sí/); assert.match(tgPara(9300)[0].text, /Precaución:<\/b> el cliente indicó/); assert.ok(!/Menores de edad/.test(tgPara(9300)[0].text))
     limpiarSolicitud()
     await pedir(compita, base)
     const t = tgPara(9300).at(-1)!.text

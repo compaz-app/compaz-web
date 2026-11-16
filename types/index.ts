@@ -74,6 +74,8 @@ export interface Usuario {
   pais?: string | null
   parentesco?: string | null
   lugar_privado?: boolean | null
+  /** Seguridad del lugar privado (menores, permanencia, animales, precaución). */
+  datos_lugar?: { menores: boolean | null; permanencia: 'toda' | 'parte' | null; animales: boolean; precaucion: boolean } | null
   ficha_personas?: string | null
   ficha_sin_nadie?: boolean | null
   terminos_version?: string | null

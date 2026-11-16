@@ -118,7 +118,7 @@ export async function POST(req: NextRequest) {
       sobre_cliente: sobre_cliente || null,
       slots_propuestos,
       franja_horaria,
-      ...(nueva ? { tipo: nueva.tipo, que: nueva.que, lugar_privado: nueva.lugar_privado, personas_en_lugar: nueva.personas_en_lugar } : {}),
+      ...(nueva ? { tipo: nueva.tipo, que: nueva.que, lugar_privado: nueva.lugar_privado, personas_en_lugar: nueva.personas_en_lugar, datos_lugar: nueva.datos_lugar } : {}),
     })
   } catch (e) {
     console.error('[solicitudes] error:', e)

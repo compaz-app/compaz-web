@@ -62,6 +62,18 @@ export function textoPersonas(personas: unknown): string | null {
   return 'Además de su familiar estarán: ' + [...cuenta].map(([t, n]) => (n > 1 ? `${n} × ${t.toLowerCase()}` : `1 ${t.toLowerCase()}`)).join(', ')
 }
 
+/** Líneas de seguridad del lugar para el compita (Telegram). Filas anteriores a este dato no tienen nada y no muestran nada. */
+export function lineasDatosLugar(d: unknown): string[] {
+  if (!d || typeof d !== 'object') return []
+  const x = d as { menores?: boolean | null; permanencia?: string | null; animales?: boolean; precaucion?: boolean }
+  const l: string[] = []
+  if (typeof x.menores === 'boolean') l.push(`<b>Menores de edad:</b> ${x.menores ? 'Sí' : 'No'}`)
+  if (x.permanencia === 'toda' || x.permanencia === 'parte') l.push(`<b>Esas personas estarán:</b> ${x.permanencia === 'toda' ? 'toda la visita' : 'solo una parte'}`)
+  if (typeof x.animales === 'boolean') l.push(`<b>Animales en el lugar:</b> ${x.animales ? 'Sí' : 'No'}`)
+  if (x.precaucion) l.push(`⚠️ <b>Precaución:</b> el cliente indicó que hay una persona con quien no debes quedarte a solas. Si no te sientes cómodo, puedes no aceptar.`)
+  return l
+}
+
 // Contratación directa y mandado: sin horarios ni sala. El compita acepta ANTES de que el cliente pague.
 function avisoSinHorario(s: Record<string, unknown>, clienteNombre: string): Contenido {
   const primero = esc(clienteNombre.split(' ')[0])
@@ -76,6 +88,7 @@ function avisoSinHorario(s: Record<string, unknown>, clienteNombre: string): Con
     `<b>Qué se hará:</b> ${esc(String(s.mensaje ?? ''))}`,
     `<b>¿Lugar privado?</b> ${s.lugar_privado ? 'Sí' : 'No'}`,
     ...(personas ? [`<b>Personas en el lugar:</b> ${esc(personas)}`] : []),
+    ...lineasDatosLugar(s.datos_lugar),
     ``,
     esEntrevista
       ? `Si aceptas, el cliente elige una de tus horas libres y te pide que la confirmes. Si no puedes, no pasa nada.`

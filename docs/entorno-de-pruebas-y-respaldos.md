@@ -38,6 +38,7 @@ Hoy **local y producción comparten la misma base de Supabase**: cualquier prueb
 - 20261112_resenas_permiso.sql
 - 20261113_indices_panel.sql
 - 20261115_compita_intereses_futuros.sql
+- 20261115b_solicitud_datos_lugar.sql
 
    (Las de captación y las de rediseño ya traen `if not exists`; si alguna falla por orden, aplícala otra vez al final.)
 3. Authentication, Sign In / Providers: deja igual que en producción: registros desactivados y "Confirm email" activo (ver abajo).
