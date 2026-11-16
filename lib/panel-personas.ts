@@ -113,7 +113,7 @@ export async function fichaDePersona(actor: Actor, tipo: TipoPersona, id: string
     const [linea, canc, notas] = await Promise.all([lineaDe(actor, 'compita', id), resumenCancelacionesCompita(id), listarNotas(actor, 'compita', id)])
     return { tipo, id, nombre: [c.nombre, c.apellido].filter(Boolean).join(' '), zona: String(c.zona ?? ''), contacto: { correo: !!c.email, telefono: !!c.telefono }, linea, notas, canc, cmc: estadoCmc(c as unknown as Compita),
       // Una cuenta eliminada se ve (por el historial) pero ya no tiene acciones.
-      perfil: puede(actor, 'cuentas') && !esCuentaEliminada(c.nombre) ? { zona: String(c.zona ?? ''), descripcion: String(c.descripcion ?? ''), servicios: Array.isArray(c.servicios) ? c.servicios.map(String) : [], youtube: String(c.youtube_url ?? ''), fotoUrl: c.foto_url ? String(c.foto_url) : null } : undefined,
+      perfil: puede(actor, 'cuentas') && !esCuentaEliminada(c.nombre) ? { zona: String(c.zona ?? ''), descripcion: String(c.descripcion ?? ''), servicios: Array.isArray(c.servicios) ? c.servicios.map(String) : [], youtube: String(c.youtube_url ?? ''), fotoUrl: c.foto_url ? String(c.foto_url) : null, intereses: Array.isArray(c.intereses_futuros) ? c.intereses_futuros.map(String) : [] } : undefined,
       cuenta: esCuentaEliminada(c.nombre) ? undefined : { bloqueado: c.estado === 'bloqueado', verificado: !!c.verificado, activo: c.estado === 'activo' } }
   }
   const { data: u } = await db.from('usuarios').select('id, nombre, zona, email, telefono, compita_id, eliminada_en, plan, portal_nuevo').eq('id', id).maybeSingle()

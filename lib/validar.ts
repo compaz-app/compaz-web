@@ -1,5 +1,6 @@
 // Validación de entradas de perfil de compita (self-service, onboarding y admin).
 import { esc } from '@/lib/html'
+import { INTERESES_COMPITA, type IdServicioProximo } from '@/lib/servicios-proximos'
 
 const HOSTS_YOUTUBE = ['youtube.com', 'www.youtube.com', 'm.youtube.com', 'youtu.be']
 const DIAS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo']
@@ -24,12 +25,13 @@ export function esUrlFotoPropia(url: string | null | undefined): boolean {
 
 export type PerfilEntrada = {
   nombre?: unknown; zona?: unknown; descripcion?: unknown; servicios?: unknown
-  youtube_url?: unknown; foto_url?: unknown; horarios_disponibles?: unknown
+  youtube_url?: unknown; foto_url?: unknown; horarios_disponibles?: unknown; intereses_futuros?: unknown
 }
 export type PerfilLimpio = {
   nombre?: string; zona?: string; descripcion?: string; servicios?: string[]
   youtube_url?: string | null; foto_url?: string | null
   horarios_disponibles?: { dia: string; inicio: string; fin: string }[]
+  intereses_futuros?: string[]
 }
 
 const texto = (v: unknown, max: number): string | null =>
@@ -83,6 +85,10 @@ export function validarPerfil(e: PerfilEntrada | Record<string, unknown>, opts: 
       hs.push({ dia: h.dia, inicio: h.inicio, fin: h.fin })
     }
     out.horarios_disponibles = hs
+  }
+  if (e.intereses_futuros !== undefined) {
+    if (!Array.isArray(e.intereses_futuros) || e.intereses_futuros.some((x) => typeof x !== 'string' || !INTERESES_COMPITA.includes(x as IdServicioProximo))) return { ok: false, error: 'Intereses inválidos' }
+    out.intereses_futuros = [...new Set(e.intereses_futuros as string[])]
   }
   return { ok: true, datos: out }
 }

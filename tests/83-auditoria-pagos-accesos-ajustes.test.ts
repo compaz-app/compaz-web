@@ -426,7 +426,7 @@ describe('líneas de servicio futuras: se muestran como "Próximamente" y nada d
     for (const s of SERVICIOS_PROXIMOS) { assert.ok(s.titulo && s.corto && s.descripcion.length > 40, s.id) }
     assert.equal(ETIQUETA_PROXIMAMENTE, 'Próximamente')
     assert.match(SERVICIOS_PROXIMOS.find((s) => s.id === 'voluntariado')!.descripcion, /no cobra ni paga nada/)       // Compaz es solo el puente
-    assert.match(SERVICIOS_PROXIMOS.find((s) => s.id === 'mascotas')!.paraCompitas!, /preguntas adicionales/)          // verificación aparte
+    assert.ok(SERVICIOS_PROXIMOS.find((s) => s.id === 'mascotas')!.paraCompitas!.length < 90)          // solo de qué trata, sin detalles
   })
   test('están colocados donde irán: portal, pago, registro y perfil del compita y panel', () => {
     const esta = (f: string, re: RegExp) => assert.match(leer(f, 'utf8'), re, f)
@@ -434,14 +434,14 @@ describe('líneas de servicio futuras: se muestran como "Próximamente" y nada d
     esta('app/portal/page.tsx', /TarjetasProximamente grande=\{false\} ids=\{\['voluntariado', 'mascotas'\]\}/)
     esta('components/portal/SeccionPlan.tsx', /ids=\{\['donar_horas'\]\}/)
     esta('app/pago/page.tsx', /donar_horas/)
-    esta('app/onboarding/page.tsx', /<OpcionesProximamenteCompita \/>/)
-    esta('app/compita/perfil/EditarPerfil.tsx', /<OpcionesProximamenteCompita \/>/)
+    esta('app/onboarding/page.tsx', /<OpcionesProximamenteCompita /)
+    esta('app/compita/perfil/EditarPerfil.tsx', /<OpcionesProximamenteCompita /)
     esta('components/panel/mas/Hub.tsx', /TarjetasProximamente/)
   })
-  test('no hay nada activo: sin enlaces, sin botones y con las casillas deshabilitadas', () => {
+  test('no hay nada activo: sin enlaces ni botones; las casillas solo guardan el interés', () => {
     const c = leer('components/ui/Proximamente.tsx', 'utf8')
     assert.doesNotMatch(c, /<a |<Link|href=|<button|onClick|router\./)
-    assert.match(c, /type="checkbox" disabled/)
+    assert.match(c, /type="checkbox" checked=/)
   })
   test('ninguna ruta, tabla ni ajuste de estas líneas existe todavía', () => {
     for (const ruta of ['app/voluntariado', 'app/mascotas', 'app/api/voluntariado', 'app/api/mascotas']) assert.throws(() => statSync(ruta), ruta)

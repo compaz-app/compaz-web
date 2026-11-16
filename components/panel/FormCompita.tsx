@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Boton from '@/components/ui/base/Boton'
 
 const CAMPO = 'min-h-9 w-full rounded-lg border border-borde bg-blanco px-2 text-sm'
-export interface PerfilCompita { zona: string; descripcion: string; servicios: string[]; youtube: string; fotoUrl: string | null }
+export interface PerfilCompita { zona: string; descripcion: string; servicios: string[]; youtube: string; fotoUrl: string | null; intereses?: string[] }
 
 // El perfil de un compita: se usa para registrarlo a mano (modo "registrar") y para corregir su perfil desde la ficha (modo "editar"). Las rutas
 // piden el permiso en el servidor. Un compita registrado a mano queda inactivo y sin verificar: se activa después desde su ficha.
@@ -74,6 +74,7 @@ export default function FormCompita({ modo, id, inicial, onListo }: { modo: 'reg
       <label className="block text-xs text-texto-medio">Foto (JPG, PNG o WEBP, máximo 5 MB){modo === 'editar' && inicial?.fotoUrl ? ' · ya tiene una; elige otra solo para cambiarla' : ''}
         <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => setFoto(e.target.files?.[0] ?? null)} disabled={cargando} className="mt-1 block w-full text-sm" />
       </label>
+      {modo === 'editar' && <p className="text-xs text-texto-medio">Interés en servicios futuros: {inicial?.intereses?.length ? inicial.intereses.map((i) => (i === 'mascotas' ? 'cuidado de mascotas' : i)).join(', ') : 'ninguno'}</p>}
       {msg && <p role={msg.ok ? 'status' : 'alert'} className={`text-sm font-bold ${msg.ok ? 'text-verde-oscuro' : 'text-rojo-oscuro'}`}>{msg.texto}</p>}
       <div className="flex justify-end">
         <Boton tamano="compacto" cargando={cargando} disabled={!completo} onClick={guardar} info={modo === 'registrar' ? 'Crea el perfil del compita. Queda inactivo y sin verificar hasta que lo actives desde su ficha. Si pusiste correo, se le envía la bienvenida.' : 'Guarda los cambios del perfil. Se ven de inmediato en su perfil público.'}>{modo === 'registrar' ? 'Registrar compita' : 'Guardar perfil'}</Boton>

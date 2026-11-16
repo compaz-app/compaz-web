@@ -41,8 +41,21 @@ describe('emojis solo en Telegram y estrellas', () => {
 
 describe('perfil del compita', () => {
   test('el registro y el perfil tienen la sección "Cuidador de mascotas" (Próximamente), sin campos que se envíen', () => {
-    for (const f of ['app/onboarding/page.tsx', 'app/compita/perfil/EditarPerfil.tsx']) assert.match(readFileSync(f, 'utf8'), /<SeccionCuidadorMascotas \/>/, f)
+    for (const f of ['app/onboarding/page.tsx', 'app/compita/perfil/EditarPerfil.tsx']) assert.match(readFileSync(f, 'utf8'), /<SeccionCuidadorMascotas /, f)
     const c = readFileSync('components/ui/Proximamente.tsx', 'utf8')
-    assert.match(c, /Cuidador de mascotas/); assert.match(c, /Más adelante te preguntaremos/); assert.doesNotMatch(c, /<input(?![^>]*disabled)/)
+    assert.match(c, /Cuidado de mascotas/); assert.doesNotMatch(c, /Más adelante te preguntaremos/); assert.doesNotMatch(c, /<input[^>]*disabled/)   // las casillas funcionan: guardan el interés
+  })
+})
+
+describe('interés en servicios futuros', () => {
+  test('validarPerfil acepta solo líneas conocidas y sin repetir', async () => {
+    const { validarPerfil } = await import('../lib/validar')
+    const bien = validarPerfil({ intereses_futuros: ['mascotas', 'voluntariado', 'mascotas'] })
+    assert.ok(bien.ok && bien.datos.intereses_futuros?.length === 2)
+    assert.equal(validarPerfil({ intereses_futuros: ['otra'] }).ok, false)
+    assert.equal(validarPerfil({ intereses_futuros: 'mascotas' }).ok, false)
+  })
+  test('el registro, la corrección y el perfil guardan intereses_futuros', () => {
+    for (const f of ['app/api/onboarding/registrar/route.ts', 'lib/onboarding-compita.ts', 'app/api/compita/perfil/route.ts', 'lib/compitas.ts']) assert.match(readFileSync(f, 'utf8'), /intereses_futuros/, f)
   })
 })

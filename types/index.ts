@@ -40,6 +40,8 @@ export interface Compita {
   youtube_url: string | null
   codigo: string | null
   horarios_disponibles: HorarioDisponible[] | null
+  /** Líneas futuras que dijo querer ofrecer (voluntariado, mascotas). Solo interés. */
+  intereses_futuros?: string[] | null
   created_at: string
   // Rating público (promedio 1-5 de visitas calificadas)
   rating_promedio: number | null

@@ -62,6 +62,7 @@ export default async function CompitaPerfilPage({ searchParams }: Props) {
             youtube_url: compita.youtube_url ?? '',
             foto_url: compita.foto_url ?? '',
             horarios_disponibles: compita.horarios_disponibles ?? [],
+            intereses_futuros: compita.intereses_futuros ?? [],
           }}
         />
       </div>

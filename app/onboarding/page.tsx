@@ -143,6 +143,7 @@ function OnboardingForm() {
     telefono: '',
     descripcion: '',
     servicios: [] as string[],
+    intereses_futuros: [] as string[],
     habilidades: '',
     youtube_url: '',
   })
@@ -293,7 +294,7 @@ function OnboardingForm() {
       const res = await fetch(corrigiendo ? '/api/onboarding/corregir' : '/api/onboarding/registrar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nombre: form.nombre, email: form.email, telefono: form.telefono, descripcion: form.descripcion, servicios: form.servicios, habilidades: form.habilidades, youtube_url: form.youtube_url, zona, foto_url, token, horarios_disponibles: horarios, ...(corrigiendo ? { edit_token: editToken } : {}) }),
+        body: JSON.stringify({ nombre: form.nombre, email: form.email, telefono: form.telefono, descripcion: form.descripcion, servicios: form.servicios, habilidades: form.habilidades, intereses_futuros: form.intereses_futuros, youtube_url: form.youtube_url, zona, foto_url, token, horarios_disponibles: horarios, ...(corrigiendo ? { edit_token: editToken } : {}) }),
       })
 
       if (res.ok) {
@@ -553,8 +554,8 @@ function OnboardingForm() {
             />
           </div>
 
-          <OpcionesProximamenteCompita />
-          <SeccionCuidadorMascotas />
+          <OpcionesProximamenteCompita valor={form.intereses_futuros} onChange={(v) => setForm({ ...form, intereses_futuros: v })} />
+          <SeccionCuidadorMascotas valor={form.intereses_futuros} onChange={(v) => setForm({ ...form, intereses_futuros: v })} />
 
           {/* Foto */}
           <div>

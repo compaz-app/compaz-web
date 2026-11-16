@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
     await alertaAdmin('actividad', `⚠️ <b>Validación fallida en onboarding</b>\n\n<b>Nombre:</b> ${body.nombre ?? '—'}\n<b>Email:</b> ${email ?? '—'}\n<b>Error:</b> ${v.error}`)
     return err(v.error)
   }
-  const { nombre, zona, descripcion, servicios, foto_url, youtube_url, horarios_disponibles } = v.datos
+  const { nombre, zona, descripcion, servicios, foto_url, youtube_url, horarios_disponibles, intereses_futuros } = v.datos
   const habil = typeof habilidades === 'string' ? habilidades.trim().slice(0, 500) : ''
 
   // Una Compita habilitada en el CMC ya tiene perfil: no crear otro (se comprueba antes de gastar el token)
@@ -80,6 +80,7 @@ export async function POST(req: NextRequest) {
     foto_url: foto_url ?? null,
     youtube_url: youtube_url ?? null,
     horarios_disponibles: horarios_disponibles ?? [],
+    intereses_futuros: intereses_futuros ?? [],
     estado: 'activo',
     verificado: false,
     visitas_realizadas: 0,

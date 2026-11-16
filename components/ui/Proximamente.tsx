@@ -49,24 +49,27 @@ export function TarjetasProximamente({ ids, grande = true }: { ids?: readonly Id
   return <div className={`grid gap-3 ${grande ? 'md:grid-cols-2' : 'sm:grid-cols-2'}`}>{lista.map((s) => <TarjetaProximamente key={s.id} s={s} grande={grande} />)}</div>
 }
 
+const alternar = (valor: readonly string[], id: string) => (valor.includes(id) ? valor.filter((x) => x !== id) : [...valor, id])
+
 /**
- * Las casillas del registro y del perfil del compita: lo que podrá ofrecer más adelante. Deshabilitadas a propósito: todavía no se activan. Dice qué
- * significará para él (por ejemplo, las preguntas adicionales de las mascotas).
+ * Las casillas del registro y del perfil del compita: lo que podrá ofrecer más adelante. Marcarlas solo guarda su interés (no activa nada todavía):
+ * el equipo lo usa para avisarle cuando la línea abra. Mascotas tiene su propia sección (SeccionCuidadorMascotas).
  */
-export function OpcionesProximamenteCompita() {
-  // Las mascotas tienen su propia sección (SeccionCuidadorMascotas): aquí solo lo que no la tiene.
+export function OpcionesProximamenteCompita({ valor, onChange }: { valor: readonly string[]; onChange: (v: string[]) => void }) {
   const ofrecibles = SERVICIOS_PROXIMOS.filter((s) => s.paraCompitas && s.id !== 'mascotas')
   return (
     <fieldset className="rounded-2xl border-2 border-dashed border-borde-lavanda bg-fondo-lavanda p-4">
       <legend className="px-1 text-sm font-extrabold text-morado-medio">Lo que podrás ofrecer más adelante <span className="ml-1 text-xs font-bold text-texto-sutil">({ETIQUETA_PROXIMAMENTE.toLowerCase()})</span></legend>
       <ul className="space-y-3">
         {ofrecibles.map((s) => (
-          <li key={s.id} className="flex items-start gap-3">
-            <input type="checkbox" disabled aria-label={`${s.titulo}, ${ETIQUETA_PROXIMAMENTE.toLowerCase()}`} className="mt-1 h-4 w-4 shrink-0 opacity-50" />
-            <div className="min-w-0 text-sm">
-              <p className="font-bold text-texto-oscuro">{s.titulo} <span className="ml-1 rounded-full bg-morado-medio px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-blanco">{ETIQUETA_PROXIMAMENTE}</span></p>
-              <p className="mt-0.5 text-texto-medio">{s.paraCompitas}</p>
-            </div>
+          <li key={s.id}>
+            <label className="flex cursor-pointer items-start gap-3">
+              <input type="checkbox" checked={valor.includes(s.id)} onChange={() => onChange(alternar(valor, s.id))} className="mt-1 h-4 w-4 shrink-0 accent-morado-medio" />
+              <span className="min-w-0 text-sm">
+                <span className="block font-bold text-texto-oscuro">{s.titulo} <span className="ml-1 rounded-full bg-morado-medio px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-blanco">{ETIQUETA_PROXIMAMENTE}</span></span>
+                <span className="mt-0.5 block text-texto-medio">{s.paraCompitas}</span>
+              </span>
+            </label>
           </li>
         ))}
       </ul>
@@ -74,23 +77,17 @@ export function OpcionesProximamenteCompita() {
   )
 }
 
-/**
- * Sección propia del perfil del compita para quien quiera cuidar mascotas. Todavía no se activa: solo dice que viene y qué se le preguntará, para que sepa
- * qué esperar. No tiene campos que se envíen.
- */
-export function SeccionCuidadorMascotas() {
+/** Sección del perfil del compita para el cuidado de mascotas: dice de qué trata y deja marcar su interés. */
+export function SeccionCuidadorMascotas({ valor, onChange }: { valor: readonly string[]; onChange: (v: string[]) => void }) {
   const m = SERVICIOS_PROXIMOS.find((x) => x.id === 'mascotas')!
   return (
     <section aria-labelledby="cuidador-mascotas" className="rounded-2xl border-2 border-dashed border-amarillo-marca bg-amarillo-claro p-4">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-        <span aria-hidden className="grid h-9 w-9 place-items-center rounded-xl bg-blanco text-ambar-oscuro shadow-sm"><Icono nombre="huella" className="h-6 w-6" /></span>
-        <h3 id="cuidador-mascotas" className="text-base font-extrabold text-ambar-oscuro">Cuidador de mascotas</h3>
+        <h3 id="cuidador-mascotas" className="text-base font-extrabold text-ambar-oscuro">Cuidado de mascotas</h3>
         <Insignia id="mascotas" />
       </div>
-      <p className="mt-2 text-sm text-texto-medio">{m.paraCompitas}</p>
-      <p className="mt-3 text-xs font-extrabold uppercase tracking-wide text-ambar-oscuro">Más adelante te preguntaremos</p>
-      <ul className="mt-1 list-disc space-y-0.5 pl-5 text-sm text-texto-medio">{m.preguntasFuturas?.map((q) => <li key={q}>{q}</li>)}</ul>
-      <label className="mt-3 flex items-center gap-2 text-sm text-texto-sutil"><input type="checkbox" disabled className="h-4 w-4 opacity-50" />Quiero ofrecer este servicio (se activará cuando esté disponible)</label>
+      <p className="mt-1 text-sm text-texto-medio">{m.paraCompitas}</p>
+      <label className="mt-3 flex cursor-pointer items-center gap-2 text-sm text-texto-oscuro"><input type="checkbox" checked={valor.includes('mascotas')} onChange={() => onChange(alternar(valor, 'mascotas'))} className="h-4 w-4 accent-ambar-oscuro" />Quiero ofrecer este servicio</label>
     </section>
   )
 }
