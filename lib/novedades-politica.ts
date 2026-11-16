@@ -26,6 +26,7 @@ export const NIVEL_POR_PLANTILLA: Partial<Record<NombrePlantilla, NivelNovedad>>
   reserva_vencida: 'accionable', direccion_faltante_cliente: 'accionable', cita_rechazada_cliente: 'accionable', cita_sin_respuesta_cliente: 'accionable',
   recordatorio_cliente: 'accionable',
   compita_en_camino: 'informativo', lugar_respuesta: 'informativo', cita_propuesta_cliente: 'informativo', pago_confirmado: 'informativo',
+  visita_resumen: 'informativo', visita_reporte: 'informativo',
 }
 
 /** La frase corta de cada novedad, como se ve en el portal (campana y avisos). Sin emojis ni guiones. */
@@ -50,6 +51,8 @@ export const TITULO_NOVEDAD: Partial<Record<NombrePlantilla, string>> = {
   cita_sin_respuesta_cliente: 'Tu compita aún no confirma la hora.',
   todo_bien: '¿Todo bien en la visita?',
   recordatorio_cliente: 'Tienes un recordatorio.',
+  visita_resumen: 'La visita terminó. Ya puedes calificarla.',
+  visita_reporte: 'El reporte de bienestar de la visita está listo.',
 }
 export const TITULO_NOVEDAD_GENERICO = 'Tienes una novedad en tu portal.'
 

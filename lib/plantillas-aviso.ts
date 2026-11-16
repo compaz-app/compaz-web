@@ -9,7 +9,7 @@ import { makeInlineKeyboard } from '@/lib/telegram'
 import { esc } from '@/lib/html'
 import { SITE_URL } from '@/lib/email'
 import { qRol } from '@/lib/links'
-import { armarSolicitudCompita } from '@/lib/resend'
+import { armarSolicitudCompita, armarVisitaResumen, armarResumenConReporte } from '@/lib/resend'
 import { getAjuste, getAjustes } from '@/lib/ajustes'
 import { PLANES, ETIQUETA_METODO, TEXTO_REEMBOLSO, type PlanId, type MetodoPago } from '@/lib/planes'
 
@@ -35,6 +35,7 @@ export type NombrePlantilla = 'solicitud_nueva' | 'directa_aceptada' | 'pago_con
   | 'entrevista_aceptada' | 'reserva_pedida' | 'reserva_rechazada' | 'reserva_vencida' | 'lugar_respuesta' | 'direccion_visita' | 'direccion_faltante_cliente' | 'compita_en_camino'
   | 'compita_llego' | 'nadie_abre_cliente' | 'visita_sin_acceso_cliente' | 'nadie_abre_cerrar'
   | 'salida_seguridad_cliente' | 'todo_bien' | 'recordatorio_cliente' | 'cancelacion_equipo_cliente' | 'pausa_cuenta_cliente' | 'pausa_cuenta_decision' | 'cita_propuesta_cliente' | 'cita_rechazada_cliente' | 'cita_sin_respuesta_cliente'
+  | 'visita_resumen' | 'visita_reporte'
 
 const etiquetaSlot = (iso: string) =>
   new Date(iso).toLocaleString('es-VE', {
@@ -711,6 +712,47 @@ const recordatorioCliente: Plantilla = {
   },
 }
 
+// Fin de la visita: el resumen básico (al terminar) y el reporte de bienestar (cuando el compita termina el cuestionario). Los dos se arman al enviar, con lo que
+// hay en la base, y salen por el sistema de avisos: el portal ya lo muestra en vivo y el correo es el respaldo (se cancela si el cliente lo vio, se junta con otros).
+const visitaResumen: Plantilla = {
+  canales: ['correo'],
+  async render(v) {
+    const admin = createAdminSupabase()
+    const { data: vis } = await admin.from('visitas').select('*').eq('id', String(v.visitaId ?? '')).maybeSingle()
+    if (!vis || vis.estado !== 'terminada' || !vis.inicio || !vis.fin) return null
+    const [{ data: usuario }, { data: compita }, { data: mensajes }, { count: anteriores }] = await Promise.all([
+      admin.from('usuarios').select('*').eq('id', vis.usuario_id).maybeSingle(),
+      admin.from('compitas').select('*').eq('id', vis.compita_id).maybeSingle(),
+      admin.from('mensajes').select('*').eq('visit_id', vis.id).order('created_at', { ascending: true }),
+      admin.from('visitas').select('id', { count: 'exact', head: true }).eq('usuario_id', vis.usuario_id).eq('compita_id', vis.compita_id).eq('estado', 'terminada').neq('id', vis.id),
+    ])
+    if (!usuario || !compita) return null
+    const c = armarVisitaResumen(usuario as never, compita as never, vis as never, (mensajes ?? []) as never, (anteriores ?? 0) > 0)
+    return { correo: { asunto: c.asunto, html: c.html } }
+  },
+}
+
+const visitaReporte: Plantilla = {
+  canales: ['correo'],
+  async render(v) {
+    const admin = createAdminSupabase()
+    const { data: rep } = await admin.from('reportes_visita').select('*').eq('id', String(v.reporteId ?? '')).maybeSingle()
+    if (!rep) return null
+    const { data: vis } = await admin.from('visitas').select('*').eq('id', rep.visita_id).maybeSingle()
+    if (!vis || !vis.inicio || !vis.fin) return null
+    const [{ data: usuario }, { data: compita }, { data: mensajes }, { data: previas }] = await Promise.all([
+      admin.from('usuarios').select('*').eq('id', vis.usuario_id).maybeSingle(),
+      admin.from('compitas').select('*').eq('id', vis.compita_id).maybeSingle(),
+      admin.from('mensajes').select('*').eq('visit_id', vis.id).order('created_at', { ascending: true }),
+      admin.from('visitas').select('id, compita_id').eq('usuario_id', vis.usuario_id).neq('id', vis.id).eq('estado', 'terminada'),
+    ])
+    if (!usuario || !compita) return null
+    const esRecurrente = ((previas ?? []) as { compita_id?: string }[]).some((x) => x.compita_id === vis.compita_id)
+    const c = armarResumenConReporte(usuario as never, compita as never, vis as never, (mensajes ?? []) as never, rep as never, String(rep.resumen_ia ?? ''), true, esRecurrente)
+    return { correo: { asunto: c.asunto, html: c.html } }
+  },
+}
+
 export const PLANTILLAS: Record<NombrePlantilla, Plantilla> = {
   solicitud_nueva: solicitudNueva,
   directa_aceptada: directaAceptada,
@@ -738,4 +780,6 @@ export const PLANTILLAS: Record<NombrePlantilla, Plantilla> = {
   cita_sin_respuesta_cliente: citaSinRespuestaCliente,
   todo_bien: todoBien,
   recordatorio_cliente: recordatorioCliente,
+  visita_resumen: visitaResumen,
+  visita_reporte: visitaReporte,
 }

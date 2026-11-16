@@ -24,7 +24,7 @@ import { generarTokenPerfil } from '@/lib/compita-tokens'
 import { getOrCreateDailyRoom } from '@/lib/daily'
 import { enlaceDeLlamada } from '@/lib/llamada-acceso'
 import { minutosLlamadaVisita } from '@/lib/llamada'
-import { sendVisitaInicio, sendVisitaResumen, sendResumenConReporte, sendCodigoTelegram } from '@/lib/resend'
+import { sendVisitaInicio, generarResumenIA, sendCodigoTelegram } from '@/lib/resend'
 import { responderSolicitud, getSolicitudPorToken, getSolicitudPorId, aceptarSolicitudDirecta } from '@/lib/solicitudes'
 import { confirmarReserva, rechazarReserva } from '@/lib/agenda'
 import { registrarCancelacion, alertarCancelacionesCompita, horasDeAviso } from '@/lib/cancelaciones'
@@ -247,29 +247,15 @@ async function guardarReporteYEnviarEmail(
     return
   }
 
-  // Enviar segundo email con indicadores de bienestar y resumen IA
+  // El reporte de bienestar: se escribe el resumen con IA, se guarda en el reporte (el portal del cliente ya lo muestra) y el correo sale por el sistema de avisos
+  // como respaldo (se cancela si el cliente ya lo vio en el portal, se junta con otros avisos).
   let emailEnviado = false
   try {
-    const { data: mensajes } = await adminReporte
-      .from('mensajes').select('*').eq('visit_id', visitaId).order('created_at', { ascending: true }) as { data: import('@/types').Mensaje[] | null }
-
-    const esRecurrenteReporte = (visitasCliente ?? []).some((v) => (v as { compita_id?: string }).compita_id === compita.id)
-    const resumenIA = await sendResumenConReporte(
-      visita.usuario,
-      compita,
-      visita,
-      mensajes ?? [],
-      reporte,
-      historial,
-      true, // esActualizacion — el email básico ya fue enviado al terminar
-      esRecurrenteReporte,
-    )
-
-    // Guardar resumen IA en el reporte
-    emailEnviado = true
-    if (reporteGuardado?.id && resumenIA) {
-      await adminReporte.from('reportes_visita').update({ resumen_ia: resumenIA }).eq('id', reporteGuardado.id)
-    }
+    const resumenIA = await generarResumenIA(compita, visita.usuario, reporte, historial)
+    if (resumenIA) await adminReporte.from('reportes_visita').update({ resumen_ia: resumenIA }).eq('id', reporteGuardado.id)
+    const r = await notificar({ plantilla: 'visita_reporte', canal: 'correo', destinatario: { tipo: 'cliente', id: visita.usuario_id }, variables: { reporteId: reporteGuardado.id }, entidad: 'visita', entidadId: visitaId, paso: 15 })
+    emailEnviado = r.ok
+    if (!r.ok) throw new Error(r.error ?? 'el aviso no salió')
   } catch (e) {
     console.error('Error correo resumen con reporte:', e)
     await alertaAdmin('tarea', `⚠️ El cuestionario de <b>${esc(compita.nombre)}</b> se guardó pero no se pudo enviar el correo a <b>${esc(visita.usuario.nombre)}</b> (${esc(visita.usuario.email)}).`)
@@ -278,7 +264,7 @@ async function guardarReporteYEnviarEmail(
   await sendTelegramMessage(
     chatId,
     emailEnviado
-      ? `✅ <b>¡Listo!</b> El cuestionario fue guardado y se le envió el resumen a la familia.\n\n¡Gracias por tu trabajo, ${esc(compita.nombre)}! 💙`
+      ? `✅ <b>¡Listo!</b> El cuestionario fue guardado y la familia ya puede ver el reporte en su portal.\n\n¡Gracias por tu trabajo, ${esc(compita.nombre)}! 💙`
       : `✅ El cuestionario fue guardado. Tuvimos un problema enviando el correo a la familia; el equipo de Compaz lo enviará.\n\n¡Gracias por tu trabajo, ${esc(compita.nombre)}! 💙`,
     TECLADO_SIN_VISITA,
   )
@@ -1499,16 +1485,10 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
       }
 
       if (visita.usuario) {
-        try {
-          const { data: mensajes } = await supabase
-            .from('mensajes').select('*').eq('visit_id', visita.id).order('created_at', { ascending: true }) as { data: Mensaje[] | null }
-          const { count: visitasAnteriores } = await supabase
-            .from('visitas').select('id', { count: 'exact', head: true })
-            .eq('usuario_id', visita.usuario_id).eq('compita_id', compita.id)
-            .eq('estado', 'terminada').neq('id', visita.id)
-          await sendVisitaResumen(visita.usuario, compita, { ...visita, fin }, mensajes ?? [], (visitasAnteriores ?? 0) > 0)
-        } catch (e) {
-          console.error('Error correo básico al terminar:', e)
+        // El resumen básico sale por el sistema de avisos: el portal del cliente lo muestra en vivo y el correo es el respaldo (se cancela si el cliente ya lo vio).
+        const r = await notificar({ plantilla: 'visita_resumen', canal: 'correo', destinatario: { tipo: 'cliente', id: visita.usuario_id }, variables: { visitaId: visita.id }, entidad: 'visita', entidadId: visita.id, paso: 14 })
+        if (!r.ok && r.estado === 'fallido') {
+          console.error('Error correo básico al terminar:', r.error)
           await alertaAdmin('actividad', `⚠️ No se pudo enviar el resumen de visita a <b>${esc(visita.usuario.nombre)}</b> (${esc(visita.usuario.email)}). Reenvíalo manualmente.`)
         }
       }
@@ -1520,7 +1500,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
 
       await sendTelegramMessage(
         chatId,
-        `🔴 <b>Visita terminada.</b>\n\n¡Gracias por tu trabajo de hoy, ${esc(compita.nombre)}! 🤝\n\nYa le enviamos el resumen básico a la familia. Ahora tómate un minuto para registrar cómo estuvo el familiar — ellos lo verán como una actualización. 📋`,
+        `🔴 <b>Visita terminada.</b>\n\n¡Gracias por tu trabajo de hoy, ${esc(compita.nombre)}! 🤝\n\nYa le dejamos el resumen básico a la familia en su portal. Ahora tómate un minuto para registrar cómo estuvo el familiar — ellos lo verán como una actualización. 📋`,
         TECLADO_SIN_VISITA,
       )
       await sendTelegramMessage(

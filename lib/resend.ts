@@ -25,7 +25,7 @@ function indicadorLabel(v: number | null): string {
   return `${v}/5 — ${ESCALA[v] ?? ''}`
 }
 
-async function generarResumenIA(
+export async function generarResumenIA(
   compita: Compita,
   usuario: Usuario,
   reporte: Pick<ReporteVisita, 'animo' | 'fisico' | 'participacion' | 'entorno' | 'novedad'>,
@@ -338,13 +338,14 @@ export async function sendVisitaInicio(
   })
 }
 
-export async function sendVisitaResumen(
+/** El contenido del correo de resumen de la visita (sin enviarlo): lo arma el aviso `visita_resumen` cuando llega su hora. */
+export function armarVisitaResumen(
   usuario: Usuario,
   compita: Compita,
   visita: Visita,
   mensajes: Mensaje[],
   esRecurrente = false,
-): Promise<void> {
+): { asunto: string; html: string } {
   const inicio = new Date(visita.inicio!)
   const fin = new Date(visita.fin!)
   const duracionMs = fin.getTime() - inicio.getTime()
@@ -381,9 +382,8 @@ export async function sendVisitaResumen(
        </div>`
     : ''
 
-  await sendEmail({
-    to: usuario.email,
-    subject: `Resumen de la visita de hoy con ${compita.nombre}`,
+  return {
+    asunto: `Resumen de la visita de hoy con ${compita.nombre}`,
     html: `
       <div style="font-family: Inter, sans-serif; max-width: 600px; margin: 0 auto; padding: 32px;">
         <img src="${SITE_URL}/logo.png" alt="Compaz" style="height: 40px; margin-bottom: 24px;" />
@@ -429,27 +429,32 @@ export async function sendVisitaResumen(
         </p>
       </div>
     `,
-  })
+  }
 }
 
-export async function sendResumenConReporte(
+/** Envía el resumen de la visita al instante (uso directo). El flujo normal lo manda el aviso `visita_resumen`, que respeta el respaldo del portal. */
+export async function sendVisitaResumen(usuario: Usuario, compita: Compita, visita: Visita, mensajes: Mensaje[], esRecurrente = false): Promise<void> {
+  const c = armarVisitaResumen(usuario, compita, visita, mensajes, esRecurrente)
+  await sendEmail({ to: usuario.email, subject: c.asunto, html: c.html })
+}
+
+/** El contenido del correo con el reporte de bienestar (sin enviarlo ni llamar a la IA): el resumen ya viene escrito. Lo arma el aviso `visita_reporte`. */
+export function armarResumenConReporte(
   usuario: Usuario,
   compita: Compita,
   visita: Visita,
   mensajes: Mensaje[],
   reporte: Pick<ReporteVisita, 'animo' | 'fisico' | 'participacion' | 'entorno' | 'novedad'>,
-  historial: Pick<ReporteVisita, 'animo' | 'fisico' | 'participacion' | 'entorno' | 'created_at'>[],
+  resumenIA: string,
   esActualizacion = false,
   esRecurrente = false,
-): Promise<string> {
+): { asunto: string; html: string } {
   const inicio = new Date(visita.inicio!)
   const fin = new Date(visita.fin!)
   const duracionMin = Math.round((fin.getTime() - inicio.getTime()) / 60000)
   const horas = Math.floor(duracionMin / 60)
   const minutos = duracionMin % 60
   const duracion = horas > 0 ? `${horas}h ${minutos}min` : `${minutos} minutos`
-
-  const resumenIA = await generarResumenIA(compita, usuario, reporte, historial)
 
   // Solo fotos desde que la visita empezó (pre_visita usa el mismo visit_id)
   const inicioMs2 = visita.inicio ? new Date(visita.inicio).getTime() : 0
@@ -466,9 +471,8 @@ export async function sendResumenConReporte(
       ${reporte.entorno !== null ? `<tr><td style="color:#6B5C90;font-size:13px;padding:6px 8px">Ambiente y entorno</td><td style="font-size:14px;color:#1A0A3C;padding:6px 8px">${indicadorLabel(reporte.entorno)}</td></tr>` : ''}
     </table>`
 
-  await sendEmail({
-    to: usuario.email,
-    subject: esActualizacion ? `Actualización de la visita de hoy con ${escapeHtml(compita.nombre)}` : `Resumen de la visita de hoy con ${escapeHtml(compita.nombre)}`,
+  return {
+    asunto: esActualizacion ? `Actualización de la visita de hoy con ${escapeHtml(compita.nombre)}` : `Resumen de la visita de hoy con ${escapeHtml(compita.nombre)}`,
     html: `
       <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px">
         <img src="${SITE_URL}/logo.png" alt="Compaz" style="height:40px;margin-bottom:24px" />
@@ -505,7 +509,22 @@ export async function sendResumenConReporte(
         <p style="color:#6B5C90;font-size:13px;margin-top:32px">Compaz — <em>Cerca aunque estés lejos</em></p>
       </div>
     `,
-  })
+  }
+}
 
+/** Genera el resumen con IA, arma el correo y lo envía al instante (uso directo). Devuelve el resumen. */
+export async function sendResumenConReporte(
+  usuario: Usuario,
+  compita: Compita,
+  visita: Visita,
+  mensajes: Mensaje[],
+  reporte: Pick<ReporteVisita, 'animo' | 'fisico' | 'participacion' | 'entorno' | 'novedad'>,
+  historial: Pick<ReporteVisita, 'animo' | 'fisico' | 'participacion' | 'entorno' | 'created_at'>[],
+  esActualizacion = false,
+  esRecurrente = false,
+): Promise<string> {
+  const resumenIA = await generarResumenIA(compita, usuario, reporte, historial)
+  const c = armarResumenConReporte(usuario, compita, visita, mensajes, reporte, resumenIA, esActualizacion, esRecurrente)
+  await sendEmail({ to: usuario.email, subject: c.asunto, html: c.html })
   return resumenIA
 }

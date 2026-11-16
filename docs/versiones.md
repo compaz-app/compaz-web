@@ -4,6 +4,13 @@ La versión vigente está en `lib/version.ts` y se ve en el panel (menú lateral
 
 Reglas: mayor = cambio grande o lanzamiento; menor = función nueva; parche = arreglo. La etapa `beta` sale cuando el sistema corre una o dos semanas con uso real sin sorpresas.
 
+## 1.2.2-beta.1 (2026-11-16)
+Los correos del fin de la visita salen por el sistema de avisos (Nivel 1, parte C).
+1. El resumen de la visita (al terminar) y el reporte de bienestar (cuando el compita termina el cuestionario) dejan de enviarse directo desde Telegram: ahora son los avisos `visita_resumen` y `visita_reporte`, que arman el correo al enviar con lo que hay en la base. Así el portal del cliente recibe la novedad en vivo («La visita terminó. Ya puedes calificarla.» y «El reporte de bienestar de la visita está listo.») y el correo es el respaldo: con `CORREO_RESPALDO=diferido` se cancela si el cliente ya lo vio y los dos se juntan en uno solo si llegan seguidos. Apagado, salen al instante como antes.
+2. El resumen con IA del reporte se escribe y se guarda en `reportes_visita.resumen_ia` antes de avisar (antes se guardaba después de enviar el correo), así el portal y el correo muestran el mismo texto.
+3. Lo que lee el compita en Telegram cambia: «Ya le dejamos el resumen básico a la familia en su portal» y «la familia ya puede ver el reporte en su portal».
+4. `lib/resend.ts`: `armarVisitaResumen` y `armarResumenConReporte` arman el contenido sin enviar; `sendVisitaResumen` y `sendResumenConReporte` siguen existiendo para el envío directo. Sin migración nueva.
+
 ## 1.2.1-beta.1 (2026-11-16)
 El correo al cliente como respaldo del portal (Nivel 1, parte B). Se enciende con `CORREO_RESPALDO=diferido` en Netlify; apagado, todo sale como antes.
 1. Cada aviso por correo al cliente ya genera su novedad (el portal se actualiza en vivo). Con el interruptor encendido, el correo espera según la urgencia y si el portal está abierto: lo crítico sale ya; lo demás, 15 minutos con el portal abierto y 3 con el portal cerrado.
