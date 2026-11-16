@@ -4,6 +4,11 @@ La versión vigente está en `lib/version.ts` y se ve en el panel (menú lateral
 
 Reglas: mayor = cambio grande o lanzamiento; menor = función nueva; parche = arreglo. La etapa `beta` sale cuando el sistema corre una o dos semanas con uso real sin sorpresas.
 
+## 1.2.9-beta.1 (2026-11-16)
+La ficha del cliente tiene el botón «Ver perfil del cliente», igual que la del compita tiene «Ver perfil público».
+1. Abre el portal del cliente tal como él lo ve (vista previa del equipo, sin ejecutar acciones). Queda anotado en Actividad. Solo para administradores: un colaborador no lo ve.
+2. Sin migración.
+
 ## 1.2.8-beta.1 (2026-11-16)
 Portal del cliente, fase 3: Mi cuenta.
 1. Mi familiar y Mi plan pasan a una sola pestaña, Mi cuenta, con las dos partes plegables. Queda abierta la que se pidió; si no, la ficha cuando falta y si no el plan.

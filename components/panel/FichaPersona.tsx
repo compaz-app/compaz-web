@@ -109,6 +109,11 @@ export default function FichaPersona({ ficha, cerrarHref, pideMotivo, puedeConta
                 <Boton tamano="compacto" variante="secundario" navegacion href={`/panel/perfil-publico/${ficha.id}`} info="Abre su perfil público tal como lo ve la familia, con lo que llenó. Sirve para revisar su calidad aunque todavía no esté verificado.">Ver perfil público</Boton>
               </div>
             )}
+            {ficha.tipo === 'cliente' && !pideMotivo && (
+              <div className="flex items-center gap-1">
+                <Boton tamano="compacto" variante="secundario" navegacion href={`/portal?preview=${ficha.id}`} info="Abre el perfil de este cliente tal como él lo ve en su portal, sin poder actuar por él. Sirve para revisar qué ve y en qué paso está. Queda anotado en Actividad. Solo para administradores.">Ver perfil del cliente</Boton>
+              </div>
+            )}
             {(ficha.detalle.fotoUrl || ficha.detalle.videoUrl) && (
               <div className="flex flex-wrap items-center gap-3">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
