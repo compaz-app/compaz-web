@@ -11,6 +11,7 @@ import { avisarAdmin } from '@/lib/telegram'
 import { alertaAdmin } from '@/lib/alertas-admin'
 import { esc } from '@/lib/html'
 import { notificar, reintentarAviso } from '@/lib/avisos'
+import { procesarCorreosDiferidos, type ResultadoDiferidos } from '@/lib/correos-diferidos'
 import { PLANTILLAS, type Canal, type NombrePlantilla, type VariablesAviso } from '@/lib/plantillas-aviso'
 import type { EntidadEvento } from '@/lib/eventos'
 
@@ -54,6 +55,8 @@ interface Fila {
 const COLUMNAS = 'id, destinatario_tipo, destinatario_id, canal, plantilla, variables, entidad, entidad_id, paso, respaldo_de, estado, intentos, error'
 
 export interface ResultadoEscalera {
+  /** Correos al cliente que esperaban su hora: enviados, juntos en uno y cancelados por ya vistos. */
+  diferidos?: ResultadoDiferidos
   barridos: number
   reintentos: number
   respaldos: number
@@ -127,6 +130,9 @@ export async function procesarEscalera(admin: Admin = createAdminSupabase()): Pr
   const r: ResultadoEscalera = { barridos: 0, reintentos: 0, respaldos: 0, tareas: 0, cancelados: 0 }
   const ahora = Date.now()
   const hace = (min: number) => new Date(ahora - min * 60_000).toISOString()
+
+  // 0. Correos al cliente que esperaban su hora (respaldo del portal): se cancelan si ya los vio, se juntan si hay varios.
+  try { r.diferidos = await procesarCorreosDiferidos(admin) } catch (e) { console.error('[escalera] diferidos:', e) }
 
   // 1. Pendientes atascados (el servidor se cayó entre guardar y enviar)
   try {

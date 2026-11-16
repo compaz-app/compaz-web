@@ -10,6 +10,9 @@ import { sendTelegramMessage } from '@/lib/telegram'
 import { sendEmail } from '@/lib/email'
 import { PLANTILLAS, type Canal, type NombrePlantilla, type VariablesAviso } from '@/lib/plantillas-aviso'
 import type { EntidadEvento } from '@/lib/eventos'
+import { registrarNovedad, clienteTienePortalAbierto } from '@/lib/novedades'
+import { nivelDe, tituloDe, esperaDelCorreoMin } from '@/lib/novedades-politica'
+import { correoDiferidoActivo, CLAVE_NOVEDAD } from '@/lib/correos-diferidos'
 
 export type DestinatarioTipo = 'cliente' | 'compita' | 'admin'
 export type EstadoAviso = 'pendiente' | 'enviado' | 'fallido' | 'cancelado'
@@ -162,6 +165,19 @@ export async function notificar(p: PedidoAviso, admin: Admin = createAdminSupaba
 
     const clave = p.claveUnica ?? [p.plantilla, p.entidadId ?? 'sin-entidad', p.destinatario.id ?? p.destinatario.tipo, p.canal].join(':')
     const ahora = new Date()
+
+    // Aviso por correo al cliente: lo que le pasa es una NOVEDAD (el portal la muestra en vivo) y el correo es el respaldo. Con CORREO_RESPALDO=diferido, el correo
+    // espera según la urgencia y si el portal está abierto (lib/novedades-politica.ts); los críticos salen ya. Un respaldo o reenvío (respaldoDe) sale al instante.
+    let programado = ahora
+    let diferir = false
+    if (p.destinatario.tipo === 'cliente' && p.canal === 'correo' && p.destinatario.id && !p.respaldoDe) {
+      const nivel = nivelDe(p.plantilla)
+      await registrarNovedad({ usuarioId: p.destinatario.id, tipo: p.plantilla, nivel, titulo: tituloDe(p.plantilla), entidad: p.entidad, entidadId: p.entidadId, clave: CLAVE_NOVEDAD(clave) }, admin)
+      if (correoDiferidoActivo()) {
+        const espera = esperaDelCorreoMin(nivel, await clienteTienePortalAbierto(p.destinatario.id, admin, ahora))
+        if (espera > 0) { programado = new Date(ahora.getTime() + espera * 60_000); diferir = true }
+      }
+    }
     const { data, error } = await admin.from('avisos').insert({
       destinatario_tipo: p.destinatario.tipo,
       destinatario_id: p.destinatario.id ?? null,
@@ -171,8 +187,8 @@ export async function notificar(p: PedidoAviso, admin: Admin = createAdminSupaba
       entidad: p.entidad ?? null,
       entidad_id: p.entidadId ?? null,
       paso: p.paso ?? null,
-      programado_para: ahora.toISOString(),
-      plazo_accion_hasta: p.plazoAccionMin ? new Date(ahora.getTime() + p.plazoAccionMin * 60_000).toISOString() : null,
+      programado_para: programado.toISOString(),
+      plazo_accion_hasta: p.plazoAccionMin ? new Date(programado.getTime() + p.plazoAccionMin * 60_000).toISOString() : null,
       clave_unica: clave,
       respaldo_de: p.respaldoDe ?? null,
     }).select('id').single()
@@ -182,6 +198,7 @@ export async function notificar(p: PedidoAviso, admin: Admin = createAdminSupaba
       console.error('[avisos] no se pudo guardar el aviso; se envía sin registro:', error?.message)
       return await enviarSinRegistro(admin, p)
     }
+    if (diferir) return { ok: true, estado: 'pendiente', avisoId: data.id as string } // sale en su hora, desde la escalera (o se cancela si el cliente ya lo vio)
     return await despachar(admin, {
       id: data.id, destinatario_tipo: p.destinatario.tipo, destinatario_id: p.destinatario.id ?? null,
       canal: p.canal, plantilla: p.plantilla, variables: p.variables, estado: 'pendiente', intentos: 0,

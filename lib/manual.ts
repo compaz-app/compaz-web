@@ -303,6 +303,17 @@ export const ENTRADAS: EntradaManual[] = [
     permiso: 'cuentas', pantalla: 'personas', busca: ['cancelacion', 'tardia', 'pausa', 'justificada'],
   },
   {
+    id: 'sit-correo-no-llega-ya', seccion: 'situaciones', titulo: 'Un cliente dice que su correo no llegó al instante',
+    paraQue: 'Con el correo diferido encendido, el portal avisa primero y el correo es solo el respaldo: no sale al instante, salvo lo urgente.',
+    pasos: [
+      'Pregunta si ya lo vio en su portal: si lo vio, el correo se cancela a propósito y no hace falta.',
+      'Si no lo vio, el correo sale a los 3 minutos (15 si tenía el portal abierto). Varios avisos juntos salen en un solo correo.',
+      'Lo urgente (alguien llegó, nadie abre, seguridad, cancelación del equipo, cuenta en pausa) sale al instante.',
+      'En Más, Avisos enviados ves cada aviso. «Cancelado: ya lo vio en el portal» y «Agrupado en un solo correo» son normales, no errores.',
+    ],
+    permiso: 'monitorear', pantalla: 'avisos', busca: ['correo', 'respaldo', 'retraso', 'portal', 'agrupado'],
+  },
+  {
     id: 'sit-aviso-fallido', seccion: 'situaciones', titulo: 'Un aviso no llegó',
     paraQue: 'Cada aviso queda guardado con su resultado.',
     pasos: [

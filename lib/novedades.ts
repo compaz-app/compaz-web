@@ -50,11 +50,19 @@ export async function clienteTienePortalAbierto(usuarioId: string, admin: Admin 
   } catch { return false }
 }
 
-/** El cliente está mirando el portal: todo lo nuevo hasta ahora queda como visto. Devuelve cuántas marcó. */
+/**
+ * El cliente está mirando el portal: todo lo nuevo hasta ahora queda como visto, y los correos de respaldo que estaban esperando esas novedades se cancelan
+ * (ya lo vio, no hace falta). Devuelve cuántas novedades marcó.
+ */
 export async function marcarNovedadesVistas(usuarioId: string, admin: Admin = createAdminSupabase()): Promise<number> {
   try {
-    const { data, error } = await admin.from('novedades_cliente').update({ vista_en: new Date().toISOString() }).eq('usuario_id', usuarioId).is('vista_en', null).select('id')
+    const { data, error } = await admin.from('novedades_cliente').update({ vista_en: new Date().toISOString() }).eq('usuario_id', usuarioId).is('vista_en', null).select('id, clave_unica')
     if (error) { console.error('[novedades] vistas:', error.message); return 0 }
+    const claves = ((data ?? []) as { clave_unica: string }[]).map((n) => n.clave_unica.replace(/^novedad:/, ''))
+    if (claves.length) {
+      await admin.from('avisos').update({ estado: 'cancelado', error: 'ya lo vio en el portal' })
+        .eq('destinatario_id', usuarioId).eq('destinatario_tipo', 'cliente').eq('canal', 'correo').eq('estado', 'pendiente').in('clave_unica', claves)
+    }
     return (data ?? []).length
   } catch (e) { console.error('[novedades] error al marcar vistas:', e); return 0 }
 }

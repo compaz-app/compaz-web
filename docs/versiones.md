@@ -4,6 +4,14 @@ La versión vigente está en `lib/version.ts` y se ve en el panel (menú lateral
 
 Reglas: mayor = cambio grande o lanzamiento; menor = función nueva; parche = arreglo. La etapa `beta` sale cuando el sistema corre una o dos semanas con uso real sin sorpresas.
 
+## 1.2.1-beta.1 (2026-11-16)
+El correo al cliente como respaldo del portal (Nivel 1, parte B). Se enciende con `CORREO_RESPALDO=diferido` en Netlify; apagado, todo sale como antes.
+1. Cada aviso por correo al cliente ya genera su novedad (el portal se actualiza en vivo). Con el interruptor encendido, el correo espera según la urgencia y si el portal está abierto: lo crítico sale ya; lo demás, 15 minutos con el portal abierto y 3 con el portal cerrado.
+2. Si el cliente ve la novedad en el portal, el correo se cancela («ya lo vio en el portal»). Si varios correos del mismo cliente están listos (o por salir en los próximos 5 minutos), salen juntos en UN correo con la lista y un botón al portal («agrupado en un solo correo»).
+3. Lo corre el cron de la escalera (cada 5 minutos), antes de los demás pasos (`procesarCorreosDiferidos`, `lib/correos-diferidos.ts`). Solo toca los avisos que nacieron con su novedad; los demás pendientes siguen igual. Un respaldo o reenvío (`respaldoDe`) sale al instante.
+4. Manual del equipo: «Un cliente dice que su correo no llegó al instante». Reglas completas en `docs/ciclo-comunicaciones.md`. Sin migración nueva (usa la de 1.2.0).
+5. Todavía NO pasan por esta regla los correos que no salen por `notificar()`, como los del fin de la visita (parte C) y algunos del flujo de pago y de Telegram.
+
 ## 1.2.0-beta.1 (2026-11-16)
 Novedades del cliente y portal en vivo (Nivel 1, parte A: la base). El portal es el centro de mando; el correo pasa a ser respaldo (parte B).
 1. Migración `20261116_novedades_cliente.sql` (solo agrega, **la aplica Juan en compaz-prod antes de desplegar**): tabla `novedades_cliente` (lo que le pasa al cliente, con `vista_en` y `actuada_en`) con permiso de lectura solo de las propias y tiempo real, y la columna `usuarios.portal_visto_en`.

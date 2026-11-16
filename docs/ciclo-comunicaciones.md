@@ -93,3 +93,17 @@ Por ahora los clientes y los compitas entran solo por invitación del equipo (`i
 ## Estado
 
 Diseño objetivo. Las etiquetas "Existe" y "Nuevo" salen de lo revisado en el código (cron de recordatorios, `confirmar-inicio`, emergencia, resultado de la llamada, `churn-alerta`) y se confirman flujo por flujo antes de construir. Depende de la base: registro de eventos y tabla de avisos con `notificar()` (ver `docs/crm-datos-pendientes.md`).
+
+## El portal como centro de mando y el correo como respaldo (decidido 2026-11-16)
+
+Principio: el portal es lo primero y el correo es el respaldo. Un cliente que ya está mirando su portal no debería recibir un correo que lo saque de ahí.
+
+Cómo funciona (Nivel 1):
+1. Cada aviso por correo al cliente es también una **novedad** (`novedades_cliente`): se guarda una vez y el portal la muestra en vivo (Realtime con la sesión del cliente, que solo lee las suyas).
+2. El portal manda un **latido** cada 45 segundos con la pestaña a la vista (`usuarios.portal_visto_en`). Si el último latido tiene menos de 90 segundos, el portal cuenta como abierto.
+3. Con la variable `CORREO_RESPALDO=diferido`, el correo no sale al instante: **crítico** (alguien llegó, nadie abre, seguridad, cancelación del equipo, cuenta en pausa) sale ya; **accionable** e **informativo** esperan 15 minutos con el portal abierto y 3 con el portal cerrado.
+4. Si el cliente **ve** la novedad en el portal, el correo se cancela (regla 6: si ya lo hizo, el aviso muere). Si en la hora de enviarlo hay varios correos del mismo cliente, salen **juntos en uno** con la lista y un botón al portal.
+5. El correo lo envía el cron de la escalera (cada 5 minutos), así que el retraso real es el indicado más hasta 5 minutos.
+6. Sin la variable, todo sale como antes (las novedades se guardan igual para el portal en vivo).
+
+Pendiente (Nivel 2 y siguientes): horas de silencio por zona horaria, preferencias del cliente, métricas (cuántos correos se evitaron, cuánto tarda en actuar) y un canal de respaldo mejor que el correo. WhatsApp está descartado por ahora; lo siguiente posible son las notificaciones del teléfono. Los correos que hoy no salen por `notificar()` (por ejemplo los del fin de la visita y algunos del flujo de pago o de Telegram) todavía no pasan por esta regla.

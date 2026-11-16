@@ -161,6 +161,10 @@ ADMIN_EMAILS=juan@compaz.com,otro@compaz.com
 # App URL (para links en Telegram)
 NEXT_PUBLIC_APP_URL=https://micompaz.com
 
+# Correo de respaldo: «diferido» = el correo al cliente espera (3 min con el portal cerrado, 15 con el abierto; lo urgente sale ya),
+# se cancela si el cliente ya lo vio en el portal y se junta con otros en uno solo. Sin esta variable, todo sale al instante como antes.
+CORREO_RESPALDO=
+
 # CMC (Apps Script de la hoja de selección)
 CMC_LECTURA_TOKEN=        # lectura de postulaciones (GET /api/cmc/postulaciones)
 CMC_ESCRITURA_TOKEN=      # foto de Compitas habilitadas (POST /api/cmc/compitas); sin él: 503
