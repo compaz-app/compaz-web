@@ -25,6 +25,7 @@ import LimpiarParamContratado from '@/components/ui/LimpiarParamContratado'
 import { clienteVePortalNuevo } from '@/lib/portal-activacion'
 import AutoRefresh from '@/components/ui/AutoRefresh'
 import UnaSolaPestana from '@/components/ui/UnaSolaPestana'
+import NovedadesEnVivo from '@/components/ui/NovedadesEnVivo'
 import ConfirmarInicioVisita from '@/components/ui/ConfirmarInicioVisita'
 import PrimerAccesoModal from '@/components/ui/PrimerAccesoModal'
 import { fichaCompleta } from '@/lib/ficha'
@@ -990,6 +991,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       {usuario && <VisitaWatcher usuarioId={targetUid} visitaActivaId={visitaActiva?.id ?? null} compitaNombre={visitaActiva?.compita?.nombre} />}
       {/* Refresca cada 15 s para mostrar cambios en llamadas y solicitudes */}
       {!isAdmin && !previewUid && <UnaSolaPestana />}
+      {!isAdmin && !previewUid && <NovedadesEnVivo usuarioId={session.user.id} />}
       <AutoRefresh intervaloSeg={15} rapido={!!visitaActiva} reposoSeg={60} />
     </div>
   )

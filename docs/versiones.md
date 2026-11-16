@@ -4,6 +4,13 @@ La versión vigente está en `lib/version.ts` y se ve en el panel (menú lateral
 
 Reglas: mayor = cambio grande o lanzamiento; menor = función nueva; parche = arreglo. La etapa `beta` sale cuando el sistema corre una o dos semanas con uso real sin sorpresas.
 
+## 1.2.0-beta.1 (2026-11-16)
+Novedades del cliente y portal en vivo (Nivel 1, parte A: la base). El portal es el centro de mando; el correo pasa a ser respaldo (parte B).
+1. Migración `20261116_novedades_cliente.sql` (solo agrega, **la aplica Juan en compaz-prod antes de desplegar**): tabla `novedades_cliente` (lo que le pasa al cliente, con `vista_en` y `actuada_en`) con permiso de lectura solo de las propias y tiempo real, y la columna `usuarios.portal_visto_en`.
+2. `lib/novedades.ts` y `lib/novedades-politica.ts`: registrar una novedad (una sola vez por clave), marcar lo visto, el latido del portal y las reglas de cuándo hace falta el correo según la urgencia (crítico, accionable, informativo) y si el portal está abierto (15 minutos con el portal abierto, 3 con el portal cerrado; lo crítico, ya).
+3. En el portal (y el dashboard viejo), solo para clientes: `NovedadesEnVivo` escucha las novedades del cliente en tiempo real (la pantalla se actualiza al instante), manda un latido cada 45 segundos con la pestaña a la vista y marca lo nuevo como visto cuando el cliente lo está mirando. Rutas nuevas `POST /api/portal/latido` y `POST /api/portal/novedades/vistas`. Si el tiempo real falla, el portal sigue actualizándose por consultas periódicas.
+4. Todavía no se genera ninguna novedad ni cambia ningún correo: eso llega en la parte B.
+
 ## 1.1.18-beta.1 (2026-11-16)
 Los correos le dicen al cliente que no hace falta hacer clic si ya tiene el portal abierto (hallazgo 14 de la auditoría de flujos).
 1. Todo correo al cliente que trae un botón al portal ahora lleva debajo: «Si ya tienes tu portal abierto, no hace falta que hagas clic: se actualiza solo y lo verás ahí.» Así, cuando el cliente ya está viendo su portal y le llega «tu compita confirmó», sabe que no tiene que abrir otra pestaña.

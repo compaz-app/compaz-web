@@ -42,6 +42,7 @@ const DEFAULTS: Record<string, () => Row> = {
   pagos_plan: () => ({ id: randomUUID(), estado: 'activo', horas: null, referencia: null, created_at: nowIso() }),
   admin_flags: () => ({ id: randomUUID(), resuelto: false, created_at: nowIso() }),
   resenas: () => ({ id: randomUUID(), publicada: false, created_at: nowIso() }),
+  novedades_cliente: () => ({ id: randomUUID(), ruta: '/portal', entidad: null, entidad_id: null, creada_en: nowIso(), vista_en: null, actuada_en: null }),
   eventos: () => ({ id: randomUUID(), modulo: 'operacion', actor: 'sistema', datos: {}, creado_en: nowIso() }),
   admin_emails: () => ({}),
   equipo: () => ({ id: randomUUID(), activo: true, permisos: {}, creado_en: nowIso(), actualizado_en: nowIso() }),
@@ -125,6 +126,7 @@ export class FakeDB {
     if (t === 'reservas_horario' && viva(row) && others.some((r) => viva(r) && r.compita_id === row.compita_id && r.inicio === row.inicio)) return dupError('reservas_horario_hora_unica')
     if (t === 'reservas_horario' && viva(row) && row.solicitud_id && others.some((r) => viva(r) && r.solicitud_id === row.solicitud_id)) return dupError('reservas_horario_una_por_solicitud')
     if (t === 'avisos' && row.clave_unica && others.some((r) => r.clave_unica === row.clave_unica)) return dupError('avisos_clave_unica_key')
+    if (t === 'novedades_cliente' && row.clave_unica && others.some((r) => r.clave_unica === row.clave_unica)) return dupError('novedades_cliente_clave_unica_key')
     if (t === 'reportes_visita' && others.some((r) => r.visita_id === row.visita_id)) return dupError('reportes_visita_unico_por_visita')
     for (const col of ['token']) if ((t === 'compita_edit_tokens' || t === 'onboarding_tokens' || t === 'action_tokens') && others.some((r) => r[col] === row[col])) return dupError(`${t}_token_key`)
     return null
