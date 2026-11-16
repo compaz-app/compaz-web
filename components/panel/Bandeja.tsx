@@ -7,6 +7,7 @@ import Boton from '@/components/ui/base/Boton'
 import Aviso from '@/components/ui/base/Aviso'
 import { CLASE_LISTA, ChipBoton, Conteo, Encabezado, Filtros, Rol } from '@/components/panel/ui'
 import AccionTarea from '@/components/panel/AccionTarea'
+import NotaTarea from '@/components/panel/NotaTarea'
 import { avisarCambio } from '@/components/panel/pendientes-store'
 import { hrefPersona } from '@/lib/panel-personas-tipos'
 import {
@@ -78,7 +79,7 @@ export default function Bandeja({ tareas, puedeAtender, pideMotivo }: { tareas: 
                 <Rol>{etiquetaDeTarea(t)}</Rol>
                 <span className="text-xs text-texto-sutil">{hace(t.created_at)}</span>
               </div>
-              <p className="line-clamp-3 whitespace-pre-wrap text-sm text-texto-medio [overflow-wrap:anywhere]">{limpiarNota(t.nota)}</p>
+              <NotaTarea texto={limpiarNota(t.nota)} />
             </div>
             {puedeAtender && (
               <AccionTarea tarea={t} cerrando={enCurso === t.id} onCerrar={() => resolver(t.id)} onHecho={() => { setResueltas((h) => ({ ...h, [t.id]: true })); avisarCambio(); router.refresh() }} onRefrescar={() => router.refresh()} pideMotivo={pideMotivo} />

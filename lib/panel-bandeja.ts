@@ -11,7 +11,7 @@ import { reportesPendientes } from '@/lib/bloqueos-compita'
 import { pendientesDeTodos } from '@/lib/solicitudes-pago'
 import { avisoParaInsistir, esperaDeReenvio, reenviosDe } from '@/lib/insistir-aviso'
 import {
-  INFO_DECIDIR_CUENTA, INFO_LLAMADA, INFO_PAGO, INFO_RESPONDER_DUDA, INFO_SITIO, PERMISO_FALTA, claseInsistir, idReporteDeNota, ordenarTareas, textoCerrar, tipoDeAccion,
+  INFO_DECIDIR_CUENTA, INFO_LLAMADA, INFO_PAGO, INFO_RESPONDER_DUDA, INFO_SITIO, PERMISO_FALTA, claseInsistir, idReporteDeNota, ordenarTareas, sinEmojis, textoCerrar, tipoDeAccion,
   type AccionTarea, type TareaBandeja,
 } from '@/lib/panel-bandeja-tipos'
 
@@ -31,9 +31,9 @@ export async function cargarBandeja(actor: Actor): Promise<TareaBandeja[]> {
     id: String(f.id),
     entidad_tipo: (TIPOS_ENTIDAD as readonly string[]).includes(f.entidad_tipo) ? f.entidad_tipo : 'cliente',
     entidad_id: String(f.entidad_id ?? ''),
-    entidad_nombre: recortarTexto(actor, String(f.entidad_nombre ?? '')),
+    entidad_nombre: sinEmojis(recortarTexto(actor, String(f.entidad_nombre ?? ''))),
     // La nota SIN recortar se usa solo para sacar el id del reporte; al navegador viaja recortada.
-    nota: recortarTexto(actor, String(f.nota ?? '')),
+    nota: sinEmojis(recortarTexto(actor, String(f.nota ?? ''))),
     reportado_por: String(f.reportado_por ?? ''),
     created_at: String(f.created_at),
     tipo: f.tipo ?? null,
@@ -51,7 +51,7 @@ async function conAcciones(actor: Actor, tareas: TareaBandeja[], reporteDe: Map<
   ])
   return Promise.all(tareas.map(async (t): Promise<TareaBandeja> => {
     const cerrar = (): AccionTarea => ({ tipo: 'cerrar', ...textoCerrar(t.tipo) })
-    const bloqueada = (texto: string, motivo: string = PERMISO_FALTA): AccionTarea => ({ tipo: 'bloqueada', texto, motivo })
+    const bloqueada = (texto: string, motivo: string = PERMISO_FALTA, resumen?: string): AccionTarea => ({ tipo: 'bloqueada', texto, motivo, ...(resumen ? { resumen } : {}) })
     switch (tipoDeAccion(t.tipo)) {
       case 'pago': {
         const sol = pagos.get(t.entidad_id)
@@ -83,7 +83,7 @@ async function conAcciones(actor: Actor, tareas: TareaBandeja[], reporteDe: Map<
           if (!aviso) return { ...t, accion: cerrar() }
           const r = await reenviosDe(aviso.id)
           const espera = esperaDeReenvio(r)
-          return { ...t, accion: espera ? bloqueada(clase.texto, `${espera.resumen} ${espera.porQue}`) : { tipo: 'insistir', texto: clase.texto, info: clase.info, reenvios: r.usados } }
+          return { ...t, accion: espera ? bloqueada(clase.texto, `${espera.resumen} ${espera.porQue}`, espera.resumen) : { tipo: 'insistir', texto: clase.texto, info: clase.info, reenvios: r.usados } }
         }
         if (t.tipo === 'nadie_abre' && t.entidad_tipo === 'visita') {
           return { ...t, accion: puede(actor, 'telefonos') ? { tipo: 'sitio', texto: 'Contactar al sitio', info: INFO_SITIO, visitaId: t.entidad_id } : bloqueada('Contactar al sitio') }

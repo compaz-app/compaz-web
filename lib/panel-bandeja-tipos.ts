@@ -93,7 +93,8 @@ export type AccionTarea =
   | { tipo: 'insistir'; texto: string; info: string; reenvios: number }
   | { tipo: 'sitio'; texto: string; info: string; visitaId: string }
   | { tipo: 'responder'; texto: string; info: string }
-  | { tipo: 'bloqueada'; texto: string; motivo: string }
+  /** `resumen`: una línea corta y visible de por qué está apagado y cuándo vuelve (el detalle va en el ⓘ, en `motivo`). */
+  | { tipo: 'bloqueada'; texto: string; motivo: string; resumen?: string }
 
 export type TipoAccion = 'cerrar' | 'pago' | 'decidir' | 'llamada'
 /** Qué clase de acción pide cada categoría de tarea (lo que no está aquí solo se cierra). */
@@ -134,6 +135,12 @@ export function claseInsistir(t: { tipo: string | null; reportado_por: string; e
 }
 export const INFO_RESPONDER_DUDA = 'Escribes la respuesta aquí y el bot la envía al Telegram del compita, como mensaje del equipo de Compaz. Al enviarla, la tarea se cierra y queda anotado quién respondió. No incluyas teléfonos ni correos: el sistema no los pasa.'
 export const INFO_SITIO = 'Te muestra el nombre y el teléfono de la persona de contacto en el sitio para que le escribas por WhatsApp. Es un dato sensible: si no eres administrador te pide un motivo, y queda anotado en Actividad. No le des datos del compita.'
+
+/**
+ * Los emojis son solo de Telegram (regla 6d): las tareas nacen de los mismos textos que salen por Telegram y traen alguno (📅, ⏳, ⚠️). En el panel se quitan,
+ * también de las tareas que ya estaban guardadas con ellos.
+ */
+export const sinEmojis = (t: string) => t.replace(/[\p{Extended_Pictographic}\u{FE0F}\u{200D}]/gu, '').replace(/[ \t]{2,}/g, ' ').replace(/^\s+/, '')
 
 export const PERMISO_FALTA = 'No tienes este permiso. Pídeselo a un administrador.'
 

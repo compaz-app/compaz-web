@@ -13,12 +13,14 @@ import { sendEmail, SITE_URL } from '@/lib/email'
 import { esc } from '@/lib/html'
 import { hoyVE, horaVE, formatFechaVE } from '@/lib/format'
 import { faltaDireccion } from '@/lib/direccion-tipos'
+import { versionCita } from '@/lib/citas-version'
+import { cerrarTareasDeCita, cerrarTareasSinTelegram } from '@/lib/tareas-obsoletas'
 
 export interface Propuesta { fecha: string; inicio: string; fin: string }
 const HORA = 3_600_000
 
 /** Marca de la propuesta vigente: va en los botones para que un botón viejo nunca confirme una propuesta nueva sin que el compita la vea. */
-export const versionCita = (propuestaEn: string | null | undefined) => (propuestaEn ? Math.floor(new Date(propuestaEn).getTime() / 1000).toString(36).slice(-6) : '')
+export { versionCita } from '@/lib/citas-version'
 const inicioDe = (p: Propuesta) => new Date(`${p.fecha}T${p.inicio.slice(0, 5)}:00-04:00`)
 const textoCita = (p: Propuesta) => `${formatFechaVE(p.fecha, true)}, ${p.inicio.slice(0, 5)} a ${p.fin.slice(0, 5)} (hora de Caracas)`
 
@@ -139,6 +141,8 @@ export async function proponerCita(p: { visitaId: string; usuarioId: string; com
   }
   await registrarEvento({ entidad: 'visita', entidadId: p.visitaId, tipo: 'cita_propuesta', actor: `cliente:${p.usuarioId}`, datos: { fecha: p.fecha, inicio: p.inicio } })
   await notificar({ plantilla: 'cita_propuesta_cliente', canal: 'correo', destinatario: { tipo: 'cliente', id: p.usuarioId }, variables: { compitaId: p.compitaId, cuando: textoCita(p) }, entidad: 'visita', entidadId: p.visitaId, paso: 11, claveUnica: `cita_propuesta:${p.visitaId}:${versionCita(propuestaEn)}` })
+  await cerrarTareasDeCita(p.visitaId, admin) // una propuesta nueva reemplaza a la anterior: su tarea vieja ya no vale
+  await cerrarTareasSinTelegram(p.compitaId, admin) // y si se le pudo avisar, su Telegram funciona
   return 'pendiente'
 }
 
@@ -163,6 +167,7 @@ export async function confirmarCita(visitaId: string, compitaId: string, version
   if (!ok) return 'cambio'
   await registrarEvento({ entidad: 'visita', entidadId: visitaId, tipo: 'cita_confirmada', actor: `compita:${compitaId}`, datos: { fecha: p.fecha, inicio: p.inicio } })
   await anunciarCitaConfirmada(visitaId, v.usuario_id, v.compita_id, p.fecha, p.inicio, p.fin)
+  await cerrarTareasDeCita(visitaId, admin) // la cita ya se confirmó: la tarea «cita sin confirmar» deja de hacer falta
   return 'ok'
 }
 
@@ -177,6 +182,7 @@ export async function rechazarCita(visitaId: string, compitaId: string, version:
   const { data: ok } = await admin.from('visitas').update({ cita_propuesta_fecha: null, cita_propuesta_inicio: null, cita_propuesta_fin: null, cita_propuesta_en: null }).eq('id', visitaId).eq('cita_propuesta_en', v.cita_propuesta_en!).select('id').maybeSingle()
   if (!ok) return 'cambio'
   await registrarEvento({ entidad: 'visita', entidadId: visitaId, tipo: 'cita_rechazada', actor: `compita:${compitaId}`, datos: { fecha: p.fecha, inicio: p.inicio } })
+  await cerrarTareasDeCita(visitaId, admin) // el compita ya respondió
   await notificar({ plantilla: 'cita_rechazada_cliente', canal: 'correo', destinatario: { tipo: 'cliente', id: v.usuario_id }, variables: { compitaId, cuando: textoCita(p) }, entidad: 'visita', entidadId: visitaId, paso: 11, claveUnica: `cita_rechazada:${visitaId}:${versionCita(v.cita_propuesta_en)}` })
   return 'ok'
 }
@@ -184,6 +190,7 @@ export async function rechazarCita(visitaId: string, compitaId: string, version:
 /** El cliente cambió de idea o reagendó: la propuesta pendiente ya no vale. */
 export async function descartarPropuesta(visitaId: string): Promise<void> {
   await createAdminSupabase().from('visitas').update({ cita_propuesta_fecha: null, cita_propuesta_inicio: null, cita_propuesta_fin: null, cita_propuesta_en: null }).eq('id', visitaId)
+  await cerrarTareasDeCita(visitaId)
 }
 
 /**
@@ -204,7 +211,7 @@ export async function escalarCitasSinRespuesta(ahora: Date = new Date()): Promis
       if (!rec) continue
       const [{ data: c }, { data: u }] = await Promise.all([admin.from('compitas').select('nombre').eq('id', v.compita_id).maybeSingle(), admin.from('usuarios').select('nombre').eq('id', v.usuario_id).maybeSingle()])
       const nc = (c as { nombre: string } | null)?.nombre ?? 'El compita'; const nu = (u as { nombre: string } | null)?.nombre ?? 'el cliente'
-      await alertaAdmin('tarea', `📅 <b>${esc(nc)} no confirma la cita</b>\n\n${esc(nu)} propuso ${esc(textoCita(p))} hace ${Math.floor(horas)} horas y ${esc(nc)} no responde. Escríbele por Telegram (no llames) o ayuda al cliente a elegir otra hora.`, { categoria: 'cita_sin_confirmar', clave: `cita:${v.id}:${versionCita(v.cita_propuesta_en)}`, entidad: { tipo: 'compita', id: v.compita_id, nombre: `📅 Cita sin confirmar: ${nc} / ${nu}` } })
+      await alertaAdmin('tarea', `📅 <b>${esc(nc)} no confirma la cita</b>\n\n${esc(nu)} propuso ${esc(textoCita(p))} ${horas < 1 ? 'hace menos de una hora' : `hace ${Math.floor(horas)} ${Math.floor(horas) === 1 ? 'hora' : 'horas'}`} y ${esc(nc)} no responde. Escríbele por Telegram (no llames) o ayuda al cliente a elegir otra hora.`, { categoria: 'cita_sin_confirmar', clave: `cita:${v.id}:${versionCita(v.cita_propuesta_en)}`, entidad: { tipo: 'compita', id: v.compita_id, nombre: `📅 Cita sin confirmar: ${nc} / ${nu}` } })
       await notificar({ plantilla: 'cita_sin_respuesta_cliente', canal: 'correo', destinatario: { tipo: 'cliente', id: v.usuario_id }, variables: { compitaId: v.compita_id, cuando: textoCita(p) }, entidad: 'visita', entidadId: v.id, paso: 11, claveUnica: `cita_sin_respuesta:${v.id}:${versionCita(v.cita_propuesta_en)}` })
       escaladas++
     } else if (!v.cita_recordada_en && horas >= Number(a.cita_recordatorio_horas)) {

@@ -202,7 +202,15 @@ export default function AccionTarea({ tarea, cerrando, onCerrar, onHecho, onRefr
     const texto = a?.texto ?? 'Marcar atendida'
     return <Boton tamano="compacto" variante="primario" info={a?.info ?? 'Marca la tarea como atendida y la quita de la bandeja. Queda anotado quién la resolvió.'} queHace={texto} cargando={cerrando} onClick={onCerrar}>{texto}</Boton>
   }
-  if (a.tipo === 'bloqueada') return <Boton tamano="compacto" variante="secundario" info={a.motivo} queHace={a.texto} disabled>{a.texto}</Boton>
+  if (a.tipo === 'bloqueada') {
+    // Un botón apagado siempre dice por qué y cuándo vuelve en UNA línea visible; la razón completa va en el ⓘ.
+    return (
+      <div className="flex flex-col items-start gap-1 @lg:items-end">
+        <Boton tamano="compacto" variante="secundario" info={a.motivo} queHace={a.texto} disabled>{a.texto}</Boton>
+        <span className="max-w-64 text-xs text-texto-medio @lg:text-right">{a.resumen ?? 'No tienes este permiso.'}</span>
+      </div>
+    )
+  }
   if (a.tipo === 'insistir') {
     // Insistir no resuelve la tarea: reenvía el aviso y la tarea sigue abierta (con un tope, explicado si se alcanza).
     const insistir = async () => {

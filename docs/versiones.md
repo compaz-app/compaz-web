@@ -4,6 +4,14 @@ La versión vigente está en `lib/version.ts` y se ve en el panel (menú lateral
 
 Reglas: mayor = cambio grande o lanzamiento; menor = función nueva; parche = arreglo. La etapa `beta` sale cuando el sistema corre una o dos semanas con uso real sin sorpresas.
 
+## 1.2.3-beta.1 (2026-11-16)
+Las tareas de la Bandeja se cierran solas cuando lo que las originó ya se resolvió, y se leen mejor (hallazgo 15 de la auditoría de flujos).
+1. «Cita sin confirmar» seguía abierta aunque la cita ya se hubiera confirmado, hecho y cerrado. Ahora se cierra en el momento (el compita confirma o rechaza la hora, el cliente elige otra o reagenda) y, además, la escalera barre cada 5 minutos las que hayan quedado abiertas por cualquier otro camino (`lib/tareas-obsoletas.ts`): sin propuesta vigente, visita terminada o inexistente, o una propuesta ya reemplazada. Lo mismo para «cita sin Telegram» cuando el compita ya tiene Telegram. Cierra también las que ya estaban atascadas.
+2. La nota de una tarea larga se podía cortar sin forma de leerla: ahora lleva «Ver más» y «Ver menos».
+3. El botón apagado («Insistir al compita» dentro de su espera de 30 minutos o con 3 envíos ya hechos) ahora dice en una línea visible por qué y cuándo vuelve; la razón completa sigue en el ⓘ.
+4. Los emojis de las tareas (📅, ⏳, ⚠️) se quitan en el panel, también de las ya guardadas (regla: emojis solo en Telegram). El texto «hace 0 horas» pasa a «hace menos de una hora».
+5. Sin migración. Las tareas de seguridad y emergencia se siguen cerrando a mano a propósito.
+
 ## 1.2.2-beta.1 (2026-11-16)
 Los correos del fin de la visita salen por el sistema de avisos (Nivel 1, parte C).
 1. El resumen de la visita (al terminar) y el reporte de bienestar (cuando el compita termina el cuestionario) dejan de enviarse directo desde Telegram: ahora son los avisos `visita_resumen` y `visita_reporte`, que arman el correo al enviar con lo que hay en la base. Así el portal del cliente recibe la novedad en vivo («La visita terminó. Ya puedes calificarla.» y «El reporte de bienestar de la visita está listo.») y el correo es el respaldo: con `CORREO_RESPALDO=diferido` se cancela si el cliente ya lo vio y los dos se juntan en uno solo si llegan seguidos. Apagado, salen al instante como antes.
