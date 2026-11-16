@@ -19,7 +19,8 @@ import { cargarDatosPortal } from '@/lib/portal-datos'
 import { registrarAcceso } from '@/lib/alertas-admin'
 import { ventanaVigente, marcarVentana } from '@/lib/cron'
 import { pestanaDeSec, esParteCuenta } from '@/lib/portal-secciones'
-import { contarNovedadesSinAbrir, marcarNovedadesAbiertas } from '@/lib/novedades'
+import { contarNovedadesSinAbrir, marcarNovedadesAbiertas, listarAvisosPortal, type AvisoPortal } from '@/lib/novedades'
+import CampanaAvisos from '@/components/portal/CampanaAvisos'
 import { contarMensajesSinLeer, marcarChatLeido } from '@/lib/portal-mensajes'
 
 export const dynamic = 'force-dynamic'
@@ -47,11 +48,13 @@ export default async function PortalPage({ searchParams }: { searchParams: Promi
     if (!anotado) redirect('/panel')
     await marcarVentana(clavePrev)
   }
-  // Círculo rojo de Visitas: lo nuevo que aún no abrió. Al entrar a Visitas se quita. El equipo en vista previa no marca nada (no es el cliente).
-  let nuevasVisitas = 0
+  // Círculos rojos: la campana cuenta los avisos nuevos y Visitas los mensajes sin leer. Entrar a Visitas deja todo atendido (el chat queda a la vista).
+  // El equipo en vista previa no marca ni cuenta nada (no es el cliente).
+  let avisos: AvisoPortal[] = []; let avisosNuevos = 0; let mensajesNuevos = 0
   if (!esAdmin) {
     if (pestana === 'visitas') await Promise.all([marcarNovedadesAbiertas(uid), marcarChatLeido(uid)])
-    else nuevasVisitas = (await Promise.all([contarNovedadesSinAbrir(uid), contarMensajesSinLeer(uid)])).reduce((a, b) => a + b, 0)
+    else [avisosNuevos, mensajesNuevos] = await Promise.all([contarNovedadesSinAbrir(uid), contarMensajesSinLeer(uid)])
+    avisos = await listarAvisosPortal(uid)
   }
   const datos = pestana === 'inicio' ? null : await cargarDatosPortal(uid)
   return (
@@ -59,9 +62,9 @@ export default async function PortalPage({ searchParams }: { searchParams: Promi
       {esAdmin && <Aviso tono="advertencia">Vista previa del portal nuevo de {portal.nombre || 'este cliente'}. Los botones de acción no se ejecutan en la vista previa.</Aviso>}
       <header className="flex items-center justify-between">
         <span className="text-lg font-extrabold text-morado-medio">Compaz</span>
-        <span className="text-base text-morado-claro">Hola, {portal.nombre.split(' ')[0] || 'bienvenido'}</span>
+        <span className="flex items-center gap-1 text-base text-morado-claro">Hola, {portal.nombre.split(' ')[0] || 'bienvenido'}{!esAdmin && <CampanaAvisos avisos={avisos} nuevos={avisosNuevos} />}</span>
       </header>
-      <NavPortal actual={pestana} preview={esAdmin ? preview : null} insignias={{ visitas: nuevasVisitas }} />
+      <NavPortal actual={pestana} preview={esAdmin ? preview : null} insignias={{ visitas: mensajesNuevos }} />
       {pestana !== 'inicio' && <TarjetaEstado tarjeta={portal.tarjeta} compita={null} visitaId={portal.estado.visitaId} estado={portal.estado.codigo} vistaPrevia={esAdmin} />}
       {pestana === 'inicio' && (
         <>

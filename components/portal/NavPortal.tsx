@@ -6,7 +6,7 @@ import { PESTANAS, type PestanaPortal } from '@/lib/portal-secciones'
 export default function NavPortal({ actual, preview, insignias = {} }: { actual: PestanaPortal; preview?: string | null; insignias?: Partial<Record<PestanaPortal, number>> }) {
   const href = (id: PestanaPortal) => `/portal?${new URLSearchParams({ ...(id === 'inicio' ? {} : { sec: id }), ...(preview ? { preview } : {}) }).toString()}`.replace(/\?$/, '')
   const item = (id: PestanaPortal, texto: string, clases: string) => (
-    <Link key={id} href={href(id)} aria-current={actual === id ? 'page' : undefined} className={`${clases} ${actual === id ? 'font-extrabold' : 'font-bold'}`}><span className="relative">{texto}{(insignias[id] ?? 0) > 0 && <span role="status" aria-label={`${insignias[id]} avisos nuevos`} className="absolute -right-5 -top-2 inline-flex min-w-5 items-center justify-center rounded-full bg-rojo px-1.5 text-[11px] font-extrabold leading-5 text-blanco">{(insignias[id] ?? 0) > 99 ? '99+' : insignias[id]}</span>}</span></Link>
+    <Link key={id} href={href(id)} aria-current={actual === id ? 'page' : undefined} className={`${clases} ${actual === id ? 'font-extrabold' : 'font-bold'}`}><span className="relative">{texto}{(insignias[id] ?? 0) > 0 && <span role="status" aria-label={`${insignias[id]} mensajes sin leer`} className="absolute -right-5 -top-2 inline-flex min-w-5 items-center justify-center rounded-full bg-rojo px-1.5 text-[11px] font-extrabold leading-5 text-blanco">{(insignias[id] ?? 0) > 99 ? '99+' : insignias[id]}</span>}</span></Link>
   )
   return (
     <>

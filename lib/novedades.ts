@@ -84,3 +84,15 @@ export async function marcarNovedadesAbiertas(usuarioId: string, admin: Admin = 
     return (data ?? []).length
   } catch { return 0 }
 }
+
+export interface AvisoPortal { id: string; titulo: string; ruta: string; creada_en: string; nueva: boolean }
+
+/** Los últimos avisos del cliente para la campana del portal (los más nuevos primero). «nueva» = todavía no abrió la campana ni Visitas. */
+export async function listarAvisosPortal(usuarioId: string, limite = 10, admin: Admin = createAdminSupabase()): Promise<AvisoPortal[]> {
+  try {
+    const { data, error } = await admin.from('novedades_cliente').select('id, titulo, ruta, creada_en, actuada_en').eq('usuario_id', usuarioId).order('creada_en', { ascending: false }).limit(limite)
+    if (error) { console.error('[novedades] listar:', error.message); return [] }
+    return ((data ?? []) as { id: string; titulo: string; ruta: string | null; creada_en: string; actuada_en: string | null }[])
+      .map((n) => ({ id: n.id, titulo: n.titulo, ruta: n.ruta?.startsWith('/') ? n.ruta : '/portal', creada_en: n.creada_en, nueva: !n.actuada_en }))
+  } catch { return [] }
+}
