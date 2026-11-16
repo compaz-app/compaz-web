@@ -1,6 +1,6 @@
 /* eslint-disable */
 // Recorridos completos y encadenados: admin + compita + cliente + crons + Daily sobre la MISMA base de datos.
-import { db, net, session, limpiar, req, tgText, tgBtn, tgFoto, ultimoTg, tgPara, emailsA, cron, ahoraMas, hoyVEstr, firmaDaily, mkCompita, mkCliente, confirmarLlegada, avisosAdmin, confirmarPropuesta } from './harness'
+import { db, net, session, limpiar, req, tgText, tgBtn, tgFoto, ultimoTg, tgPara, emailsA, cron, ahoraMas, hoyVEstr, firmaDaily, mkCompita, mkCliente, confirmarLlegada, avisosAdmin, confirmarPropuesta, conDireccion } from './harness'
 import { beforeEach, test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import { tokenRating } from '@/lib/links'
@@ -124,6 +124,7 @@ describe('RECORRIDO 1: de la invitación de la compita hasta la valoración, tod
     await webhook(tgText(2000, '¿Te queda bien mañana a las 10?'))
     assert.ok(db.rows('mensajes').some((m) => m.origen === 'compita' && m.visit_id === visita.id))
     como(carlos)
+    conDireccion(visita.id)
     assert.equal((await fechaPut(req('/api/visita/fecha', { method: 'PUT', json: { visita_id: visita.id, fecha_programada: hoyVEstr(1), hora_inicio: '10:00', hora_fin: '12:00' } }))).status, 200)
     await confirmarPropuesta(visita.id) // el compita confirma la hora
     admin(); net.tg = []

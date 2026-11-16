@@ -278,6 +278,7 @@ export const ENTRADAS: EntradaManual[] = [
       'Escríbele al compita por Telegram, sin llamar.',
       'Si no puede, ayuda al cliente a elegir otra hora desde su portal.',
     ],
+    despues: 'El cliente no puede pedir la hora sin haber registrado antes la dirección y el contacto en el sitio, y el compita no puede confirmarla sin ellos. Si el cliente dice que no puede agendar, revisa que haya llenado «¿Dónde será esta visita?».',
     permiso: 'atender', pantalla: 'bandeja', busca: ['cita', 'confirmar', 'hora', 'agenda'],
   },
   {

@@ -12,6 +12,7 @@ import { reclamarUnaVez } from '@/lib/cron'
 import { sendEmail, SITE_URL } from '@/lib/email'
 import { esc } from '@/lib/html'
 import { hoyVE, horaVE, formatFechaVE } from '@/lib/format'
+import { faltaDireccion } from '@/lib/direccion-tipos'
 
 export interface Propuesta { fecha: string; inicio: string; fin: string }
 const HORA = 3_600_000
@@ -141,11 +142,11 @@ export async function proponerCita(p: { visitaId: string; usuarioId: string; com
   return 'pendiente'
 }
 
-type VisitaCita = { id: string; usuario_id: string; compita_id: string; estado: string; cita_propuesta_fecha: string | null; cita_propuesta_inicio: string | null; cita_propuesta_fin: string | null; cita_propuesta_en: string | null }
-const COLS = 'id, usuario_id, compita_id, estado, cita_propuesta_fecha, cita_propuesta_inicio, cita_propuesta_fin, cita_propuesta_en'
+type VisitaCita = { direccion?: string | null; contacto_nombre?: string | null; contacto_tel?: string | null; id: string; usuario_id: string; compita_id: string; estado: string; cita_propuesta_fecha: string | null; cita_propuesta_inicio: string | null; cita_propuesta_fin: string | null; cita_propuesta_en: string | null }
+const COLS = 'direccion, contacto_nombre, contacto_tel, id, usuario_id, compita_id, estado, cita_propuesta_fecha, cita_propuesta_inicio, cita_propuesta_fin, cita_propuesta_en'
 const propuestaDe = (v: VisitaCita): Propuesta | null => (v.cita_propuesta_fecha && v.cita_propuesta_inicio && v.cita_propuesta_fin ? { fecha: v.cita_propuesta_fecha, inicio: v.cita_propuesta_inicio, fin: v.cita_propuesta_fin } : null)
 
-export type ResultadoRespuesta = 'ok' | 'cambio' | 'ya_no_hay' | 'choque'
+export type ResultadoRespuesta = 'ok' | 'cambio' | 'ya_no_hay' | 'choque' | 'sin_direccion'
 
 /** El compita confirma: la visita queda programada y se avisa a los dos. `version` evita confirmar a ciegas una propuesta que ya cambió. */
 export async function confirmarCita(visitaId: string, compitaId: string, version: string): Promise<ResultadoRespuesta> {
@@ -155,6 +156,8 @@ export async function confirmarCita(visitaId: string, compitaId: string, version
   const p = v ? propuestaDe(v) : null
   if (!v || !p) return 'ya_no_hay'
   if (version !== versionCita(v.cita_propuesta_en)) return 'cambio'
+  // Respaldo del requisito: aunque una propuesta vieja haya quedado sin dirección, no se confirma hasta que el cliente la registre.
+  if (faltaDireccion(v)) return 'sin_direccion'
   if (await hayChoque(compitaId, p.fecha, p.inicio, p.fin, v.id)) return 'choque'
   const { data: ok } = await admin.from('visitas').update({ fecha_programada: p.fecha, hora_inicio_programada: p.inicio, hora_fin_programada: p.fin, estado: 'programada', cita_propuesta_fecha: null, cita_propuesta_inicio: null, cita_propuesta_fin: null, cita_propuesta_en: null }).eq('id', visitaId).eq('cita_propuesta_en', v.cita_propuesta_en!).in('estado', ['pre_visita', 'programada']).select('id').maybeSingle()
   if (!ok) return 'cambio'

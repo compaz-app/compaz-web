@@ -601,6 +601,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                 </span>
               )}
             </h2>
+            {!previewUid && <DireccionVisita />}
             <div id="fecha-programada">
               {!previewUid && (
                 <FechaProgramada
@@ -634,7 +635,6 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                 tieneFecha={!!visitaPreVisita.fecha_programada}
               />
             )}
-            {!previewUid && <DireccionVisita />}
             {!previewUid && <LugarPersonas />}
           </section>
         )}

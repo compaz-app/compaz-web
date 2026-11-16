@@ -32,8 +32,16 @@ export default function FechaProgramada({ visitaId, fechaActual, horaInicioActua
   // Con la confirmación del compita encendida, la hora queda PROPUESTA hasta que ella responda.
   const [pendiente, setPendiente] = useState(false)
   const router = useRouter()
+  // Sin dirección y contacto en el sitio no se puede agendar: el botón queda apagado y se explica por qué (el servidor también lo exige).
+  const [direccionOk, setDireccionOk] = useState<boolean | null>(null)
+  useEffect(() => {
+    let vivo = true
+    const cargar = () => { fetch('/api/visita/direccion').then((r) => r.json()).then((d) => { if (vivo && d?.ok) setDireccionOk(!!d.data.registrada) }).catch(() => { /* sin dato: el servidor decide al enviar */ }) }
+    cargar(); window.addEventListener('compaz:direccion', cargar)
+    return () => { vivo = false; window.removeEventListener('compaz:direccion', cargar) }
+  }, [])
 
-  const valido = fecha && fecha >= hoy && horaInicio && horaFin && horaFin > horaInicio
+  const valido = fecha && fecha >= hoy && horaInicio && horaFin && horaFin > horaInicio && direccionOk !== false
 
   async function guardar() {
     if (!valido) return
@@ -120,6 +128,11 @@ export default function FechaProgramada({ visitaId, fechaActual, horaInicioActua
               placeholder="Fin"
             />
           </div>
+          {direccionOk === false && (
+            <p role="alert" style={{ background: colors.amarilloClaro, borderRadius: '8px', padding: '8px 12px', color: colors.moradoProfundo, fontSize: '13px', fontWeight: 700, lineHeight: 1.5, margin: 0, fontFamily: 'Inter, sans-serif' }}>
+              Primero registra la dirección y el contacto en el sitio (en «¿Dónde será esta visita?»). Sin eso no se puede confirmar la visita.
+            </p>
+          )}
           {horaInicio && horaFin && horaFin <= horaInicio && (
             <p style={{ color: '#E05520', fontSize: '12px', margin: 0, fontFamily: 'Inter, sans-serif' }}>
               La hora de fin debe ser después de la hora de inicio.

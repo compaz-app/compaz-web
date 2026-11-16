@@ -39,6 +39,8 @@ export function validarDireccion(b: unknown): { ok: true; datos: DatosDireccion 
   return { ok: true, datos: { direccion, indicaciones: indicaciones || null, quien_abre: quien || null, contacto_nombre, contacto_tel } }
 }
 
+export { faltaDireccion, MENSAJE_FALTA_DIRECCION } from '@/lib/direccion-tipos'
+
 /** Instante en que empieza la cita (hora de Venezuela), o null si aún no tiene fecha. */
 export function inicioDeLaCita(fecha: string | null, hora: string | null): Date | null {
   if (!fecha || !/^\d{4}-\d{2}-\d{2}$/.test(fecha) || !hora || !/^\d{2}:\d{2}/.test(hora)) return null

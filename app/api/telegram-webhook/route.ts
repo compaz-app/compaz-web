@@ -946,6 +946,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
       ? (accion === 'ok' ? `✅ Cita confirmada. Te mandamos la dirección 3 horas antes y un recordatorio.` : `Anotado ✓ Le avisamos al cliente para que elija otra hora. Gracias por avisar.`)
       : r === 'cambio' ? `Esa propuesta ya cambió: el cliente eligió otra hora. Revisa el mensaje más reciente.`
       : r === 'choque' ? `Ya tienes otra visita a esa hora, así que no se puede confirmar. Toca "No puedo a esa hora" y el cliente elige otra.`
+      : r === 'sin_direccion' ? `El cliente todavía no registró la dirección de la visita, así que no se puede confirmar. Cuando la registre, vuelve a tocar Confirmo la cita.`
       : `Esa propuesta ya no está pendiente.`, await tecladoSegunEstado())
     return NextResponse.json({ ok: true })
   }

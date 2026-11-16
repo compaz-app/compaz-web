@@ -188,3 +188,7 @@ export async function confirmarPropuesta(visitaId: string): Promise<boolean> {
   const { confirmarCita, versionCita } = await import('@/lib/citas')
   return (await confirmarCita(visitaId, v.compita_id, versionCita(v.cita_propuesta_en))) === 'ok'
 }
+
+/** Una visita lista para agendar: con dirección y contacto en el sitio (sin ellos la cita no se puede pedir ni confirmar). */
+export const DIRECCION_PRUEBA = { direccion: 'Av. Francisco de Miranda, Edif. Sol, piso 3, Chacao', contacto_nombre: 'Rosa Linares', contacto_tel: '+584145550101' }
+export const conDireccion = (visitaId: string) => { const r = db.rows('visitas').find((x: any) => x.id === visitaId); if (r) Object.assign(r, DIRECCION_PRUEBA) }

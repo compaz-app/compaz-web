@@ -1,12 +1,15 @@
 /* eslint-disable */
 // Lote 4 (tramo 1): dirección por cita. El cliente la registra; el compita la recibe 3 horas antes por Telegram, nunca el
 // teléfono del contacto; si falta, se avisa y se abre una tarea; "Voy en camino" avisa al cliente.
-import { db, net, limpiar, req, session, mkCliente, mkCompita, mkVisita, tgBtn, tgPara, emailsA, cron, avisosAdmin } from './harness'
+import { db, net, limpiar, req, session, mkCliente, mkCompita, mkVisita, tgBtn, tgPara, emailsA, cron, avisosAdmin, hoyVEstr } from './harness'
 import { beforeEach, test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import { GET as dirGet, PUT as dirPut } from '@/app/api/visita/direccion/route'
 import { POST as webhook } from '@/app/api/telegram-webhook/route'
 import { POST as cronEscalera } from '@/app/api/cron/escalera-avisos/route'
+import { PUT as fechaPutRuta } from '@/app/api/visita/fecha/route'
+import { confirmarCita, versionCita } from '@/lib/citas'
+import { readFileSync } from 'node:fs'
 import { validarDireccion, entregarDirecciones, entregarDireccionDeVisita } from '@/lib/direccion'
 import { limpiarCacheAjustes, setAjuste } from '@/lib/ajustes'
 
@@ -154,5 +157,32 @@ describe('"Voy en camino"', () => {
     const { visita } = mundo(2); mkCompita({ telegram_chat_id: '9811' })
     await webhook(tgBtn('9811', `camino:${visita.id}`))
     assert.equal(emailsA('caro@mail.test').filter((e) => /va en camino/.test(e.subject)).length, 0)
+  })
+})
+
+describe('la dirección es requisito para agendar', () => {
+  const putFecha = (v: any) => fechaPutRuta(req('/api/visita/fecha', { method: 'PUT', json: { visita_id: v.id, fecha_programada: hoyVEstr(3), hora_inicio: '10:00', hora_fin: '12:00' } }))
+  test('sin dirección y contacto en el sitio, el cliente no puede pedir la cita (409) y no se avisa al compita', async () => {
+    const { cliente, visita } = mundo(48)
+    Object.assign(visita, { direccion: null, contacto_nombre: null, contacto_tel: null, fecha_programada: null, hora_inicio_programada: null })
+    como(cliente)
+    const r = await putFecha(visita); assert.equal(r.status, 409); assert.match((await r.json()).error, /registra la dirección/)
+    assert.equal(db.rows('visitas').find((x: any) => x.id === visita.id)!.cita_propuesta_fecha ?? null, null)
+  })
+  test('con dirección y contacto, la propuesta sale', async () => {
+    const { cliente, visita } = mundo(48)
+    Object.assign(visita, { fecha_programada: null, hora_inicio_programada: null }); como(cliente)
+    assert.equal(visita.direccion ?? null, null); await guardar(cliente, buena())
+    assert.equal((await putFecha(visita)).status, 200)
+  })
+  test('el compita no puede confirmar una cita cuyo cliente no registró la dirección', async () => {
+    const { compita, cliente, visita } = mundo(48)
+    Object.assign(visita, { direccion: null, contacto_nombre: null, contacto_tel: null, estado: 'pre_visita', cita_propuesta_fecha: hoyVEstr(3), cita_propuesta_inicio: '10:00', cita_propuesta_fin: '12:00', cita_propuesta_en: new Date().toISOString() })
+    const r = await confirmarCita(visita.id, compita.id, versionCita(visita.cita_propuesta_en))
+    assert.equal(r, 'sin_direccion'); assert.equal(db.rows('visitas').find((x: any) => x.id === visita.id)!.estado, 'pre_visita')
+  })
+  test('la pantalla apaga la fecha sin dirección y la dirección va primero', () => {
+    const f = readFileSync('components/ui/FechaProgramada.tsx', 'utf8'); assert.match(f, /direccionOk !== false/); assert.match(f, /compaz:direccion/)
+    assert.match(readFileSync('lib/portal-secciones.ts', 'utf8'), /propios\('direccion', 'fecha'\)/)
   })
 })

@@ -18,7 +18,7 @@ const sit = (o: Partial<SituacionVisitas> = {}): SituacionVisitas => ({ visita: 
 
 describe('qué bloques salen en la pestaña Visitas', () => {
   test('sin visitas: solo el mensaje de que aún no tiene', () => assert.deepEqual(bloquesDeVisitas(sit()), ['vacio']))
-  test('coordinando la fecha: elegir fecha, chat, acciones, dirección y quién estará (en ese orden)', () => assert.deepEqual(bloquesDeVisitas(sit({ visita: 'pre_visita' })), ['fecha', 'chat', 'acciones_coordinacion', 'direccion', 'lugar']))
+  test('coordinando la fecha: dirección primero, luego fecha, chat, acciones y quién estará (en ese orden)', () => assert.deepEqual(bloquesDeVisitas(sit({ visita: 'pre_visita' })), ['direccion', 'fecha', 'chat', 'acciones_coordinacion', 'lugar']))
   test('visita programada: chat plegable, reagendar, llegada, dirección y quién estará', () => assert.deepEqual(bloquesDeVisitas(sit({ visita: 'programada' })), ['chat_plegable', 'reagendar', 'llegada', 'direccion', 'lugar']))
   test('visita en curso: videollamada y chat; con el compita recién llegado, solo el chat (confirmar está en Inicio)', () => {
     assert.deepEqual(bloquesDeVisitas(sit({ visita: 'en_curso' })), ['video', 'chat']); assert.deepEqual(bloquesDeVisitas(sit({ visita: 'confirmando_inicio' })), ['chat'])

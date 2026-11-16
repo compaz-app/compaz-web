@@ -28,7 +28,8 @@ export function bloquesDeVisitas(s: SituacionVisitas): BloqueVisitas[] {
   const propios = (...x: BloqueVisitas[]) => { if (!s.vistaPrevia) b.push(...x) }
   if (s.visita === 'en_curso') { propios('video'); b.push('chat') }
   else if (s.visita === 'confirmando_inicio') b.push('chat')
-  else if (s.visita === 'pre_visita') { propios('fecha'); b.push('chat'); propios('acciones_coordinacion', 'direccion', 'lugar') }
+  // La dirección va ANTES de la fecha: sin ella no se puede agendar (el servidor lo exige y la fecha queda apagada hasta que se registre).
+  else if (s.visita === 'pre_visita') { propios('direccion', 'fecha'); b.push('chat'); propios('acciones_coordinacion', 'lugar') }
   else if (s.visita === 'programada') { b.push('chat_plegable'); propios('reagendar', 'llegada', 'direccion', 'lugar') }
   if (s.puedeAgendarOtra && !s.vistaPrevia) b.push('agendar_otra')
   if (s.reportes > 0) b.push('bienestar')

@@ -1,6 +1,6 @@
 /* eslint-disable */
 // Visitas 2, 3, 4...: el cliente agenda otra con su compita y se repite el mismo flujo completo.
-import { db, net, session, limpiar, req, tgText, tgBtn, tgFoto, ultimoTg, tgPara, emailsA, cron, ahoraMas, hoyVEstr, mkCompita, mkCliente, mkSolicitud, confirmarLlegada, avisosAdmin, confirmarPropuesta } from './harness'
+import { db, net, session, limpiar, req, tgText, tgBtn, tgFoto, ultimoTg, tgPara, emailsA, cron, ahoraMas, hoyVEstr, mkCompita, mkCliente, mkSolicitud, confirmarLlegada, avisosAdmin, confirmarPropuesta, conDireccion } from './harness'
 import { beforeEach, test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import { tokenRating } from '@/lib/links'
@@ -37,6 +37,7 @@ async function visitaCompleta(carlos: any, lucia: any, n: number) {
   await webhook(tgText(3000, `Hola, ¿qué día te queda bien? (visita ${n})`))
   assert.ok(db.rows('mensajes').some((m) => m.visit_id === v.id && m.origen === 'compita'), `visita ${n}: el chat funciona`)
   como(carlos)
+  conDireccion(v.id)
   const f = await fechaPut(req('/api/visita/fecha', { method: 'PUT', json: { visita_id: v.id, fecha_programada: hoyVEstr(1), hora_inicio: `${9 + n}:00`.padStart(5, '0'), hora_fin: `${11 + n}:00` } }))
   assert.equal(f.status, 200, `visita ${n}: registra la fecha`)
   await confirmarPropuesta(v.id) // el compita confirma la hora
@@ -120,6 +121,7 @@ describe('Agendar otra visita (2ª, 3ª, 4ª...)', () => {
     const v2 = db.rows('visitas').find((v) => v.estado === 'pre_visita')!
     for (let i = 0; i < 3; i++) {
       como(carlos)
+      conDireccion(v2.id)
       await fechaPut(req('/api/visita/fecha', { method: 'PUT', json: { visita_id: v2.id, fecha_programada: hoyVEstr(2 + i), hora_inicio: '10:00', hora_fin: '12:00' } }))
       await confirmarPropuesta(v2.id)
       assert.equal(v2.estado, 'programada')

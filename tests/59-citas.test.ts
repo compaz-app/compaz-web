@@ -1,6 +1,6 @@
 /* eslint-disable */
 // Confirmación de la cita de la visita por el compita: el cliente PROPONE; la visita queda programada solo cuando el compita confirma.
-import { db, net, limpiar, req, session, cron, mkCliente, mkCompita, mkVisita, tgText, tgBtn, tgPara, emailsA } from './harness'
+import { db, net, limpiar, req, session, cron, mkCliente, mkCompita, mkVisita, tgText, tgBtn, tgPara, emailsA, conDireccion } from './harness'
 import { beforeEach, test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import { PUT as fecha } from '@/app/api/visita/fecha/route'
@@ -21,7 +21,7 @@ const mundo = (o: any = {}) => {
   session.user = { id: cliente.id, email: cliente.email } as any
   return { cliente, compita, v }
 }
-const proponer = (v: any, d = 3, ini = '09:00', fin = '10:00') => fecha(req('/api/visita/fecha', { method: 'PUT', json: { visita_id: v.id, fecha_programada: dia(d), hora_inicio: ini, hora_fin: fin } }))
+const proponer = (v: any, d = 3, ini = '09:00', fin = '10:00') => (conDireccion(v.id), fecha)(req('/api/visita/fecha', { method: 'PUT', json: { visita_id: v.id, fecha_programada: dia(d), hora_inicio: ini, hora_fin: fin } }))
 const fila = (id: string) => db.rows('visitas').find((x) => x.id === id)!
 const botones = (m: any) => (m?.markup?.inline_keyboard ?? []).flat().map((b: any) => b.callback_data)
 const ver = (v: any) => versionCita(fila(v.id).cita_propuesta_en)

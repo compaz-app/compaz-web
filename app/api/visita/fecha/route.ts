@@ -7,6 +7,7 @@ import { esc } from '@/lib/html'
 import { hoyVE, horaVE } from '@/lib/format'
 import { alertaAdmin } from '@/lib/alertas-admin'
 import { proponerCita } from '@/lib/citas'
+import { faltaDireccion, MENSAJE_FALTA_DIRECCION } from '@/lib/direccion-tipos'
 
 // PUT /api/visita/fecha
 // El cliente elige fecha y horario: queda PROPUESTA hasta que el compita la confirme (pre_visita → programada). Nunca se programa sin que el
@@ -36,7 +37,7 @@ export async function PUT(req: NextRequest) {
 
   const { data: visita } = await admin
     .from('visitas')
-    .select('id, usuario_id, compita_id, estado')
+    .select('id, usuario_id, compita_id, estado, direccion, contacto_nombre, contacto_tel')
     .eq('id', visita_id)
     .single()
 
@@ -44,6 +45,8 @@ export async function PUT(req: NextRequest) {
   if (visita.usuario_id !== user.id) return err('Sin acceso', 403)
   if (await personaPausada('cliente', user.id)) return err('Tu cuenta está en pausa: por ahora no puedes agendar visitas. El equipo se comunica contigo por correo.', 403)
   if (!['pre_visita', 'programada'].includes(visita.estado)) return err('Estado de visita inválido')
+  // Requisito: sin dirección y contacto en el sitio no se pide la cita (el compita nunca recibe una propuesta de un lugar desconocido).
+  if (faltaDireccion(visita)) return err(MENSAJE_FALTA_DIRECCION, 409)
 
   // Verificar solapamiento: buscar visitas del mismo compita en la misma fecha
   // con horario que se cruce con el nuevo bloque solicitado.

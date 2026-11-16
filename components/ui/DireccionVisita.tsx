@@ -39,11 +39,12 @@ export default function DireccionVisita() {
       const d = await r.json()
       if (!d.ok) { setError(d.error ?? 'No pudimos guardar la dirección.'); return }
       setEditando(false); setListo({ entregada: d.data.entregada }); await cargar()
+      window.dispatchEvent(new Event('compaz:direccion'))
     } catch { setError('Sin conexión. Intenta de nuevo.') } finally { setGuardando(false) }
   }
 
   return (
-    <section style={{ marginTop: spacing.md, background: colors.blanco, border: `1px solid ${colors.gris200}`, borderRadius: radius.lg, padding: spacing.md, fontFamily: fonts.body }}>
+    <section id="direccion-visita" style={{ marginTop: spacing.md, background: colors.blanco, border: `1px solid ${colors.gris200}`, borderRadius: radius.lg, padding: spacing.md, fontFamily: fonts.body }}>
       <div style={{ fontFamily: fonts.display, fontWeight: 800, fontSize: '16px', color: colors.textoOscuro }}>¿Dónde será esta visita?</div>
       {!editando && (
         <>
