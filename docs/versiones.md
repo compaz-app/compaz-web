@@ -4,6 +4,11 @@ La versión vigente está en `lib/version.ts` y se ve en el panel (menú lateral
 
 Reglas: mayor = cambio grande o lanzamiento; menor = función nueva; parche = arreglo. La etapa `beta` sale cuando el sistema corre una o dos semanas con uso real sin sorpresas.
 
+## 1.3.2-beta.1 (2026-11-16)
+El chat del portal del cliente se distingue del resto de la pestaña Visitas.
+1. Antes el chat quedaba sin marco, fundido con el fondo y las demás tarjetas. Ahora tiene su propio marco (borde morado, fondo tenue y sombra suave) y una altura fija con los mensajes desplazándose adentro, así que nunca estira la página.
+2. Sin migración.
+
 ## 1.3.1-beta.1 (2026-11-16)
 Portal del cliente: la campana de avisos.
 1. Una campana arriba, junto al saludo, con un círculo rojo y el número de avisos nuevos (compita confirmó, llegó, la visita terminó...). Al abrirla se quita el círculo y la lista queda a la vista con los últimos 10 avisos; cada uno lleva a donde se atiende.

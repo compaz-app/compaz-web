@@ -30,7 +30,8 @@ export default function SeccionVisitas({ d, vistaPrevia }: { d: DatosPortal; vis
   const dibujar = (b: BloqueVisitas) => {
     switch (b) {
       case 'video': return <VideoCall visitaId={d.visitaActiva!.id} compitaNombre={nombre} roomUrlInicial={d.visitaActiva?.room_url ?? null} />
-      case 'chat': return <Chat visita={visita!} mensajesIniciales={d.mensajes} compitaNombre={nombre} />
+      // El chat con marco propio: borde morado, fondo tenue y altura fija con desplazamiento adentro, para que se distinga de las demás tarjetas de la pestaña.
+      case 'chat': return <section aria-label={`Chat con ${nombre}`} className="flex h-[min(34rem,75dvh)] flex-col overflow-hidden rounded-2xl border-2 border-morado-medio bg-fondo-claro shadow-sm"><Chat visita={visita!} mensajesIniciales={d.mensajes} compitaNombre={nombre} /></section>
       case 'fecha': return <div id="fecha-programada"><FechaProgramada visitaId={visita!.id} fechaActual={visita!.fecha_programada ?? null} horaInicioActual={visita!.hora_inicio_programada ?? null} horaFinActual={visita!.hora_fin_programada ?? null} compitaNombre={nombre} /></div>
       case 'acciones_coordinacion': return <PreVisitaActions compitaNombre={nombre} tieneFecha={!!visita!.fecha_programada} />
       case 'reagendar': return <ReagendarButton visitaId={visita!.id} compitaNombre={nombre} />
