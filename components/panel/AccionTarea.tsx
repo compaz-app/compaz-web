@@ -217,7 +217,8 @@ export default function AccionTarea({ tarea, cerrando, onCerrar, onHecho, onRefr
       setInsistiendo(true); setMensaje(null)
       const r = await enviar('/api/admin/insistir-aviso', 'POST', { flag_id: tarea.id })
       setInsistiendo(false)
-      if (r.ok) { setMensaje({ ok: true, texto: `Aviso reenviado (${r.data?.reenvios ?? 1} de 3).` }); onRefrescar() } else setMensaje({ ok: false, texto: r.error ?? 'No se pudo reenviar' })
+      if (r.ok) setMensaje({ ok: true, texto: `Aviso reenviado (${r.data?.reenvios ?? 1} de 3).` }); else setMensaje({ ok: false, texto: r.error ?? 'No se pudo reenviar' })
+      onRefrescar() // pase lo que pase se vuelve a leer la lista: si la tarea ya se resolvió o se cerró, desaparece o cambia
     }
     return (
       <div className="flex flex-col items-start gap-1 @lg:items-end">

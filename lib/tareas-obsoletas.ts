@@ -8,10 +8,23 @@ import { versionCita } from '@/lib/citas-version'
 type Admin = ReturnType<typeof createAdminSupabase>
 
 /** La clave de la tarea va en la nota como «[cita:<visita>:<versión>]» (la pone alertaAdmin). */
-const CLAVE_CITA = /\[cita:([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}):([^\]]*)\]/i
+export const CLAVE_CITA = /\[cita:([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}):([^\]]*)\]/i
 
 const cerrar = (admin: Admin, ids: string[]) =>
   ids.length ? admin.from('admin_flags').update({ resuelto: true, resuelto_at: new Date().toISOString() }).in('id', ids).eq('resuelto', false) : Promise.resolve()
+
+/**
+ * ¿Sigue vigente la propuesta que originó la tarea? Solo si la visita sigue en coordinación o programada, con una propuesta pendiente y es LA MISMA propuesta
+ * (misma versión). Si no, la cita ya se resolvió (o cambió) y insistirle al compita sería mandarle algo viejo.
+ */
+export const citaVigente = (v: { estado: string; cita_propuesta_en: string | null } | undefined | null, version: string) =>
+  !!v && ['pre_visita', 'programada'].includes(v.estado) && !!v.cita_propuesta_en && versionCita(v.cita_propuesta_en) === version
+
+/** De la nota de una tarea de «cita sin confirmar»: a qué visita y a qué propuesta (versión) se refiere. */
+export function claveDeTareaCita(nota: string | null | undefined): { visitaId: string; version: string } | null {
+  const m = CLAVE_CITA.exec(nota ?? '')
+  return m ? { visitaId: m[1], version: m[2] } : null
+}
 
 /** La cita de esa visita se resolvió (confirmada, rechazada o cambiada): se cierran sus tareas de «cita sin confirmar». */
 export async function cerrarTareasDeCita(visitaId: string, admin: Admin = createAdminSupabase()): Promise<void> {
@@ -38,11 +51,7 @@ export async function cerrarTareasObsoletas(admin: Admin = createAdminSupabase()
     if (filas.length) {
       const { data: visitas } = await admin.from('visitas').select('id, estado, cita_propuesta_en').in('id', [...new Set(filas.map((f) => f.m[1]))])
       const porId = new Map(((visitas ?? []) as { id: string; estado: string; cita_propuesta_en: string | null }[]).map((v) => [v.id, v]))
-      const obsoletas = filas.filter((f) => {
-        const v = porId.get(f.m[1])
-        // Vigente solo si la visita sigue en coordinación o programada, con una propuesta pendiente y es LA MISMA propuesta que originó la tarea.
-        return !v || !['pre_visita', 'programada'].includes(v.estado) || !v.cita_propuesta_en || versionCita(v.cita_propuesta_en) !== f.m[2]
-      }).map((f) => f.id)
+      const obsoletas = filas.filter((f) => !citaVigente(porId.get(f.m[1]), f.m[2])).map((f) => f.id)
       await cerrar(admin, obsoletas); r.citas = obsoletas.length
     }
 

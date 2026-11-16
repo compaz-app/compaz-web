@@ -9,7 +9,8 @@ import { recortarTexto } from '@/lib/panel-datos'
 import { pausasActivas } from '@/lib/pausas'
 import { reportesPendientes } from '@/lib/bloqueos-compita'
 import { pendientesDeTodos } from '@/lib/solicitudes-pago'
-import { avisoParaInsistir, esperaDeReenvio, reenviosDe } from '@/lib/insistir-aviso'
+import { avisoParaInsistir, esperaDeReenvio, estadoInsistenciaCita, reenviosDe } from '@/lib/insistir-aviso'
+import { citaVigente, claveDeTareaCita } from '@/lib/tareas-obsoletas'
 import {
   INFO_DECIDIR_CUENTA, INFO_LLAMADA, INFO_PAGO, INFO_RESPONDER_DUDA, INFO_SITIO, PERMISO_FALTA, claseInsistir, idReporteDeNota, ordenarTareas, sinEmojis, textoCerrar, tipoDeAccion,
   type AccionTarea, type TareaBandeja,
@@ -75,6 +76,17 @@ async function conAcciones(actor: Actor, tareas: TareaBandeja[], reporteDe: Map<
         // Insistir con un aviso (solo si hay un aviso que reenviar) o contactar al sitio de una visita donde nadie abre.
         if (t.tipo === 'duda_sin_resolver' && t.entidad_tipo === 'compita') {
           return { ...t, accion: puede(actor, 'atender') ? { tipo: 'responder', texto: 'Responder por Telegram', info: INFO_RESPONDER_DUDA } : cerrar() }
+        }
+        if (t.tipo === 'cita_sin_confirmar') {
+          // Insistir con una cita no depende de ningún aviso: se le recuerda al compita la propuesta pendiente. Si la cita ya se resolvió, solo queda cerrar la tarea.
+          if (!puede(actor, 'atender')) return { ...t, accion: cerrar() }
+          const clave = claveDeTareaCita(t.nota)
+          const { data: v } = clave ? await createAdminSupabase().from('visitas').select('estado, cita_propuesta_en').eq('id', clave.visitaId).maybeSingle() : { data: null }
+          if (!clave || !citaVigente(v as { estado: string; cita_propuesta_en: string | null } | null, clave.version)) return { ...t, accion: cerrar() }
+          const r = await estadoInsistenciaCita(clave.visitaId, clave.version)
+          const espera = esperaDeReenvio(r)
+          const clase = claseInsistir(t)!
+          return { ...t, accion: espera ? bloqueada(clase.texto, `${espera.resumen} ${espera.porQue}`, espera.resumen) : { tipo: 'insistir', texto: clase.texto, info: clase.info, reenvios: r.usados } }
         }
         const clase = claseInsistir(t)
         if (clase) {

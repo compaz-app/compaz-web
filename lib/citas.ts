@@ -187,6 +187,23 @@ export async function rechazarCita(visitaId: string, compitaId: string, version:
   return 'ok'
 }
 
+/**
+ * Le manda de nuevo al compita la cita que no ha confirmado (con sus botones), por Telegram. Es lo que hace «Insistir al compita» en la tarea de «cita sin confirmar».
+ * `sin_propuesta`: la cita ya se resolvió o cambió, no hay nada que recordar. `sin_telegram`: el compita no tiene Telegram. Si Telegram falla, lanza el error.
+ */
+export async function recordarCitaAlCompita(visitaId: string): Promise<'enviado' | 'sin_propuesta' | 'sin_telegram'> {
+  const admin = createAdminSupabase()
+  const { data } = await admin.from('visitas').select(COLS).eq('id', visitaId).maybeSingle()
+  const v = data as VisitaCita | null
+  const p = v ? propuestaDe(v) : null
+  if (!v || !p || !v.cita_propuesta_en || !['pre_visita', 'programada'].includes(v.estado)) return 'sin_propuesta'
+  const { data: c } = await admin.from('compitas').select('telegram_chat_id').eq('id', v.compita_id).maybeSingle()
+  const chat = (c as { telegram_chat_id: string | null } | null)?.telegram_chat_id
+  if (!chat) return 'sin_telegram'
+  await sendTelegramMessage(chat, `⏰ <b>Falta tu respuesta</b>\n\nEl cliente espera que confirmes: ${esc(textoCita(p))}.`, tecladoCita(v.id, v.cita_propuesta_en))
+  return 'enviado'
+}
+
 /** El cliente cambió de idea o reagendó: la propuesta pendiente ya no vale. */
 export async function descartarPropuesta(visitaId: string): Promise<void> {
   await createAdminSupabase().from('visitas').update({ cita_propuesta_fecha: null, cita_propuesta_inicio: null, cita_propuesta_fin: null, cita_propuesta_en: null }).eq('id', visitaId)

@@ -4,6 +4,14 @@ La versión vigente está en `lib/version.ts` y se ve en el panel (menú lateral
 
 Reglas: mayor = cambio grande o lanzamiento; menor = función nueva; parche = arreglo. La etapa `beta` sale cuando el sistema corre una o dos semanas con uso real sin sorpresas.
 
+## 1.2.4-beta.1 (2026-11-16)
+«Insistir al compita» en una cita sin confirmar de verdad funciona (hallazgo 16 de la auditoría de flujos).
+1. Bug: el botón no reenviaba la cita. La cita se le manda al compita por Telegram sin guardar un aviso, así que el botón buscaba «el último aviso sin atender de ese compita», que casi nunca era el de la cita. Si ese aviso ya no aplicaba (por ejemplo una solicitud ya respondida), no salía nada y aun así se contaba como «reenviado 1 de 3».
+2. Ahora, en una tarea de cita sin confirmar, insistir le manda al compita LA CITA pendiente con sus botones «Confirmo la cita» y «No puedo a esa hora» (`recordarCitaAlCompita`). El tope sigue siendo uno cada 30 minutos y 3 por propuesta, contado con eventos `cita_insistida`.
+3. Si la cita ya se resolvió (la visita se programó, terminó o la propuesta cambió), no se manda nada y la tarea se cierra, y la Bandeja ya no ofrece el botón. Sin Telegram vinculado o si Telegram falla, lo dice claro y no cuenta como reenvío.
+4. Arreglo general: en cualquier «Insistir», un aviso que ya no aplica o que ya se envió deja de contarse como reenviado; se explica («No se reenvió nada: eso ya se resolvió») y, si ya no aplica, se cierra la tarea. La pantalla vuelve a leer la lista después de cada intento.
+5. Sin migración.
+
 ## 1.2.3-beta.1 (2026-11-16)
 Las tareas de la Bandeja se cierran solas cuando lo que las originó ya se resolvió, y se leen mejor (hallazgo 15 de la auditoría de flujos).
 1. «Cita sin confirmar» seguía abierta aunque la cita ya se hubiera confirmado, hecho y cerrado. Ahora se cierra en el momento (el compita confirma o rechaza la hora, el cliente elige otra o reagenda) y, además, la escalera barre cada 5 minutos las que hayan quedado abiertas por cualquier otro camino (`lib/tareas-obsoletas.ts`): sin propuesta vigente, visita terminada o inexistente, o una propuesta ya reemplazada. Lo mismo para «cita sin Telegram» cuando el compita ya tiene Telegram. Cierra también las que ya estaban atascadas.
