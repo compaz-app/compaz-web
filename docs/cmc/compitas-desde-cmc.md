@@ -4,11 +4,11 @@ Integración unidireccional: el CMC (hoja `03 · Compitas`) publica cada hora la
 
 Aprobado por Luis el 10-nov-2026.
 
-**Estado (15-nov-2026, 18:28 UTC): etapas 1 a 4 hechas, salvo el disparador horario.**
+**Estado (16-nov-2026, 02:50 UTC): etapas 1 a 4 cerradas. La publicación es automática cada hora.**
 - Etapa 1: migración `20261111_cmc_compitas` aplicada (11-nov).
 - Etapa 2: web desplegada (PR #19, `main@53588c2`, 1.1.4-beta.1, 13-nov).
 - Etapa 3: Apps Script con `PublicarCompitas.gs` y simulación correcta (15-nov).
-- Etapa 4: `CMC_COMPITAS_MODO=aplicar` en Production y 2 publicaciones manuales (15-nov). **Falta** `instalarDisparadorPublicarCompitas()`: sin autorización todavía; hoy nada publica solo.
+- Etapa 4: `CMC_COMPITAS_MODO=aplicar` en Production, 2 publicaciones manuales y disparador horario instalado (15-nov).
 - Etapa 5 pendiente.
 
 ## Reparto de autoridad
@@ -103,7 +103,17 @@ En Supabase, nombre, email y zona (provisional) se escriben **solo al crear**. D
   - 1.ª `publicarCompitasWeb()` (18:27 UTC): registro `aplicada`; altas COM-0025 (Mauricio Acacio) y COM-0187 (María Alejandra Navarro), las dos `inactivo`, `verificado=false`, `cmc_permite=true`, `cmc_estado` «Habilitado · Activo · Acepta: Sí»; 2 bienvenidas enviadas sin errores (`cmc_bienvenida_enviada_en` 18:27:06); 0 conflictos, 0 cuarentena, 0 errores; ningún aviso en Atención (no hay restricciones); la web envía al admin un aviso por Telegram con las altas (pendiente de que Luis confirme que lo recibió).
   - 2.ª `publicarCompitasWeb()` (18:28 UTC): `aplicada`, 0 altas, 0 bienvenidas, 0 cambios, 2 gestionadas con permiso. Idempotente.
   - Sin cambios en el resto: las 25 Compitas anteriores (Lorna, Reyna, demos, bloqueadas) con la misma huella fila a fila; postulaciones, avisos, eventos y solicitudes iguales; 0 COM- repetidos y 0 emails duplicados; 5 disparadores originales.
-  - Pendiente: `instalarDisparadorPublicarCompitas()`, con autorización aparte. Mientras no exista, el CMC no publica solo.
+- **Disparador, 15-nov (autorización de Luis).**
+  - El primer intento (14:14 NY) pidió un permiso nuevo del Apps Script: `script.scriptapp`, «gestionar los disparadores». Se canceló sin conceder y no se creó nada.
+  - Luis concedió el permiso y ejecutó `instalarDisparadorPublicarCompitas()` a las 20:29 NY. Resultado: 6 disparadores, los 5 originales y uno `publicarCompitasWeb` horario.
+  - Hora real: hacia el minuto 33 (Google aplica el «~40» con margen).
+  - 1.ª ejecución automática (20:33:48 NY) y 2.ª (21:33:48 NY): Completed, HTTP 200 (`CMC_PUBLICAR_ULTIMO`), registros `aplicada` con 0 altas, 0 bienvenidas, 0 conflictos, 0 cuarentena, 0 errores y 0 cambios (2 gestionadas con permiso).
+  - COM-0025 y COM-0187 siguen `inactivo`, sin verificar, con `cmc_permite=true` y la misma fecha de bienvenida. Las dos vincularon Telegram por su cuenta (código por correo, al primer intento) a las 19:12 y 15:21 NY.
+  - Los 25 perfiles anteriores, con los mismos datos (la huella se compara con las 25 columnas originales, porque el 16-nov 02:42 UTC se añadió `compitas.intereses_futuros` con el PR #24).
+  - Notas:
+    - La alerta `alerta_cron:cmc-compitas` del 16-nov 00:35 UTC era esperable: 7 h sin foto entre la publicación manual y el disparador.
+    - «Juan Compita» (16-nov 01:45 UTC, sin código) es un registro manual por Telegram, ajeno al CMC.
+- **Etapa 4 cerrada.** Siguiente: etapa 5, por Compita (completar /perfil; Juan reactiva y verifica cuando el perfil esté completo).
 
 **Etapa 5 — Activación operativa** (por Compita).
 - La Compita vincula Telegram (nombre + código por correo) y completa `/perfil`.
