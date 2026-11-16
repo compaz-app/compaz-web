@@ -283,7 +283,7 @@ export const ENTRADAS: EntradaManual[] = [
     paraQue: 'El bot responde solo a las dudas comunes. Pasa a una persona después de dos intentos sin resolver.',
     pasos: [
       'Lee la tarea: dice qué preguntó y por qué no se resolvió.',
-      'Respóndele por Telegram. Nunca por llamada.',
+      'Toca «Responder por Telegram» en la tarea, escribe la respuesta y envíala: le llega al Telegram del compita como mensaje del equipo y la tarea se cierra sola. Sin teléfonos ni correos. Nunca por llamada.',
       'Mira en Más, Estado del sistema, qué dudas son las más comunes: si una domina, arregla la causa (por ejemplo, el campo de indicaciones de la dirección).',
     ],
     permiso: 'atender', pantalla: 'estado', busca: ['ayuda', 'bot', 'duda sin resolver', 'atascado'],

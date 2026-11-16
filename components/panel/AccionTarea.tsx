@@ -6,7 +6,8 @@ import Aviso from '@/components/ui/base/Aviso'
 import InfoBoton from '@/components/ui/InfoBoton'
 import DialogoPanel from '@/components/panel/DialogoPanel'
 import MotivoDialog from '@/components/panel/MotivoDialog'
-import { OPCIONES_DECISION, OPCIONES_LLAMADA, type AccionTarea as Accion, type ReporteLlamada, type TareaBandeja } from '@/lib/panel-bandeja-tipos'
+import { OPCIONES_DECISION, OPCIONES_LLAMADA, limpiarNota, type AccionTarea as Accion, type ReporteLlamada, type TareaBandeja } from '@/lib/panel-bandeja-tipos'
+import { MAX_RESPUESTA_DUDA } from '@/lib/responder-duda-tipos'
 import { cuandoLinea, digitosWhatsapp } from '@/lib/panel-personas-tipos'
 
 async function enviar(url: string, metodo: 'POST' | 'PATCH', cuerpo: unknown): Promise<{ ok: boolean; data?: any; error?: string }> {
@@ -132,6 +133,33 @@ function DialogoLlamada({ reporte, onCerrar, onHecho }: { reporte: ReporteLlamad
   )
 }
 
+/** Responder una duda del compita: el texto se envía por el bot de Telegram y la tarea se cierra. */
+function DialogoResponder({ tarea, onCerrar, onHecho }: { tarea: TareaBandeja; onCerrar: () => void; onHecho: () => void }) {
+  const [texto, setTexto] = useState('')
+  const [cargando, setCargando] = useState(false); const [fallo, setFallo] = useState<string | null>(null)
+  async function mandar() {
+    setCargando(true); setFallo(null)
+    const r = await enviar('/api/admin/responder-duda', 'POST', { flag_id: tarea.id, texto })
+    setCargando(false)
+    if (!r.ok) { setFallo(r.error ?? 'No se pudo enviar'); return }
+    onHecho()
+  }
+  return (
+    <DialogoPanel titulo="Responder al compita por Telegram" onCerrar={onCerrar}>
+      <p className="mt-1 text-sm text-texto-medio">{limpiarNota(tarea.nota)}</p>
+      <label className="mt-3 block text-xs text-texto-medio">Tu respuesta
+        <textarea value={texto} onChange={(e) => setTexto(e.target.value)} maxLength={MAX_RESPUESTA_DUDA} disabled={cargando} className="mt-1 min-h-28 w-full rounded-lg border border-borde bg-blanco p-2 text-sm" />
+      </label>
+      <p className="mt-1 text-xs text-texto-sutil">{texto.length} de {MAX_RESPUESTA_DUDA}. Le llega al Telegram del compita como mensaje del equipo. Sin teléfonos ni correos.</p>
+      {fallo && <div className="mt-3"><Aviso tamano="compacto" tono="peligro">{fallo}</Aviso></div>}
+      <div className="mt-4 flex items-center justify-end gap-2">
+        <Boton tamano="compacto" variante="fantasma" navegacion onClick={onCerrar}>Cancelar</Boton>
+        <Boton tamano="compacto" info="Envía tu respuesta al Telegram del compita y cierra la tarea. Si Telegram falla, la tarea sigue abierta para que lo intentes de nuevo." disabled={!texto.trim()} cargando={cargando} onClick={mandar}>Enviar respuesta</Boton>
+      </div>
+    </DialogoPanel>
+  )
+}
+
 /** Contactar al sitio: el nombre y el teléfono de quien debe abrir la puerta. Un colaborador da un motivo primero; queda anotado en Actividad. */
 function DialogoSitio({ visitaId, pideMotivo, onCerrar }: { visitaId: string; pideMotivo: boolean; onCerrar: () => void }) {
   const [preguntar, setPreguntar] = useState(pideMotivo)
@@ -199,6 +227,7 @@ export default function AccionTarea({ tarea, cerrando, onCerrar, onHecho, onRefr
       {abierto && a.tipo === 'pago' && <DialogoPago tarea={tarea} monto={a.monto} onCerrar={cerrar} onHecho={hecho} />}
       {abierto && a.tipo === 'decidir' && <DialogoDecision accion={a} onCerrar={cerrar} onHecho={hecho} />}
       {abierto && a.tipo === 'llamada' && <DialogoLlamada reporte={a.reporte} onCerrar={cerrar} onHecho={hecho} />}
+      {abierto && a.tipo === 'responder' && <DialogoResponder tarea={tarea} onCerrar={cerrar} onHecho={hecho} />}
       {abierto && a.tipo === 'sitio' && <DialogoSitio visitaId={a.visitaId} pideMotivo={pideMotivo} onCerrar={cerrar} />}
     </>
   )

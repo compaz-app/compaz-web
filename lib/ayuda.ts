@@ -154,8 +154,8 @@ async function escalarDuda(compita: Compita, tipo: TipoDuda, etiqueta: string, u
   if (tipo !== 'mal') await registrarEvento({ entidad: 'compita', entidadId: compita.id, tipo: 'duda_compita', actor: 'sistema', datos: { tipo, resultado: 'escalada' } }).catch(() => undefined)
   await abrirTarea({
     compita, tipo: 'duda_sin_resolver', titulo: `Duda sin resolver (${etiqueta})`, prioridad: urgente ? 1 : 2,
-    nota: `${compita.nombre} tiene una duda: "${etiqueta}".${texto ? `\nDijo: ${texto}` : ''}${v ? `\nSu visita está en estado "${v.estado}".` : '\nNo tiene una visita próxima.'}\nRespóndele por Telegram, nunca por llamada. Si se repite por el mismo motivo, conviene arreglar la causa (por ejemplo, mejorar el campo de indicaciones).`,
-    aviso: `🙋 <b>${urgente ? 'URGENTE: ' : ''}Duda sin resolver</b>\n\n<b>${esc(compita.nombre)}</b>: ${esc(etiqueta)}.${texto ? `\n"${esc(texto)}"` : ''}\n\nRespóndele por Telegram.`,
+    nota: `${compita.nombre} tiene una duda: "${etiqueta}".${texto ? `\nDijo: ${texto}` : ''}${v ? `\nSu visita está en estado "${v.estado}".` : '\nNo tiene una visita próxima.'}\nRespóndele desde la tarea en el panel (le llega por Telegram), nunca por llamada. Si se repite por el mismo motivo, conviene arreglar la causa (por ejemplo, mejorar el campo de indicaciones).`,
+    aviso: `🙋 <b>${urgente ? 'URGENTE: ' : ''}Duda sin resolver</b>\n\n<b>${esc(compita.nombre)}</b>: ${esc(etiqueta)}.${texto ? `\n"${esc(texto)}"` : ''}\n\nRespóndele desde la Bandeja del panel.`,
   })
 }
 

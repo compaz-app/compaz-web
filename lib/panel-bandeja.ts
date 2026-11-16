@@ -11,7 +11,7 @@ import { reportesPendientes } from '@/lib/bloqueos-compita'
 import { pendientesDeTodos } from '@/lib/solicitudes-pago'
 import { avisoParaInsistir, esperaDeReenvio, reenviosDe } from '@/lib/insistir-aviso'
 import {
-  INFO_DECIDIR_CUENTA, INFO_LLAMADA, INFO_PAGO, INFO_SITIO, PERMISO_FALTA, claseInsistir, idReporteDeNota, ordenarTareas, textoCerrar, tipoDeAccion,
+  INFO_DECIDIR_CUENTA, INFO_LLAMADA, INFO_PAGO, INFO_RESPONDER_DUDA, INFO_SITIO, PERMISO_FALTA, claseInsistir, idReporteDeNota, ordenarTareas, textoCerrar, tipoDeAccion,
   type AccionTarea, type TareaBandeja,
 } from '@/lib/panel-bandeja-tipos'
 
@@ -73,6 +73,9 @@ async function conAcciones(actor: Actor, tareas: TareaBandeja[], reporteDe: Map<
       }
       default: {
         // Insistir con un aviso (solo si hay un aviso que reenviar) o contactar al sitio de una visita donde nadie abre.
+        if (t.tipo === 'duda_sin_resolver' && t.entidad_tipo === 'compita') {
+          return { ...t, accion: puede(actor, 'atender') ? { tipo: 'responder', texto: 'Responder por Telegram', info: INFO_RESPONDER_DUDA } : cerrar() }
+        }
         const clase = claseInsistir(t)
         if (clase) {
           if (!puede(actor, 'atender')) return { ...t, accion: cerrar() }

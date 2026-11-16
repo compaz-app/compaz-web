@@ -92,6 +92,7 @@ export type AccionTarea =
   | { tipo: 'llamada'; texto: string; info: string; reporte: ReporteLlamada }
   | { tipo: 'insistir'; texto: string; info: string; reenvios: number }
   | { tipo: 'sitio'; texto: string; info: string; visitaId: string }
+  | { tipo: 'responder'; texto: string; info: string }
   | { tipo: 'bloqueada'; texto: string; motivo: string }
 
 export type TipoAccion = 'cerrar' | 'pago' | 'decidir' | 'llamada'
@@ -131,6 +132,7 @@ export function claseInsistir(t: { tipo: string | null; reportado_por: string; e
   }
   return null
 }
+export const INFO_RESPONDER_DUDA = 'Escribes la respuesta aquí y el bot la envía al Telegram del compita, como mensaje del equipo de Compaz. Al enviarla, la tarea se cierra y queda anotado quién respondió. No incluyas teléfonos ni correos: el sistema no los pasa.'
 export const INFO_SITIO = 'Te muestra el nombre y el teléfono de la persona de contacto en el sitio para que le escribas por WhatsApp. Es un dato sensible: si no eres administrador te pide un motivo, y queda anotado en Actividad. No le des datos del compita.'
 
 export const PERMISO_FALTA = 'No tienes este permiso. Pídeselo a un administrador.'
