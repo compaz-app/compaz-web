@@ -3,7 +3,7 @@
 
 import { PERMISOS_BASE, normalizarPermisos, type PermisoRequerido, type PermisosActor } from '@/lib/permisos-catalogo'
 
-export type SeccionPanel = 'bandeja' | 'seguimiento' | 'personas' | 'visitas' | 'mas'
+export type SeccionPanel = 'bandeja' | 'seguimiento' | 'personas' | 'visitas' | 'pagos' | 'mas'
 
 export interface DefSeccion {
   id: SeccionPanel
@@ -17,6 +17,7 @@ export const SECCIONES_PANEL: DefSeccion[] = [
   { id: 'seguimiento', texto: 'Seguimiento', permiso: 'monitorear' },
   { id: 'personas', texto: 'Personas', permiso: 'monitorear' },
   { id: 'visitas', texto: 'Visitas', permiso: 'monitorear' },
+  { id: 'pagos', texto: 'Pagos', permiso: 'pagos' },
   { id: 'mas', texto: 'Más', permiso: 'cualquiera' },
 ]
 

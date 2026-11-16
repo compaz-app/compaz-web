@@ -17,9 +17,10 @@ const tarea = (o: Partial<TareaBandeja> = {}): TareaBandeja => ({ id: Math.rando
 
 describe('secciones y permisos', () => {
   test('el administrador ve todo; un colaborador solo lo que su permiso abre', () => {
-    assert.equal(seccionesVisibles(admin).length, 5)
+    assert.equal(seccionesVisibles(admin).length, 6)
     assert.deepEqual(seccionesVisibles(colab({ atender: true })).map((s) => s.id), ['bandeja', 'mas'])
     assert.deepEqual(seccionesVisibles(colab({ monitorear: true })).map((s) => s.id), ['seguimiento', 'personas', 'visitas', 'mas'])
+    assert.deepEqual(seccionesVisibles(colab({ atender: true, pagos: true })).map((s) => s.id), ['bandeja', 'pagos', 'mas'], 'la pestaña Pagos es para quien tiene el permiso de pagos')
   })
   test('sin monitorear ni atender no se entra al panel', () => {
     assert.equal(puedeEntrarAlPanel(colab({ pagos: true })), false)

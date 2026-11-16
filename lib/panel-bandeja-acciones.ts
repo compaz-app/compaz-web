@@ -10,6 +10,25 @@ import { tipoDeAccion } from '@/lib/panel-bandeja-tipos'
 
 export type ResultadoAccion = { ok: true; correoEnviado: boolean } | { ok: false; error: string; status: number }
 
+/** Tras confirmar un pago: cierra las tareas de pago de ese cliente y anota quién lo hizo y desde dónde. */
+async function cerrarTareasDePago(usuarioId: string, quien: string, monto: number, nombre: string, desde: string) {
+  const db = createAdminSupabase()
+  await db.from('admin_flags').update({ resuelto: true, resuelto_at: new Date().toISOString() }).eq('entidad_id', usuarioId).eq('resuelto', false).in('tipo', ['pago_insistido', 'pago_escalado'])
+  await alertaAdmin('actividad', `${quien} confirmó el pago de $${monto} de ${nombre} desde ${desde}.`, { categoria: 'pago_confirmado_bandeja', entidad: { tipo: 'cliente', id: usuarioId, nombre } })
+}
+
+/**
+ * Confirma un pago por su solicitud de pago (la pestaña Pagos). Mismas reglas que desde la Bandeja: permiso 'pagos', solo si sigue pendiente,
+ * y se cierran las tareas de pago de ese cliente. El cliente recibe su aviso igual que siempre.
+ */
+export async function confirmarPagoPorSolicitud(actor: Actor, solicitudPagoId: string): Promise<ResultadoAccion> {
+  if (!puede(actor, 'pagos')) return { ok: false, error: 'Acceso denegado', status: 403 }
+  const r = await confirmarPagoYAvisar(solicitudPagoId, actor.correo)
+  if (!r.ok) return { ok: false, error: r.error, status: r.status }
+  await cerrarTareasDePago(r.usuarioId, actor.correo, r.pago.monto_usd, r.nombre, 'la pestaña Pagos')
+  return { ok: true, correoEnviado: r.correoEnviado }
+}
+
 /**
  * Confirma el pago que pide una tarea de la Bandeja. Reglas: permiso 'pagos' (confirmar dinero no es para cualquiera del equipo);
  * la solicitud de pago se busca por el CLIENTE de la tarea (el navegador no elige qué pago confirmar); al confirmar se cierran las tareas de pago

@@ -67,6 +67,8 @@ export function estadoProceso(cadaMin: number, ultimo: string | null, ahora: num
 // ── Reseñas, pagos, avisos y cobertura ───────────────────────────────────────────────────────
 export interface FilaResena { id: string; estrellas: number; texto: string; publicada: boolean; creada: string; cliente: string; compita: string }
 export interface FilaPago { id: string; cliente: string; clienteId: string; plan: string; monto: number; metodo: string; referencia: string | null; creado: string; anulado: boolean; motivo: string | null }
+/** Un pago que el cliente dice haber hecho y que el equipo aún no confirma (solicitud de pago pendiente). */
+export interface FilaPorConfirmar { id: string; clienteId: string; cliente: string; plan: string; monto: number; metodo: string; referencia: string; creado: string }
 export interface FilaAviso { id: string; creado: string; canal: 'telegram' | 'correo'; para: string; rol: 'cliente' | 'compita' | 'admin'; plantilla: string; estado: 'pendiente' | 'enviado' | 'fallido' | 'cancelado'; error: string | null; intentos: number }
 export interface FilaCobertura { estado: string; compitas: number; solicitudes: number; falta: boolean }
 

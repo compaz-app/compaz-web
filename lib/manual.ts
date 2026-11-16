@@ -70,7 +70,8 @@ export const ENTRADAS: EntradaManual[] = [
       'Seguimiento: en qué etapa está cada cliente, para detectar a quien se atascó.',
       'Personas: la lista de compitas y clientes, con su estado y sus métricas.',
       'Visitas: las visitas de hoy, las que tienen problema y las ya terminadas.',
-      'Más: las herramientas que no usas todos los días (pagos, ajustes, actividad y este manual).',
+      'Pagos (con el permiso de pagos): los pagos por confirmar y los ya registrados.',
+      'Más: las herramientas que no usas todos los días (ajustes, actividad y este manual).',
     ],
     pantalla: 'bandeja', busca: ['menu', 'pantallas', 'navegar'],
   },
@@ -238,10 +239,10 @@ export const ENTRADAS: EntradaManual[] = [
     pasos: [
       'Llega un aviso con la referencia del pago y un botón "Confirmar pago recibido".',
       'Revisa que el dinero llegó con esa referencia.',
-      'Si llegó, toca Confirmar pago en la Bandeja, o el botón del aviso de Telegram. El cliente recibe un correo y puede completar su ficha.',
+      'Si llegó, toca Confirmar pago en la pestaña Pagos (sección Por confirmar), en la Bandeja o en el botón del aviso de Telegram. El cliente recibe un correo.',
       'Si no llegó, no confirmes: escríbele por correo.',
     ],
-    despues: 'Si el cliente insiste, el pago se marca urgente (una alerta cada 30 minutos). Si pasan 6 horas sin confirmar, se avisa a todos los administradores.',
+    despues: 'La Bandeja y Pagos se actualizan solos (cada 30 segundos, o 15 si hay un pago por confirmar) mientras la pestaña está a la vista. Si el cliente insiste, el pago se marca urgente (una alerta cada 30 minutos). Si pasan 6 horas sin confirmar, se avisa a todos los administradores.',
     permiso: 'pagos', pantalla: 'pagos', busca: ['zelle', 'transferencia', 'confirmar', 'referencia'],
   },
   {
@@ -438,7 +439,7 @@ export const ENTRADAS: EntradaManual[] = [
     id: 'cfg-pagos', seccion: 'configuracion', titulo: '¿Cómo registro o anulo un pago?',
     paraQue: 'Los pagos activan las visitas del cliente.',
     pasos: [
-      'Abre Más, Pagos. Verás los pagos registrados, el más reciente primero, con filtros Activos y Anulados.',
+      'Abre Pagos. Arriba está Por confirmar; debajo, los registrados, el más reciente primero, con filtros Activos y Anulados.',
       'Anular: solo si hubo un error. Escribe el motivo; las visitas que no se habían usado se liberan y el cupo del cliente se recalcula.',
       'Un pago nuevo entra por la confirmación de la Bandeja (Zelle o transferencia) o, mientras no esté Stripe, como pago simulado. Registrar un pago a mano no está en este panel a propósito.',
     ],

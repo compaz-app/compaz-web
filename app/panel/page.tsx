@@ -1,6 +1,6 @@
 // Panel nuevo del equipo. Reemplazará a /admin (el prototipo aprobado es app/prototipo/admin).
 // Todo el estado vive en la dirección: ?sec= (sección), ?como=colaborador (solo administrador), y por sección:
-//   bandeja: tipo, ver · personas: lista, q, vista, orden, dir, pag · seguimiento: etapa, pag · visitas: vv, pv
+//   bandeja: tipo, ver · personas: lista, q, vista, orden, dir, pag · seguimiento: etapa, pag · visitas: vv, pv · pagos: pag_ver, pag_pag
 //   en cualquier sección: persona=<tipo>:<id> abre la ficha, chat=<cliente>:<compita> abre el chat; en seguimiento, caso=<cliente> abre el caso.
 import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
@@ -29,6 +29,8 @@ import Manual from '@/components/panel/mas/Manual'
 import Estado from '@/components/panel/mas/Estado'
 import Resenas from '@/components/panel/mas/Resenas'
 import Pagos from '@/components/panel/mas/Pagos'
+import PagosPorConfirmar from '@/components/panel/mas/PagosPorConfirmar'
+import AutoRefresh from '@/components/ui/AutoRefresh'
 import Postulaciones from '@/components/panel/mas/Postulaciones'
 import Invitar from '@/components/panel/mas/Invitar'
 import { listarPostulaciones, pendientesDeAirtable } from '@/lib/panel-postulaciones'
@@ -39,7 +41,7 @@ import Equipo from '@/components/panel/mas/Equipo'
 import Ajustes from '@/components/panel/mas/Ajustes'
 import { datosDeAjustes } from '@/lib/panel-ajustes'
 import { datosDeEquipo } from '@/lib/panel-equipo'
-import { cargarCobertura, listarAvisos, listarPagosRecientes, listarResenas } from '@/lib/panel-mas-datos'
+import { cargarCobertura, listarAvisos, listarPagosPorConfirmar, listarPagosRecientes, listarResenas } from '@/lib/panel-mas-datos'
 import { subMasActiva, filtrosActividad, CATEGORIAS_ACCESO } from '@/lib/panel-mas-tipos'
 import { listarActividad } from '@/lib/panel-actividad'
 import { catalogoEsperas } from '@/lib/esperas-catalogo'
@@ -65,6 +67,7 @@ const CLAVES: Record<string, string[]> = {
   personas: ['lista', 'q', 'vista', 'orden', 'dir', 'pag', 'estado'],
   seguimiento: ['etapa', 'pag'],
   visitas: ['vv', 'pv'],
+  pagos: ['pag_ver', 'pag_pag'],
   mas: ['mas', 'act_nivel', 'act_dias', 'act_q', 'act_pag', 'lim', 'man_q', 'man_sec', 'man_abierta', 'reg_dias', 'reg_q', 'reg_pag', 'res_ver', 'po_tipo', 'po_clasif', 'po_pag', 'pag_ver', 'pag_pag', 'av_ver', 'av_pag'],
 }
 const COMUNES = ['persona', 'chat', 'caso', 'visita']
@@ -111,7 +114,20 @@ async function ContenidoPanel({ sp, actual, actor, comoActor, comoColaborador }:
   let avisoTope: React.ReactNode = null
   if (actual === 'bandeja') {
     const tareas = await cargarBandeja(comoActor)
-    cuerpo = <div className="space-y-3"><AvisoTope cargadas={tareas.length} tope={TOPE_BANDEJA} que="las tareas" /><Suspense><Bandeja tareas={tareas} puedeAtender={actor.permisos.atender === true} pideMotivo={actor.rol !== 'admin'} /></Suspense></div>
+    // La Bandeja se actualiza sola (nada de recargar a mano): cada 30 s, y cada 15 s si hay un pago por confirmar. Solo con la pestaña a la vista.
+    const hayPago = tareas.some((t) => t.tipo === 'pago_insistido' || t.tipo === 'pago_escalado')
+    cuerpo = <div className="space-y-3"><AutoRefresh intervaloSeg={15} rapido={hayPago} reposoSeg={30} /><AvisoTope cargadas={tareas.length} tope={TOPE_BANDEJA} que="las tareas" /><Suspense><Bandeja tareas={tareas} puedeAtender={actor.permisos.atender === true} pideMotivo={actor.rol !== 'admin'} /></Suspense></div>
+  } else if (actual === 'pagos') {
+    const [porConfirmar, registrados] = await Promise.all([listarPagosPorConfirmar(), listarPagosRecientes()])
+    cuerpo = (
+      <div className="max-w-3xl space-y-4">
+        <AutoRefresh intervaloSeg={15} rapido={porConfirmar.length > 0} reposoSeg={30} />
+        <Encabezado titulo="Pagos" descripcion="Lo que falta por confirmar y lo ya registrado." />
+        <PagosPorConfirmar filas={porConfirmar} puedeConfirmar={actor.permisos.pagos === true} />
+        <h3 className="text-base font-extrabold">Registrados</h3>
+        <Pagos filas={registrados} ver={un('pag_ver') === 'anulados' ? 'anulados' : 'activos'} pagina={un('pag_pag')} enlace={enlace} />
+      </div>
+    )
   } else if (actual === 'personas') {
     const lista = un('lista') === 'clientes' ? 'clientes' : 'compitas'
     // La lista llega completa una vez; ordenar, filtrar, buscar y paginar se resuelve en el navegador (PersonasInteractivo), sin pedirle nada al servidor.

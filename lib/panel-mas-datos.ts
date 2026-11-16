@@ -5,9 +5,10 @@ import { conCacheCorto } from '@/lib/cache-corto'
 import type { Actor } from '@/lib/permisos'
 import { recortarTexto } from '@/lib/panel-datos'
 import { PLANES } from '@/lib/planes'
+import { referenciaDe } from '@/lib/solicitudes-pago'
 import { listarCompitas } from '@/lib/panel-personas'
 import { estadosDeZona } from '@/lib/panel-personas-tipos'
-import { coberturaPorEstado, type FilaAviso, type FilaCobertura, type FilaPago, type FilaResena } from '@/lib/panel-mas-tipos'
+import { coberturaPorEstado, type FilaAviso, type FilaCobertura, type FilaPago, type FilaPorConfirmar, type FilaResena } from '@/lib/panel-mas-tipos'
 
 export const LIMITE = 500
 const nombreCompleto = (c: { nombre?: string | null; apellido?: string | null } | null | undefined) => [c?.nombre, c?.apellido].filter(Boolean).join(' ') || 'Sin nombre'
@@ -33,6 +34,22 @@ export async function listarPagosRecientes(): Promise<FilaPago[]> {
     id: String(f.id), clienteId: String(f.usuario_id), cliente: nombre.get(f.usuario_id) ?? 'Sin nombre',
     plan: f.tipo === 'extra' ? `Visita extra${f.horas ? ` de ${f.horas} h` : ''}` : PLANES[f.plan as keyof typeof PLANES]?.nombre ?? f.plan ?? 'Plan',
     monto: Number(f.monto_usd), metodo: String(f.metodo), referencia: f.referencia, creado: String(f.created_at), anulado: f.estado === 'anulado', motivo: f.anulado_motivo,
+  }))
+}
+
+/** Los pagos que los clientes dicen haber hecho y que nadie ha confirmado todavía (el más antiguo primero: es el que lleva más tiempo esperando). */
+export async function listarPagosPorConfirmar(): Promise<FilaPorConfirmar[]> {
+  const db = createAdminSupabase()
+  const { data, error } = await db.from('solicitudes_pago').select('id, usuario_id, tipo, plan, horas, monto_usd, metodo, created_at').eq('estado', 'pendiente').order('created_at', { ascending: true }).limit(LIMITE)
+  if (error) throw new Error(`No se pudo leer los pagos por confirmar: ${error.message}`)
+  const filas = (data ?? []) as { id: string; usuario_id: string; tipo: string; plan: string | null; horas: number | null; monto_usd: number; metodo: string; created_at: string }[]
+  const ids = [...new Set(filas.map((f) => f.usuario_id))]
+  const { data: us } = ids.length ? await db.from('usuarios').select('id, nombre').in('id', ids) : { data: [] }
+  const nombre = new Map(((us ?? []) as { id: string; nombre: string }[]).map((u) => [u.id, u.nombre]))
+  return filas.map((f): FilaPorConfirmar => ({
+    id: String(f.id), clienteId: String(f.usuario_id), cliente: nombre.get(f.usuario_id) ?? 'Sin nombre',
+    plan: f.tipo === 'extra' ? `Visita extra${f.horas ? ` de ${f.horas} h` : ''}` : PLANES[f.plan as keyof typeof PLANES]?.nombre ?? f.plan ?? 'Plan',
+    monto: Number(f.monto_usd), metodo: String(f.metodo), referencia: referenciaDe(String(f.id)), creado: String(f.created_at),
   }))
 }
 
