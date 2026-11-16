@@ -4,6 +4,12 @@ La versión vigente está en `lib/version.ts` y se ve en el panel (menú lateral
 
 Reglas: mayor = cambio grande o lanzamiento; menor = función nueva; parche = arreglo. La etapa `beta` sale cuando el sistema corre una o dos semanas con uso real sin sorpresas.
 
+## 1.3.0-beta.1 (2026-11-16)
+Portal del cliente: círculo rojo de mensajes sin leer.
+1. La pestaña Visitas muestra un círculo rojo con el número de mensajes nuevos del compita o del equipo, sumado a los avisos nuevos. Se quita al entrar a Visitas (el chat queda a la vista). Lo que escribe el propio cliente no cuenta.
+2. Si llega un mensaje mientras el cliente tiene otra pestaña abierta, el círculo aparece al instante (Realtime). Si lo tiene el chat a la vista, queda leído solo.
+3. MIGRACIÓN `20261117_chat_leido.sql`: agrega `usuarios.chat_leido_en`. Solo agrega. Hasta que se aplique, el círculo de mensajes queda en cero (no rompe nada).
+
 ## 1.2.9-beta.1 (2026-11-16)
 La ficha del cliente tiene el botón «Ver perfil del cliente», igual que la del compita tiene «Ver perfil público».
 1. Abre el portal del cliente tal como él lo ve (vista previa del equipo, sin ejecutar acciones). Queda anotado en Actividad. Solo para administradores: un colaborador no lo ve.

@@ -71,6 +71,8 @@ export default function Chat({ visita, mensajesIniciales, compitaNombre }: ChatP
             const nuevo = payload.new as Mensaje
             if (nuevo.visit_id === visita.id) {
               setMensajes((prev) => [...prev, nuevo])
+              // Lo tiene a la vista: queda leído y el círculo rojo del portal no se enciende por un mensaje que ya está viendo.
+              if (nuevo.origen !== 'cliente' && document.visibilityState === 'visible') fetch('/api/portal/chat/leido', { method: 'POST' }).catch(() => undefined)
             }
           }
         )

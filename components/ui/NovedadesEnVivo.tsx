@@ -36,6 +36,10 @@ export default function NovedadesEnVivo({ usuarioId }: { usuarioId: string }) {
           router.refresh()
           if (visible()) void post('/api/portal/novedades/vistas')
         })
+        // Un mensaje nuevo del compita o del equipo: se actualiza el círculo rojo de Visitas. Realtime solo entrega los de sus propias visitas (permisos de la tabla).
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensajes' }, (p) => {
+          if ((p.new as { origen?: string }).origen !== 'cliente') router.refresh()
+        })
         .subscribe()
     })
 

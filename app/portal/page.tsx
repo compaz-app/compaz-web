@@ -20,6 +20,7 @@ import { registrarAcceso } from '@/lib/alertas-admin'
 import { ventanaVigente, marcarVentana } from '@/lib/cron'
 import { pestanaDeSec, esParteCuenta } from '@/lib/portal-secciones'
 import { contarNovedadesSinAbrir, marcarNovedadesAbiertas } from '@/lib/novedades'
+import { contarMensajesSinLeer, marcarChatLeido } from '@/lib/portal-mensajes'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Mi portal', robots: { index: false, follow: false } }
@@ -49,8 +50,8 @@ export default async function PortalPage({ searchParams }: { searchParams: Promi
   // Círculo rojo de Visitas: lo nuevo que aún no abrió. Al entrar a Visitas se quita. El equipo en vista previa no marca nada (no es el cliente).
   let nuevasVisitas = 0
   if (!esAdmin) {
-    if (pestana === 'visitas') await marcarNovedadesAbiertas(uid)
-    else nuevasVisitas = await contarNovedadesSinAbrir(uid)
+    if (pestana === 'visitas') await Promise.all([marcarNovedadesAbiertas(uid), marcarChatLeido(uid)])
+    else nuevasVisitas = (await Promise.all([contarNovedadesSinAbrir(uid), contarMensajesSinLeer(uid)])).reduce((a, b) => a + b, 0)
   }
   const datos = pestana === 'inicio' ? null : await cargarDatosPortal(uid)
   return (
