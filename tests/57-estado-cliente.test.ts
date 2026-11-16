@@ -151,7 +151,9 @@ describe('recorridos reales contra la base (cargarFoto)', () => {
     const c = mkCliente(); const k = mkCompita(); const s = mkSolicitud(c, k, { estado: 'aceptada', tipo: 'entrevista', slots_propuestos: [] })
     assert.equal((await estadoDelCliente(c.id, ahora)).codigo, 'elegir_horario')
     db.seed('reservas_horario', { solicitud_id: s.id, compita_id: k.id, cliente_id: c.id, inicio: new Date(Date.now() + 86400_000).toISOString(), vence_en: new Date(Date.now() + 7200_000).toISOString(), estado: 'reservada' })
-    assert.equal((await estadoDelCliente(c.id, ahora)).codigo, 'horario_pedido')
+    const pedido = await estadoDelCliente(c.id, ahora)
+    assert.equal(pedido.codigo, 'horario_pedido')
+    assert.equal(pedido.cuando, db.rows('reservas_horario')[0].inicio, 'el estado trae la hora que el cliente eligió')
     db.rows('solicitudes')[0].slot_confirmado = new Date(Date.now() + 86400_000).toISOString()
     assert.equal((await estadoDelCliente(c.id, ahora)).codigo, 'entrevista_programada')
   })
@@ -174,5 +176,14 @@ describe('recorridos reales contra la base (cargarFoto)', () => {
   test('el estado de un cliente nunca mezcla datos de otro', async () => {
     const a = mkCliente(); const b = mkCliente(); const k = mkCompita(); mkVisita(b, k, { estado: 'en_curso' })
     assert.equal((await estadoDelCliente(a.id, ahora)).codigo, 'bienvenida'); assert.equal((await estadoDelCliente(b.id, ahora)).codigo, 'visita_en_curso')
+  })
+})
+
+describe('hora pedida: el portal muestra qué hora eligió', () => {
+  test('la tarjeta dice la hora elegida y que está pendiente de confirmar por el compita', async () => {
+    const { CATALOGO_PORTAL } = await import('../lib/portal-estados')
+    const cuando = new Date(Date.now() + 86400_000).toISOString()
+    const t = CATALOGO_PORTAL.horario_pedido({ estado: { codigo: 'horario_pedido', paso: 1, compitaNombre: 'María Pérez', cuando, solicitudId: 'x' }, pagado: false, zonaCliente: 'America/New_York' } as any)
+    assert.match(t.titulo, /confirme tu hora/); assert.match(t.texto, /Elegiste: /); assert.match(t.texto, /Pendiente de confirmar por María/)
   })
 })

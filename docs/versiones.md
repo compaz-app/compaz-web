@@ -4,6 +4,11 @@ La versión vigente está en `lib/version.ts` y se ve en el panel (menú lateral
 
 Reglas: mayor = cambio grande o lanzamiento; menor = función nueva; parche = arreglo. La etapa `beta` sale cuando el sistema corre una o dos semanas con uso real sin sorpresas.
 
+## 1.1.8-beta.1 (2026-11-15)
+El portal muestra la hora elegida para la entrevista (hallazgo 4 de la auditoría de flujos).
+1. Tras elegir hora, la tarjeta dice «Esperando que X confirme tu hora», la hora que eligió (en su hora y en la de Caracas) y que está pendiente de confirmar por el compita.
+2. Solo cambia texto y lectura: no requiere migración.
+
 ## 1.1.7-beta.1 (2026-11-15)
 Seguridad del lugar en la solicitud del cliente (hallazgo 3 de la auditoría de flujos).
 1. Con lugar privado, el formulario exige además: si hay animales; y, si estará alguien más, si habrá menores de edad y si estarán toda la visita o solo una parte. Opcional: «hay alguien con quien el compita no debe quedarse a solas». Todo por opciones, sin nombres ni texto libre.
