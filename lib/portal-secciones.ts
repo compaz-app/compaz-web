@@ -9,7 +9,7 @@ export const PESTANAS: { id: PestanaPortal; texto: string }[] = [
 export const esPestana = (v: unknown): v is PestanaPortal => typeof v === 'string' && PESTANAS.some((p) => p.id === v)
 
 export type BloqueVisitas =
-  | 'video' | 'chat' | 'fecha' | 'acciones_coordinacion' | 'chat_plegable' | 'reagendar' | 'llegada' | 'direccion' | 'lugar'
+  | 'video' | 'chat' | 'fecha' | 'acciones_coordinacion' | 'reagendar' | 'llegada' | 'direccion' | 'lugar'
   | 'agendar_otra' | 'bienestar' | 'historial' | 'vacio'
 
 export interface SituacionVisitas {
@@ -30,10 +30,24 @@ export function bloquesDeVisitas(s: SituacionVisitas): BloqueVisitas[] {
   else if (s.visita === 'confirmando_inicio') b.push('chat')
   // La dirección va ANTES de la fecha: sin ella no se puede agendar (el servidor lo exige y la fecha queda apagada hasta que se registre).
   else if (s.visita === 'pre_visita') { propios('direccion', 'fecha'); b.push('chat'); propios('acciones_coordinacion', 'lugar') }
-  else if (s.visita === 'programada') { b.push('chat_plegable'); propios('reagendar', 'llegada', 'direccion', 'lugar') }
+  // El chat con el compita nunca se pliega: es lo primero que el cliente busca cuando algo cambia.
+  else if (s.visita === 'programada') { b.push('chat'); propios('reagendar', 'llegada', 'direccion', 'lugar') }
   if (s.puedeAgendarOtra && !s.vistaPrevia) b.push('agendar_otra')
   if (s.reportes > 0) b.push('bienestar')
   if (s.visitasTerminadas > 0) b.push('historial')
   if (b.length === 0) b.push('vacio')
   return b
+}
+
+// El recorrido de una visita: 5 pasos que el cliente ve de un vistazo. Función PURA: dónde está cada paso (hecho, ahora, después) según la visita.
+export type EstadoPasoVisita = 'hecho' | 'ahora' | 'despues'
+export interface PasoVisita { id: 'direccion' | 'fecha' | 'confirmacion' | 'visita' | 'reporte'; titulo: string; estado: EstadoPasoVisita }
+export const TITULOS_RECORRIDO = ['Dirección de la visita', 'Día y hora', 'Confirmación de tu compita', 'La visita', 'Reporte y calificación'] as const
+
+export function recorridoDeVisita(s: { visita: SituacionVisitas['visita']; tieneDireccion: boolean; tieneFecha: boolean }): PasoVisita[] | null {
+  if (!s.visita) return null
+  // Cuántos pasos están hechos: el siguiente es «ahora». Antes de programarse se avanza según lo que ya tiene; desde que se programa, los 3 primeros están hechos.
+  const hechos = s.visita === 'pre_visita' ? (s.tieneDireccion ? (s.tieneFecha ? 2 : 1) : 0) : 3
+  const ids = ['direccion', 'fecha', 'confirmacion', 'visita', 'reporte'] as const
+  return ids.map((id, i) => ({ id, titulo: TITULOS_RECORRIDO[i], estado: i < hechos ? 'hecho' : i === hechos ? 'ahora' : 'despues' }))
 }

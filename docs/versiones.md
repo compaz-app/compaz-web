@@ -4,6 +4,12 @@ La versión vigente está en `lib/version.ts` y se ve en el panel (menú lateral
 
 Reglas: mayor = cambio grande o lanzamiento; menor = función nueva; parche = arreglo. La etapa `beta` sale cuando el sistema corre una o dos semanas con uso real sin sorpresas.
 
+## 1.2.7-beta.1 (2026-11-16)
+Portal del cliente, fase 2: recorrido de la visita y chat siempre abierto.
+1. En la pestaña Visitas, arriba, un recorrido de 5 pasos: dirección, día y hora, confirmación del compita, la visita, reporte y calificación. Lo hecho queda en una línea con ✓ verde, el paso de ahora se destaca y lo que falta queda tenue.
+2. El chat con el compita ya no se pliega cuando la visita está programada: siempre está abierto.
+3. Sin migración.
+
 ## 1.2.6-beta.1 (2026-11-16)
 Portal del cliente, fase 1: siguiente paso en todas las pestañas y círculo rojo en Visitas.
 1. La tarjeta «qué pasa y qué sigue» ya no solo está en Inicio: aparece arriba en Visitas, Mi familiar y Mi plan.

@@ -1,5 +1,4 @@
 import Chat from '@/components/ui/Chat'
-import ChatColapsable from '@/components/ui/ChatColapsable'
 import VideoCall from '@/components/ui/VideoCall'
 import FechaProgramada from '@/components/ui/FechaProgramada'
 import PreVisitaActions from '@/components/ui/PreVisitaActions'
@@ -10,8 +9,10 @@ import LugarPersonas from '@/components/ui/LugarPersonas'
 import AgendarOtraVisita from '@/components/ui/AgendarOtraVisita'
 import SeguimientoBienestar from '@/components/ui/SeguimientoBienestar'
 import HistorialVisitas from '@/components/ui/HistorialVisitas'
+import { faltaDireccion } from '@/lib/direccion-tipos'
 import Tarjeta from '@/components/ui/base/Tarjeta'
-import { bloquesDeVisitas, type BloqueVisitas } from '@/lib/portal-secciones'
+import RecorridoVisita from '@/components/portal/RecorridoVisita'
+import { bloquesDeVisitas, recorridoDeVisita, type BloqueVisitas } from '@/lib/portal-secciones'
 import type { DatosPortal } from '@/lib/portal-datos'
 
 // La pestaña Visitas: según la situación (qué bloques, en qué orden) la decide `bloquesDeVisitas`; aquí solo se dibujan, reutilizando los
@@ -24,6 +25,7 @@ export default function SeccionVisitas({ d, vistaPrevia }: { d: DatosPortal; vis
     puedeAgendarOtra: !!d.compita && d.compita.estado === 'activo' && d.compita.verificado && !hayActiva && d.visitasPasadas.length > 0 && d.usuario?.plan !== 'bloqueado',
     visitasTerminadas: d.visitasPasadas.length, reportes: d.reportes.length, vistaPrevia,
   })
+  const recorrido = recorridoDeVisita({ visita: (visita?.estado as 'en_curso' | 'confirmando_inicio' | 'pre_visita' | 'programada' | undefined) ?? null, tieneDireccion: !!visita && !faltaDireccion(visita as never), tieneFecha: !!visita?.fecha_programada })
   const nombre = visita?.compita.nombre ?? d.compita?.nombre ?? 'tu compita'
   const dibujar = (b: BloqueVisitas) => {
     switch (b) {
@@ -31,7 +33,6 @@ export default function SeccionVisitas({ d, vistaPrevia }: { d: DatosPortal; vis
       case 'chat': return <Chat visita={visita!} mensajesIniciales={d.mensajes} compitaNombre={nombre} />
       case 'fecha': return <div id="fecha-programada"><FechaProgramada visitaId={visita!.id} fechaActual={visita!.fecha_programada ?? null} horaInicioActual={visita!.hora_inicio_programada ?? null} horaFinActual={visita!.hora_fin_programada ?? null} compitaNombre={nombre} /></div>
       case 'acciones_coordinacion': return <PreVisitaActions compitaNombre={nombre} tieneFecha={!!visita!.fecha_programada} />
-      case 'chat_plegable': return <ChatColapsable visita={visita!} mensajesIniciales={d.mensajes} compitaNombre={nombre} />
       case 'reagendar': return <ReagendarButton visitaId={visita!.id} compitaNombre={nombre} />
       case 'llegada': return <LlegadaVisita />
       case 'direccion': return <DireccionVisita />
@@ -42,5 +43,5 @@ export default function SeccionVisitas({ d, vistaPrevia }: { d: DatosPortal; vis
       case 'vacio': return <Tarjeta><h2 className="text-xl font-extrabold text-morado-profundo">Aún no tienes visitas</h2><p className="mt-1 text-lg text-morado-claro">Cuando elijas a tu compita y confirmemos tu pago, podrás agendar tu primera visita aquí.</p></Tarjeta>
     }
   }
-  return <div className="space-y-4">{bloques.map((b) => <div key={b}>{dibujar(b)}</div>)}</div>
+  return <div className="space-y-4">{recorrido && <RecorridoVisita pasos={recorrido} />}{bloques.map((b) => <div key={b}>{dibujar(b)}</div>)}</div>
 }
