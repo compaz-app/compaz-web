@@ -101,6 +101,11 @@ export default function FichaPersona({ ficha, cerrarHref, pideMotivo, puedeConta
         {ficha.detalle && (
           <section className="space-y-2">
             <div className="flex items-center gap-1"><TituloBloque>{ficha.tipo === 'compita' ? 'Todo de este compita' : 'Todo de este cliente'}</TituloBloque><InfoBoton que="Para qué sirve" texto={ficha.tipo === 'compita' ? 'Lo que necesitas para revisar su calidad: cómo lo ve la familia, calificaciones y reseñas, solicitudes y visitas. Solo lectura, sin teléfono ni correo.' : 'Lo que necesitas para revisar a este cliente: su ficha, plan, solicitudes, visitas y reseñas. Solo lectura. La condición y las notas de salud del familiar las ve solo un administrador.'} /></div>
+            {ficha.tipo === 'compita' && (
+              <div className="flex items-center gap-1">
+                <Boton tamano="compacto" variante="secundario" navegacion href={`/panel/perfil-publico/${ficha.id}`} info="Abre su perfil público tal como lo ve la familia, con lo que llenó. Sirve para revisar su calidad aunque todavía no esté verificado.">Ver perfil público</Boton>
+              </div>
+            )}
             {(ficha.detalle.fotoUrl || ficha.detalle.videoUrl) && (
               <div className="flex flex-wrap items-center gap-3">
                 {/* eslint-disable-next-line @next/next/no-img-element */}

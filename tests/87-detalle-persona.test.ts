@@ -47,3 +47,16 @@ describe('todo del cliente', () => {
     const fam = JSON.stringify(sec(f, 'Su familiar')); assert.match(fam, /Rosa/); assert.ok(!/Diabetes|insulina/.test(fam))
   })
 })
+
+describe('perfil público para el equipo', () => {
+  const { readFileSync } = require('node:fs')
+  test('la familia y el equipo usan la misma pieza, y la página exige el permiso de cuentas y no trae contactos', () => {
+    assert.match(readFileSync('app/compitas/CompitasMarketplace.tsx', 'utf8'), /<PerfilPublicoCompita compita=/)
+    const p = readFileSync('app/panel/perfil-publico/[id]/page.tsx', 'utf8')
+    assert.match(p, /<PerfilPublicoCompita compita=/); assert.match(p, /puede\(actor, 'cuentas'\)/)
+    assert.ok(!/telefono\b|email\b/.test(p.replace(/telegram_chat_id/g, '')), 'la página no pide contactos')
+  })
+  test('la ficha del compita tiene el botón «Ver perfil público»', () => {
+    assert.match(readFileSync('components/panel/FichaPersona.tsx', 'utf8'), /perfil-publico\/\$\{ficha\.id\}/)
+  })
+})
