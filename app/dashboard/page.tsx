@@ -24,6 +24,7 @@ import { qRol, firmaRol } from '@/lib/links'
 import LimpiarParamContratado from '@/components/ui/LimpiarParamContratado'
 import { clienteVePortalNuevo } from '@/lib/portal-activacion'
 import AutoRefresh from '@/components/ui/AutoRefresh'
+import UnaSolaPestana from '@/components/ui/UnaSolaPestana'
 import ConfirmarInicioVisita from '@/components/ui/ConfirmarInicioVisita'
 import PrimerAccesoModal from '@/components/ui/PrimerAccesoModal'
 import { fichaCompleta } from '@/lib/ficha'
@@ -988,6 +989,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       {/* Actualiza la página cuando cambia el estado de la visita */}
       {usuario && <VisitaWatcher usuarioId={targetUid} visitaActivaId={visitaActiva?.id ?? null} compitaNombre={visitaActiva?.compita?.nombre} />}
       {/* Refresca cada 15 s para mostrar cambios en llamadas y solicitudes */}
+      {!isAdmin && !previewUid && <UnaSolaPestana />}
       <AutoRefresh intervaloSeg={15} rapido={!!visitaActiva} reposoSeg={60} />
     </div>
   )
