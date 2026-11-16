@@ -4,6 +4,12 @@ La versión vigente está en `lib/version.ts` y se ve en el panel (menú lateral
 
 Reglas: mayor = cambio grande o lanzamiento; menor = función nueva; parche = arreglo. La etapa `beta` sale cuando el sistema corre una o dos semanas con uso real sin sorpresas.
 
+## 1.3.3-beta.1 (2026-11-16)
+Un botón de la tarjeta que lleva a donde ya estás ya no se muestra.
+1. Al terminar la visita, «Ver el reporte» llevaba a la pestaña Visitas, pero la tarjeta (que ahora sale en todas las pestañas) seguía mostrando el mismo botón encima del reporte: tocarlo recargaba la misma página, en círculo.
+2. Ahora, en cada pestaña, la tarjeta oculta los botones que llevan a esa misma pestaña. En Inicio sigue «Ver el reporte» y en Visitas queda el reporte sin botón repetido. Vale para todos los estados («Ver mis visitas», «Elegir la fecha», «Cambiar la fecha», «Completar la ficha»...).
+3. Sin migración.
+
 ## 1.3.2-beta.1 (2026-11-16)
 El chat del portal del cliente se distingue del resto de la pestaña Visitas.
 1. Antes el chat quedaba sin marco, fundido con el fondo y las demás tarjetas. Ahora tiene su propio marco (borde morado, fondo tenue y sombra suave) y una altura fija con los mensajes desplazándose adentro, así que nunca estira la página.

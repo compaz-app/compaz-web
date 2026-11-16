@@ -2,6 +2,7 @@
 // ÚNICO lugar con estos textos: cambiar una frase es tocar una línea aquí, y la prueba exige que cada estado tenga todo completo.
 // Antes de pagar el cliente ve "María P." (nombre y la inicial); el nombre completo llega con el pago (decisión del punto 2).
 
+import { pestanaDeSec, type PestanaPortal } from '@/lib/portal-secciones'
 import { type CodigoEstado, type EstadoCliente, CODIGOS_ESTADO } from '@/lib/estado-cliente'
 import { nombreCorto } from '@/lib/plantillas-aviso'
 import { dosHoras } from '@/lib/zonas'
@@ -113,3 +114,20 @@ export const CODIGOS_CON_TARJETA = CODIGOS_ESTADO
 /** Estados cuya tarjeta muestra la foto que el compita mandó al llegar (se sirve desde /api/visita/llegada-foto, solo al dueño de la visita). */
 export const ESTADOS_CON_FOTO_LLEGADA: readonly string[] = ['compita_llego', 'nadie_abre']
 export const llevaFotoLlegada = (estado: string): boolean => ESTADOS_CON_FOTO_LLEGADA.includes(estado)
+
+/** La pestaña a la que lleva un botón de ruta (/dashboard?sec=... o /portal?sec=...), o null si lleva a otra parte (pago, compitas, solicitar...). */
+export function pestanaDelBoton(b: BotonPortal | undefined): PestanaPortal | null {
+  if (!b || !('ruta' in b.destino)) return null
+  const u = new URL(b.destino.ruta, 'https://compaz.local')
+  return u.pathname === '/dashboard' || u.pathname === '/portal' ? pestanaDeSec(u.searchParams.get('sec')) : null
+}
+
+/**
+ * La tarjeta tal como se muestra en una pestaña: un botón que lleva a ESTA misma pestaña se quita, porque ya estás ahí (antes «Ver el reporte» seguía
+ * visible dentro del reporte y volvía a la misma página sin hacer nada). Los demás botones se quedan.
+ */
+export function tarjetaParaPestana(t: TarjetaPortal, pestana: PestanaPortal): TarjetaPortal {
+  const ya = (b: BotonPortal | undefined) => pestanaDelBoton(b) === pestana
+  const { principal, secundario, ...resto } = t
+  return { ...resto, ...(principal && !ya(principal) ? { principal } : {}), ...(secundario && !ya(secundario) ? { secundario } : {}) }
+}
