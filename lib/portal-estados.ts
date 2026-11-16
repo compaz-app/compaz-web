@@ -16,6 +16,8 @@ export interface TarjetaPortal {
   titulo: string
   texto: string
   tono: 'accion' | 'espera' | 'alerta'
+  /** Lo que viene después de este paso, en una frase. La tarjeta lo muestra debajo para que el cliente sepa qué sigue. */
+  luego?: string
   principal?: BotonPortal
   secundario?: BotonPortal
 }
@@ -80,7 +82,31 @@ export const CATALOGO_PORTAL: Record<CodigoEstado, (c: ContextoPortal) => Tarjet
 
 /** La tarjeta del estado, lista para dibujar. Falla en tiempo de prueba si falta un estado: el catálogo debe cubrirlos todos. */
 export function tarjetaDelEstado(c: ContextoPortal): TarjetaPortal {
-  return (CATALOGO_PORTAL[c.estado.codigo] ?? CATALOGO_PORTAL.bienvenida)(c)
+  const t = (CATALOGO_PORTAL[c.estado.codigo] ?? CATALOGO_PORTAL.bienvenida)(c)
+  const luego = LUEGO[c.estado.codigo]
+  return luego ? { ...t, luego } : t
+}
+
+/** Qué viene después de cada paso, en una frase. Los estados sin entrada no muestran la línea (no hay un siguiente claro o es el final). */
+const LUEGO: Partial<Record<CodigoEstado, string>> = {
+  bienvenida: 'Después: tu compita recibe la solicitud y responde.',
+  solicitud_enviada: 'Después: tu compita responde y eliges la hora de la entrevista.',
+  solicitud_recibida: 'Después: tu compita responde y eliges la hora de la entrevista.',
+  elegir_horario: 'Después: tu compita confirma la hora.',
+  horario_pedido: 'Después: la entrevista por video.',
+  entrevista_programada: 'Después: la entrevista y tu decisión.',
+  entrevista_ahora: 'Después: decides si la contratas.',
+  decidir: 'Después: el pago.',
+  directa_aceptada: 'Después: confirmamos el pago y completas la ficha.',
+  pagar: 'Después: confirmamos el pago y completas la ficha.',
+  pago_revision: 'Después: agendas tu primera visita.',
+  ficha: 'Después: eliges el día y la hora de la visita.',
+  agendar_visita: 'Después: tu compita confirma la hora.',
+  cita_pendiente: 'Después: la visita en la fecha acordada.',
+  visita_programada: 'Después: tu compita llega y empieza la visita.',
+  compita_llego: 'Después: la visita.',
+  visita_en_curso: 'Después: el reporte de bienestar.',
+  visita_terminada: 'Después: agendas la próxima visita.',
 }
 export const CODIGOS_CON_TARJETA = CODIGOS_ESTADO
 

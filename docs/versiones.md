@@ -4,6 +4,13 @@ La versión vigente está en `lib/version.ts` y se ve en el panel (menú lateral
 
 Reglas: mayor = cambio grande o lanzamiento; menor = función nueva; parche = arreglo. La etapa `beta` sale cuando el sistema corre una o dos semanas con uso real sin sorpresas.
 
+## 1.2.6-beta.1 (2026-11-16)
+Portal del cliente, fase 1: siguiente paso en todas las pestañas y círculo rojo en Visitas.
+1. La tarjeta «qué pasa y qué sigue» ya no solo está en Inicio: aparece arriba en Visitas, Mi familiar y Mi plan.
+2. La tarjeta dice en una frase qué viene después de ese paso («Después: tu compita confirma la hora»).
+3. Un círculo rojo con número en la pestaña Visitas cuenta lo nuevo que aún no abriste. Se quita al entrar a Visitas. Que el portal estuviera abierto no lo quita. El equipo en vista previa no lo marca.
+4. Sin migración (usa la columna `actuada_en` que ya existía).
+
 ## 1.2.5-beta.1 (2026-11-16)
 El bloqueo «este compita no vuelve con este cliente» se ve y se levanta desde la ficha (hallazgo 17 de la auditoría de flujos).
 1. Causa de «Este compita no está disponible» al contratar por segunda vez: el compita había reportado al cliente pidiendo no volver con él (en Telegram), eso creó un bloqueo, y la llamada del equipo se cerró como «Resuelto», que NO lo levanta. El bloqueo quedó activo y escondido: el cliente solo ve «no está disponible» (a propósito, sin el motivo), y el panel no tenía ninguna pantalla para verlo ni levantarlo (existía la ruta, pero ningún botón).

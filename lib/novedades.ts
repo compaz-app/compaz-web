@@ -66,3 +66,21 @@ export async function marcarNovedadesVistas(usuarioId: string, admin: Admin = cr
     return (data ?? []).length
   } catch (e) { console.error('[novedades] error al marcar vistas:', e); return 0 }
 }
+
+/** Cuántas novedades no ha abierto el cliente en su pestaña de Visitas (el círculo rojo del menú). Distinto de «vista»: eso es que el portal estaba abierto. */
+export async function contarNovedadesSinAbrir(usuarioId: string, admin: Admin = createAdminSupabase()): Promise<number> {
+  try {
+    const { count, error } = await admin.from('novedades_cliente').select('id', { count: 'exact', head: true }).eq('usuario_id', usuarioId).is('actuada_en', null)
+    if (error) { console.error('[novedades] contar:', error.message); return 0 }
+    return count ?? 0
+  } catch { return 0 }
+}
+
+/** El cliente abrió su pestaña de Visitas: lo nuevo queda atendido y el círculo rojo se quita. */
+export async function marcarNovedadesAbiertas(usuarioId: string, admin: Admin = createAdminSupabase()): Promise<number> {
+  try {
+    const { data, error } = await admin.from('novedades_cliente').update({ actuada_en: new Date().toISOString() }).eq('usuario_id', usuarioId).is('actuada_en', null).select('id')
+    if (error) { console.error('[novedades] abiertas:', error.message); return 0 }
+    return (data ?? []).length
+  } catch { return 0 }
+}

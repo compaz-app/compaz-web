@@ -26,6 +26,7 @@ export default function TarjetaEstado({ tarjeta, compita, visitaId, estado, vist
       )}
       <h2 className="text-2xl font-extrabold leading-tight text-morado-profundo">{tarjeta.titulo}</h2>
       <p className="mt-2 text-lg leading-snug text-morado-claro">{tarjeta.texto}</p>
+      {tarjeta.luego && <p className="mt-2 text-sm font-bold text-morado-sutil">{tarjeta.luego}</p>}
       {/* La foto se pide solo al cliente real: el endpoint la sirve únicamente al dueño de la visita, no al equipo en vista previa. */}
       {estado && !vistaPrevia && llevaFotoLlegada(estado) && (
         // eslint-disable-next-line @next/next/no-img-element

@@ -20,6 +20,7 @@ import { cargarDatosPortal } from '@/lib/portal-datos'
 import { registrarAcceso } from '@/lib/alertas-admin'
 import { ventanaVigente, marcarVentana } from '@/lib/cron'
 import { esPestana } from '@/lib/portal-secciones'
+import { contarNovedadesSinAbrir, marcarNovedadesAbiertas } from '@/lib/novedades'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Mi portal', robots: { index: false, follow: false } }
@@ -46,6 +47,12 @@ export default async function PortalPage({ searchParams }: { searchParams: Promi
     if (!anotado) redirect('/panel')
     await marcarVentana(clavePrev)
   }
+  // Círculo rojo de Visitas: lo nuevo que aún no abrió. Al entrar a Visitas se quita. El equipo en vista previa no marca nada (no es el cliente).
+  let nuevasVisitas = 0
+  if (!esAdmin) {
+    if (pestana === 'visitas') await marcarNovedadesAbiertas(uid)
+    else nuevasVisitas = await contarNovedadesSinAbrir(uid)
+  }
   const datos = pestana === 'inicio' ? null : await cargarDatosPortal(uid)
   return (
     <main className="mx-auto max-w-xl space-y-5 px-4 pb-24 pt-4 lg:max-w-2xl lg:pb-12">
@@ -54,7 +61,8 @@ export default async function PortalPage({ searchParams }: { searchParams: Promi
         <span className="text-lg font-extrabold text-morado-medio">Compaz</span>
         <span className="text-base text-morado-claro">Hola, {portal.nombre.split(' ')[0] || 'bienvenido'}</span>
       </header>
-      <NavPortal actual={pestana} preview={esAdmin ? preview : null} />
+      <NavPortal actual={pestana} preview={esAdmin ? preview : null} insignias={{ visitas: nuevasVisitas }} />
+      {pestana !== 'inicio' && <TarjetaEstado tarjeta={portal.tarjeta} compita={null} visitaId={portal.estado.visitaId} estado={portal.estado.codigo} vistaPrevia={esAdmin} />}
       {pestana === 'inicio' && (
         <>
           <Pasos pasos={portal.pasos} actual={portal.estado.paso} />
