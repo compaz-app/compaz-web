@@ -28,6 +28,8 @@ export default function VerChat({ clienteId, compitaId, cerrarHref, pideMotivo, 
   const [cargando, setCargando] = useState(false)
   const [preguntar, setPreguntar] = useState(pideMotivo)
   const pedido = useRef(false)
+  const ultima = useRef<string | null>(null)
+  const [detenido, setDetenido] = useState<string | null>(null)
   // Qué días están abiertos. Por defecto solo el más reciente: con un mes de conversación no hay que recorrerlo todo.
   const [abiertos, setAbiertos] = useState<Record<string, boolean>>({})
 
@@ -37,9 +39,36 @@ export default function VerChat({ clienteId, compitaId, cerrarHref, pideMotivo, 
       const r = await fetch('/api/admin/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ clienteId, compitaId, motivo }) })
       const j = await r.json().catch(() => null) as { ok: boolean; data?: Cargado; error?: string } | null
       if (!r.ok || !j?.ok || !j.data) throw new Error(j?.error ?? 'No se pudo abrir el chat')
-      setDatos(j.data)
+      setDatos(j.data); setDetenido(null)
+      ultima.current = j.data.mensajes.reduce<string | null>((m, x) => (!m || x.cuando > m ? x.cuando : m), null)
     } catch (e) { setFallo(e instanceof Error ? e.message : 'No se pudo abrir el chat') } finally { setCargando(false) }
   }, [clienteId, compitaId])
+
+  // Se actualiza solo: cada 10 s, con la pestaña a la vista, pide solo los mensajes nuevos. No anota un acceso nuevo por cada actualización: el servidor
+  // solo responde mientras no pasen 30 minutos desde que abriste el chat; pasado ese plazo se detiene y hay que pulsar «Seguir viendo».
+  useEffect(() => {
+    if (!datos || detenido) return
+    let vivo = true
+    const t = setInterval(async () => {
+      if (document.visibilityState !== 'visible') return
+      try {
+        const r = await fetch('/api/admin/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ clienteId, compitaId, refrescar: true, desde: ultima.current }) })
+        const j = await r.json().catch(() => null) as { ok: boolean; data?: { mensajes: MensajePanel[] }; error?: string } | null
+        if (!vivo) return
+        if (r.status === 403) { setDetenido(j?.error ?? 'Se detuvo la actualización. Ábrelo de nuevo para seguir viéndolo.'); return }
+        if (!r.ok || !j?.ok || !j.data?.mensajes.length) return
+        const nuevos = j.data.mensajes
+        setDatos((d) => {
+          if (!d) return d
+          const clave = (m: MensajePanel) => `${m.cuando}|${m.de}|${m.texto}|${m.esFoto}`
+          const ya = new Set(d.mensajes.map(clave))
+          return { ...d, mensajes: [...d.mensajes, ...nuevos.filter((m) => !ya.has(clave(m)))] }
+        })
+        ultima.current = nuevos.reduce((m, x) => (x.cuando > m ? x.cuando : m), ultima.current ?? '')
+      } catch { /* sin conexión: se vuelve a intentar en el siguiente ciclo */ }
+    }, 10_000)
+    return () => { vivo = false; clearInterval(t) }
+  }, [datos, detenido, clienteId, compitaId])
 
   // Administrador: entra directo, una sola vez por apertura (el servidor lo anota).
   useEffect(() => { if (!pideMotivo && !pedido.current) { pedido.current = true; void cargar() } }, [pideMotivo, cargar])
@@ -65,6 +94,9 @@ export default function VerChat({ clienteId, compitaId, cerrarHref, pideMotivo, 
         {datos && (
           <>
             <p className="text-xs text-texto-sutil">Solo el equipo ve esta conversación. Quedó anotado en Actividad que la abriste.</p>
+            {detenido
+              ? <div className="flex flex-wrap items-center gap-2"><p className="text-xs text-texto-medio">{detenido}</p><Boton tamano="compacto" variante="secundario" cargando={cargando} info="Vuelve a abrir este chat y lo anota otra vez en Actividad. Después se actualiza solo durante 30 minutos." onClick={() => { if (pideMotivo) setPreguntar(true); else void cargar() }}>Seguir viendo</Boton></div>
+              : <p className="text-xs text-texto-sutil">Se actualiza solo cada 10 segundos mientras la pestaña esté a la vista.</p>}
             {dias.length === 0 ? <p className="text-sm text-texto-sutil">Todavía no hay mensajes entre ellos.</p> : (
               <div className="space-y-2" aria-label="Mensajes">
                 {dias.length > 1 && (

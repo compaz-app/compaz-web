@@ -182,7 +182,7 @@ export const ENTRADAS: EntradaManual[] = [
       'Si no eres administrador, elige un motivo. Si eliges Otro, explícalo en una frase.',
       'Lee la conversación. Los teléfonos y correos que intentaron compartir ya vienen borrados.',
     ],
-    despues: 'Cada vez que abres un chat queda anotado en Actividad: quién, cuándo y por qué. Si no se pudo anotar, el chat no se muestra.',
+    despues: 'Cada vez que abres un chat queda anotado en Actividad: quién, cuándo y por qué. Si no se pudo anotar, el chat no se muestra. El chat se actualiza solo cada 10 segundos durante 30 minutos; después pulsa Seguir viendo (queda anotado otra vez).',
     permiso: 'chats', pantalla: 'visitas', busca: ['conversacion', 'mensajes', 'reclamo', 'privado'],
   },
   {
