@@ -7,6 +7,7 @@ import Aviso from '@/components/ui/base/Aviso'
 import InfoBoton from '@/components/ui/InfoBoton'
 import DialogoPanel from '@/components/panel/DialogoPanel'
 import { CLASE_LISTA } from '@/components/panel/ui'
+import { avisarCambio } from '@/components/panel/pendientes-store'
 import { cuandoLinea } from '@/lib/panel-personas-tipos'
 import type { FilaPorConfirmar } from '@/lib/panel-mas-tipos'
 
@@ -30,7 +31,7 @@ export default function PagosPorConfirmar({ filas, puedeConfirmar }: { filas: Fi
       const r = await fetch('/api/admin/confirmar-pago', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ solicitud_pago_id: abierto.id }) })
       const j = await r.json().catch(() => null) as { ok?: boolean; error?: string } | null
       if (!r.ok || j?.ok === false) { setFallo(j?.error ?? `Error ${r.status}`); return }
-      setAbierto(null); router.refresh()
+      setAbierto(null); avisarCambio(); router.refresh()
     } catch { setFallo('Sin conexión. No se perdió nada: inténtalo otra vez.') } finally { setCargando(false) }
   }
 

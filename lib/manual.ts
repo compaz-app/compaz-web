@@ -111,7 +111,7 @@ export const ENTRADAS: EntradaManual[] = [
       'Insistir al compita, Recordar al cliente y Recordarle por correo reenvían el aviso que no atendió. La tarea sigue abierta y hay un tope: uno cada 30 minutos y 3 por aviso. Si lo alcanzas, el botón se apaga y el ⓘ explica por qué.',
       'Toca el botón cuando ya hiciste lo que pide la tarea. Queda anotado quién la resolvió. Si no tienes el permiso, el botón sale apagado y el ⓘ lo explica.',
     ],
-    despues: 'Si no hay nada, dice "Todo en orden". Una tarea que se resuelve sola (por ejemplo, un pago confirmado) desaparece sin que hagas nada.',
+    despues: 'El punto rojo con número junto a Bandeja cuenta las tareas nuevas que aún no has visto, como los mensajes sin leer: se quita al abrir la Bandeja. El de Pagos cuenta los pagos por confirmar y se va al confirmarlos. El número también sale en el título de la pestaña del navegador (se actualiza cada 20 segundos con la pestaña a la vista y cada 60 si está oculta). Si no hay nada, dice "Todo en orden". Una tarea que se resuelve sola (por ejemplo, un pago confirmado) desaparece sin que hagas nada.',
     permiso: 'atender', pantalla: 'bandeja', busca: ['atencion', 'tareas', 'pendientes', 'resolver'],
   },
   {

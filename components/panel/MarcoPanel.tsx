@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { VERSION } from '@/lib/version'
+import InsigniaPendiente from '@/components/panel/InsigniaPendiente'
 import { hrefSeccion, seccionesVisibles, type ActorVista, type SeccionPanel } from '@/lib/panel-secciones'
 
 // Marco del panel nuevo: menú lateral en escritorio, barra inferior en el teléfono (patrón de móvil, igual que el portal).
@@ -8,16 +9,18 @@ export default function MarcoPanel({ actor, actual, comoColaborador, puedeElegir
   actor: ActorVista; actual: SeccionPanel; comoColaborador: boolean; puedeElegirVista: boolean; correo: string; children: React.ReactNode
 }) {
   const secciones = seccionesVisibles(actor)
+  // Punto rojo: solo en las secciones que tienen pendientes propios y que esta persona puede ver (el servidor lo comprueba otra vez).
+  const punto = (id: string, compacta = false) => (id === 'bandeja' && actor.permisos.atender === true ? <InsigniaPendiente tipo="bandeja" esActiva={actual === 'bandeja'} correo={correo} compacta={compacta} /> : id === 'pagos' && actor.permisos.pagos === true ? <InsigniaPendiente tipo="pagos" esActiva={actual === 'pagos'} correo={correo} compacta={compacta} /> : null)
   const lateral = (s: (typeof secciones)[number]) => (
     <Link prefetch={false} key={s.id} href={hrefSeccion(s.id, comoColaborador)} aria-current={actual === s.id ? 'page' : undefined}
       className={`flex min-h-12 items-center gap-3 rounded-xl px-3 text-base ${actual === s.id ? 'bg-morado-medio font-extrabold text-blanco' : 'font-bold text-morado-claro hover:bg-fondo-claro'}`}>
-      <span>{s.texto}</span>
+      <span>{s.texto}</span>{punto(s.id)}
     </Link>
   )
   const inferior = (s: (typeof secciones)[number]) => (
     <Link prefetch={false} key={s.id} href={hrefSeccion(s.id, comoColaborador)} aria-current={actual === s.id ? 'page' : undefined}
-      className={`flex min-h-16 flex-col items-center justify-center text-xs ${actual === s.id ? 'font-extrabold text-naranja-oscuro' : 'font-bold text-morado-claro'}`}>
-      <span>{s.texto}</span>
+      className={`relative flex min-h-16 flex-col items-center justify-center text-xs ${actual === s.id ? 'font-extrabold text-naranja-oscuro' : 'font-bold text-morado-claro'}`}>
+      <span>{s.texto}</span>{punto(s.id, true)}
     </Link>
   )
   const vista = (como: boolean, texto: string) => (

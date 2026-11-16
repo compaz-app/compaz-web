@@ -7,6 +7,7 @@ import Boton from '@/components/ui/base/Boton'
 import Aviso from '@/components/ui/base/Aviso'
 import { CLASE_LISTA, ChipBoton, Conteo, Encabezado, Filtros, Rol } from '@/components/panel/ui'
 import AccionTarea from '@/components/panel/AccionTarea'
+import { avisarCambio } from '@/components/panel/pendientes-store'
 import { hrefPersona } from '@/lib/panel-personas-tipos'
 import {
   INFO_BANDEJA, PAGINA_BANDEJA, TIPO_TODAS, cuantasMostrar, esEmergencia, etiquetaDeTarea, filtrarPorTipo, hace, limpiarNota, tiposConConteo,
@@ -43,6 +44,7 @@ export default function Bandeja({ tareas, puedeAtender, pideMotivo }: { tareas: 
       const r = await fetch('/api/admin/flags', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ flag_id: id }) })
       if (!r.ok) throw new Error(String(r.status))
       setResueltas((h) => ({ ...h, [id]: true }))
+      avisarCambio()
       router.refresh()
     } catch {
       setFallo('No se pudo marcar como atendida. No se perdió nada: inténtalo otra vez.')
@@ -79,7 +81,7 @@ export default function Bandeja({ tareas, puedeAtender, pideMotivo }: { tareas: 
               <p className="line-clamp-3 whitespace-pre-wrap text-sm text-texto-medio [overflow-wrap:anywhere]">{limpiarNota(t.nota)}</p>
             </div>
             {puedeAtender && (
-              <AccionTarea tarea={t} cerrando={enCurso === t.id} onCerrar={() => resolver(t.id)} onHecho={() => { setResueltas((h) => ({ ...h, [t.id]: true })); router.refresh() }} onRefrescar={() => router.refresh()} pideMotivo={pideMotivo} />
+              <AccionTarea tarea={t} cerrando={enCurso === t.id} onCerrar={() => resolver(t.id)} onHecho={() => { setResueltas((h) => ({ ...h, [t.id]: true })); avisarCambio(); router.refresh() }} onRefrescar={() => router.refresh()} pideMotivo={pideMotivo} />
             )}
           </li>
         ))}
