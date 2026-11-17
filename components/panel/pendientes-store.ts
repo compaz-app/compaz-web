@@ -57,10 +57,22 @@ async function consultar() {
 function programar() {
   if (temporizador) clearTimeout(temporizador)
   if (usos.bandeja + usos.pagos === 0) { temporizador = null; return }
-  temporizador = setTimeout(async () => { await consultar(); programar() }, visible() ? 20_000 : 60_000)
+  temporizador = setTimeout(() => { ahora() }, visible() ? 20_000 : 60_000)
 }
 
-const ahora = () => { void consultar().then(programar) }
+// Tope de seguridad: nunca más de una consulta cada 5 segundos por pestaña, pase lo que pase (un error de dibujo, un evento repetido...). Si llega otra petición
+// dentro de ese plazo, se junta en UNA sola consulta al terminar el plazo; si ya hay una en camino, no se lanza otra. Así un fallo aquí nunca puede tumbar el servidor.
+export const MIN_ENTRE_CONSULTAS_MS = 5_000
+let enCurso = false
+let ultimaConsulta = 0
+let trailing: ReturnType<typeof setTimeout> | null = null
+const ahora = () => {
+  if (enCurso) return
+  const espera = ultimaConsulta + MIN_ENTRE_CONSULTAS_MS - Date.now()
+  if (espera > 0) { if (!trailing) trailing = setTimeout(() => { trailing = null; ahora() }, espera); return }
+  enCurso = true; ultimaConsulta = Date.now()
+  void consultar().finally(() => { enCurso = false; programar() })
+}
 const alVolver = () => { if (visible()) ahora() }
 
 /** Se suscribe un punto. `esActiva` = la persona está en esa sección ahora; `correo` separa lo "visto" de cada persona en este navegador. */
@@ -78,6 +90,7 @@ export function usar(tipo: TipoPendiente, oyente: () => void, opciones: { esActi
     if (usos.bandeja + usos.pagos === 0) {
       document.removeEventListener('visibilitychange', alVolver); window.removeEventListener(EVENTO_PENDIENTES, ahora)
       if (temporizador) clearTimeout(temporizador); temporizador = null
+      if (trailing) clearTimeout(trailing); trailing = null
       if (tituloBase !== null) { document.title = tituloBase; tituloBase = null }
       valor.bandeja = null; valor.pagos = null
     }

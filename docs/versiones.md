@@ -4,6 +4,13 @@ La versión vigente está en `lib/version.ts` y se ve en el panel (menú lateral
 
 Reglas: mayor = cambio grande o lanzamiento; menor = función nueva; parche = arreglo. La etapa `beta` sale cuando el sistema corre una o dos semanas con uso real sin sorpresas.
 
+## 1.3.9-beta.1 (2026-11-17)
+URGENTE: el punto rojo del panel tumbaba la web con una lluvia de consultas.
+1. Qué pasó: el 17-nov, entre la 01:00 y las 02:00 UTC, dos navegadores con el panel abierto hicieron cerca de 35.000 consultas a `/api/admin/pendientes-bandeja` (unas 5 por segundo cada uno; lo normal son unas 60 peticiones por HORA en todo el sitio). Eso gastó una cantidad enorme de ejecuciones de funciones de Netlify y las dos conexiones dejaron de poder abrir el sitio.
+2. Causa: en `InsigniaPendiente` la función de suscripción era una flecha nueva en cada dibujo. React se desuscribía y volvía a suscribirse en cada dibujo; al quedar sin suscriptores el almacén borraba el número, y al volver a suscribirse consultaba al servidor y recuperaba el número, lo que forzaba otro dibujo. Un bucle sin fin mientras el panel estuviera abierto. Entró con el punto rojo (1.1.x).
+3. Arreglo en tres capas: (a) la función de suscripción es estable (`useCallback`); (b) el almacén nunca hace más de una consulta cada 5 segundos por pestaña, junta las peticiones repetidas en una y no lanza otra si ya hay una en camino; (c) la prueba 113 reproduce el bucle (50 suscripciones seguidas = 1 consulta) y vigila que la suscripción siga estable.
+4. Sin migración.
+
 ## 1.3.8-beta.1 (2026-11-16)
 Estado del sistema ya no muestra nada de Airtable.
 1. Se quitan de Más, Estado del sistema: la fila «Postulaciones sin enviar a Airtable» y los dos procesos «Reintento de envíos a Airtable» y «Conciliación con Airtable» (que además ya no se vigilan: no avisan si dejan de correr).

@@ -1,6 +1,6 @@
 'use client'
 
-import { useSyncExternalStore } from 'react'
+import { useCallback, useSyncExternalStore } from 'react'
 import { usar, leer, type TipoPendiente } from '@/components/panel/pendientes-store'
 
 const QUE: Record<TipoPendiente, (n: number) => string> = {
@@ -13,7 +13,10 @@ const QUE: Record<TipoPendiente, (n: number) => string> = {
  * confirmar (se quita al confirmarlos). No dibuja nada si no hay pendientes, ni mientras se cuenta la primera vez.
  */
 export default function InsigniaPendiente({ tipo, esActiva, correo, compacta = false }: { tipo: TipoPendiente; esActiva: boolean; correo: string; compacta?: boolean }) {
-  const n = useSyncExternalStore((f) => usar(tipo, f, { esActiva, correo }), () => leer(tipo), () => null)
+  // La función de suscripción tiene que ser ESTABLE: si cambia en cada dibujo, React se desuscribe y se vuelve a suscribir cada vez, y cada suscripción cuenta
+  // de nuevo (una consulta al servidor) y vuelve a cambiar el número, que vuelve a dibujar... un bucle de varias consultas por segundo (así se tumbó la web).
+  const suscribir = useCallback((f: () => void) => usar(tipo, f, { esActiva, correo }), [tipo, esActiva, correo])
+  const n = useSyncExternalStore(suscribir, () => leer(tipo), () => null)
   if (!n) return null
   const texto = n > 99 ? '99+' : String(n)
   return (
