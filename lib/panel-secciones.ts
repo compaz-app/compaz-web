@@ -3,19 +3,22 @@
 
 import { PERMISOS_BASE, normalizarPermisos, type PermisoRequerido, type PermisosActor } from '@/lib/permisos-catalogo'
 
-export type SeccionPanel = 'bandeja' | 'seguimiento' | 'personas' | 'visitas' | 'pagos' | 'mas'
+export type SeccionPanel = 'bandeja' | 'seguimiento' | 'personas' | 'confianza' | 'visitas' | 'pagos' | 'mas'
 
 export interface DefSeccion {
   id: SeccionPanel
   texto: string
   /** Permiso para entrar; 'cualquiera' = basta con poder entrar al panel. */
   permiso: PermisoRequerido | 'cualquiera'
+  /** false = en el teléfono no va en la barra inferior (ya tiene 6 y no caben más); se llega desde Más. */
+  enBarraMovil?: boolean
 }
 
 export const SECCIONES_PANEL: DefSeccion[] = [
   { id: 'bandeja', texto: 'Bandeja', permiso: 'atender' },
   { id: 'seguimiento', texto: 'Seguimiento', permiso: 'monitorear' },
   { id: 'personas', texto: 'Personas', permiso: 'monitorear' },
+  { id: 'confianza', texto: 'Sistema de Confianza', permiso: 'monitorear', enBarraMovil: false },
   { id: 'visitas', texto: 'Visitas', permiso: 'monitorear' },
   { id: 'pagos', texto: 'Pagos', permiso: 'pagos' },
   { id: 'mas', texto: 'Más', permiso: 'cualquiera' },
