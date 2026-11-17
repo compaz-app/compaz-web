@@ -25,11 +25,12 @@ Cómo se escribe cada entrada: impacto, línea de tiempo, causa raíz, detecció
 2. Que el bloqueo de las dos conexiones sea una protección automática de Netlify. Es la explicación más probable, pero es una deducción.
 3. Que el arreglo se comporte bien en el navegador real: la prueba cubre el almacén y la forma del componente, no el dibujo en pantalla.
 
+**Hecho.** 1. Arreglo publicado (1.3.9, commit `8580d19`). 2. Tope en el servidor y alarma de tráfico anormal por persona y ruta (1.3.10, `lib/guardia-trafico.ts`): 30 consultas por minuto, 429 explicado y aviso urgente una vez por hora.
+
 **Pendiente (por orden).**
-1. Publicar el arreglo. Mientras siga el código viejo, cada panel abierto repite el bucle.
-2. Tope en el servidor: las rutas `pendientes-*` deben limitar las consultas por persona por minuto y responder 429 con explicación (`lib/esperas.ts`). El cliente nunca debe ser la única defensa.
-3. Alarma: detectar tráfico anormal (muchas peticiones por minuto de una misma persona) y avisar por Telegram. Y una alerta de uso con tope de gasto en Netlify.
-4. Cambiar el sondeo cada 20 segundos por avisos en tiempo real (Realtime), como ya se hace en el portal del cliente.
+1. En Netlify, por quien administra la cuenta: alerta de uso, tope de gasto y revisar Usage para saber cuántos créditos se gastaron. El tope del código protege la base de datos y avisa, pero la función de Netlify igual se ejecuta en cada petición.
+2. Cambiar el sondeo cada 20 segundos por avisos en tiempo real (Realtime), como ya se hace en el portal del cliente. Requiere una migración y permisos para colaboradores.
+3. Auditoría de resiliencia completa: `docs/auditoria-resiliencia-prompt.md`.
 
 **Qué se aprendió.**
 1. Una prueba que cuenta llamadas al servidor se escribe para todo lo que consulta en intervalos.
