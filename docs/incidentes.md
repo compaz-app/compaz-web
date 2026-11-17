@@ -1,0 +1,59 @@
+# Bitácora de incidentes
+
+Aquí se anota todo lo que salió mal en producción (o estuvo cerca): qué pasó, por qué, cómo se detectó, qué se cambió y qué queda pendiente. Sin buscar culpables: sirve para no repetirlo y para que quien herede el proyecto (un programador, un equipo) sepa qué se aprendió y por qué el código es como es.
+
+Cómo se escribe cada entrada: impacto, línea de tiempo, causa raíz, detección, arreglo, qué queda pendiente y qué se aprendió. Lo que no se pudo comprobar se dice como tal. La entrada más nueva va arriba. El detalle de cada cambio de código está en `docs/versiones.md`.
+
+---
+
+## INC-002 · 17-nov-2026 · Una lluvia de consultas desde el panel dejó sin acceso a dos conexiones
+
+**Impacto.** Dos navegadores con el panel abierto (el de Juan, Mac, y el de Luis, Windows) hicieron cerca de 35.000 consultas en una hora a `/api/admin/pendientes-bandeja` y unas 2.600 a `/api/admin/pendientes-pagos` (unas 5 por segundo cada uno). Lo normal en todo el sitio son unas 60 peticiones por hora. Después de eso, el sitio dejó de abrirse desde esas dos conexiones (la conexión se corta al empezar). Para el resto, el sitio siguió funcionando: los procesos programados respondían 200 y el despliegue estaba "ready". Los clientes no se vieron afectados hasta donde se pudo comprobar.
+
+**Línea de tiempo (UTC).**
+1. 01:00 a 02:00 del 17-nov: el pico (35.692 respuestas 200 y 2.031 respuestas 499 en esa hora; la hora anterior y la siguiente, normales).
+2. Más tarde ese día: Juan reporta que la web "está caída". Se comprueba que mi propia conexión (la misma IP de Juan, `186.106.55.229`) es la que más peticiones hizo y que no puede abrir el sitio, mientras que Netlify lo ve sano.
+
+**Causa raíz.** En `components/panel/InsigniaPendiente.tsx` la función de suscripción de `useSyncExternalStore` era una flecha nueva en cada dibujo. React se desuscribía y volvía a suscribirse en cada dibujo; al quedar sin suscriptores, `components/panel/pendientes-store.ts` borraba el número, y al volver a suscribirse consultaba al servidor y recuperaba el número, lo que forzaba otro dibujo. Un bucle sin fin mientras el panel estuviera abierto, sin que nadie tocara nada. El error entró con el punto rojo del menú (versión 1.1.x) y pasó desapercibido porque solo daña cuando alguien deja el panel abierto un buen rato, y porque ninguna prueba abría un componente real.
+
+**Detección.** La detectó una persona al ver que no abría. Ninguna alarma saltó. Se encontró con las métricas de solicitudes de Netlify (por URL, por dirección y por agente de usuario).
+
+**Arreglo (versión 1.3.9-beta.1).** Tres capas: (a) la suscripción es estable con `useCallback`; (b) el almacén nunca consulta más de una vez cada 5 segundos por pestaña, junta las repetidas y no lanza otra si ya hay una en camino; (c) la prueba `tests/113-punto-rojo-sin-bucle.test.ts` reproduce el bucle (50 suscripciones seguidas = una consulta) y falla con la lógica vieja.
+
+**Qué no se pudo comprobar.**
+1. Cuántos créditos de Netlify se gastaron. Esas 35.000 ejecuciones pueden ser poco o mucho según el plan; hay que mirar Usage en Netlify.
+2. Que el bloqueo de las dos conexiones sea una protección automática de Netlify. Es la explicación más probable, pero es una deducción.
+3. Que el arreglo se comporte bien en el navegador real: la prueba cubre el almacén y la forma del componente, no el dibujo en pantalla.
+
+**Pendiente (por orden).**
+1. Publicar el arreglo. Mientras siga el código viejo, cada panel abierto repite el bucle.
+2. Tope en el servidor: las rutas `pendientes-*` deben limitar las consultas por persona por minuto y responder 429 con explicación (`lib/esperas.ts`). El cliente nunca debe ser la única defensa.
+3. Alarma: detectar tráfico anormal (muchas peticiones por minuto de una misma persona) y avisar por Telegram. Y una alerta de uso con tope de gasto en Netlify.
+4. Cambiar el sondeo cada 20 segundos por avisos en tiempo real (Realtime), como ya se hace en el portal del cliente.
+
+**Qué se aprendió.**
+1. Una prueba que cuenta llamadas al servidor se escribe para todo lo que consulta en intervalos.
+2. Antes de publicar algo que sondea, se deja la pantalla abierta 5 minutos con la pestaña Red del navegador y se cuentan las peticiones.
+3. Defensa en capas: causa raíz, tope en el cliente, tope en el servidor y alarma. Ninguna sola basta.
+
+---
+
+## INC-001 · 16-nov-2026 · «Este compita no está disponible» al contratar por segunda vez
+
+**Impacto.** Un cliente no podía contratar de nuevo a su compita: la pantalla decía «no está disponible» sin más explicación.
+
+**Causa raíz.** El compita había reportado al cliente pidiendo no volver con él (en Telegram), y eso creó un bloqueo (`bloqueos_compita_cliente`). La llamada del equipo se cerró como «Resuelto», que NO levanta el bloqueo. El bloqueo quedó activo y escondido: el cliente solo ve «no está disponible» (a propósito, sin el motivo) y el panel no tenía ninguna pantalla para verlo ni levantarlo (la ruta existía, pero ningún botón).
+
+**Detección.** La reportó Juan al probar una segunda contratación. Se diagnosticó con consultas de solo lectura a la base.
+
+**Arreglo (versión 1.2.5-beta.1).** El bloqueo se ve y se levanta desde la ficha del compita y la del cliente («No vuelven a trabajar juntos» con «Levantar el bloqueo»). La llamada del equipo ya no se puede cerrar como «Resuelto» ni «Hablar con el cliente» si hay un bloqueo activo, y el servidor lo exige (409). El bloqueo de ese caso se levantó con autorización de Juan.
+
+**Qué se aprendió.** Todo estado que impide algo al usuario debe poder verse y revertirse desde el panel. Si una ruta existe pero ninguna pantalla la usa, es una funcionalidad que no existe.
+
+---
+
+## Notas de proceso (no son incidentes, pero conviene saberlo)
+
+1. **Publicación directa a `main`.** Varias veces se publicó con `git push origin <rama>:main` usando el permiso de administrador, que se salta la regla de GitHub «los cambios deben entrar por un pull request». Se hizo a propósito (un solo despliegue, para ahorrar créditos), pero implica que la prueba automática (`verificar`) corre DESPUÉS de publicar y que Netlify no la espera. Si entra un programador, conviene cerrar ese atajo.
+2. **Base de datos compartida.** Local y producción usan la misma base de Supabase (`compaz-prod`). Toda migración debe ser aditiva (solo agrega) y se aplica antes de publicar el código que la usa. Ver `CLAUDE.md`, sección «Datos y respaldo antes de abrir al público».
+3. **El proyecto de Supabase archivado** (`qrhkzlzblaknzsxqfney`) no se toca.
