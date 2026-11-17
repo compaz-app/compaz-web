@@ -6,7 +6,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { HUB, hubVisible } from '@/lib/panel-mas-tipos'
 import { resumenPorOrigen, consultarPostulaciones } from '@/lib/panel-postulaciones-tipos'
-import { listarPostulaciones, pendientesDeAirtable } from '@/lib/panel-postulaciones'
+import { listarPostulaciones, pendientesPorResolver } from '@/lib/panel-postulaciones'
 import { TODOS, NINGUNO } from '@/lib/permisos-catalogo'
 
 beforeEach(limpiar)
@@ -45,7 +45,7 @@ describe('postulaciones y origen', () => {
 
   test('sin CAPTACION_DESDE no hay nada por resolver (y se dice)', async () => {
     const antes = process.env.CAPTACION_DESDE; delete process.env.CAPTACION_DESDE
-    try { assert.deepEqual(await pendientesDeAirtable(), { activa: false, error: false, filas: [] }) } finally { if (antes) process.env.CAPTACION_DESDE = antes }
+    try { assert.deepEqual(await pendientesPorResolver(), { activa: false, error: false, filas: [] }) } finally { if (antes) process.env.CAPTACION_DESDE = antes }
   })
 
   test('la pantalla está conectada en el panel y la resolución sigue protegida por permiso', () => {

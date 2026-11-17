@@ -17,9 +17,9 @@ export async function listarPostulaciones(): Promise<FilaOrigen[]> {
   }))
 }
 
-/** Las que no llegaron a Airtable. Solo si la captación está activa; si la lectura falla, se dice (no se esconde). */
-export async function pendientesDeAirtable(): Promise<{ activa: boolean; error: boolean; soloSupabase?: boolean; filas: PostulacionPorResolver[] }> {
+/** Las postulaciones anteriores que el CMC no llegó a ver y están por resolver. Solo si la captación está activa; si la lectura falla, se dice (no se esconde). */
+export async function pendientesPorResolver(): Promise<{ activa: boolean; error: boolean; filas: PostulacionPorResolver[] }> {
   if (!process.env.CAPTACION_DESDE) return { activa: false, error: false, filas: [] }
-  try { return { activa: true, error: false, soloSupabase: true, filas: await postulacionesPorResolver(500) } }
+  try { return { activa: true, error: false, filas: await postulacionesPorResolver(500) } }
   catch (e) { console.error('[panel/postulaciones]', e); return { activa: true, error: true, filas: [] } }
 }

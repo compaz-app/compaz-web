@@ -16,7 +16,7 @@ export const ETIQUETA_FUENTE: Record<string, string> = {
 }
 
 export const DESCRIPCION_POSTULACIONES = 'Quién se postuló, por qué página o campaña llegó y si calificó.'
-export const INFO_POSTULACIONES = 'Cada vez que alguien deja sus datos en la página (una familia o un aspirante a compita) queda aquí, con la página y la campaña de anuncios desde la que llegó. Sirve para saber qué campañas traen gente que de verdad califica. Arriba salen las postulaciones que no se pudieron copiar a Airtable, que el equipo de selección no ve hasta que se resuelven. Teléfono y correo no se muestran aquí.'
+export const INFO_POSTULACIONES = 'Cada vez que alguien deja sus datos en la página (una familia o un aspirante a compita) queda aquí, con la página y la campaña de anuncios desde la que llegó. Sirve para saber qué campañas traen gente que de verdad califica. Arriba salen, si las hay, las postulaciones anteriores que el equipo de selección no llegó a ver en el CMC y que hay que resolver. Teléfono y correo no se muestran aquí.'
 
 export const FILTROS_TIPO = ['familia', 'compita'] as const
 export const FILTROS_CLASIF = ['pendiente', 'calificada', 'no_calificada', 'spam', 'repetida'] as const

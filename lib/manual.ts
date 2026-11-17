@@ -401,15 +401,15 @@ export const ENTRADAS: EntradaManual[] = [
     permiso: 'invitar', pantalla: 'invitar', busca: ['invitacion', 'registro', 'postulacion', 'reclutar'],
   },
   {
-    id: 'cta-postulaciones', seccion: 'cuentas', titulo: '¿Cómo veo de dónde llegan las postulaciones y resuelvo las que no llegaron a Airtable?',
-    paraQue: 'Para saber qué campañas traen gente que califica y para que ninguna postulación quede invisible para el equipo de selección.',
+    id: 'cta-postulaciones', seccion: 'cuentas', titulo: '¿Cómo veo de dónde llegan las postulaciones y resuelvo las que quedaron por resolver?',
+    paraQue: 'Para saber qué campañas traen gente que califica y para que ninguna postulación anterior quede invisible para el equipo de selección.',
     pasos: [
       'Abre Más, Postulaciones y origen.',
-      'Arriba, si hay postulaciones "Sin llegar a Airtable", elige cómo resolver cada una: ya está en Airtable (pega el ID que empieza por "rec"), la registraste directo en el CMC (escribe el ID COM-) o no procede (escribe el motivo). Toca Resolver.',
+      'Arriba, si hay postulaciones "Por resolver" (anteriores que el CMC no llegó a ver), elige cómo resolver cada una: la registraste directo en el CMC (escribe el ID COM-) o no procede (escribe el motivo). Toca Resolver.',
       'Más abajo, "De dónde llegan" cuenta cuántas postulaciones trajo cada campaña y cuántas calificaron. Usa los filtros para ver solo familias o aspirantes a compita, o solo las calificadas.',
     ],
     despues: 'La resolución queda guardada con tu correo, la nota y la fecha, y la postulación sale de la lista. Teléfono y correo solo aparecen en las que están por resolver, y esta pantalla es solo para administradores.',
-    permiso: 'cuentas', pantalla: 'postulaciones', busca: ['postulaciones', 'campana', 'origen', 'airtable', 'calificada'],
+    permiso: 'cuentas', pantalla: 'postulaciones', busca: ['postulaciones', 'campana', 'origen', 'por resolver', 'calificada'],
   },
   {
     id: 'cta-equipo', seccion: 'cuentas', titulo: '¿Cómo agrego a alguien al equipo y le doy permisos?',

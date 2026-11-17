@@ -1,19 +1,15 @@
 // ══════════════════════════════════════════════════════════════════════════════
 // Compaz — Captación: postulaciones de familias y aspirantes a Compita
 //
-// Supabase es la fuente principal: cada postulación se guarda primero aquí
-// (supabase/migrations/20261022_captacion.sql) y después se copia a Airtable
-// mientras el CMC dependa de Airtable.
+// Supabase es la única fuente: cada postulación se guarda aquí
+// (supabase/migrations/20261022_captacion.sql) y el CMC la lee de /api/cmc/postulaciones
+// (lib/cmc.ts, que mantiene el formato de Airtable porque el Apps Script del CMC lo espera).
+// Hasta nov-2026 además se copiaba a Airtable; esa copia, sus reintentos y su conciliación se quitaron (1.3.12).
 //
 // Garantías:
-//   · Sin pérdidas: la persona solo recibe "ok" cuando la postulación está guardada.
-//   · Sin duplicados en Airtable: cada postulación tiene una huella fija
-//     (Contacto + Fecha con milisegundos). Todo reintento busca esa huella antes de
-//     crear; si ya existe, la vincula. Si la búsqueda falla, no crea nada.
-//   · Sin postulaciones invisibles: lo que no llega a Airtable queda en la bandeja
-//     /admin/postulaciones, con aviso por Telegram hasta que alguien lo resuelve.
-//   · Ruta de respaldo conciliada: lo que la web guarde directamente en Airtable
-//     porque Supabase falló se importa después (conciliarAirtable).
+//   · Sin pérdidas: la persona solo recibe "ok" cuando la postulación está guardada. Si Supabase falla ve un error y puede reintentar.
+//   · Sin duplicados: la clave de idempotencia y la huella las resuelve la función SQL registrar_postulacion.
+//   · Lo anterior que el CMC no llegó a ver queda en la bandeja de Postulaciones del panel hasta que alguien lo resuelve.
 // ══════════════════════════════════════════════════════════════════════════════
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { avisarAdmin } from '@/lib/telegram'
@@ -157,7 +153,7 @@ export async function registrarPostulacion(d: DatosPostulacion): Promise<Resulta
   return { ok: true, postulacionId: String(fila.postulacion_id), resultado: fila.resultado as 'registrada' | 'repetida' | 'reintento_tecnico' }
 }
 
-// ── Bandeja de postulaciones que no llegaron a Airtable ──────────────────────
+// ── Bandeja de postulaciones por resolver (histórico) ──────────────────────
 
 export interface PostulacionPorResolver {
   id: string; recibida_en: string; tipo: TipoPostulacion; nombre: string; telefono: string; email: string

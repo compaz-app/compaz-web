@@ -6,9 +6,9 @@ import { DESCRIPCION_POSTULACIONES, ETIQUETA_CLASIF, ETIQUETA_FUENTE, ETIQUETA_T
 import type { PostulacionPorResolver } from '@/lib/captacion'
 
 type Enlace = (cambios: Record<string, string | null>) => string
-interface Pend { activa: boolean; error: boolean; soloSupabase?: boolean; filas: PostulacionPorResolver[] }
+interface Pend { activa: boolean; error: boolean; filas: PostulacionPorResolver[] }
 
-// Postulaciones y origen: arriba lo que no llegó a Airtable (hay que resolverlo), luego qué campañas traen gente y el listado de postulaciones.
+// Postulaciones y origen: arriba lo que quedó por resolver (histórico que el CMC no llegó a ver), luego qué campañas traen gente y el listado de postulaciones.
 export default function Postulaciones({ q, pend, enlace }: { q: ConsultaPost; pend: Pend; enlace: Enlace }) {
   const sin = { po_tipo: null, po_clasif: null, po_pag: null }
   return (
@@ -16,27 +16,24 @@ export default function Postulaciones({ q, pend, enlace }: { q: ConsultaPost; pe
       <p className="flex items-center gap-1 text-sm text-texto-medio">{DESCRIPCION_POSTULACIONES}<InfoBoton que="Para qué sirve esta pantalla" texto={INFO_POSTULACIONES} /></p>
 
       {pend.error && <p role="alert" className="rounded-xl border border-borde bg-blanco p-3 text-sm font-bold text-rojo-oscuro">No se pudo leer lo que falta por resolver. Inténtalo en unos minutos.</p>}
-      {pend.activa && pend.soloSupabase && <p className="rounded-xl border border-borde bg-blanco p-3 text-sm text-texto-medio">La copia a Airtable está desactivada: las postulaciones nuevas llegan al CMC directo desde Supabase y no aparecen en la lista de abajo. Lo que quede ahí es anterior: comprueba su ID en el CMC y ciérralo con "La registré directamente en el CMC".</p>}
       {pend.activa && !pend.error && pend.filas.length > 0 && (
         <div className="space-y-2">
-          <div className="flex items-center gap-1"><TituloSeccion>Sin llegar a Airtable ({pend.filas.length})</TituloSeccion><InfoBoton que="Qué es esto" texto="Están guardadas en Compaz pero no se pudieron copiar a Airtable, así que el equipo de selección no las ve. Resuélvelas: vincúlalas a un registro de Airtable, regístralas directamente en el CMC o márcalas como no procedentes." /></div>
+          <div className="flex items-center gap-1"><TituloSeccion>Por resolver ({pend.filas.length})</TituloSeccion><InfoBoton que="Qué es esto" texto="Postulaciones anteriores que quedaron guardadas en Compaz pero que el equipo de selección no llegó a ver en el CMC. Resuélvelas: regístralas directamente en el CMC o márcalas como no procedentes. Las nuevas llegan solas al CMC y no pasan por aquí." /></div>
           <ul className={CLASE_LISTA}>
             {pend.filas.map((p) => (
               <li key={p.id} className="px-3 py-2.5">
                 <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
                   <span className="text-sm"><b>{p.nombre}</b> <span className="text-texto-medio">· {p.tipo === 'compita' ? 'Aspirante a compita' : p.tipo === 'familia' ? 'Familia' : 'Sin tipo'} · {p.ubicacion}</span></span>
-                  <Rol>{p.airtable_estado === 'conflicto' ? 'Posible duplicado' : `Falló ${p.airtable_intentos} veces`}</Rol>
+                  <Rol>{p.airtable_estado === 'conflicto' ? 'Posible duplicado' : 'No llegó al CMC'}</Rol>
                 </div>
                 <div className="break-all text-xs text-texto-sutil">{p.telefono} · {p.email} · {cuandoLinea(p.recibida_en)}</div>
-                {p.airtable_ultimo_error && <div className="break-words font-mono text-[11px] text-texto-sutil">{p.airtable_ultimo_error}</div>}
                 <ResolverPostulacion id={p.id} />
               </li>
             ))}
           </ul>
         </div>
       )}
-      {pend.activa && !pend.error && pend.filas.length === 0 && <p className="text-sm text-texto-medio">Todo lo recibido llegó a Airtable: no hay nada por resolver.</p>}
-      {!pend.activa && <p className="text-sm text-texto-sutil">La copia a Airtable no está activada en este entorno, así que no hay nada por resolver.</p>}
+      {pend.activa && !pend.error && pend.filas.length === 0 && <p className="text-sm text-texto-medio">No hay postulaciones por resolver.</p>}
 
       <div className="space-y-2">
         <div className="flex items-center gap-1"><TituloSeccion>De dónde llegan</TituloSeccion><InfoBoton que="Cómo leerlo" texto="Cada fila es una campaña de anuncios (o la página, si llegó sin campaña): cuántas postulaciones trajo y cuántas calificaron. Si una campaña trae muchas pero casi ninguna califica, está atrayendo a la gente equivocada. Cuenta las últimas 500 postulaciones." /></div>

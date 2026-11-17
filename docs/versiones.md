@@ -4,6 +4,13 @@ La versión vigente está en `lib/version.ts` y se ve en el panel (menú lateral
 
 Reglas: mayor = cambio grande o lanzamiento; menor = función nueva; parche = arreglo. La etapa `beta` sale cuando el sistema corre una o dos semanas con uso real sin sorpresas.
 
+## 1.3.13-beta.1 (2026-11-17)
+Limpieza de Airtable, fase 3: la pantalla Postulaciones y el manual ya no hablan de Airtable.
+1. En Más, Postulaciones y origen, la bandeja se llama «Por resolver» (postulaciones anteriores que el CMC no llegó a ver) y se resuelven con «La registré directamente en el CMC» o «No procede». Desaparecen los mensajes «La copia a Airtable está desactivada», «Todo lo recibido llegó a Airtable» y el detalle del error de Airtable.
+2. El manual del equipo (¿Cómo veo de dónde llegan las postulaciones…?) y la ayuda ⓘ se reescriben sin Airtable. `pendientesDeAirtable` pasa a llamarse `pendientesPorResolver`.
+3. Se actualizan los comentarios de `lib/captacion.ts`. SE QUEDAN, a propósito, el formato Airtable de `/api/cmc/postulaciones` (lo espera el Apps Script del CMC), las columnas `airtable_*` de la base y las etiquetas «Respaldo de Airtable» / «Importada de Airtable» de datos históricos.
+4. Con esto termina la limpieza de Airtable en el código. Queda por hacer fuera del código: quitar de Netlify `AIRTABLE_*` y `POSTULACIONES_DESTINO`, y revocar la clave de Airtable. Sin migración.
+
 ## 1.3.12-beta.1 (2026-11-17)
 Limpieza de Airtable, fase 2: el código de la web ya no usa Airtable.
 1. Las postulaciones (`/api/waitlist`) se guardan SOLO en Supabase. Si Supabase falla, la persona ve un error 503 y puede reintentar, y el equipo recibe un aviso (como mucho uno cada 15 minutos). Ya no existe el respaldo directo a Airtable.

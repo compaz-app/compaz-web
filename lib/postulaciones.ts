@@ -1,7 +1,7 @@
 // ══════════════════════════════════════════════════════════════════════════════
 // Compaz — Postulaciones de Compitas desde la landing pública (/se-compita)
 // Usa el mismo endpoint y formato que el formulario de la home (/api/waitlist),
-// así Airtable y sus automatizaciones reciben los leads igual que siempre.
+// que guarda la postulación en Supabase (de ahí la lee el CMC).
 // `fuente` y `claveIdempotencia` los usa el registro en Supabase (lib/captacion.ts).
 // ══════════════════════════════════════════════════════════════════════════════
 

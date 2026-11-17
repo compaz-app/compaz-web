@@ -33,7 +33,7 @@ import PagosPorConfirmar from '@/components/panel/mas/PagosPorConfirmar'
 import AutoRefresh from '@/components/ui/AutoRefresh'
 import Postulaciones from '@/components/panel/mas/Postulaciones'
 import Invitar from '@/components/panel/mas/Invitar'
-import { listarPostulaciones, pendientesDeAirtable } from '@/lib/panel-postulaciones'
+import { listarPostulaciones, pendientesPorResolver } from '@/lib/panel-postulaciones'
 import { consultarPostulaciones } from '@/lib/panel-postulaciones-tipos'
 import Avisos from '@/components/panel/mas/Avisos'
 import Cobertura from '@/components/panel/mas/Cobertura'
@@ -175,7 +175,7 @@ async function ContenidoPanel({ sp, actual, actor, comoActor, comoColaborador }:
       } else if (subMas.id === 'invitar') {
         vista = <Invitar />
       } else if (subMas.id === 'postulaciones') {
-        vista = <Postulaciones q={consultarPostulaciones(await listarPostulaciones(), un('po_tipo'), un('po_clasif'), un('po_pag'))} pend={await pendientesDeAirtable()} enlace={enlace} />
+        vista = <Postulaciones q={consultarPostulaciones(await listarPostulaciones(), un('po_tipo'), un('po_clasif'), un('po_pag'))} pend={await pendientesPorResolver()} enlace={enlace} />
       } else if (subMas.id === 'pagos') {
         vista = <Pagos filas={await listarPagosRecientes()} ver={un('pag_ver') === 'anulados' ? 'anulados' : 'activos'} pagina={un('pag_pag')} enlace={enlace} />
       } else if (subMas.id === 'avisos') {
