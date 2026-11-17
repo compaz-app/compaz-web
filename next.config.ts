@@ -37,6 +37,8 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // Permite una segunda instancia local (demo) con su propia carpeta de compilación (scripts/demo/arrancar.sh). Sin la variable no cambia nada.
+  ...(process.env.NEXT_DIST_DIR ? { distDir: process.env.NEXT_DIST_DIR } : {}),
   images: {
     formats: ["image/webp"],
   },
