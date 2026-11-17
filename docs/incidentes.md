@@ -29,7 +29,7 @@ Cómo se escribe cada entrada: impacto, línea de tiempo, causa raíz, detecció
 
 **Pendiente (por orden).**
 1. En Netlify, por quien administra la cuenta: alerta de uso, tope de gasto y revisar Usage para saber cuántos créditos se gastaron. El tope del código protege la base de datos y avisa, pero la función de Netlify igual se ejecuta en cada petición.
-2. Cambiar el sondeo cada 20 segundos por avisos en tiempo real (Realtime), como ya se hace en el portal del cliente. Requiere una migración y permisos para colaboradores.
+2. DECIDIDO NO HACERLO POR AHORA (17-nov): cambiar el sondeo de 20 segundos por avisos en tiempo real. Para un equipo de 2 a 5 personas el sondeo (con el error arreglado y los topes) cuesta unas 3 consultas por minuto por persona, y el tiempo real añade piezas que pueden fallar sin avisar (tabla, disparadores, permisos, conexión en vivo). El trabajo ya hecho (versiones 1.3.14 y 1.3.15, migración `20261117c_panel_senales.sql`, interruptor `panel_tiempo_real` apagado) queda guardado sin publicar en la rama `auditoria/acumulado-7` por si el equipo crece. Criterio para retomarlo: más de unas 10 personas con el panel abierto o un costo de ejecuciones que moleste.
 3. Auditoría de resiliencia completa: `docs/auditoria-resiliencia-prompt.md`.
 
 **Qué se aprendió.**
