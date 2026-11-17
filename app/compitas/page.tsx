@@ -19,7 +19,7 @@ export default async function CompitasPage() {
     .select('id, nombre, zona, estado, verificado, foto_url, descripcion, servicios, youtube_url, visitas_realizadas, rating_promedio, total_ratings, horarios_disponibles, created_at')
     .eq('estado', 'activo')
     .eq('verificado', true)
-    .not('telegram_chat_id', 'is', null)
+    .or('telegram_chat_id.not.is.null,es_demo.eq.true') // reales con Telegram, más las demos (mismo criterio que getCompitasActivas)
     .order('visitas_realizadas', { ascending: false }) as { data: Compita[] | null }
 
   // Un compita en pausa por cancelaciones tardías no se ofrece: así el cliente no elige a alguien que no puede recibirlo.
