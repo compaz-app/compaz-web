@@ -1,6 +1,6 @@
 import InfoBoton from '@/components/ui/InfoBoton'
 import ResolverPostulacion from '@/components/panel/mas/ResolverPostulacion'
-import { CLASE_LISTA, ChipLink, Encabezado, Filtros, Paginador, Rol, TituloSeccion } from '@/components/panel/ui'
+import { CLASE_LISTA, ChipLink, Filtros, Paginador, Rol, TituloSeccion } from '@/components/panel/ui'
 import { cuandoLinea } from '@/lib/panel-personas-tipos'
 import { DESCRIPCION_POSTULACIONES, ETIQUETA_CLASIF, ETIQUETA_FUENTE, ETIQUETA_TIPO, FILTROS_CLASIF, FILTROS_TIPO, INFO_POSTULACIONES, type ConsultaPost } from '@/lib/panel-postulaciones-tipos'
 import type { PostulacionPorResolver } from '@/lib/captacion'
@@ -13,7 +13,7 @@ export default function Postulaciones({ q, pend, enlace }: { q: ConsultaPost; pe
   const sin = { po_tipo: null, po_clasif: null, po_pag: null }
   return (
     <section className="max-w-3xl space-y-4">
-      <Encabezado titulo="Postulaciones y origen (CMC)" descripcion={DESCRIPCION_POSTULACIONES} info={INFO_POSTULACIONES} infoQue="Para qué sirve esta pantalla" />
+      <p className="flex items-center gap-1 text-sm text-texto-medio">{DESCRIPCION_POSTULACIONES}<InfoBoton que="Para qué sirve esta pantalla" texto={INFO_POSTULACIONES} /></p>
 
       {pend.error && <p role="alert" className="rounded-xl border border-borde bg-blanco p-3 text-sm font-bold text-rojo-oscuro">No se pudo leer lo que falta por resolver. Inténtalo en unos minutos.</p>}
       {pend.activa && pend.soloSupabase && <p className="rounded-xl border border-borde bg-blanco p-3 text-sm text-texto-medio">La copia a Airtable está desactivada: las postulaciones nuevas llegan al CMC directo desde Supabase y no aparecen en la lista de abajo. Lo que quede ahí es anterior: comprueba su ID en el CMC y ciérralo con "La registré directamente en el CMC".</p>}

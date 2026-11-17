@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Boton from '@/components/ui/base/Boton'
 import InfoBoton from '@/components/ui/InfoBoton'
-import { Encabezado, TituloSeccion } from '@/components/panel/ui'
+import { TituloSeccion } from '@/components/panel/ui'
 import FormCompita from '@/components/panel/FormCompita'
 
 const INFO = 'Para sumar personas sin que se registren solas. A un cliente se le crea la cuenta y recibe un correo con su enlace de acceso. Para un compita se genera un enlace de registro que dura 7 días y que tú le mandas. Si el cliente ya está registrado no se le reinvita: que pida un enlace nuevo en la página de entrada.'
@@ -42,7 +42,7 @@ export default function Invitar() {
 
   return (
     <section className="max-w-3xl space-y-4">
-      <Encabezado titulo="Invitar" descripcion="Suma a un cliente o a un compita sin que se registre solo." info={INFO} infoQue="Cómo funciona invitar" />
+      <p className="flex items-center gap-1 text-sm text-texto-medio">Suma a un cliente o a un compita sin que se registre solo.<InfoBoton que="Cómo funciona invitar" texto={INFO} /></p>
 
       <div className="space-y-2">
         <TituloSeccion>Invitar a un cliente</TituloSeccion>

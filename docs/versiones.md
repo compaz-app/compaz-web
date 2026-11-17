@@ -4,6 +4,11 @@ La versión vigente está en `lib/version.ts` y se ve en el panel (menú lateral
 
 Reglas: mayor = cambio grande o lanzamiento; menor = función nueva; parche = arreglo. La etapa `beta` sale cuando el sistema corre una o dos semanas con uso real sin sorpresas.
 
+## 1.3.7-beta.1 (2026-11-16)
+Más, Invitar y Postulaciones: el título ya no sale repetido.
+1. El panel ya pone el título de cada herramienta de Más; Invitar y Postulaciones y origen ponían además el suyo, así que se leía «Invitar» dos veces. Ahora solo queda el del panel, con la descripción y su ⓘ debajo.
+2. Sin migración.
+
 ## 1.3.6-beta.1 (2026-11-16)
 El equipo no puede verificar ni activar a un compita sin el perfil público lleno.
 1. Complementa 1.3.5 (que cierra Telegram): ahora «Verificar» y «Activar» responden con un error claro (409) si al compita le falta la descripción o al menos un servicio, y no cambian nada. El mensaje dice qué hacer: que lo complete (enlace del correo o /perfil en Telegram) o completarlo con Editar perfil.
