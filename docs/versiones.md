@@ -4,6 +4,12 @@ La versión vigente está en `lib/version.ts` y se ve en el panel (menú lateral
 
 Reglas: mayor = cambio grande o lanzamiento; menor = función nueva; parche = arreglo. La etapa `beta` sale cuando el sistema corre una o dos semanas con uso real sin sorpresas.
 
+## 1.3.11-beta.1 (2026-11-17)
+La política de privacidad dice dónde se guardan los datos de verdad.
+1. `/privacidad` decía «Tus datos se almacenan en Airtable». Ya no es cierto: las postulaciones y todo lo demás se guardan en Supabase. Ahora dice Supabase.
+2. Es un texto legal público: conviene que Juan lo revise. El resto de la política no se tocó.
+3. Es la fase 1 de la limpieza de Airtable. Sin migración.
+
 ## 1.3.10-beta.1 (2026-11-17)
 Tope en el servidor y alarma de tráfico anormal para el punto rojo del panel (derivado de INC-002, ver `docs/incidentes.md`).
 1. Las rutas `/api/admin/pendientes-bandeja` y `/api/admin/pendientes-pagos` cuentan las consultas de cada persona por minuto. Pasadas 30 por minuto (lo normal son unas 3) responden 429 con la explicación y la razón (`panel_consultas` en `lib/esperas.ts`, ya listado en Más, Límites y esperas). El navegador, al recibir 429, se calla un minuto.

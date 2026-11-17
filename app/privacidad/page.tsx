@@ -20,7 +20,7 @@ const secciones = [
   {
     titulo: "Dónde se guardan",
     cuerpo:
-      "Tus datos se almacenan en Airtable, nuestro proveedor de base de datos, con acceso restringido al equipo de Compaz.",
+      "Tus datos se almacenan en Supabase, nuestro proveedor de base de datos, con acceso restringido al equipo de Compaz.",
   },
   {
     titulo: "Publicidad y Meta Pixel",
