@@ -11,6 +11,7 @@ Sistema de Confianza en el panel (primera versión, en revisión: no fusionar si
 3. **Demostración (`&cf_modo=demo`):** escenario sintético con 9 aspirantes ficticios. Se puede preseleccionar, entrevistar con los 8 criterios reales del CMC, verificar, hacer el onboarding, habilitar con los 7 controles, pasar a la operación y simular una solicitud con su aviso por Telegram (representado). Todo se guarda solo en el navegador; no llama a ninguna API ni a la base, no envía correos, mensajes ni pagos. Distingue lo comprobado, lo simulado y lo pendiente de validar.
 4. Las reglas de selección del CMC quedan escritas como espejo en `lib/confianza/reglas.ts` (la fuente autorizada sigue siendo el CMC). La prueba 118 vigila las reglas, el motor de la demo y su aislamiento.
 5. En la demostración el marco del panel esconde el correo, el «ver como» y los puntos rojos (muestran datos reales). Sin migración.
+6. Login en los deploy previews: `lib/site.ts` usa la dirección del preview SOLO si la compilación es de Netlify «deploy-preview» (variable `CONTEXT`, fijada por `next.config.ts`) y la petición llega a `deploy-preview-N--compaz-beta.netlify.app`. Antes el proxy mandaba al login de micompaz.com y la sesión no volvía al preview. Producción no cambia. El administrador vuelve a la pantalla del panel de la que venía (`panelDeRegreso`). Prueba 119.
 
 ## 1.3.13-beta.1 (2026-11-17)
 Limpieza de Airtable, fase 3: la pantalla Postulaciones y el manual ya no hablan de Airtable.

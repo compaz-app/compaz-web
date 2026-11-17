@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createServerSupabase } from '@/lib/supabase-server'
 import { isAdminEmail } from '@/lib/auth'
 import { rutaInterna } from '@/lib/html'
+import { panelDeRegreso } from '@/lib/login-destino'
 import LoginForm from './LoginForm'
 
 // Si ya hay una sesión, la persona entra directo a donde iba (o a su portal) sin que se le pida el correo otra vez.
@@ -11,7 +12,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   if (!params.error) {
     const supabase = await createServerSupabase()
     const { data: { user } } = await supabase.auth.getUser()
-    if (user) redirect(isAdminEmail(user.email ?? '') ? '/panel' : rutaInterna(params.returnTo, '/dashboard'))
+    if (user) redirect(isAdminEmail(user.email ?? '') ? panelDeRegreso(rutaInterna(params.returnTo, '')) : rutaInterna(params.returnTo, '/dashboard'))
   }
   return <LoginForm returnTo={rutaInterna(params.returnTo, '')} error={params.error} motivo={params.motivo} />
 }
