@@ -47,12 +47,12 @@ export function FormEntrevista({ onGuardar }: { onGuardar: (x: Omit<Entrevista, 
     <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); onGuardar({ siNo, puntajes, positivas: positivas.trim(), pendientes: pendientes.trim(), alertas: alertas.trim(), decision, razon }) }}>
       <div className="grid gap-2 sm:grid-cols-2">
         {CRITERIOS_SI_NO.map((c, i) => (
-          <Campo key={c} etiqueta={c}><Lista nombre={c} valor={siNo[i] ? 'Sí' : 'No'} opciones={['Sí', 'No'] as const} onChange={(v) => setSiNo(siNo.map((x, j) => (j === i ? v === 'Sí' : x)))} /></Campo>
+          <Campo key={c} etiqueta={c}><Lista nombre={c} valor={siNo[i] ? 'Sí' : 'No'} opciones={['Sí', 'No'] as const} onChange={(v) => setSiNo((ant) => ant.map((x, j) => (j === i ? v === 'Sí' : x)))} /></Campo>
         ))}
       </div>
       <fieldset className="space-y-2">
         <legend className={ETIQUETA}>Criterios (1 = muy débil, 5 = excelente)</legend>
-        {CRITERIOS_PUNTAJE.map((c, i) => <Puntaje key={c} etiqueta={c} valor={puntajes[i]} onChange={(n) => setPuntajes(puntajes.map((x, j) => (j === i ? n : x)))} />)}
+        {CRITERIOS_PUNTAJE.map((c, i) => <Puntaje key={c} etiqueta={c} valor={puntajes[i]} onChange={(n) => setPuntajes((ant) => ant.map((x, j) => (j === i ? n : x)))} />)}
       </fieldset>
       <div className="grid gap-2 sm:grid-cols-3">
         <Campo etiqueta="Señales positivas"><textarea rows={2} maxLength={300} value={positivas} onChange={(e) => setPositivas(e.target.value)} className={`${CAMPO} py-2`} /></Campo>
@@ -100,7 +100,7 @@ export function FormOnboarding({ onGuardar }: { onGuardar: (x: { controles: bool
         <legend className={ETIQUETA}>Controles operativos comprendidos</legend>
         {ONBOARDING_CONTROLES.map((c, i) => (
           <label key={c} className="flex min-h-9 items-center gap-2 text-sm">
-            <input type="checkbox" checked={controles[i]} onChange={(e) => setControles(controles.map((x, j) => (j === i ? e.target.checked : x)))} className="h-5 w-5" />{c}
+            <input type="checkbox" checked={controles[i]} onChange={(e) => { const marcado = e.target.checked; setControles((ant) => ant.map((x, j) => (j === i ? marcado : x))) }} className="h-5 w-5" />{c}
           </label>
         ))}
       </fieldset>
