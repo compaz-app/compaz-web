@@ -16,10 +16,6 @@
 //     porque Supabase falló se importa después (conciliarAirtable).
 // ══════════════════════════════════════════════════════════════════════════════
 import { createAdminSupabase } from '@/lib/supabase-server'
-import {
-  crearRegistroAirtable, buscarPorContacto, listarCreadosDesde, obtenerRegistro, mismaFecha,
-  type CamposAirtable, type RegistroAirtable,
-} from '@/lib/airtable'
 import { avisarAdmin } from '@/lib/telegram'
 import { alertaAdmin } from '@/lib/alertas-admin'
 import { reclamarUnaVez } from '@/lib/cron'
@@ -28,21 +24,6 @@ import { SITE_URL } from '@/lib/email'
 
 export type TipoPostulacion = 'familia' | 'compita' | 'desconocido'
 
-/**
- * Destino de las postulaciones (variable POSTULACIONES_DESTINO):
- *   · 'airtable' (sin variable): comportamiento anterior al Bloque 1, solo Airtable.
- *   · 'supabase_y_airtable': Supabase primero y copia a Airtable (con reintentos, conciliación y bandeja).
- *   · 'solo_supabase': solo Supabase. El CMC las lee de Supabase (/api/cmc/postulaciones),
- *     no se copia nada a Airtable y los crons de Airtable no hacen llamadas ni avisos.
- *     Las filas nuevas quedan con airtable_estado = 'pendiente' (copia diferida): si se
- *     vuelve a 'supabase_y_airtable', el cron las copia y el CMC las sigue reconociendo
- *     por su clave SB-<uuid> (sin duplicados).
- */
-export type DestinoPostulaciones = 'airtable' | 'supabase_y_airtable' | 'solo_supabase'
-export function destinoPostulaciones(): DestinoPostulaciones {
-  const v = process.env.POSTULACIONES_DESTINO
-  return v === 'supabase_y_airtable' || v === 'solo_supabase' ? v : 'airtable'
-}
 export type FuentePostulacion = 'home' | 'se_compita' | 'otra'
 
 // ── Normalización (funciones puras) ────────────────────────────────────────────
@@ -113,7 +94,6 @@ export function separarUbicacion(ubicacion: string): { ciudad: string | null; re
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-const ID_AIRTABLE = /^rec[A-Za-z0-9]{14}$/
 
 /** Clave por envío generada en el navegador; si falta o es inválida, el servidor crea una. */
 export function claveIdempotencia(valor: unknown): string {
@@ -137,20 +117,6 @@ async function rpc<T>(fn: string, args: Record<string, unknown>): Promise<{ data
   }
 }
 
-type EstadoMarca = 'enviada' | 'error' | 'conflicto'
-
-async function marcarEnvio(id: string, estado: EstadoMarca, airtableId: string | null, error: string | null): Promise<string | null> {
-  const { data, error: e } = await rpc<string>('marcar_envio_airtable', {
-    p_id: id, p_estado: estado, p_airtable_id: airtableId, p_error: error,
-  })
-  if (e) {
-    // Sin riesgo de duplicado: la fila sigue pendiente y el siguiente intento buscará la huella.
-    console.error('[captacion] marcar_envio_airtable falló:', id, e.message)
-    return null
-  }
-  return data
-}
-
 // ── Registro desde el formulario ──────────────────────────────────────────────
 
 export interface DatosPostulacion {
@@ -165,18 +131,17 @@ export interface DatosPostulacion {
 }
 
 export type ResultadoRegistro =
-  | { ok: true; postulacionId: string; resultado: 'registrada' | 'repetida' | 'reintento_tecnico'; airtable: 'enviada' | 'pendiente' | 'no_aplica' | 'diferida' }
+  | { ok: true; postulacionId: string; resultado: 'registrada' | 'repetida' | 'reintento_tecnico' }
   | { ok: false; error: string }
 
 /**
- * Guarda la postulación en Supabase y hace el primer intento de copia a Airtable.
- * Si la copia falla o no se confirma, la fila queda pendiente y el cron la retoma
- * buscando antes su huella: nunca se crea un segundo registro de la misma postulación.
+ * Guarda la postulación en Supabase (identidad, repetidas y huella las resuelve la función SQL `registrar_postulacion`). El CMC la lee de ahí
+ * (/api/cmc/postulaciones). Ya no se copia a ningún otro sistema.
  */
-export async function registrarPostulacion(d: DatosPostulacion, opciones: { copiarAirtable?: boolean } = {}): Promise<ResultadoRegistro> {
+export async function registrarPostulacion(d: DatosPostulacion): Promise<ResultadoRegistro> {
   const tipo = tipoDesdeContacto(d.contacto)
   const { ciudad, region } = separarUbicacion(d.ubicacion)
-  const { data, error } = await rpc<Array<{ postulacion_id: string; resultado: string; enviar_a_airtable: boolean; recibida_en: string }>>(
+  const { data, error } = await rpc<Array<{ postulacion_id: string; resultado: string; recibida_en: string }>>(
     'registrar_postulacion', {
       p_clave: d.clave, p_tipo: tipo, p_fuente: d.fuente, p_nombre: d.nombre,
       p_telefono_e164: normalizarTelefono(d.whatsapp), p_email_norm: normalizarEmail(d.email),
@@ -189,143 +154,7 @@ export async function registrarPostulacion(d: DatosPostulacion, opciones: { copi
     console.error('[captacion] registrar_postulacion falló:', error?.message ?? 'sin fila')
     return { ok: false, error: 'No se pudo guardar la postulación' }
   }
-
-  const postulacionId = String(fila.postulacion_id)
-  const resultado = fila.resultado as 'registrada' | 'repetida' | 'reintento_tecnico'
-  if (!fila.enviar_a_airtable) return { ok: true, postulacionId, resultado, airtable: 'no_aplica' }
-  // solo_supabase: sin primer intento ni llamadas a Airtable; la fila queda 'pendiente' (copia diferida).
-  if (opciones.copiarAirtable === false) return { ok: true, postulacionId, resultado, airtable: 'diferida' }
-
-  const envio = await crearRegistroAirtable({
-    nombre: d.nombre, contacto: contactoCanonico(d.whatsapp, d.email, tipo), ciudad: d.ubicacion,
-    fecha: new Date(fila.recibida_en).toISOString(),
-    utmSource: d.utm.source, utmMedium: d.utm.medium, utmCampaign: d.utm.campaign,
-  })
-  if (!envio.ok) {
-    await marcarEnvio(postulacionId, 'error', null, `${envio.incierto ? '[incierto] ' : ''}${envio.error}`)
-    return { ok: true, postulacionId, resultado, airtable: 'pendiente' }
-  }
-  const marcado = await marcarEnvio(postulacionId, 'enviada', envio.id, null)
-  return { ok: true, postulacionId, resultado, airtable: marcado === 'enviada' ? 'enviada' : 'pendiente' }
-}
-
-// ── Reintentos (cron) ─────────────────────────────────────────────────────────
-
-export interface FilaPostulacion {
-  id: string
-  tipo: TipoPostulacion
-  nombre_declarado: string
-  telefono_declarado: string
-  email_declarado: string
-  ubicacion_declarada: string
-  utm_source: string | null
-  utm_medium: string | null
-  utm_campaign: string | null
-  recibida_en: string
-}
-
-export function camposAirtableDesdeFila(f: FilaPostulacion): CamposAirtable {
-  return {
-    nombre: f.nombre_declarado,
-    contacto: contactoCanonico(f.telefono_declarado, f.email_declarado, f.tipo),
-    ciudad: f.ubicacion_declarada,
-    fecha: new Date(f.recibida_en).toISOString(),
-    utmSource: f.utm_source ?? '',
-    utmMedium: f.utm_medium ?? '',
-    utmCampaign: f.utm_campaign ?? '',
-  }
-}
-
-export type DesenlaceReintento = 'creada' | 'vinculada' | 'conflicto' | 'error' | 'agotada' | 'sin_marcar'
-
-/**
- * Un reintento: 1) buscar la huella en Airtable; 2) si existe una, vincularla;
- * si hay varias, conflicto; 3) si no existe, crear. Si la búsqueda falla, no crea.
- */
-export async function reintentarFila(f: FilaPostulacion): Promise<DesenlaceReintento> {
-  const campos = camposAirtableDesdeFila(f)
-  const busqueda = await buscarPorContacto(campos.contacto)
-  if (!busqueda.ok) {
-    const e = await marcarEnvio(f.id, 'error', null, `búsqueda previa falló: ${busqueda.error}`)
-    return e === 'agotada' ? 'agotada' : e ? 'error' : 'sin_marcar'
-  }
-  const mismas = busqueda.registros.filter((r) => mismaFecha(r.fecha, campos.fecha))
-  if (mismas.length === 1) {
-    return (await marcarEnvio(f.id, 'enviada', mismas[0].id, null)) === 'enviada' ? 'vinculada' : 'sin_marcar'
-  }
-  if (mismas.length > 1) {
-    await marcarEnvio(f.id, 'conflicto', null, `huella repetida en Airtable: ${mismas.map((m) => m.id).join(', ')}`)
-    return 'conflicto'
-  }
-  const envio = await crearRegistroAirtable(campos)
-  if (!envio.ok) {
-    const e = await marcarEnvio(f.id, 'error', null, `${envio.incierto ? '[incierto] ' : ''}${envio.error}`)
-    return e === 'agotada' ? 'agotada' : e ? 'error' : 'sin_marcar'
-  }
-  return (await marcarEnvio(f.id, 'enviada', envio.id, null)) === 'enviada' ? 'creada' : 'sin_marcar'
-}
-
-export type ResumenReintentos = Record<DesenlaceReintento, number> & { reclamadas: number }
-
-/** Procesa pendientes dentro de un presupuesto de tiempo (la función de Netlify corta a los 30 s). */
-export async function reintentarEnviosAirtable(limite = 10, presupuestoMs = 18_000): Promise<ResumenReintentos> {
-  const inicio = Date.now()
-  const { data, error } = await rpc<FilaPostulacion[]>('reclamar_envios_airtable', { p_limite: limite })
-  if (error) throw new Error(`reclamar_envios_airtable: ${error.message}`)
-  const filas = data ?? []
-  const r: ResumenReintentos = { reclamadas: filas.length, creada: 0, vinculada: 0, conflicto: 0, error: 0, agotada: 0, sin_marcar: 0 }
-  for (const f of filas) {
-    // Las filas no procesadas quedan reservadas 5 min y vuelven en la siguiente ejecución.
-    if (Date.now() - inicio > presupuestoMs) break
-    r[await reintentarFila(f)]++
-  }
-  return r
-}
-
-// ── Conciliación con Airtable (ruta de respaldo y confirmaciones perdidas) ────
-
-export type DesenlaceConciliacion = 'ya_vinculada' | 'adoptada' | 'importada' | 'ambigua' | 'ilegible' | 'error'
-export type ResumenConciliacion = Record<DesenlaceConciliacion, number> & { revisados: number; ilegibles: string[] }
-
-export async function conciliarRegistro(reg: RegistroAirtable): Promise<DesenlaceConciliacion> {
-  const c = leerContacto(reg.contacto)
-  const fecha = reg.fecha ?? reg.creado
-  if (!c || !fecha || !reg.nombre) return 'ilegible'
-  const { ciudad, region } = separarUbicacion(reg.ciudad)
-  const { data, error } = await rpc<string>('conciliar_registro_airtable', {
-    p_airtable_id: reg.id, p_fecha: fecha, p_tipo: c.tipo, p_nombre: reg.nombre.slice(0, 100),
-    p_telefono_decl: c.telefono.slice(0, 30), p_email_decl: c.email.slice(0, 100), p_ubicacion_decl: reg.ciudad.slice(0, 100),
-    p_telefono_e164: normalizarTelefono(c.telefono), p_email_norm: normalizarEmail(c.email),
-    p_ciudad: ciudad, p_region: region,
-    p_utm: { source: reg.utmSource, medium: reg.utmMedium, campaign: reg.utmCampaign },
-  })
-  if (error) {
-    console.error('[captacion] conciliar_registro_airtable', reg.id, error.message)
-    return /sin teléfono ni correo/.test(error.message) ? 'ilegible' : 'error'
-  }
-  return (data ?? 'error') as DesenlaceConciliacion
-}
-
-/**
- * Revisa los registros creados en Airtable desde la activación (CAPTACION_DESDE) y
- * concilia los que Supabase no tiene vinculados. No toca el histórico anterior.
- */
-export async function conciliarAirtable(desdeIso: string, presupuestoMs = 20_000): Promise<ResumenConciliacion> {
-  const inicio = Date.now()
-  const lista = await listarCreadosDesde(desdeIso)
-  if (!lista.ok) throw new Error(`listar Airtable: ${lista.error}`)
-  const { data: vinculados, error } = await rpc<string[]>('airtable_ids_vinculados', { p_desde: desdeIso })
-  if (error) throw new Error(`airtable_ids_vinculados: ${error.message}`)
-  const ya = new Set((vinculados ?? []).map(String))
-  const r: ResumenConciliacion = { revisados: lista.registros.length, ya_vinculada: 0, adoptada: 0, importada: 0, ambigua: 0, ilegible: 0, error: 0, ilegibles: [] }
-  for (const reg of lista.registros) {
-    if (ya.has(reg.id)) { r.ya_vinculada++; continue }
-    if (Date.now() - inicio > presupuestoMs) break
-    const d = await conciliarRegistro(reg)
-    r[d]++
-    if (d === 'ilegible') r.ilegibles.push(reg.id)
-  }
-  return r
+  return { ok: true, postulacionId: String(fila.postulacion_id), resultado: fila.resultado as 'registrada' | 'repetida' | 'reintento_tecnico' }
 }
 
 // ── Bandeja de postulaciones que no llegaron a Airtable ──────────────────────
@@ -342,65 +171,18 @@ export async function postulacionesPorResolver(limite = 200): Promise<Postulacio
   return data ?? []
 }
 
-export type Resolucion = 'vinculada_airtable' | 'registrada_en_cmc' | 'no_procede'
+export type Resolucion = 'registrada_en_cmc' | 'no_procede'
 
 export type ResultadoResolucion = { ok: true } | { ok: false; error: string }
 
-/**
- * Resuelve una postulación de la bandeja. Para vincularla a Airtable se comprueba
- * antes que el registro existe y que su Contacto corresponde a esta persona.
- */
-export async function resolverPostulacion(
-  id: string, resolucion: Resolucion, actor: string, nota: string, airtableId: string,
-): Promise<ResultadoResolucion> {
+/** Resuelve una postulación de la bandeja: o se registró directo en el CMC (la nota lleva el ID COM-) o no procede (la nota lleva el motivo). */
+export async function resolverPostulacion(id: string, resolucion: Resolucion, actor: string, nota: string): Promise<ResultadoResolucion> {
   if (!UUID.test(id)) return { ok: false, error: 'Postulación no válida' }
-  if (!['vinculada_airtable', 'registrada_en_cmc', 'no_procede'].includes(resolucion)) return { ok: false, error: 'Resolución no válida' }
+  if (!['registrada_en_cmc', 'no_procede'].includes(resolucion)) return { ok: false, error: 'Resolución no válida' }
   const notaLimpia = nota.trim().slice(0, 500)
-  if (resolucion !== 'vinculada_airtable' && !notaLimpia) return { ok: false, error: 'Escribe una nota (por ejemplo el ID COM- o el motivo)' }
-
-  if (resolucion === 'vinculada_airtable') {
-    if (!ID_AIRTABLE.test(airtableId)) return { ok: false, error: 'El ID de Airtable debe empezar por "rec" y tener 17 caracteres' }
-    const pendiente = (await postulacionesPorResolver(500)).find((p) => p.id === id)
-    if (!pendiente) return { ok: false, error: 'La postulación ya no está pendiente' }
-    const reg = await obtenerRegistro(airtableId)
-    if (!reg) return { ok: false, error: 'No se encontró ese registro en Airtable' }
-    const c = leerContacto(reg.contacto)
-    const coincide = !!c && (
-      (!!normalizarTelefono(c.telefono) && normalizarTelefono(c.telefono) === normalizarTelefono(pendiente.telefono))
-      || (!!normalizarEmail(c.email) && normalizarEmail(c.email) === normalizarEmail(pendiente.email)))
-    if (!coincide) return { ok: false, error: 'Ese registro de Airtable no tiene el teléfono ni el correo de esta postulación' }
-  }
-
-  const { data, error } = await rpc<boolean>('resolver_postulacion', {
-    p_id: id, p_resolucion: resolucion, p_actor: actor, p_nota: notaLimpia || null,
-    p_airtable_id: resolucion === 'vinculada_airtable' ? airtableId : null,
-  })
-  if (error) return { ok: false, error: /duplicate key|unique/i.test(error.message) ? 'Ese registro de Airtable ya está vinculado a otra postulación' : 'No se pudo guardar la resolución' }
+  if (!notaLimpia) return { ok: false, error: 'Escribe una nota (por ejemplo el ID COM- o el motivo)' }
+  const { data, error } = await rpc<boolean>('resolver_postulacion', { p_id: id, p_resolucion: resolucion, p_actor: actor, p_nota: notaLimpia, p_airtable_id: null })
+  if (error) return { ok: false, error: 'No se pudo guardar la resolución' }
   if (!data) return { ok: false, error: 'La postulación ya no está pendiente' }
   return { ok: true }
-}
-
-// ── Avisos con seguimiento hasta la resolución ───────────────────────────────
-
-/**
- * Avisa por Telegram de cada postulación nueva en la bandeja (una vez por
- * postulación) y recuerda cada día cuántas siguen sin resolver, hasta que no quede
- * ninguna. Devuelve cuántas hay pendientes.
- */
-export async function avisarBandeja(): Promise<number> {
-  const pendientes = await postulacionesPorResolver(500)
-  if (pendientes.length === 0) return 0
-  const enlace = `${SITE_URL}/panel?sec=mas&mas=postulaciones`
-
-  const nuevas: PostulacionPorResolver[] = []
-  for (const p of pendientes) if (await reclamarUnaVez(`alerta_post:${p.id}`)) nuevas.push(p)
-  if (nuevas.length > 0) {
-    await alertaAdmin('tarea', 
-      `⚠️ <b>${nuevas.length} postulación(es) no llegaron a Airtable</b>\n\n` +
-      `Están guardadas en Supabase pero el CMC no las ve. Resuélvelas en la bandeja:\n${enlace}`,
-    )
-  } else if (await reclamarUnaVez(`alerta_bandeja:${hoyVE()}`)) {
-    await alertaAdmin('actividad', `🔔 <b>Bandeja de postulaciones</b>\n\nSiguen ${pendientes.length} sin resolver.\n${enlace}`)
-  }
-  return pendientes.length
 }

@@ -1,5 +1,5 @@
 // POST /api/admin/postulaciones/resolver — resolver una postulación de la bandeja
-// Body: { id, resolucion: 'vinculada_airtable' | 'registrada_en_cmc' | 'no_procede', nota?, airtableId? }
+// Body: { id, resolucion: 'registrada_en_cmc' | 'no_procede', nota }
 // El operador queda registrado con el correo verificado de su sesión.
 import { NextRequest } from 'next/server'
 import { requierePermiso } from '@/lib/permisos'
@@ -10,13 +10,12 @@ export async function POST(req: NextRequest) {
   const g = await requierePermiso('cuentas')
   if (!g.ok) return g.res
 
-  const body = (await req.json().catch(() => ({}))) as { id?: unknown; resolucion?: unknown; nota?: unknown; airtableId?: unknown }
+  const body = (await req.json().catch(() => ({}))) as { id?: unknown; resolucion?: unknown; nota?: unknown }
   const r = await resolverPostulacion(
     typeof body.id === 'string' ? body.id : '',
     body.resolucion as Resolucion,
     g.actor.correo,
     typeof body.nota === 'string' ? body.nota : '',
-    typeof body.airtableId === 'string' ? body.airtableId.trim() : '',
   )
   return r.ok ? ok(null) : err(r.error)
 }

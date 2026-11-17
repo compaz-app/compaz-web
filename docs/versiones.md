@@ -4,6 +4,15 @@ La versión vigente está en `lib/version.ts` y se ve en el panel (menú lateral
 
 Reglas: mayor = cambio grande o lanzamiento; menor = función nueva; parche = arreglo. La etapa `beta` sale cuando el sistema corre una o dos semanas con uso real sin sorpresas.
 
+## 1.3.12-beta.1 (2026-11-17)
+Limpieza de Airtable, fase 2: el código de la web ya no usa Airtable.
+1. Las postulaciones (`/api/waitlist`) se guardan SOLO en Supabase. Si Supabase falla, la persona ve un error 503 y puede reintentar, y el equipo recibe un aviso (como mucho uno cada 15 minutos). Ya no existe el respaldo directo a Airtable.
+2. Se borran: el cliente de Airtable (`lib/airtable.ts`), las rutas de cron `reintentar-airtable` y `conciliar-airtable`, sus funciones programadas de Netlify, las pruebas de integración contra Airtable real y los trabajos `airtable` y `e2e` del flujo de GitHub. En `lib/captacion.ts` se quitan la copia, los reintentos, la conciliación y los avisos de la bandeja.
+3. En la bandeja de postulaciones por resolver desaparece la resolución «Ya está en Airtable» (queda «La registré directamente en el CMC» y «No procede», las dos con nota obligatoria).
+4. SE QUEDA a propósito el contrato con el CMC: `/api/cmc/postulaciones` sigue respondiendo en formato Airtable (columna «ID Airtable» de la hoja) porque cambiarlo exige que Luis cambie el Apps Script, y las columnas `airtable_*` de la tabla `postulaciones` (solo agregamos, nunca borramos).
+5. La prueba 116 vigila que no vuelva a aparecer ninguna llamada a Airtable. La prueba 18 se reescribió para Supabase solo.
+6. Pendiente: fase 3 (la pantalla Postulaciones todavía dice «Sin llegar a Airtable» y el manual lo menciona) y quitar en Netlify las variables `AIRTABLE_*` y `POSTULACIONES_DESTINO` (lo hace Juan). Sin migración.
+
 ## 1.3.11-beta.1 (2026-11-17)
 La política de privacidad dice dónde se guardan los datos de verdad.
 1. `/privacidad` decía «Tus datos se almacenan en Airtable». Ya no es cierto: las postulaciones y todo lo demás se guardan en Supabase. Ahora dice Supabase.

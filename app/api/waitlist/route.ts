@@ -1,8 +1,7 @@
 import { explicarEspera } from "@/lib/esperas";
 import { NextRequest, NextResponse } from "next/server";
-import { registrarPostulacion, claveIdempotencia, fuenteValida, destinoPostulaciones } from "@/lib/captacion";
+import { registrarPostulacion, claveIdempotencia, fuenteValida } from "@/lib/captacion";
 import { avisarAdmin } from "@/lib/telegram";
-import { alertaAdmin } from '@/lib/alertas-admin'
 
 // ── Dominios permitidos (CORS) ────────────────────────────────────────────────
 const ALLOWED_ORIGINS = [
@@ -186,7 +185,7 @@ export async function POST(req: NextRequest) {
   const whatsapp = stripHtml(whatsappRaw).slice(0, MAX_LEN.whatsapp);
   const email = stripHtml(emailRaw).slice(0, MAX_LEN.email);
   const ciudad = stripHtml(ciudadRaw).slice(0, MAX_LEN.ciudad); const utmSource = stripHtml(utmSourceRaw).slice(0, MAX_LEN.utm); const utmMedium = stripHtml(utmMediumRaw).slice(0, MAX_LEN.utm); const utmCampaign = stripHtml(utmCampaignRaw).slice(0, MAX_LEN.utm);
-  // utm_content y utm_term solo se guardan en Supabase (Airtable no tiene esos campos)
+  // Las cinco UTM se guardan en Supabase
   const utmContent = stripHtml(typeof body.utmContent === "string" ? body.utmContent : "").slice(0, MAX_LEN.utmLargo);
   const utmTerm = stripHtml(typeof body.utmTerm === "string" ? body.utmTerm : "").slice(0, MAX_LEN.utmLargo);
 
@@ -210,76 +209,22 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // 6. Guardar
-  let respaldo = false;
-  //    POSTULACIONES_DESTINO=supabase_y_airtable → Supabase primero (fuente principal) y copia a Airtable.
-  //    POSTULACIONES_DESTINO=solo_supabase → solo Supabase (el CMC lee de Supabase); sin Airtable.
-  //    Sin la variable (o con "airtable") se mantiene el comportamiento anterior: solo Airtable.
-  const destino = destinoPostulaciones();
-  if (destino !== "airtable") {
-    const r = await registrarPostulacion({
-      clave: claveIdempotencia(body.claveIdempotencia),
-      fuente: fuenteValida(body.fuente),
-      nombre, whatsapp, email, contacto, ubicacion: ciudad,
-      utm: { source: utmSource, medium: utmMedium, campaign: utmCampaign, content: utmContent, term: utmTerm },
-    }, { copiarAirtable: destino === "supabase_y_airtable" });
-    if (r.ok) {
-      registrarEnvioEmail(emailKey);
-      return NextResponse.json({ ok: true }, { headers });
-    }
-    if (destino === "solo_supabase") {
-      // Sin ruta de respaldo: lo que se guardara solo en Airtable no llegaría al CMC (que lee
-      // de Supabase) y nadie lo conciliaría. La persona ve el error y puede volver a enviar.
-      console.error("[waitlist] Supabase falló (solo_supabase): postulación no guardada");
-      if (Date.now() - ultimoAvisoRespaldo > 15 * 60_000) {
-        ultimoAvisoRespaldo = Date.now();
-        await avisarAdmin("🚨 <b>Supabase no respondió en /api/waitlist</b>\n\nAl menos una persona no pudo enviar su postulación (vio un error y puede reintentar). Con POSTULACIONES_DESTINO=solo_supabase no hay copia en Airtable.").catch(() => false);
-      }
-      return NextResponse.json({ error: "No pudimos guardar tu postulación. Inténtalo de nuevo en unos minutos." }, { status: 503, headers });
-    }
-    // Supabase no respondió: se guarda como antes, directamente en Airtable, para no
-    // perder la postulación. El cron conciliar-airtable la importará después a Supabase.
-    console.error("[waitlist] Supabase falló; se guarda solo en Airtable");
-    respaldo = true;
-    if (!process.env.AIRTABLE_API_KEY || !process.env.AIRTABLE_BASE_ID) {
-      return NextResponse.json({ error: "Error guardando" }, { status: 500, headers });
-    }
-  }
-
-  // 6b. Guardar en Airtable (comportamiento anterior)
-  const airtableKey = process.env.AIRTABLE_API_KEY;
-  const baseId = process.env.AIRTABLE_BASE_ID;
-  const tableName = process.env.AIRTABLE_TABLE_NAME ?? "Lista de Espera";
-
-  if (!airtableKey || !baseId) {
-    console.log("Waitlist entry (sin Airtable):", { nombre, contacto, ciudad, utmSource, utmMedium, utmCampaign });
+  // 6. Guardar. Solo en Supabase: el CMC las lee de ahí (/api/cmc/postulaciones). Si Supabase falla, la persona ve el error y puede reintentar;
+  //    no hay otra ruta de respaldo, así que el equipo recibe un aviso (como mucho uno cada 15 minutos).
+  const r = await registrarPostulacion({
+    clave: claveIdempotencia(body.claveIdempotencia),
+    fuente: fuenteValida(body.fuente),
+    nombre, whatsapp, email, contacto, ubicacion: ciudad,
+    utm: { source: utmSource, medium: utmMedium, campaign: utmCampaign, content: utmContent, term: utmTerm },
+  });
+  if (r.ok) {
     registrarEnvioEmail(emailKey);
     return NextResponse.json({ ok: true }, { headers });
   }
-
-  const res = await fetch(
-    `https://api.airtable.com/v0/${baseId}/${encodeURIComponent(tableName)}`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${airtableKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        fields: { Nombre: nombre, Contacto: contacto, Ciudad: ciudad, Fecha: new Date().toISOString(), "UTM Source": utmSource, "UTM Medium": utmMedium, "UTM Campaign": utmCampaign },
-      }),
-    }
-  );
-
-  if (!res.ok) {
-    console.error("Airtable error:", await res.text());
-    return NextResponse.json({ error: "Error guardando" }, { status: 500, headers });
-  }
-
-  registrarEnvioEmail(emailKey);
-  if (respaldo && Date.now() - ultimoAvisoRespaldo > 15 * 60_000) {
+  console.error("[waitlist] Supabase falló: postulación no guardada");
+  if (Date.now() - ultimoAvisoRespaldo > 15 * 60_000) {
     ultimoAvisoRespaldo = Date.now();
-    await alertaAdmin('urgente', "⚠️ <b>Supabase no respondió en /api/waitlist</b>\n\nAl menos una postulación se guardó solo en Airtable. La conciliación horaria la importará a Supabase.").catch(() => false);
+    await avisarAdmin("🚨 <b>Supabase no respondió en /api/waitlist</b>\n\nAl menos una persona no pudo enviar su postulación (vio un error y puede reintentar). Revisa Supabase.");
   }
-  return NextResponse.json({ ok: true }, { headers });
+  return NextResponse.json({ error: "No pudimos guardar tu postulación. Inténtalo de nuevo en unos minutos." }, { status: 503, headers });
 }
