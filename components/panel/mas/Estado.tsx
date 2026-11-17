@@ -10,7 +10,7 @@ import type { EstadoSistema } from '@/lib/panel-estado'
 const TEXTO = { ok: { u: 'verde', t: 'Corriendo' }, caido: { u: 'rojo', t: 'Dejó de correr' }, sin_registro: { u: 'neutro', t: 'Sin registro todavía' } } as const
 const NOMBRE_PROCESO: Record<string, string> = {
   recordatorios: 'Recordatorios a clientes', seguimiento: 'Seguimiento tras la entrevista', 'escalera-avisos': 'Revisión de avisos sin respuesta', 'recordatorio-cuestionario': 'Recordatorio del cuestionario',
-  'cierre-rechazo': 'Cierre de solicitudes rechazadas', 'recordatorio-visita': 'Recordatorio de visitas', 'reintentar-airtable': 'Reintento de envíos a Airtable', 'conciliar-airtable': 'Conciliación con Airtable',
+  'cierre-rechazo': 'Cierre de solicitudes rechazadas', 'recordatorio-visita': 'Recordatorio de visitas',
 }
 const hace = (iso: string, ahora: number) => { const m = Math.max(0, Math.round((ahora - new Date(iso).getTime()) / 60_000)); return m < 1 ? 'hace menos de 1 min' : m < 60 ? `hace ${m} min` : m < 1440 ? `hace ${Math.round(m / 60)} h` : `hace ${Math.round(m / 1440)} d` }
 
@@ -37,7 +37,6 @@ export default function Estado({ e, ahora, puedeReintentar, esAdmin = false }: {
         <ul className={`${CLASE_LISTA} mt-2`}>
           <li className={fila}><PuntoUrgencia u={e.fallidos === 0 ? 'verde' : 'rojo'} texto={e.fallidos === 0 ? 'Sin fallidos' : 'Hay fallidos'} /><span className="flex-1">Avisos fallidos</span><b>{e.fallidos}</b></li>
           <li className={fila}><PuntoUrgencia u="neutro" texto="Informativo" /><span className="flex-1">Avisos pendientes de enviar</span><b>{e.pendientes}</b></li>
-          <li className={fila}><PuntoUrgencia u={e.airtablePendientes === 0 ? 'verde' : 'amarillo'} texto={e.airtablePendientes === 0 ? 'Al día' : 'Con pendientes'} /><span className="flex-1">Postulaciones sin enviar a Airtable</span><b>{e.airtablePendientes}</b></li>
         </ul>
         {e.ultimosFallidos.length > 0 && (
           <ul className={`${CLASE_LISTA} mt-2`}>

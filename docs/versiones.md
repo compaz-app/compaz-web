@@ -4,6 +4,12 @@ La versión vigente está en `lib/version.ts` y se ve en el panel (menú lateral
 
 Reglas: mayor = cambio grande o lanzamiento; menor = función nueva; parche = arreglo. La etapa `beta` sale cuando el sistema corre una o dos semanas con uso real sin sorpresas.
 
+## 1.3.8-beta.1 (2026-11-16)
+Estado del sistema ya no muestra nada de Airtable.
+1. Se quitan de Más, Estado del sistema: la fila «Postulaciones sin enviar a Airtable» y los dos procesos «Reintento de envíos a Airtable» y «Conciliación con Airtable» (que además ya no se vigilan: no avisan si dejan de correr).
+2. NO se toca el resto: las rutas, funciones programadas y el código de captación que todavía mencionan Airtable siguen igual, y la pantalla Postulaciones conserva su bandeja de «Sin llegar a Airtable». Con `POSTULACIONES_DESTINO=solo_supabase` no hacen nada; borrarlos es una limpieza aparte, en orden seguro.
+3. Sin migración.
+
 ## 1.3.7-beta.1 (2026-11-16)
 Más, Invitar y Postulaciones: el título ya no sale repetido.
 1. El panel ya pone el título de cada herramienta de Más; Invitar y Postulaciones y origen ponían además el suyo, así que se leía «Invitar» dos veces. Ahora solo queda el del panel, con la descripción y su ⓘ debajo.
