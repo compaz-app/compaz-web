@@ -3,7 +3,7 @@ import Boton from '@/components/ui/base/Boton'
 import InfoBoton from '@/components/ui/InfoBoton'
 import { CLASE_LISTA, ChipLink, Conteo, Filtros, Flecha, Paginador, Rol } from '@/components/panel/ui'
 import {
-  COLUMNAS_COMPITA, LEYENDA_COMPITA, POR_PAGINA_PERSONAS, VISTAS_COMPITA, puntoCompita,
+  COLUMNAS_COMPITA, LEYENDA_COMPITA, POR_PAGINA_PERSONAS, VISTAS_COMPITA, etiquetaEstadoCompita, puntoCompita,
   type FilaCliente, type FilaCompita, type Urgencia,
 } from '@/lib/panel-personas-tipos'
 
@@ -120,11 +120,11 @@ export function TablaCompitas({ d, enlace, params, alBuscar }: { d: DatosCompita
                   <Link prefetch={false} href={enlace({ persona: `compita:${p.id}` })} className="flex items-center gap-2.5" title={p.nombre}>
                     <PuntoUrgencia u={puntoCompita(p)} />
                     <span className="min-w-0"><span className="block truncate font-bold">{p.nombre}</span>
-                      <span className="block truncate text-xs text-texto-medio @2xl:hidden">{p.zona} · {p.estado}{p.tardias > 0 && <b className="text-ambar-oscuro"> · {p.tardias} cancelación{p.tardias > 1 ? 'es' : ''} tardía{p.tardias > 1 ? 's' : ''}</b>}</span></span>
+                      <span className="block truncate text-xs text-texto-medio @2xl:hidden">{p.zona} · {etiquetaEstadoCompita(p)}{p.tardias > 0 && <b className="text-ambar-oscuro"> · {p.tardias} cancelación{p.tardias > 1 ? 'es' : ''} tardía{p.tardias > 1 ? 's' : ''}</b>}</span></span>
                   </Link>
                 </td>
                 <td className="hidden whitespace-nowrap px-2.5 @2xl:table-cell"><span className="block max-w-56 truncate" title={p.zona}>{p.zona}</span></td>
-                <td className="hidden whitespace-nowrap px-2.5 @lg:table-cell">{p.estado}</td>
+                <td className="hidden whitespace-nowrap px-2.5 @lg:table-cell">{etiquetaEstadoCompita(p)}</td>
                 <td className="hidden whitespace-nowrap px-2.5 @4xl:table-cell">{p.activos}</td>
                 <td className="hidden whitespace-nowrap px-2.5 @4xl:table-cell">{p.visitas}</td>
                 <td className="whitespace-nowrap px-2.5">{p.rating ? p.rating.toFixed(1) : '·'}</td>

@@ -3,7 +3,7 @@ import type { EstadoCmc } from '@/lib/cmc-estado'
 // Personas del panel nuevo: lógica PURA (sin base de datos) que comparten el servidor y la pantalla.
 // Compitas: tabla con estado, calificación, respuesta y cancelaciones. Clientes: lista simple. Ficha: línea de tiempo y contacto con motivo.
 
-export type EstadoCompita = 'Disponible' | 'Con cupo' | 'En pausa' | 'Nuevo'
+export type EstadoCompita = 'Disponible' | 'Con cupo' | 'En pausa' | 'Nuevo' | 'Pendiente'
 export type Urgencia = 'verde' | 'amarillo' | 'rojo'
 
 export interface FilaCompita {
@@ -13,6 +13,7 @@ export interface FilaCompita {
   /** Promedio 1 a 5 (0 = sin calificaciones). */ rating: number
   /** % de solicitudes respondidas en 30 días (null = no recibió ninguna). */ respuesta: number | null
   /** Horas desde que respondió o hizo una visita (null = nunca). */ inactivoH: number | null
+  /** Pendiente: qué le falta para entrar al sistema (perfil lleno y Telegram activo). */ falta?: 'perfil' | 'Telegram' | 'perfil y Telegram'
   /** Cancelaciones del compita en 30 días. */ canc: number
   /** Las tardías que no están justificadas (las que cuentan en su contra). */ tardias: number
 }
@@ -44,8 +45,11 @@ export interface FichaPersona {
 }
 
 // ── Urgencia y vistas de compitas ─────────────────────────────────────────────
+/** Lo que se muestra en la columna Estado: para un pendiente, qué le falta (corto, sin instrucciones). */
+export const etiquetaEstadoCompita = (p: FilaCompita): string => (p.estado === 'Pendiente' && p.falta ? `Falta ${p.falta}` : p.estado)
+
 export function urgCompita(s: FilaCompita): Urgencia {
-  if (s.estado === 'Nuevo' || s.estado === 'En pausa') return 'verde'
+  if (s.estado === 'Nuevo' || s.estado === 'En pausa' || s.estado === 'Pendiente') return 'verde'
   if ((s.respuesta !== null && s.respuesta < 50) || (s.rating > 0 && s.rating < 4) || (s.inactivoH !== null && s.inactivoH > 72) || s.tardias >= 3) return 'rojo'
   if ((s.respuesta !== null && s.respuesta < 75) || (s.inactivoH !== null && s.inactivoH > 24) || s.tardias >= 2) return 'amarillo'
   return 'verde'
@@ -53,12 +57,14 @@ export function urgCompita(s: FilaCompita): Urgencia {
 export const ORD_URG: Record<Urgencia, number> = { rojo: 0, amarillo: 1, verde: 2 }
 
 export const VISTAS_COMPITA: { id: string; t: string; ayuda?: string; f: (s: FilaCompita) => boolean }[] = [
-  { id: 'todas', t: 'Todos', f: () => true },
+  // Un compita que todavía no llena su perfil o no activa Telegram no cuenta en el sistema: sale solo en «Pendientes».
+  { id: 'todas', t: 'Todos', f: (s) => s.estado !== 'Pendiente' },
   { id: 'disponibles', t: 'Disponibles', ayuda: 'Compitas activos sin ninguna familia asignada ahora.', f: (s) => s.estado === 'Disponible' },
   { id: 'cupo', t: 'Con familias', ayuda: 'Compitas activos que ya atienden al menos una familia.', f: (s) => s.estado === 'Con cupo' },
-  { id: 'sinrespuesta', t: 'Sin respuesta 24h', ayuda: 'Compitas activos que llevan 24 horas o más sin responder una solicitud ni hacer una visita.', f: (s) => s.estado !== 'En pausa' && s.estado !== 'Nuevo' && s.inactivoH !== null && s.inactivoH >= 24 },
+  { id: 'sinrespuesta', t: 'Sin respuesta 24h', ayuda: 'Compitas activos que llevan 24 horas o más sin responder una solicitud ni hacer una visita.', f: (s) => s.estado !== 'En pausa' && s.estado !== 'Nuevo' && s.estado !== 'Pendiente' && s.inactivoH !== null && s.inactivoH >= 24 },
   { id: 'cancel', t: 'Cancelaciones tardías', ayuda: 'Compitas que en los últimos 30 días cancelaron con poco aviso. Las justificadas (enfermedad, emergencia) no cuentan.', f: (s) => s.tardias >= 1 },
   { id: 'pausa', t: 'En pausa', ayuda: 'Compitas pausados por cancelaciones, por compartir contactos o desactivados.', f: (s) => s.estado === 'En pausa' },
+  { id: 'pendientes', t: 'Pendientes', ayuda: 'Se registraron o los invitaron, pero todavía no completan el perfil o no activan Telegram. No cuentan en el sistema hasta entonces.', f: (s) => s.estado === 'Pendiente' },
   { id: 'nuevas', t: 'Nuevos sin verificar', ayuda: 'Compitas ya registrados que el equipo aún no ha verificado.', f: (s) => s.estado === 'Nuevo' },
 ]
 
@@ -66,7 +72,7 @@ export type ColumnaCompita = 'nombre' | 'zona' | 'estado' | 'activos' | 'visitas
 export const COLUMNAS_COMPITA: { id: ColumnaCompita; t: string; ayuda?: string; clase: string; v: (p: FilaCompita) => number | string }[] = [
   { id: 'nombre', t: 'Nombre', clase: '', v: (p) => p.nombre },
   { id: 'zona', t: 'Zona', ayuda: 'Zona donde atiende.', clase: 'hidden @2xl:table-cell', v: (p) => p.zona },
-  { id: 'estado', t: 'Estado', ayuda: 'Disponible o con familias: puede recibir solicitudes. En pausa: no las recibe. Nuevo: falta verificarlo.', clase: 'hidden @lg:table-cell', v: (p) => p.estado },
+  { id: 'estado', t: 'Estado', ayuda: 'Disponible o con familias: puede recibir solicitudes. En pausa: no las recibe. Nuevo: falta verificarlo. Falta perfil o Telegram: aún no entra al sistema.', clase: 'hidden @lg:table-cell', v: (p) => etiquetaEstadoCompita(p) },
   { id: 'activos', t: 'Familias', ayuda: 'Familias que atiende ahora.', clase: 'hidden @4xl:table-cell', v: (p) => p.activos },
   { id: 'visitas', t: 'Visitas', ayuda: 'Visitas de los últimos 30 días.', clase: 'hidden @4xl:table-cell', v: (p) => p.visitas },
   { id: 'rating', t: '★', ayuda: 'Calificación promedio de las familias, de 1 a 5. Menos de 4 pasa a rojo.', clase: '', v: (p) => p.rating },
@@ -76,7 +82,7 @@ export const COLUMNAS_COMPITA: { id: ColumnaCompita; t: string; ayuda?: string; 
 ]
 
 /** El punto de la tabla: nuevo o en pausa no se evalúan (gris), el resto sale de urgCompita. */
-export const puntoCompita = (p: FilaCompita): Urgencia | 'neutro' => (p.estado === 'Nuevo' || p.estado === 'En pausa' ? 'neutro' : urgCompita(p))
+export const puntoCompita = (p: FilaCompita): Urgencia | 'neutro' => (p.estado === 'Nuevo' || p.estado === 'En pausa' || p.estado === 'Pendiente' ? 'neutro' : urgCompita(p))
 
 export const LEYENDA_COMPITA = 'Rojo (revisar): respondió menos del 50%, calificación menor a 4, más de 72 horas sin actividad o 3 cancelaciones tardías. Amarillo (atención): respondió menos del 75%, más de 24 horas sin actividad o 2 cancelaciones tardías. Verde: nada de lo anterior. Gris: nuevo o en pausa, no se evalúa.'
 

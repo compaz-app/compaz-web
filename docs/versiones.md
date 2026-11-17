@@ -4,6 +4,13 @@ La versión vigente está en `lib/version.ts` y se ve en el panel (menú lateral
 
 Reglas: mayor = cambio grande o lanzamiento; menor = función nueva; parche = arreglo. La etapa `beta` sale cuando el sistema corre una o dos semanas con uso real sin sorpresas.
 
+## 1.3.15-beta.1 (2026-11-17)
+Un compita nuevo no cuenta en el sistema hasta tener el perfil lleno y Telegram activo.
+1. En Personas, un compita sin verificar al que le falta el perfil (descripción y al menos un servicio) o Telegram sale como «Pendiente», con lo que le falta en la columna Estado («Falta perfil», «Falta Telegram» o «Falta perfil y Telegram»). Ya no aparece en «Todos» ni en los conteos de esa lista: se ve en el filtro nuevo «Pendientes».
+2. Cuando completa el perfil y activa Telegram pasa solo a «Nuevo» (a la espera de que el equipo lo verifique). Antes, un compita dado de alta desde el CMC (inactivo) aparecía como «En pausa» aunque nunca hubiera sido verificado; ahora «En pausa» es solo para los ya verificados que se pausaron o desactivaron. Un compita ya verificado NO cambia aunque le falte algo, para no esconder a quien ya atiende familias; los bloqueados tampoco.
+3. Complementa 1.3.5 y 1.3.6 (Telegram y verificar ya exigen el perfil): ahora además se ve con claridad quién está en el sistema y quién está pendiente. Sin párrafos nuevos: solo la etiqueta corta y el filtro.
+4. Sin migración.
+
 ## 1.3.14-beta.1 (2026-11-17)
 Un cliente invitado no cuenta como cliente hasta activar su cuenta.
 1. Antes, al invitar a un cliente se le creaba la cuenta y ya figuraba como cliente (en Clientes y en Seguimiento) aunque nunca abriera el correo. Ahora queda como «Invitado» (`usuarios.activado = false`): no sale en Clientes ni en Seguimiento. Pasa a ser cliente cuando abre el correo y activa su cuenta.
