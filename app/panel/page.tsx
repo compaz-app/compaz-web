@@ -33,6 +33,7 @@ import PagosPorConfirmar from '@/components/panel/mas/PagosPorConfirmar'
 import AutoRefresh from '@/components/ui/AutoRefresh'
 import Postulaciones from '@/components/panel/mas/Postulaciones'
 import Invitar from '@/components/panel/mas/Invitar'
+import { listarInvitadosPendientes } from '@/lib/panel-invitaciones'
 import { listarPostulaciones, pendientesPorResolver } from '@/lib/panel-postulaciones'
 import { consultarPostulaciones } from '@/lib/panel-postulaciones-tipos'
 import Avisos from '@/components/panel/mas/Avisos'
@@ -173,7 +174,7 @@ async function ContenidoPanel({ sp, actual, actor, comoActor, comoColaborador }:
       } else if (subMas.id === 'resenas') {
         vista = <Resenas filas={await listarResenas(comoActor)} ver={un('res_ver') === 'publicadas' ? 'publicadas' : 'pendientes'} enlace={enlace} puedeActuar={actor.permisos.atender === true} />
       } else if (subMas.id === 'invitar') {
-        vista = <Invitar />
+        vista = <Invitar pendientes={await listarInvitadosPendientes()} />
       } else if (subMas.id === 'postulaciones') {
         vista = <Postulaciones q={consultarPostulaciones(await listarPostulaciones(), un('po_tipo'), un('po_clasif'), un('po_pag'))} pend={await pendientesPorResolver()} enlace={enlace} />
       } else if (subMas.id === 'pagos') {

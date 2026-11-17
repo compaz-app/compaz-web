@@ -4,6 +4,13 @@ La versión vigente está en `lib/version.ts` y se ve en el panel (menú lateral
 
 Reglas: mayor = cambio grande o lanzamiento; menor = función nueva; parche = arreglo. La etapa `beta` sale cuando el sistema corre una o dos semanas con uso real sin sorpresas.
 
+## 1.3.14-beta.1 (2026-11-17)
+Un cliente invitado no cuenta como cliente hasta activar su cuenta.
+1. Antes, al invitar a un cliente se le creaba la cuenta y ya figuraba como cliente (en Clientes y en Seguimiento) aunque nunca abriera el correo. Ahora queda como «Invitado» (`usuarios.activado = false`): no sale en Clientes ni en Seguimiento. Pasa a ser cliente cuando abre el correo y activa su cuenta.
+2. En Más, Invitar aparece «Invitados sin activar» con un botón «Reenviar». Reenviar manda un enlace nuevo (el anterior deja de servir). Invitar otra vez al mismo correo hace lo mismo en lugar de rechazarlo; quien ya activó su cuenta sigue sin poder reinvitarse (409).
+3. Los clientes que ya existían no cambian: solo se oculta a quien está marcado como no activado.
+4. Sin migración.
+
 ## 1.3.13-beta.1 (2026-11-17)
 Limpieza de Airtable, fase 3: la pantalla Postulaciones y el manual ya no hablan de Airtable.
 1. En Más, Postulaciones y origen, la bandeja se llama «Por resolver» (postulaciones anteriores que el CMC no llegó a ver) y se resuelven con «La registré directamente en el CMC» o «No procede». Desaparecen los mensajes «La copia a Airtable está desactivada», «Todo lo recibido llegó a Airtable» y el detalle del error de Airtable.

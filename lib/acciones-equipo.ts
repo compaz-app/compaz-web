@@ -104,11 +104,15 @@ export async function subirFotoCompita(buffer: Buffer, contentType: string, ext:
   return bien({ url: admin.storage.from('fotos').getPublicUrl(path).data.publicUrl })
 }
 
-export async function invitarCliente(nombre: string, email: string, actorCorreo: string): Promise<Res<{ email: string; nombre: string }>> {
+export async function invitarCliente(nombre: string, email: string, actorCorreo: string): Promise<Res<{ email: string; nombre: string; reenviada?: boolean }>> {
   const admin = createAdminSupabase()
   const YA = 'Este cliente ya está registrado y no se le puede enviar otra invitación. Si no puede entrar, dile que pida un enlace nuevo en micompaz.com/login.'
-  const { data: existente } = await admin.from('usuarios').select('id').eq('email', email).maybeSingle()
-  if (existente) return mal(409, YA)
+  const { data: existente } = await admin.from('usuarios').select('id, nombre, activado, eliminada_en').eq('email', email).maybeSingle()
+  if (existente) {
+    // Invitado que todavía no abrió el correo: NO es cliente aún (el panel lo muestra como «Invitado»). Se le reenvía la invitación con un enlace nuevo.
+    if (existente.activado === false && !existente.eliminada_en) return reenviarInvitacionCliente(String(existente.nombre ?? nombre), email, actorCorreo, String(existente.id))
+    return mal(409, YA)
+  }
   // Crear la cuenta y obtener el enlace de activación (sin que Supabase envíe correo)
   const link = await admin.auth.admin.generateLink({ type: 'invite', email, options: { data: { nombre } } })
   if (link.error && (link.error.code === 'email_exists' || /already|registered|exists/i.test(link.error.message))) return mal(409, YA)
@@ -117,7 +121,8 @@ export async function invitarCliente(nombre: string, email: string, actorCorreo:
     return mal(500, 'No se pudo generar el enlace')
   }
   const { user, properties } = link.data
-  const { error: eU } = await admin.from('usuarios').upsert({ id: user.id, email, nombre }, { onConflict: 'id', ignoreDuplicates: true })
+  // activado: false a propósito: hasta que abra el correo y active su cuenta es un «Invitado», no un cliente.
+  const { error: eU } = await admin.from('usuarios').upsert({ id: user.id, email, nombre, activado: false }, { onConflict: 'id', ignoreDuplicates: true })
   if (eU) console.error('[invitar-cliente] upsert usuarios falló:', eU.message)
   const tipo = properties.verification_type ?? 'invite'
   const enlace = `${SITE_URL}/auth/confirm?token_hash=${encodeURIComponent(properties.hashed_token)}&type=${tipo}`
@@ -130,6 +135,22 @@ export async function invitarCliente(nombre: string, email: string, actorCorreo:
   }
   await anotarAccion(actorCorreo, `invitó a un cliente (${esc(nombre)})`, { tipo: 'cliente', id: user.id, nombre })
   return bien({ email, nombre })
+}
+
+/** Reenvía la invitación a quien todavía no se activó: enlace nuevo (el anterior deja de servir) y el mismo correo de bienvenida. */
+async function reenviarInvitacionCliente(nombre: string, email: string, actorCorreo: string, id: string): Promise<Res<{ email: string; nombre: string; reenviada: boolean }>> {
+  const link = await createAdminSupabase().auth.admin.generateLink({ type: 'magiclink', email })
+  if (link.error || !link.data?.properties?.hashed_token) {
+    console.error('[invitar-cliente] reenvío: generateLink falló:', link.error?.code, link.error?.message)
+    return mal(500, 'No se pudo generar el enlace')
+  }
+  const enlace = `${SITE_URL}/auth/confirm?token_hash=${encodeURIComponent(link.data.properties.hashed_token)}&type=${link.data.properties.verification_type ?? 'magiclink'}`
+  try { await sendBienvenidaCliente(email, nombre, enlace) } catch (e) {
+    console.error('[invitar-cliente] reenvío: correo falló:', e)
+    return mal(502, 'No se pudo enviar el correo. Vuelve a pulsar Reenviar.')
+  }
+  await anotarAccion(actorCorreo, `reenvió la invitación a un cliente (${esc(nombre)})`, { tipo: 'cliente', id, nombre })
+  return bien({ email, nombre, reenviada: true })
 }
 
 export async function registrarCompitaManual(body: Record<string, unknown>, actorCorreo: string): Promise<Res<Record<string, unknown>>> {

@@ -35,8 +35,9 @@ test('la invitación envía UN solo correo con el botón que activa la cuenta y 
   assert.match(new URL((await confPost(req(url.pathname + url.search, { method: 'POST' }))).headers.get('location')!).search, /error=auth/)
 })
 
-test('reinvitar a un cliente que YA está registrado se rechaza (409) y no se envía ningún correo', async () => {
+test('reinvitar a un cliente que YA activó su cuenta se rechaza (409) y no se envía ningún correo', async () => {
   await invitarA({ nombre: 'Carlos Ruiz', email: 'carlos@mail.test' })
+  db.rows('usuarios')[0].activado = true // abrió el correo y entró
   net.emails = []
   const r = await invitarA({ nombre: 'Carlos Ruiz', email: 'CARLOS@mail.test' })
   assert.equal(r.status, 409)

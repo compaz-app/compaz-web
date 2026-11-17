@@ -67,12 +67,13 @@ export async function listarCompitas(ahora: Date = new Date()): Promise<FilaComp
 export async function listarClientes(): Promise<FilaCliente[]> {
   const db = createAdminSupabase()
   const [u, c] = await Promise.all([
-    db.from('usuarios').select('id, nombre, zona, plan, plan_contratado, compita_id, created_at, eliminada_en').order('created_at', { ascending: false }).limit(LIMITE),
+    db.from('usuarios').select('id, nombre, zona, plan, plan_contratado, compita_id, created_at, eliminada_en, activado').order('created_at', { ascending: false }).limit(LIMITE),
     db.from('compitas').select('id, nombre, apellido').limit(LIMITE),
   ])
   if (u.error || c.error) throw new Error(`No se pudo leer los clientes: ${u.error?.message ?? c.error?.message}`)
   const nombres = new Map((c.data ?? []).map((x) => [String(x.id), [x.nombre, x.apellido].filter(Boolean).join(' ')]))
-  return (u.data ?? []).filter((x) => !x.eliminada_en).map((x): FilaCliente => ({
+  // Un invitado que todavía no abrió el correo (activado = false) no cuenta como cliente: se ve en Más, Invitar.
+  return (u.data ?? []).filter((x) => !x.eliminada_en && x.activado !== false).map((x): FilaCliente => ({
     id: String(x.id), nombre: String(x.nombre ?? ''), zona: String(x.zona ?? ''), compita: x.compita_id ? nombres.get(String(x.compita_id)) ?? null : null,
     plan: x.plan_contratado ?? null, alta: String(x.created_at), bloqueado: x.plan === 'bloqueado',
   }))
