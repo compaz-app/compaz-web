@@ -1,6 +1,7 @@
 // ══════════════════════════════════════════════════════════════════════════════
 // Compaz — Lógica de negocio para compitas
 // ══════════════════════════════════════════════════════════════════════════════
+import { perfilCompleto, PERFIL_MINIMO } from '@/lib/compita-perfil'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import type { Compita } from '@/types'
 import { escLike } from '@/lib/html'
@@ -76,6 +77,21 @@ export async function exigirPermisoCmc(id: string): Promise<void> {
   if (data?.cmc_permite === false) throw new CompitaNoPermitidaPorCmc(data.cmc_estado ?? null)
 }
 
+/** El compita todavía no llenó su perfil público (descripción y al menos un servicio): no se puede verificar ni activar. */
+export class PerfilIncompleto extends Error {
+  constructor() {
+    super(`Este compita todavía no llenó su perfil público (${PERFIL_MINIMO}). Pídele que lo complete (enlace del correo o /perfil en Telegram) o complétalo tú con Editar perfil.`)
+    this.name = 'PerfilIncompleto'
+  }
+}
+
+/** Lanza PerfilIncompleto si al compita le falta lo mínimo del perfil público. Las familias eligen por ese perfil. */
+export async function exigirPerfil(id: string): Promise<void> {
+  const { data, error } = await createAdminSupabase().from('compitas').select('descripcion, servicios').eq('id', id).maybeSingle()
+  if (error) throw new Error(error.message)
+  if (!perfilCompleto(data as { descripcion: string | null; servicios: string[] | null } | null)) throw new PerfilIncompleto()
+}
+
 /**
  * ¿Hay ya un perfil creado desde el CMC (con código COM-) con este email?
  * Las altas manuales (invitación por enlace, registro desde el panel) no deben duplicarlo.
@@ -90,10 +106,11 @@ export async function existePerfilCmcConEmail(email: string | null | undefined):
 }
 
 /**
- * Verifica una compita (la hace aparecer en el mapa). Exige el permiso del CMC.
+ * Verifica una compita (la hace aparecer en el mapa). Exige el permiso del CMC y el perfil público lleno.
  */
 export async function verificarCompita(id: string): Promise<void> {
   await exigirPermisoCmc(id)
+  await exigirPerfil(id)
   const supabase = createAdminSupabase()
   const { error } = await supabase
     .from('compitas')
@@ -118,10 +135,11 @@ export async function desactivarCompita(id: string): Promise<void> {
 }
 
 /**
- * Reactiva una compita previamente desactivada. Exige el permiso del CMC.
+ * Reactiva una compita previamente desactivada. Exige el permiso del CMC y el perfil público lleno.
  */
 export async function reactivarCompita(id: string): Promise<void> {
   await exigirPermisoCmc(id)
+  await exigirPerfil(id)
   const supabase = createAdminSupabase()
   const { error } = await supabase
     .from('compitas')

@@ -46,8 +46,8 @@ export default function CuentaPersona({ ficha, puedeCuentas, puedeAtender, puede
               <>
                 {(c.verificado || cmcPermiteActivar(ficha.cmc)) && <AccionCuenta texto={c.verificado ? 'Quitar verificación' : 'Verificar'} url="/api/admin/toggle-verificado" cuerpo={{ compita_id: ficha.id, verificado: !c.verificado }}
                   titulo={c.verificado ? `Quitar la verificación de ${nombre}` : `Verificar a ${nombre}`}
-                  mensaje={c.verificado ? 'Deja de aparecer como verificado y no recibirá solicitudes nuevas.' : 'Aparecerá como verificado y podrá recibir solicitudes. Hazlo solo tras revisar su entrevista y antecedentes.'}
-                  info="Marca si el compita pasó la verificación. Solo un compita verificado y activo recibe solicitudes." />}
+                  mensaje={c.verificado ? 'Deja de aparecer como verificado y no recibirá solicitudes nuevas.' : 'Aparecerá como verificado y podrá recibir solicitudes. Hazlo solo tras revisar su entrevista y antecedentes. Exige su perfil público lleno (descripción y al menos un servicio).'}
+                  info="Marca si el compita pasó la verificación. Solo un compita verificado y activo recibe solicitudes. No se puede verificar si no llenó su perfil público." />}
                 {(c.activo || cmcPermiteActivar(ficha.cmc)) && <AccionCuenta texto={c.activo ? 'Desactivar' : 'Activar'} url="/api/admin/toggle-estado" cuerpo={{ compita_id: ficha.id, estado: c.activo ? 'inactivo' : 'activo' }}
                   titulo={c.activo ? `Desactivar a ${nombre}` : `Activar a ${nombre}`}
                   mensaje={c.activo ? 'Deja de recibir solicitudes nuevas. Lo que ya tiene en curso sigue.' : 'Vuelve a recibir solicitudes nuevas.'}

@@ -4,6 +4,13 @@ La versión vigente está en `lib/version.ts` y se ve en el panel (menú lateral
 
 Reglas: mayor = cambio grande o lanzamiento; menor = función nueva; parche = arreglo. La etapa `beta` sale cuando el sistema corre una o dos semanas con uso real sin sorpresas.
 
+## 1.3.6-beta.1 (2026-11-16)
+El equipo no puede verificar ni activar a un compita sin el perfil público lleno.
+1. Complementa 1.3.5 (que cierra Telegram): ahora «Verificar» y «Activar» responden con un error claro (409) si al compita le falta la descripción o al menos un servicio, y no cambian nada. El mensaje dice qué hacer: que lo complete (enlace del correo o /perfil en Telegram) o completarlo con Editar perfil.
+2. Quitar la verificación o desactivar sigue funcionando siempre. La foto y el video siguen siendo opcionales.
+3. Los textos y la ayuda ⓘ del botón Verificar lo avisan.
+4. Sin migración.
+
 ## 1.3.5-beta.1 (2026-11-16)
 Telegram no se activa sin el perfil público lleno.
 1. Hallazgo: los compitas que entran por el CMC se crean con descripción vacía y sin servicios (el formulario de registro, que sí los exige, no lo pasan), y el bot los vinculaba igual diciéndoles «tu registro ya terminó». Mauricio Acacio y María Alejandra Navarro lo hicieron así.
