@@ -89,6 +89,22 @@ export async function sendCodigoTelegram(email: string, nombre: string, codigo: 
   })
 }
 
+/** El compita todavía no llenó su perfil público: se le manda el enlace para hacerlo (sin él, Telegram no se activa). Sin emojis: es un correo. */
+export async function sendCompletarPerfilCompita(email: string, nombre: string, enlace: string): Promise<void> {
+  await sendEmail({
+    to: email,
+    subject: 'Completa tu perfil para activar tu cuenta en Compaz',
+    html: `
+      <div style="font-family: Inter, sans-serif; max-width: 600px; margin: 0 auto; padding: 32px;">
+        <p style="font-size: 16px; color: #1A0A3C;">Hola <strong>${escapeHtml(nombre)}</strong>,</p>
+        <p style="font-size: 16px; color: #1A0A3C;">Antes de activar tu cuenta en Telegram necesitamos que llenes tu perfil público: una descripción y los servicios que ofreces. Es lo que ven las familias para elegirte.</p>
+        <p style="text-align: center; padding: 16px 0;"><a href="${enlace}" style="background: #FF6B2B; color: #FFFFFF; padding: 14px 28px; border-radius: 12px; text-decoration: none; font-weight: 700;">Completar mi perfil</a></p>
+        <p style="font-size: 14px; color: #6B5C90;">El enlace vale 24 horas y es solo tuyo. Cuando lo guardes, vuelve a Telegram, toca /start y escribe tu nombre otra vez.</p>
+      </div>
+    `,
+  })
+}
+
 export async function sendBienvenidaCompita(
   email: string,
   nombre: string,

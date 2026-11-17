@@ -24,7 +24,8 @@ import { generarTokenPerfil } from '@/lib/compita-tokens'
 import { getOrCreateDailyRoom } from '@/lib/daily'
 import { enlaceDeLlamada } from '@/lib/llamada-acceso'
 import { minutosLlamadaVisita } from '@/lib/llamada'
-import { sendVisitaInicio, generarResumenIA, sendCodigoTelegram } from '@/lib/resend'
+import { sendVisitaInicio, generarResumenIA, sendCodigoTelegram, sendCompletarPerfilCompita } from '@/lib/resend'
+import { perfilCompleto, PERFIL_MINIMO } from '@/lib/compita-perfil'
 import { responderSolicitud, getSolicitudPorToken, getSolicitudPorId, aceptarSolicitudDirecta } from '@/lib/solicitudes'
 import { confirmarReserva, rechazarReserva } from '@/lib/agenda'
 import { registrarCancelacion, alertarCancelacionesCompita, horasDeAviso } from '@/lib/cancelaciones'
@@ -359,6 +360,24 @@ async function iniciarVerificacion(
     return
   }
   await supabase.from('telegram_estados').upsert({ chat_id: key, registro_pendiente: false, updated_at: new Date().toISOString() }, { onConflict: 'chat_id' })
+
+  // Sin perfil público lleno no hay Telegram: las familias eligen por ese perfil. No se da el código; se manda por CORREO (nunca por aquí: cualquiera puede escribir
+  // un nombre en el bot) el enlace para llenarlo. Va después del plazo de un minuto de arriba, así que tampoco se puede usar para llenar de correos a nadie.
+  const { data: perfil } = await supabase.from('compitas').select('descripcion, servicios').eq('id', c.id).maybeSingle()
+  if (!perfilCompleto(perfil as { descripcion: string | null; servicios: string[] | null } | null)) {
+    let enviado = false
+    if (c.email) {
+      try { await sendCompletarPerfilCompita(c.email, c.nombre, `${SITE_URL}/compita/perfil?token=${await generarTokenPerfil(c.id)}`); enviado = true } catch (e) { console.error('Error enviando el enlace del perfil:', e) }
+    }
+    await sendTelegramMessage(
+      chatId,
+      enviado
+        ? `Encontré tu cuenta 👀\n\nAntes de activar Telegram debes llenar tu <b>perfil público</b> (${PERFIL_MINIMO}). Es lo que ven las familias para elegirte.\n\nTe enviamos el enlace al correo <b>${esc(enmascarar(c.email!))}</b>. Vale 24 horas. Cuando lo guardes, vuelve aquí, toca /start y escribe tu nombre otra vez.`
+        : `Encontré tu cuenta 👀\n\nAntes de activar Telegram debes llenar tu <b>perfil público</b> (${PERFIL_MINIMO}), pero no pudimos enviarte el enlace. Escríbenos a hola@micompaz.com y te lo mandamos.`,
+      QUITAR_TECLADO,
+    )
+    return
+  }
 
   const codigo = String(randomInt(100000, 1000000))
   const expira = new Date(Date.now() + 15 * 60 * 1000).toISOString()

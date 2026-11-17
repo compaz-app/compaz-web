@@ -4,6 +4,14 @@ La versión vigente está en `lib/version.ts` y se ve en el panel (menú lateral
 
 Reglas: mayor = cambio grande o lanzamiento; menor = función nueva; parche = arreglo. La etapa `beta` sale cuando el sistema corre una o dos semanas con uso real sin sorpresas.
 
+## 1.3.5-beta.1 (2026-11-16)
+Telegram no se activa sin el perfil público lleno.
+1. Hallazgo: los compitas que entran por el CMC se crean con descripción vacía y sin servicios (el formulario de registro, que sí los exige, no lo pasan), y el bot los vinculaba igual diciéndoles «tu registro ya terminó». Mauricio Acacio y María Alejandra Navarro lo hicieron así.
+2. Ahora, al escribir su nombre en el bot, si falta la descripción o los servicios NO se les da el código: se les envía por correo (nunca por Telegram, porque cualquiera puede escribir un nombre en el bot) el enlace para llenar el perfil, que vale 24 horas, y el bot les dice por qué. Al guardarlo, vuelven, tocan /start y escriben su nombre otra vez; ahí sigue el flujo normal.
+3. Mínimo exigido: descripción y al menos un servicio, igual que el formulario de registro. La foto y el video siguen siendo opcionales. Sin correo registrado se les pide escribir a hola@micompaz.com.
+4. El plazo de un minuto entre intentos aplica también aquí. Los compitas que ya estaban vinculados no cambian.
+5. Sin migración.
+
 ## 1.3.4-beta.1 (2026-11-16)
 «Ver el reporte» ya no se queda: al ver el reporte, el portal pasa a agendar la siguiente visita.
 1. Causa real: tras terminar una visita, el portal decía «La visita terminó, ¿cómo te fue?» durante 12 horas SIN IMPORTAR si el cliente ya había abierto el reporte. Por eso el botón seguía ahí aunque ya lo estuviera viendo.
