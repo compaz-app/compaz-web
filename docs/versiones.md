@@ -4,6 +4,14 @@ La versión vigente está en `lib/version.ts` y se ve en el panel (menú lateral
 
 Reglas: mayor = cambio grande o lanzamiento; menor = función nueva; parche = arreglo. La etapa `beta` sale cuando el sistema corre una o dos semanas con uso real sin sorpresas.
 
+## 1.3.10-beta.1 (2026-11-17)
+Tope en el servidor y alarma de tráfico anormal para el punto rojo del panel (derivado de INC-002, ver `docs/incidentes.md`).
+1. Las rutas `/api/admin/pendientes-bandeja` y `/api/admin/pendientes-pagos` cuentan las consultas de cada persona por minuto. Pasadas 30 por minuto (lo normal son unas 3) responden 429 con la explicación y la razón (`panel_consultas` en `lib/esperas.ts`, ya listado en Más, Límites y esperas). El navegador, al recibir 429, se calla un minuto.
+2. Alarma: la primera vez que alguien pasa el tope llega un aviso urgente al equipo («Tráfico anormal: correo hizo N consultas en un minuto a la ruta»), una vez por hora y por persona y ruta, no una por consulta.
+3. Falla abierto a propósito: si el conteo no se puede hacer, la consulta pasa. Es un freno contra errores, no una barrera de seguridad.
+4. Alcance honesto: esto protege la base de datos y avisa, pero la función de Netlify igual se ejecuta en cada petición. El tope real de gasto en ejecuciones es una regla de Netlify (alerta de uso y reglas de límite de la plataforma), que se configura en Netlify, no en el código.
+5. Sin migración.
+
 ## 1.3.9-beta.1 (2026-11-17)
 URGENTE: el punto rojo del panel tumbaba la web con una lluvia de consultas.
 1. Qué pasó: el 17-nov, entre la 01:00 y las 02:00 UTC, dos navegadores con el panel abierto hicieron cerca de 35.000 consultas a `/api/admin/pendientes-bandeja` (unas 5 por segundo cada uno; lo normal son unas 60 peticiones por HORA en todo el sitio). Eso gastó una cantidad enorme de ejecuciones de funciones de Netlify y las dos conexiones dejaron de poder abrir el sitio.

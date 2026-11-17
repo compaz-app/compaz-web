@@ -2,6 +2,7 @@
 // para que el equipo pueda responder "¿por qué no deja hacer esto otra vez?" sin tocar el código.
 import { getAjustes } from '@/lib/ajustes'
 import { CATALOGO, type ClaveEspera } from '@/lib/esperas'
+import { TOPE_CONSULTAS_PANEL } from '@/lib/guardia-trafico'
 
 export interface FilaLimite { clave: ClaveEspera; quien: 'compita' | 'cliente' | 'equipo'; limita: string; porQue: string; valor: string }
 
@@ -25,6 +26,7 @@ export async function catalogoEsperas(): Promise<FilaLimite[]> {
     postulacion_correo: 'Una por correo',
     insistir_aviso: 'Uno cada 30 minutos y 3 por aviso',
     enlace_llamada_equipo: 'Uno cada 5 minutos por solicitud',
+    panel_consultas: `Máximo ${TOPE_CONSULTAS_PANEL.max} por minuto por persona y ruta`,
   }
   return (Object.keys(CATALOGO) as ClaveEspera[]).map((clave) => ({ clave, ...CATALOGO[clave], valor: valores[clave] }))
 }

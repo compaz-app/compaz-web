@@ -37,6 +37,7 @@ async function consultar() {
       const visto = leerVisto()
       const r = await fetch(`${RUTA.bandeja}${visto ? `?desde=${encodeURIComponent(visto)}` : ''}`, { cache: 'no-store' })
       const j = await r.json().catch(() => null) as { ok?: boolean; data?: { nuevas?: number; ahora?: string } } | null
+      if (r.status === 429) { pausaHasta = Date.now() + 60_000; return }
       if (!r.ok || j?.ok === false || typeof j?.data?.nuevas !== 'number') return
       // Estás mirando la Bandeja con la pestaña a la vista: lo que hay ya lo viste. Se guarda la hora del servidor y el punto se quita.
       if (activa.bandeja && visible() && j.data.ahora) { guardarVisto(j.data.ahora); valor.bandeja = 0 } else valor.bandeja = j.data.nuevas
@@ -46,6 +47,7 @@ async function consultar() {
     try {
       const r = await fetch(RUTA.pagos, { cache: 'no-store' })
       const j = await r.json().catch(() => null) as { ok?: boolean; data?: { n?: number } } | null
+      if (r.status === 429) { pausaHasta = Date.now() + 60_000; return }
       if (r.ok && j?.ok !== false && typeof j?.data?.n === 'number') valor.pagos = j.data.n
     } catch { /* igual */ }
   })())
@@ -66,8 +68,11 @@ export const MIN_ENTRE_CONSULTAS_MS = 5_000
 let enCurso = false
 let ultimaConsulta = 0
 let trailing: ReturnType<typeof setTimeout> | null = null
+// Si el servidor responde 429 (se pasó del tope), la pestaña se calla un minuto entero en vez de seguir insistiendo.
+let pausaHasta = 0
 const ahora = () => {
   if (enCurso) return
+  if (Date.now() < pausaHasta) { programar(); return }
   const espera = ultimaConsulta + MIN_ENTRE_CONSULTAS_MS - Date.now()
   if (espera > 0) { if (!trailing) trailing = setTimeout(() => { trailing = null; ahora() }, espera); return }
   enCurso = true; ultimaConsulta = Date.now()
