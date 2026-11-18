@@ -5,12 +5,16 @@ import { isAdminEmail } from '@/lib/auth'
 
 export const BLOQUEADO = 'BLOQUEADO' as const
 
+/** Solo rutas internas del panel (ya pasaron por rutaInterna); cualquier otra, al inicio del panel. */
+export const panelDeRegreso = (ruta: string | null | undefined) => (ruta && /^\/panel(?:[/?]|$)/.test(ruta) && !ruta.startsWith('//') ? ruta : '/panel')
+
 /**
  * '/admin' para admins; `redirectTo` para clientes con fila en `usuarios`;
  * BLOQUEADO si la cuenta está suspendida; null si no fue invitada.
  */
 export async function destinoTrasLogin(userId: string, email: string | null | undefined, redirectTo: string): Promise<string | typeof BLOQUEADO | null> {
-  if (isAdminEmail(email ?? '')) return '/panel'
+  // El administrador vuelve a la pantalla del panel de la que venía (por ejemplo /panel?sec=confianza); a cualquier otra cosa, al panel.
+  if (isAdminEmail(email ?? '')) return panelDeRegreso(redirectTo)
   const { data } = await createAdminSupabase().from('usuarios').select('plan, eliminacion_programada_en, eliminada_en').eq('id', userId).maybeSingle()
   if (!data) return null
   if (data.plan === 'bloqueado' || data.eliminada_en) return BLOQUEADO

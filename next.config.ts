@@ -37,6 +37,9 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // Contexto de Netlify en la compilación (production, deploy-preview, branch-deploy). No es secreto. Lo usa lib/site.ts para que el login
+  // de un deploy preview vuelva al preview en lugar de a micompaz.com. En producción vale «production» y no cambia nada.
+  env: { COMPAZ_CONTEXTO_DESPLIEGUE: process.env.CONTEXT ?? "" },
   images: {
     formats: ["image/webp"],
   },

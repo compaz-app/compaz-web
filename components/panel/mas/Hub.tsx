@@ -9,11 +9,17 @@ import type { ActorVista } from '@/lib/panel-secciones'
 type Enlace = (cambios: Record<string, string | null>) => string
 
 // Más: el menú de herramientas que no son del día a día. Solo muestra las que esta persona puede usar.
-export default function Hub({ actor, enlace }: { actor: ActorVista; enlace: Enlace }) {
+export default function Hub({ actor, enlace, confianzaHref = null }: { actor: ActorVista; enlace: Enlace; /** En el teléfono, el CMC (Sistema de Confianza) no cabe en la barra inferior: se entra desde aquí. */ confianzaHref?: string | null }) {
   const hub = hubVisible(actor)
   return (
     <section className="max-w-3xl space-y-3">
       <Encabezado titulo="Más" descripcion="Herramientas que no son del día a día." />
+      {confianzaHref && (
+        <Link prefetch={false} href={confianzaHref} className="block rounded-xl border-2 border-morado-medio bg-blanco p-3 hover:bg-lavanda-sutil lg:hidden">
+          <span className="flex items-center gap-2 text-base font-extrabold">CMC<span aria-hidden className="ml-auto text-texto-sutil">›</span></span>
+          <span className="mt-1 block text-sm text-texto-medio">Centro de Mando Compitaz: selección, verificación y habilitación de Compitas.</span>
+        </Link>
+      )}
       <ul className="grid gap-2 sm:grid-cols-2">
         {hub.map((h) => (
           <li key={h.id}>

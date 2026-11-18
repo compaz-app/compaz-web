@@ -30,6 +30,18 @@
   --color-ambar-oscuro: #92400E;
   --color-naranja-oscuro: #C84B0E;
   --color-naranja-claro: #FFF3E8;
+  --color-cf-fondo: #FFFFFF;
+  --color-cf-lateral: #F6F6F8;
+  --color-cf-superficie: #F9F9FB;
+  --color-cf-cabecera: #F2F2F5;
+  --color-cf-borde: #E5E5EB;
+  --color-cf-morado: #473463;
+  --color-cf-morado-hover: #3A2A52;
+  --color-cf-morado-secundario: #5B4779;
+  --color-cf-lavanda: #EAE6F0;
+  --color-cf-lavanda-suave: #F4F1F8;
+  --color-cf-texto: #20202C;
+  --color-cf-texto-suave: #646475;
   --color-blanco: #FFFFFF;
   --color-negro: #000000;
   --color-gris100: #F3F4F6;

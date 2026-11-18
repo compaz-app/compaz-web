@@ -1,0 +1,2 @@
+// Textos del Sistema de Confianza que comparten la pantalla y el manual.
+export const INFO_CONFIANZA = 'Operación real muestra, solo para leer, quién se postuló y qué Compitas habilitó el CMC, separando perfiles de prueba, repetidos y demos. Las entrevistas, verificaciones y el onboarding reales se siguen registrando en el Centro Compitas V2. Demostración recorre el proceso completo con personas ficticias: aplica las mismas reglas del CMC, guarda todo solo en este navegador y no envía correos, mensajes ni pagos.'

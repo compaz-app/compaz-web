@@ -22,7 +22,7 @@ export const SECCIONES: { id: SeccionManual; titulo: string; descripcion: string
 ]
 
 /** Las pantallas del panel. Cada una debe tener al menos una entrada del manual (lo comprueba una prueba). */
-export const PANTALLAS_PANEL = ['bandeja', 'seguimiento', 'personas', 'visitas', 'resenas', 'invitar', 'postulaciones', 'pagos', 'avisos', 'cobertura', 'umbrales', 'equipo', 'ajustes', 'actividad', 'limites', 'registro', 'estado', 'manual'] as const
+export const PANTALLAS_PANEL = ['bandeja', 'seguimiento', 'personas', 'confianza', 'visitas', 'resenas', 'invitar', 'postulaciones', 'pagos', 'avisos', 'cobertura', 'umbrales', 'equipo', 'ajustes', 'actividad', 'limites', 'registro', 'estado', 'manual'] as const
 export type PantallaPanel = (typeof PANTALLAS_PANEL)[number]
 
 export interface EntradaManual {
@@ -173,6 +173,19 @@ export const ENTRADAS: EntradaManual[] = [
       'Las notas internas las ve solo el equipo. Cada una guarda quién la escribió y cuándo, y no se puede editar ni borrar.',
     ],
     permiso: 'monitorear', pantalla: 'personas', busca: ['compitas', 'clientes', 'buscar', 'ficha'],
+  },
+  {
+    id: 'sistema-confianza', seccion: 'dia_a_dia', titulo: '¿Qué es el CMC (Sistema de Confianza) y cuándo uso la demostración?',
+    paraQue: 'El CMC, Centro de Mando Compitaz, reúne cómo se selecciona, verifica y habilita a cada Compita. Tiene dos modalidades: Operación real, para leer, y Demostración, con personas ficticias.',
+    pasos: [
+      'Entra a CMC en el menú (en el teléfono, desde Más).',
+      'En Operación real ves las postulaciones, las Compitas que el CMC habilitó y si ya están en el catálogo. Los perfiles de prueba, repetidos y demos no cuentan en las cifras.',
+      'Toca una Compita para abrir su ficha de siempre. Las entrevistas, verificaciones y el onboarding reales se siguen registrando en el Centro Compitas V2.',
+      'Para enseñar el proceso, elige Demostración: abre un aspirante ficticio, regístrale la entrevista, las verificaciones y el onboarding, y habilítalo. Las reglas son las mismas del CMC: si falta algo, el botón Habilitar sale apagado y dice qué falta.',
+      'Al terminar, toca Reiniciar demostración para volver al escenario inicial.',
+    ],
+    despues: 'La demostración se guarda solo en tu navegador: no envía correos, mensajes de Telegram, solicitudes ni pagos, y no toca la base. Mientras está abierta, el panel esconde tu correo y los puntos rojos. Si Requiere atención marca un perfil de prueba visible en el catálogo, desactívalo desde su ficha al terminar la prueba.',
+    permiso: 'monitorear', pantalla: 'confianza', busca: ['confianza', 'sistema de confianza', 'centro de mando', 'cmc', 'habilitar', 'verificacion', 'entrevista', 'onboarding', 'demo', 'inversionistas', 'presentacion'],
   },
   {
     id: 'chats', seccion: 'dia_a_dia', titulo: '¿Cómo veo el chat entre un cliente y su compita?',

@@ -6,7 +6,7 @@ import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import { requireAuth } from '@/lib/auth'
 import { actorDePagina, type Actor } from '@/lib/permisos'
-import { actorComo, puedeEntrarAlPanel, seccionActiva, type SeccionPanel, type ActorVista } from '@/lib/panel-secciones'
+import { actorComo, hrefSeccion, puedeEntrarAlPanel, seccionActiva, seccionesVisibles, type SeccionPanel, type ActorVista } from '@/lib/panel-secciones'
 import EsqueletoPanel from '@/components/panel/EsqueletoPanel'
 import { cargarBandeja, TOPE_BANDEJA } from '@/lib/panel-bandeja'
 import AvisoTope from '@/components/panel/AvisoTope'
@@ -58,6 +58,10 @@ import { consultarSeguimiento, umbralesDeAjustes } from '@/lib/panel-seguimiento
 import { detalleDeVisita, listarVisitas, MAX_VISITAS } from '@/lib/panel-visitas'
 import DetalleVisita from '@/components/panel/DetalleVisita'
 import { consultarVisitas, leerVisitaUrl } from '@/lib/panel-visitas-tipos'
+import ConfianzaOperativo from '@/components/panel/confianza/ConfianzaOperativo'
+import ConfianzaDemo from '@/components/panel/confianza/ConfianzaDemo'
+import MarcoConfianza from '@/components/panel/confianza/MarcoConfianza'
+import { cargarResumenOperativo } from '@/lib/confianza/operativo'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Panel', robots: { index: false, follow: false } }
@@ -65,6 +69,7 @@ export const metadata = { title: 'Panel', robots: { index: false, follow: false 
 /** Qué parámetros de la dirección pertenecen a cada sección (los demás se descartan al cambiar de sección). */
 const CLAVES: Record<string, string[]> = {
   personas: ['lista', 'q', 'vista', 'orden', 'dir', 'pag', 'estado'],
+  confianza: ['cf_modo', 'cf_etapa', 'cf_q', 'cf_id', 'cf_tab'],
   seguimiento: ['etapa', 'pag'],
   visitas: ['vv', 'pv'],
   pagos: ['pag_ver', 'pag_pag'],
@@ -86,9 +91,11 @@ export default async function PanelPage({ searchParams }: { searchParams: Promis
   const actual = seccionActiva(actor, un('sec'))
   // Viendo como colaborador, los datos se recortan como se le recortarían a él (así el administrador ve lo mismo que el equipo).
   const comoActor = { ...real, rol: actor.rol, permisos: actor.permisos }
+  // Sistema de Confianza en modalidad de demostración: el marco esconde el correo, el "ver como" y los puntos rojos (datos reales).
+  const presentacion = actual === 'confianza' && un('cf_modo') === 'demo'
 
   return (
-    <MarcoPanel actor={actor} actual={actual} comoColaborador={comoColaborador} puedeElegirVista={real.rol === 'admin'} correo={real.correo}>
+    <MarcoPanel actor={actor} actual={actual} comoColaborador={comoColaborador} puedeElegirVista={real.rol === 'admin'} correo={real.correo} presentacion={presentacion}>
       {comoColaborador && <div className="mb-4"><Aviso tamano="compacto" tono="advertencia">Estás viendo el panel como un colaborador con los permisos base. Es solo la pantalla: tus permisos reales no cambian.</Aviso></div>}
       <Suspense key={clave} fallback={<EsqueletoPanel />}>
         <ContenidoPanel sp={sp} actual={actual} actor={actor} comoActor={comoActor} comoColaborador={comoColaborador} />
@@ -142,6 +149,21 @@ async function ContenidoPanel({ sp, actual, actor, comoActor, comoColaborador }:
       cuerpo = <PersonasInteractivo lista="clientes" clientes={todos} qsInicial={qsInicial} />
     }
     cuerpo = <div className="space-y-3"><Encabezado titulo="Personas" descripcion={DESCRIPCION_PERSONAS} info={INFO_PERSONAS} infoQue="Para qué sirve Personas" /><Selector lista={lista} enlace={enlace} />{avisoTope}{cuerpo}</div>
+  } else if (actual === 'confianza') {
+    const demo = un('cf_modo') === 'demo'
+    let vista: React.ReactNode
+    if (demo) {
+      const qsInicial = new URLSearchParams(Object.entries(sp).filter((e): e is [string, string] => typeof e[1] === 'string')).toString()
+      vista = <ConfianzaDemo qsInicial={qsInicial} />
+    } else {
+      let r: Awaited<ReturnType<typeof cargarResumenOperativo>> | null = null
+      try { r = await cargarResumenOperativo() } catch (e) { console.error('[panel/confianza]', e) }
+      vista = r
+        ? <ConfianzaOperativo r={r} fichaHref={(id) => enlace({ persona: `compita:${id}` })} urlV2={process.env.CMC_V2_URL || null} />
+        : <Aviso tamano="compacto" tono="peligro">No se pudieron leer los datos de selección. Vuelve a intentarlo en un momento; si sigue, revisa Más, Estado del sistema.</Aviso>
+    }
+    const modo = (d: boolean) => enlace({ cf_modo: d ? 'demo' : null, cf_etapa: null, cf_q: null, cf_id: null, cf_tab: null, persona: null })
+    cuerpo = <MarcoConfianza demo={demo} hrefReal={modo(false)} hrefDemo={modo(true)}>{vista}</MarcoConfianza>
   } else if (actual === 'seguimiento') {
     cuerpo = <Seguimiento enlace={enlace} d={{ ...consultarSeguimiento(await listarSeguimiento(), un('etapa'), un('pag')), umbrales: umbralesDeAjustes(await getAjustes()) }} />
   } else if (actual === 'visitas') {
@@ -152,7 +174,7 @@ async function ContenidoPanel({ sp, actual, actor, comoActor, comoColaborador }:
     const subMas = subMasActiva(actor, un('mas'))
     const sinSub = Object.fromEntries(CLAVES.mas.map((k) => [k, null])) as Record<string, string | null>
     if (!subMas) {
-      cuerpo = <Hub actor={actor} enlace={(c) => enlace({ ...sinSub, ...c })} />
+      cuerpo = <Hub actor={actor} enlace={(c) => enlace({ ...sinSub, ...c })} confianzaHref={seccionesVisibles(actor).some((s) => s.id === 'confianza') ? hrefSeccion('confianza', comoColaborador) : null} />
     } else {
       const base: Record<string, string> = { sec: 'mas', mas: subMas.id, ...(comoColaborador ? { como: 'colaborador' } : {}) }
       let vista: React.ReactNode = null
