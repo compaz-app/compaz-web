@@ -9,7 +9,7 @@
   "app/feedback/[visitaId]/page.tsx": 4,
   "app/globals.css": 2,
   "app/login/LoginForm.tsx": 27,
-  "app/onboarding/page.tsx": 85,
+  "app/onboarding/page.tsx": 79,
   "app/page.tsx": 62,
   "app/pago/page.tsx": 53,
   "app/privacidad/page.tsx": 6,

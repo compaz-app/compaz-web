@@ -4,6 +4,13 @@ La versión vigente está en `lib/version.ts` y se ve en el panel (menú lateral
 
 Reglas: mayor = cambio grande o lanzamiento; menor = función nueva; parche = arreglo. La etapa `beta` sale cuando el sistema corre una o dos semanas con uso real sin sorpresas.
 
+## 1.3.22-beta.1 (2026-11-18)
+Inscripción del compita: el formulario de registro y su pantalla de activación son más cortos (segunda parte de la reducción de textos).
+1. Formulario: de 366 a 267 palabras visibles por defecto (la guía de cómo grabar y subir el video ya estaba plegada y no cuenta). Los textos de ayuda bajo cada campo pasan a una frase corta («Solo lo ve el equipo, nunca las familias.», «Aquí te llega el código para activar Telegram.»…). Se quitaron las repeticiones (la lista de ejemplos de habilidades salía dos veces) y la promesa de «triplicar las probabilidades».
+2. Pantalla de después de registrarse: de los bloques «Paso 1 — Descarga Telegram», «Paso 2 — Abre el bot» y la «Alerta de fraude» (unas 130 palabras) a tres pasos (abrir el bot, tocar Iniciar y escribir el nombre, escribir el código), el enlace de descarga para iPhone y Android y la frase corta de fraude (`AVISO_FRAUDE`).
+3. Prueba 127: presupuesto de 290 palabras visibles y ayudas de 20 palabras como máximo.
+4. NO se vio en pantalla: el formulario exige una invitación válida y crearla escribiría en la base compartida. Hay que mirarlo con un enlace de invitación real. Sin migración.
+
 ## 1.3.21-beta.1 (2026-11-18)
 Inscripción del compita: correos y mensajes de Telegram mucho más cortos (primera parte de la reducción de textos).
 1. Medido antes con los mensajes reales de las pruebas: el compita leía unas 1.300 palabras para inscribirse (formulario 647, correo de bienvenida 322, cinco mensajes de Telegram 305, correo del código 50).
