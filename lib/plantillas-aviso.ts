@@ -92,8 +92,8 @@ function avisoSinHorario(s: Record<string, unknown>, clienteNombre: string): Con
     ...lineasDatosLugar(s.datos_lugar),
     ``,
     esEntrevista
-      ? `Si aceptas, el cliente elige una de tus horas libres y te pide que la confirmes. Si no puedes, no pasa nada.`
-      : `Si aceptas, el cliente paga primero y te avisamos cuando el pago esté confirmado. Si no puedes, no pasa nada: el cliente elige a otro compita sin haber pagado.`,
+      ? `Si aceptas, el cliente elige una de tus horas libres y tú la confirmas.`
+      : `Si aceptas, el cliente paga primero y te avisamos al confirmarse. Si no puedes, elige a otro sin costo.`,
   ]
   const token = String(s.token_respuesta)
   const bot = process.env.TELEGRAM_BOT_USERNAME ? `https://t.me/${process.env.TELEGRAM_BOT_USERNAME}` : SITE_URL
@@ -150,7 +150,7 @@ const solicitudNueva: Plantilla = {
       `<b>Horarios propuestos (llamada de 20 min):</b>`,
       conEtiqueta.map(({ i, label }) => `${['1️⃣', '2️⃣', '3️⃣'][i]} ${label}`).join('\n'),
       ``,
-      `👇 <b>Toca el botón del horario que te funcione para confirmar.</b>`,
+      `👇 Toca el horario que te funcione.`,
     ].join('\n')
 
     const teclado = makeInlineKeyboard([

@@ -4,6 +4,12 @@ La versión vigente está en `lib/version.ts` y se ve en el panel (menú lateral
 
 Reglas: mayor = cambio grande o lanzamiento; menor = función nueva; parche = arreglo. La etapa `beta` sale cuando el sistema corre una o dos semanas con uso real sin sorpresas.
 
+## 1.3.24-beta.1 (2026-11-18)
+Mensajes largos de Telegram, más cortos (cuarta parte de la reducción de textos).
+1. Medido: 54 de 283 mensajes distintos pasaban de 40 palabras; los peores eran «¡Te contrataron!» (129), «el cliente decidió no continuar» (116) y «Gracias por tu dedicación» (105).
+2. Recortados: contratación, decisión del cliente, resultado de llamada, reagendado, «nadie abre», «Edita tu perfil», dirección repetida y cierres de solicitud sin horario. Se mantienen las advertencias de fraude y de no acordar por fuera, en su versión breve (`lib/avisos-seguridad.ts`).
+3. Prueba 129: ningún texto de Telegram en las rutas pasa de 70 palabras.
+
 ## 1.3.23-beta.1 (2026-11-18)
 Correos del cliente: menos y más cortos (tercera parte de la reducción de textos).
 1. Medido (correos reales de las pruebas): un cliente recibía unos 11 correos hasta su primera visita. El «trío» de la llamada (confirmada, empieza a las…, link de acceso) eran en realidad DOS normales más uno que solo manda el equipo a mano, así que ese no se junta.

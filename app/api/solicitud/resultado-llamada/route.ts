@@ -175,7 +175,8 @@ async function ejecutar(req: NextRequest, p: NonNullable<ReturnType<typeof leer>
     try {
       await sendTelegramMessage(
         compita.telegram_chat_id,
-        `👋 <b>Gracias por tu dedicación</b>\n\nLa familia decidió no seguir adelante en esta ocasión. No es un reflejo de tu valor. A veces simplemente no encajan las necesidades o la química. Pasa, y no hay que desanimarse.\n\nMientras tanto, hay cosas que pueden ayudarte a destacar más:\n\n1. Agrega un video de presentación o mejora el que ya tienes. Las familias confían mucho más cuando te ven hablar.\n2. Actualiza o mejora la foto que tienes en tu perfil.\n3. Describe con más detalle tu experiencia específica (adultos mayores, niños, enfermedades crónicas, etc.).\n\nEl equipo de Compaz está trabajando para conectarte con nuevas familias. ¡Tú puedes!`,
+        `👋 <b>Gracias por tu dedicación</b>\n\nLa familia decidió no seguir en esta ocasión. No dice nada de tu valor: a veces simplemente no encajan.\n\n💡 Un video de presentación, una buena foto y una descripción con más detalle atraen más familias.`,
+
       )
     } catch (e) { console.error('Telegram no_contratar compita:', e) }
   }

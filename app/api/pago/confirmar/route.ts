@@ -1,3 +1,4 @@
+import { AVISO_FUERA } from '@/lib/avisos-seguridad'
 import { NextRequest } from 'next/server'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { getClienteActivo } from '@/lib/auth'
@@ -115,13 +116,11 @@ export async function POST(req: NextRequest) {
         sol.compitas.telegram_chat_id,
         [
           `🎉 <b>¡Te contrataron!</b>`, ``,
-          `<b>${esc(clienteNombre)}</b> acaba de contratarte con el plan <b>${esc(planInfo.nombre)}</b>.`, ``,
-          `📋 <b>En qué consiste:</b> ${esc(planInfo.descripcion)}`,
+          `<b>${esc(clienteNombre)}</b> te contrató con el plan <b>${esc(planInfo.nombre)}</b>.`,
+          `📋 ${esc(planInfo.descripcion)}`,
           ...perfilBloque, ``,
-          `👋 <b>Empieza saludando a ${esc(clienteNombre.split(' ')[0])}</b>`, ``,
-          `Escríbele desde este mismo chat: un simple "¡Hola! Soy tu compita, ¿cuándo te queda bien para la primera visita?" es suficiente. Ellos lo verán en su dashboard y te responderán aquí.`, ``,
-          `Una vez que queden de acuerdo, el cliente registra la fecha en el sistema y tú podrás iniciar la visita desde aquí.`, ``,
-          `💙 Toda la comunicación con tu cliente debe mantenerse dentro de Compaz. Coordinar por fuera va contra nuestras condiciones de uso y puede resultar en la suspensión de tu cuenta.`,
+          `👋 Salúdale desde este chat para coordinar la primera visita.`, ``,
+          `🔒 ${AVISO_FUERA}`,
         ].join('\n'),
         TECLADO_SIN_VISITA,
       )

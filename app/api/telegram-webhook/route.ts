@@ -513,7 +513,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
       })
       await sendTelegramMessage(
         chatId,
-        `✏️ <b>Edita tu perfil</b>\n\nAquí tienes tu enlace personal:\n\n<a href="${url}">${url}</a>\n\n⏳ Este enlace vence el <b>${venceLabel}</b> y solo funciona una vez. Si lo abres y lo dejas a medias, vuelve a escribir /perfil para obtener uno nuevo.\n\nSi tienes algún problema, escríbenos a hola@micompaz.com.`,
+        `✏️ <b>Edita tu perfil</b>\n\n<a href="${url}">${url}</a>\n\n⏳ Vence el <b>${venceLabel}</b> y funciona una sola vez. Si lo dejas a medias, escribe /perfil para otro.`,
         tecladoPerfil,
       )
     } catch (e) {
@@ -1191,8 +1191,8 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
           ? `Le avisamos a <b>${clienteNombre}</b> que necesitas cambiar la fecha${fechaAnterior ? ` del ${esc(fechaAnterior)}` : ''}.`
           : `Registramos el cambio de fecha${fechaAnterior ? ` del ${esc(fechaAnterior)}` : ''}, pero no pudimos enviar el correo a <b>${clienteNombre}</b>. Escríbele desde este chat para avisarle.`,
         ``,
-        `Escríbele desde este mismo chat para acordar un nuevo día. Ellos lo verán en su portal.`,
-        ...(avisoTardio ? [``, `⚠️ Avisaste con menos de ${minimoCompita} horas de anticipación. Queda registrado: varias veces seguidas puede pausar tus solicitudes nuevas.`] : []),
+        `Escríbele desde este chat para acordar un nuevo día.`,
+        ...(avisoTardio ? [``, `⚠️ Avisaste con menos de ${minimoCompita} horas de anticipación. Queda registrado; si se repite, pueden pausarte solicitudes nuevas.`] : []),
       ].join('\n'),
       TECLADO_SIN_VISITA,
     )
@@ -1251,9 +1251,9 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
     }
     await sendTelegramMessage(chatId, [
       `🚪 <b>Anotado: nadie abre</b>`, ``,
-      `Espera cerca. Ya le avisamos al cliente y, a los 5 y 15 minutos, el equipo de Compaz intenta comunicarse con el contacto en el sitio y con el cliente.`,
-      `Tu tiempo se paga: si pasan ${r.espera} minutos sin que nadie abra, podrás cerrar la visita desde aquí (se cuenta como usada y cobras el viaje).`,
-      `Si el cliente aparece antes, toca ▶️ Iniciar visita.`,
+      `Espera cerca: ya le avisamos al cliente y, a los 5 y 15 minutos, el equipo intenta comunicarse con el contacto en el sitio.`,
+      `Tu tiempo se paga: si en ${r.espera} minutos nadie abre, podrás cerrar la visita aquí (cuenta como usada y cobras el viaje).`,
+      `Si abren antes, toca ▶️ Iniciar visita.`,
     ].join('\n'), TECLADO_INICIO)
     return NextResponse.json({ ok: true })
   }
