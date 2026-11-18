@@ -23,9 +23,9 @@ const secciones = [
       "Tus datos se almacenan en Supabase, nuestro proveedor de base de datos, con acceso restringido al equipo de Compaz.",
   },
   {
-    titulo: "Publicidad y Meta Pixel",
+    titulo: "Medición y publicidad",
     cuerpo:
-      "Usamos Meta Pixel (Facebook) para medir la efectividad de nuestra publicidad. Esto implica compartir cierta información de tu navegación en este sitio con Meta, conforme a sus propias políticas de privacidad.",
+      "En las páginas públicas de este sitio (la portada, la página para ser Compita y esta política) usamos Meta Pixel (Facebook), Google Analytics y Microsoft Clarity para medir la efectividad de nuestra publicidad y entender cómo se usa la página. Esto implica compartir cierta información de tu navegación con esos proveedores, conforme a sus propias políticas de privacidad. Clarity no graba lo que escribes en los formularios ni en el chat, y no incluimos esos datos en los eventos de medición. En tu cuenta, el portal, las videollamadas, los pagos y el panel del equipo no usamos ninguna de ellas.",
   },
   {
     titulo: "Cómo pedir que borremos tus datos",
@@ -56,7 +56,7 @@ export default function PrivacidadPage() {
           className="text-sm mb-12"
           style={{ color: "#6B5C90", fontFamily: "var(--font-inter)" }}
         >
-          Última actualización: 10 de agosto de 2026
+          Última actualización: 17 de noviembre de 2026
         </p>
 
         <div className="flex flex-col gap-9">

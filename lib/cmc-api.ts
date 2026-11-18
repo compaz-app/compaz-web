@@ -69,7 +69,8 @@ async function llamar<T>(op: OperacionLectura, id = ''): Promise<RespuestaCmc<T>
   let cuerpo: unknown
   try { cuerpo = await res.json() } catch { throw new CmcError('respuesta_no_json') }
   const r = cuerpo as Partial<RespuestaCmc<T>> & { error?: unknown }
-  if (!r || r.ok !== true) throw new CmcError(typeof r?.error === 'string' ? r.error.slice(0, 40) : 'respuesta_invalida')
+  // Solo un código conocido (letras y guion bajo) pasa a los registros; cualquier otro texto se descarta.
+  if (!r || r.ok !== true) throw new CmcError(typeof r?.error === 'string' && /^[a-z_]{1,40}$/.test(r.error) ? r.error : 'respuesta_invalida')
   if (r.v !== VERSION_API_CMC || r.op !== op || typeof r.generado !== 'string' || r.datos == null) throw new CmcError('contrato_distinto')
   return { ...(r as RespuestaCmc<T>), datos: limpiarPrivados(r.datos as T) }
 }

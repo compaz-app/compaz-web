@@ -5,7 +5,7 @@
 // Filtro, búsqueda y página viven en la dirección. Abrir una ficha es una navegación normal (el servidor lee esa ficha del CMC).
 
 import Link from 'next/link'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import IconoCmc from '@/components/panel/confianza/iconos'
 import { BANDA_CF, Cifra, EtiquetaAtencion, EtiquetaEtapa, LISTA_CF } from '@/components/panel/confianza/piezas'
 import type { EtapaReal, FilaReal } from '@/lib/confianza/real'
@@ -21,6 +21,9 @@ const FLUJO: { id: string; texto: string; que: string; etapa: EtapaReal; enCatal
 const OTROS = [{ id: 'todos', texto: 'Todos' }, { id: 'sin-etapa', texto: 'Sin etapa' }, { id: 'descartados', texto: 'Descartados' }, { id: 'no-cuentan', texto: 'No cuentan' }] as const
 const FILTROS = [...FLUJO.map((f) => f.id), ...OTROS.map((o) => o.id)]
 const POR_PAGINA = 50
+export const CLAVE_BUSQUEDA = 'cmc_busqueda'
+const sinSuscripcion = () => () => {}
+const leerBusqueda = () => { try { return (sessionStorage.getItem(CLAVE_BUSQUEDA) ?? '').slice(0, 60) } catch { return '' } }
 const plural = (n: number, uno: string, varios: string) => `${n} ${n === 1 ? uno : varios}`
 // La tabla de columnas aparece desde 1024 px: a 768 el nombre quedaba cortado; por debajo, cada fila es una tarjeta.
 const COLUMNAS = 'lg:grid-cols-[minmax(0,1.7fr)_9.5rem_minmax(0,2fr)_9rem_1.25rem]'
@@ -47,15 +50,21 @@ export default function ConfianzaReal({ filas, resumen, generado, fuente, descar
 }) {
   const inicial = useMemo(() => new URLSearchParams(qsInicial), [qsInicial])
   const [filtro, setFiltro] = useState(() => (FILTROS.includes(inicial.get('cf_etapa') ?? '') ? inicial.get('cf_etapa')! : 'todos'))
-  const [q, setQ] = useState(() => (inicial.get('cf_q') ?? '').slice(0, 60))
+  // La búsqueda puede ser un nombre: NUNCA va en la dirección (historial, registros del servidor, analítica).
+  // Se guarda solo en esta pestaña (sessionStorage) para que siga ahí al volver de una ficha.
+  const guardada = useSyncExternalStore(sinSuscripcion, leerBusqueda, () => '')
+  const [escrita, setQ] = useState<string | null>(null)
+  const q = escrita ?? guardada
   const [pagina, setPagina] = useState(() => Math.max(1, Number(inicial.get('cf_pag')) || 1))
+
+  useEffect(() => { if (escrita === null) return; try { if (escrita.trim()) sessionStorage.setItem(CLAVE_BUSQUEDA, escrita.slice(0, 60)); else sessionStorage.removeItem(CLAVE_BUSQUEDA) } catch { /* sin almacenamiento */ } }, [escrita])
 
   useEffect(() => {
     const u = new URL(window.location.href)
     const pon = (k: string, v: string | null) => { if (v) u.searchParams.set(k, v); else u.searchParams.delete(k) }
-    pon('cf_etapa', filtro === 'todos' ? null : filtro); pon('cf_q', q.trim() || null); pon('cf_pag', pagina > 1 ? String(pagina) : null)
+    pon('cf_etapa', filtro === 'todos' ? null : filtro); pon('cf_q', null); pon('cf_pag', pagina > 1 ? String(pagina) : null)
     if (u.href !== window.location.href) window.history.replaceState(window.history.state, '', u.href)
-  }, [filtro, q, pagina])
+  }, [filtro, pagina])
 
   const texto = q.trim().toLowerCase()
   const visibles = filas.filter((f) => enFiltro(f, filtro)).filter((f) => !texto || `${f.nombre} ${f.id} ${f.zona}`.toLowerCase().includes(texto))
@@ -66,7 +75,7 @@ export default function ConfianzaReal({ filas, resumen, generado, fuente, descar
   const n = (id: string) => filas.filter((f) => enFiltro(f, id)).length
   const elegir = (id: string) => { setFiltro(id); setPagina(1) }
   // La ficha conserva el filtro, la búsqueda y la página para poder volver al mismo sitio.
-  const hrefFicha = (id: string) => { const u = new URLSearchParams(qsInicial); u.set('cf_id', id); u.delete('cf_tab'); if (filtro !== 'todos') u.set('cf_etapa', filtro); else u.delete('cf_etapa'); if (q.trim()) u.set('cf_q', q.trim()); else u.delete('cf_q'); if (pag > 1) u.set('cf_pag', String(pag)); else u.delete('cf_pag'); return `/panel?${u.toString()}` }
+  const hrefFicha = (id: string) => { const u = new URLSearchParams(qsInicial); u.set('cf_id', id); u.delete('cf_tab'); if (filtro !== 'todos') u.set('cf_etapa', filtro); else u.delete('cf_etapa'); u.delete('cf_q'); if (pag > 1) u.set('cf_pag', String(pag)); else u.delete('cf_pag'); return `/panel?${u.toString()}` }
 
   // data-clarity-mask: Clarity se carga en todo el sitio; con esto no graba el texto de esta vista (nombres de aspirantes).
   return (

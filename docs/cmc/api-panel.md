@@ -70,7 +70,7 @@ Minimización: se borran en cualquier nivel las claves que coinciden con `teléf
 - Solo un **administrador** ve los datos reales. Se decide en el servidor (`app/panel/page.tsx`: `actor.rol === 'admin'`), y «Ver como colaborador» también los esconde. Un colaborador con «monitorear» sigue viendo la vista anterior.
 - Ninguna ruta `/api` ni pública lee el CMC (prueba 120). El token vive solo en el servidor; nunca en una variable `NEXT_PUBLIC_`.
 - Los errores se registran como códigos (`[cmc/lectura] lista: firma_invalida`), nunca con contenido.
-- **Clarity:** el panel (`/panel`) ya está fuera de Clarity, GA y Meta Pixel (`app/layout.tsx`, rutas con token y panel). Hay que comprobarlo de nuevo antes de instalar: si Clarity grabara `/panel`, los nombres de aspirantes quedarían en grabaciones de terceros.
+- **Analítica:** Clarity, Google Analytics y Meta Pixel solo se cargan en las páginas públicas (`lib/analitica.ts`, prueba 121); `/panel` no carga ninguna. Además la vista real y la ficha llevan `data-clarity-mask` como segunda barrera. La búsqueda del CMC no va en la dirección (se guarda en la pestaña).
 - Lo que sí sale del CMC: nombre, zona declarada, etapas, estados y textos de notas (observaciones, motivos y respuestas de la preentrevista). Las notas son texto libre y pueden contener datos que alguien escribió a mano. Es aceptable porque solo lo ve un administrador, pero conviene saberlo.
 - En el repositorio solo hay datos ficticios (`COM-9xxx`). La fuente sintética solo se activa en un deploy preview sin la API configurada.
 

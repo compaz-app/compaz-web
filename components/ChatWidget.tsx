@@ -120,7 +120,8 @@ export default function ChatWidget() {
     setInput("");
     setIsTyping(true);
 
-    trackEvent("chat_message", { message_text: trimmed.slice(0, 100) });
+    // Solo se mide que hubo un mensaje y su largo: el texto puede traer datos personales y nunca va a la analítica.
+    trackEvent("chat_message", { longitud: String(trimmed.length) });
 
     try {
       const res = await fetch("/api/chat", {
@@ -313,8 +314,9 @@ export default function ChatWidget() {
         )}
       </button>
 
-      {/* Chat window */}
+      {/* Chat window. data-clarity-mask: lo que escribe la persona (puede traer nombres o teléfonos) no se graba. */}
       <div
+        data-clarity-mask="True"
         className={`chat-window ${isOpen ? "open" : "closed"}`}
         style={{
           position: "fixed",

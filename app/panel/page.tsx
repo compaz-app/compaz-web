@@ -72,7 +72,8 @@ export const metadata = { title: 'Panel', robots: { index: false, follow: false 
 /** Qué parámetros de la dirección pertenecen a cada sección (los demás se descartan al cambiar de sección). */
 const CLAVES: Record<string, string[]> = {
   personas: ['lista', 'q', 'vista', 'orden', 'dir', 'pag', 'estado'],
-  confianza: ['cf_modo', 'cf_etapa', 'cf_q', 'cf_id', 'cf_tab', 'cf_pag'],
+  // cf_q (la búsqueda) no se propaga en los enlaces del servidor: puede ser un nombre (ver ConfianzaReal).
+  confianza: ['cf_modo', 'cf_etapa', 'cf_id', 'cf_tab', 'cf_pag'],
   seguimiento: ['etapa', 'pag'],
   visitas: ['vv', 'pv'],
   pagos: ['pag_ver', 'pag_pag'],
