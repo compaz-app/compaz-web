@@ -176,7 +176,7 @@ export const ENTRADAS: EntradaManual[] = [
   },
   {
     id: 'sistema-confianza', seccion: 'dia_a_dia', titulo: '¿Qué es el CMC (Sistema de Confianza) y cuándo uso la demostración?',
-    paraQue: 'El CMC, Centro de Mando Compaz, reúne cómo se selecciona, verifica y habilita a cada Compita. Tiene dos modalidades: Operación real, para leer, y Demostración, con personas ficticias.',
+    paraQue: 'El CMC, Centro de Mando Compitaz, reúne cómo se selecciona, verifica y habilita a cada Compita. Tiene dos modalidades: Operación real, para leer, y Demostración, con personas ficticias.',
     pasos: [
       'Entra a CMC en el menú (en el teléfono, desde Más).',
       'En Operación real ves las postulaciones, las Compitas que el CMC habilitó y si ya están en el catálogo. Los perfiles de prueba, repetidos y demos no cuentan en las cifras.',

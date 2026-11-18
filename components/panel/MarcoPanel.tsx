@@ -54,7 +54,8 @@ export default function MarcoPanel({ actor, actual, comoColaborador, puedeElegir
           <span className="text-lg font-extrabold text-morado-medio">Compaz <span className="text-sm text-texto-medio">Panel</span> <span className="text-xs font-normal text-texto-sutil">v{VERSION}</span></span>
           {elegirVista && <div className="flex w-48 gap-1 rounded-xl border border-borde p-1">{vista(false, 'Admin')}{vista(true, 'Colab.')}</div>}
         </header>
-        <main className="@container mx-auto max-w-5xl px-4 pb-24 pt-5 lg:pb-10">{children}</main>
+        {/* El CMC usa un ancho mayor (su tabla y su banda de indicadores lo necesitan); las demás secciones conservan max-w-5xl. */}
+        <main className={`@container mx-auto px-4 pb-24 pt-5 lg:pb-10 ${actual === 'confianza' ? 'max-w-6xl' : 'max-w-5xl'}`}>{children}</main>
       </div>
       <nav aria-label="Secciones del panel" style={{ gridTemplateColumns: `repeat(${enBarra.length}, minmax(0, 1fr))` }} className="fixed inset-x-0 bottom-0 z-30 grid border-t border-borde bg-blanco lg:hidden">{enBarra.map(inferior)}</nav>
     </div>

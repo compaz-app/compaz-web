@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import Aviso from '@/components/ui/base/Aviso'
 import InfoBoton from '@/components/ui/InfoBoton'
-import { Cifra, EtiquetaAtencion, LISTA_CF, TarjetaCf } from '@/components/panel/confianza/piezas'
+import { BANDA_CF, Cifra, EtiquetaAtencion, LISTA_CF, TarjetaCf } from '@/components/panel/confianza/piezas'
 import type { CompitaHabilitada, ResumenOperativo } from '@/lib/confianza/operativo'
 
 // Vista operativa del Sistema de Confianza: datos reales y SOLO LECTURA. Las fichas se abren con la ficha que ya existe en el panel
@@ -26,13 +26,13 @@ export default function ConfianzaOperativo({ r, fichaHref, urlV2 }: { r: Resumen
       </p>
 
       <section aria-label="Resumen">
-        <div className="grid grid-cols-2 divide-cf-borde sm:grid-cols-4 sm:divide-x">
-          <Cifra valor={r.postulaciones.recibidas} texto="Postulaciones" detalle="Desde la web" info="Compitas que se registraron desde la web. No cuenta repetidas, spam ni perfiles de prueba." />
-          <Cifra valor={reales.length} texto="Habilitadas" detalle="Pasaron los 7 controles" info="Compitas que el CMC habilitó y publicó en la web. No cuenta perfiles de prueba." />
-          <Cifra valor={enCatalogo} texto="En el catálogo" detalle="Reciben solicitudes" info="Habilitadas reales que el equipo ya activó y verificó, con Telegram vinculado: las familias pueden pedirlas." />
-          <Cifra valor={atencion} texto="Requieren atención" detalle="Ver abajo" tono={atencion > 0 ? 'atencion' : 'neutro'} info="Habilitadas sin activar, perfiles de prueba visibles al público y postulaciones por resolver." />
+        <div className={BANDA_CF}>
+          <Cifra icono="personas" valor={r.postulaciones.recibidas} texto="Postulaciones" detalle="Desde la web" info="Compitas que se registraron desde la web. No cuenta repetidas, spam ni perfiles de prueba." />
+          <Cifra icono="check" tono="exito" valor={reales.length} texto="Habilitadas" detalle="Pasaron los 7 controles" info="Compitas que el CMC habilitó y publicó en la web. No cuenta perfiles de prueba." />
+          <Cifra icono="reloj" valor={enCatalogo} texto="En el catálogo" detalle="Reciben solicitudes" info="Habilitadas reales que el equipo ya activó y verificó, con Telegram vinculado: las familias pueden pedirlas." />
+          <Cifra icono="alerta" valor={atencion} texto="Requieren atención" detalle="Ver abajo" tono={atencion > 0 ? 'atencion' : 'neutro'} info="Habilitadas sin activar, perfiles de prueba visibles al público y postulaciones por resolver." />
         </div>
-        <p className="mt-3 flex flex-wrap items-center gap-1 text-xs text-cf-texto-suave">
+        <p className="mt-2 flex flex-wrap items-center gap-1 px-1 text-sm text-cf-texto-suave">
           No cuentan en las cifras: {pruebas.length + r.postulaciones.pruebas} de prueba · {r.postulaciones.repetidas} repetidas · {r.demos} perfiles demo del catálogo.
           <InfoBoton que="Qué no cuenta" texto="Los perfiles de prueba se reconocen por su código (lista en lib/confianza/operativo.ts), por palabras como prueba o test en el nombre o el correo, y por ser cuentas del equipo. Se siguen mostrando en la lista, marcados, para poder revisarlos; los perfiles demo son los de muestra del catálogo." />
         </p>
@@ -40,7 +40,7 @@ export default function ConfianzaOperativo({ r, fichaHref, urlV2 }: { r: Resumen
 
       {(pruebaVisible.length > 0 || porActivar.length > 0 || r.postulaciones.porResolver > 0) && (
         <section className="space-y-2">
-          <h2 className="text-base font-extrabold">Requieren atención</h2>
+          <h2 className="text-lg font-extrabold">Requieren atención</h2>
           <ul className={LISTA_CF}>
             {pruebaVisible.map((c) => <FilaHabilitada key={c.id} c={c} href={fichaHref(c.id)} conNota />)}
             {porActivar.map((c) => <FilaHabilitada key={c.id} c={c} href={fichaHref(c.id)} conNota />)}
@@ -52,7 +52,7 @@ export default function ConfianzaOperativo({ r, fichaHref, urlV2 }: { r: Resumen
       )}
 
       <section className="space-y-2">
-        <h2 className="flex flex-wrap items-center gap-1 text-base font-extrabold">
+        <h2 className="flex flex-wrap items-center gap-1 text-lg font-extrabold">
           Compitas habilitadas por el CMC
           <span className="font-semibold text-cf-texto-suave">· {r.habilitadas.length} {r.habilitadas.length === 1 ? 'ficha' : 'fichas'}, {reales.length} {reales.length === 1 ? 'cuenta' : 'cuentan'} en las cifras</span>
           {pruebas.length > 0 && <InfoBoton que="Por qué hay más fichas que habilitadas" texto={`La lista muestra todas las fichas que el CMC publicó, también ${pruebas.length === 1 ? 'el perfil de prueba' : `los ${pruebas.length} perfiles de prueba`}, para poder revisarlos. Esos perfiles no cuentan en las cifras de arriba.`} />}
@@ -75,7 +75,7 @@ export default function ConfianzaOperativo({ r, fichaHref, urlV2 }: { r: Resumen
 function FilaHabilitada({ c, href, conNota = false }: { c: CompitaHabilitada; href: string; /** La nota se muestra solo en «Requieren atención», para no repetirla en la lista completa. */ conNota?: boolean }) {
   return (
     <li>
-      <Link prefetch={false} href={href} className="flex items-center gap-3 px-3 py-3 hover:bg-cf-lateral">
+      <Link prefetch={false} href={href} className="flex items-center gap-3 px-3 py-3 hover:bg-cf-superficie">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <span className="font-bold">{c.nombre}</span><span className="text-xs text-cf-texto-suave">{c.codigo}</span>

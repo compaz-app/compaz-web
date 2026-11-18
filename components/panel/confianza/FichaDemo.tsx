@@ -37,14 +37,14 @@ function Progreso({ a }: { a: AspiranteDemo }) {
   return (
     <div className="-mx-4 overflow-x-auto px-4">
       <ol aria-label="Progreso de selección" className="relative grid min-w-[30rem] grid-cols-6">
-        <span aria-hidden className="absolute left-[8.33%] right-[8.33%] top-3 h-px bg-cf-borde" />
-        <span aria-hidden className="absolute left-[8.33%] top-3 h-px bg-verde-vivo" style={{ width: `${(Math.min(actual, 5) / 6) * 100}%` }} />
+        <span aria-hidden className="absolute left-[8.33%] right-[8.33%] top-3 h-0.5 bg-cf-borde" />
+        <span aria-hidden className="absolute left-[8.33%] top-3 h-0.5 bg-cf-morado-secundario" style={{ width: `${(Math.min(actual, 5) / 6) * 100}%` }} />
         {PASOS_FICHA.map((p, i) => {
           const hecho = i < actual || (i === actual && enOperacion(a))
           const esActual = i === actual && !enOperacion(a)
           const estado = descartado && i === actual ? 'descartado' : hecho ? 'hecho' : esActual ? 'actual' : 'pendiente'
-          const nodo = { hecho: 'bg-verde-vivo text-blanco', actual: 'bg-cf-morado text-blanco ring-4 ring-cf-lavanda', descartado: 'bg-rojo text-blanco', pendiente: 'border border-cf-borde bg-blanco text-cf-texto-suave' }[estado]
-          const texto = { hecho: 'text-cf-texto', actual: 'font-extrabold text-cf-morado', descartado: 'font-extrabold text-rojo-oscuro', pendiente: 'text-cf-texto-suave' }[estado]
+          const nodo = { hecho: 'border-2 border-cf-morado-secundario bg-blanco text-cf-morado', actual: 'bg-cf-morado text-blanco ring-4 ring-cf-lavanda', descartado: 'bg-rojo text-blanco', pendiente: 'border border-cf-borde bg-blanco text-cf-texto-suave' }[estado]
+          const texto = { hecho: 'text-cf-texto', actual: 'font-bold text-cf-morado', descartado: 'font-extrabold text-rojo-oscuro', pendiente: 'text-cf-texto-suave' }[estado]
           return (
             <li key={p} aria-current={esActual ? 'step' : undefined} className={`relative flex flex-col items-center gap-1 ${descartado && i > actual ? 'opacity-40' : ''}`}>
               <span className={`relative z-10 grid h-6 w-6 place-items-center rounded-full text-[11px] font-extrabold ${nodo}`}>{estado === 'hecho' ? '✓' : estado === 'descartado' ? '✕' : i + 1}</span>
@@ -71,16 +71,16 @@ export default function FichaDemo({ a, estado, tab, setTab, hacer, volver, mensa
   a: AspiranteDemo; estado: EstadoDemo; tab: TabFicha; setTab: (t: TabFicha) => void; hacer: Hacer; volver: () => void; mensaje: React.ReactNode
 }) {
   const p = proximaAccion(a, estado.solicitudes)
-  const tonoProxima = p.tipo === 'disponible' ? 'border-verde-vivo' : p.tipo === 'cerrado' ? 'border-cf-borde' : 'border-cf-morado'
+  const tonoProxima = p.tipo === 'disponible' ? 'border-verde-vivo' : p.tipo === 'cerrado' ? 'border-cf-borde' : 'border-cf-morado-secundario'
   return (
     <div className="space-y-4">
       <button type="button" onClick={volver} className="inline-flex min-h-9 items-center gap-1 text-sm font-bold text-cf-morado">‹ Volver a la lista</button>
 
-      <header className="space-y-4 border-b border-cf-borde pb-5">
+      <header className="space-y-4 rounded-xl bg-cf-lateral p-4 sm:p-5">
         <div className="flex flex-wrap items-start gap-x-3 gap-y-1">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full bg-amarillo-claro px-2 py-0.5 text-xs font-bold text-ambar-oscuro">Demo · ficticio</span>
+              <span className="rounded-full bg-cf-lavanda px-2.5 py-0.5 text-xs font-semibold text-cf-morado">Demo · ficticio</span>
               <span className="text-xs font-bold text-cf-texto-suave">{a.id}</span>
             </div>
             <h2 className="mt-1 text-2xl font-extrabold leading-tight">{a.nombre}</h2>
@@ -89,7 +89,7 @@ export default function FichaDemo({ a, estado, tab, setTab, hacer, volver, mensa
           <span className="ml-auto"><EtiquetaEtapa etapa={enOperacion(a) ? 'En operación' : a.etapa} /></span>
         </div>
         <Progreso a={a} />
-        <div className={`border-l-[3px] py-0.5 pl-3 ${tonoProxima}`}>
+        <div className={`rounded-lg border-l-[3px] bg-cf-cabecera py-2 pl-3 pr-3 ${tonoProxima}`}>
           <p className="text-sm"><span className="font-extrabold">Próxima acción:</span> {p.texto}</p>
           {p.solicitud && <p className="mt-0.5 text-sm"><span className="font-extrabold">Solicitud en curso · {p.solicitud.familia}:</span> {p.solicitud.texto}.</p>}
         </div>

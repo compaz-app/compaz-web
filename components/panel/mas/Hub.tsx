@@ -17,7 +17,7 @@ export default function Hub({ actor, enlace, confianzaHref = null }: { actor: Ac
       {confianzaHref && (
         <Link prefetch={false} href={confianzaHref} className="block rounded-xl border-2 border-morado-medio bg-blanco p-3 hover:bg-lavanda-sutil lg:hidden">
           <span className="flex items-center gap-2 text-base font-extrabold">CMC<span aria-hidden className="ml-auto text-texto-sutil">›</span></span>
-          <span className="mt-1 block text-sm text-texto-medio">Centro de Mando Compaz: selección, verificación y habilitación de Compitas.</span>
+          <span className="mt-1 block text-sm text-texto-medio">Centro de Mando Compitaz: selección, verificación y habilitación de Compitas.</span>
         </Link>
       )}
       <ul className="grid gap-2 sm:grid-cols-2">

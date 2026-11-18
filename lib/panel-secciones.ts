@@ -18,7 +18,7 @@ export const SECCIONES_PANEL: DefSeccion[] = [
   { id: 'bandeja', texto: 'Bandeja', permiso: 'atender' },
   { id: 'seguimiento', texto: 'Seguimiento', permiso: 'monitorear' },
   { id: 'personas', texto: 'Personas', permiso: 'monitorear' },
-  { id: 'confianza', texto: 'CMC', permiso: 'monitorear', enBarraMovil: false }, // CMC · Centro de Mando Compaz (Sistema de Confianza)
+  { id: 'confianza', texto: 'CMC', permiso: 'monitorear', enBarraMovil: false }, // CMC · Centro de Mando Compitaz (Sistema de Confianza)
   { id: 'visitas', texto: 'Visitas', permiso: 'monitorear' },
   { id: 'pagos', texto: 'Pagos', permiso: 'pagos' },
   { id: 'mas', texto: 'Más', permiso: 'cualquiera' },
