@@ -146,8 +146,7 @@ export async function sendAccesoEmail(email: string, nombre: string, enlaceAcces
         <a href="${escapeHtml(enlaceAcceso)}" style="display:inline-block;background:#FF6B2B;color:white;padding:16px 32px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:17px">Entrar a Compaz →</a>
         ${bloqueCodigo}
         <p style="color:#6B5C90;font-size:13px;line-height:1.6;margin:16px 0 0">El enlace y el código son personales, funcionan una sola vez y <strong>vencen en 1 hora</strong>. Si pides otro, <strong>usa siempre el correo más reciente</strong>: el anterior deja de servir. Si no lo pediste, ignora este correo.</p>
-        <p style="color:#9990A8;font-size:13px;margin-top:20px">Compaz, <em>Cerca aunque estés lejos</em></p>
-      </div>
+</div>
     `,
   })
 }
@@ -159,51 +158,17 @@ export async function sendBienvenidaCliente(email: string, nombre: string, enlac
     subject: `Bienvenido a Compaz, ${nombre.split(' ')[0]}`,
     html: `
       <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px;background:#FDFAF6">
-        <h1 style="color:#2D1464;font-size:26px;margin-bottom:8px">¡Hola, ${primero}!</h1>
-        <p style="color:#4A3B6B;font-size:16px;line-height:1.6;margin-bottom:20px">
-          Te damos la bienvenida a Compaz. Lee los tres pasos a continuación y luego activa tu cuenta.
-        </p>
-
-        <div style="background:white;border:2px solid #E8E0D4;border-radius:16px;padding:24px;margin-bottom:16px">
-          <p style="color:#FF6B2B;font-weight:800;font-size:13px;margin:0 0 8px;text-transform:uppercase;letter-spacing:1px">Paso 1</p>
-          <h2 style="color:#2D1464;font-size:18px;margin:0 0 10px">Explora los compitas disponibles</h2>
-          <p style="color:#4A3B6B;font-size:15px;line-height:1.6;margin:0">
-            Desde tu portal puedes ver perfiles, leer descripciones y elegir quién mejor se adapta a las necesidades de tu familiar.
-          </p>
-        </div>
-
-        <div style="background:white;border:2px solid #E8E0D4;border-radius:16px;padding:24px;margin-bottom:16px">
-          <p style="color:#FF6B2B;font-weight:800;font-size:13px;margin:0 0 8px;text-transform:uppercase;letter-spacing:1px">Paso 2</p>
-          <h2 style="color:#2D1464;font-size:18px;margin:0 0 10px">Solicita una entrevista</h2>
-          <p style="color:#4A3B6B;font-size:15px;line-height:1.6;margin:0">
-            Cuando encuentres un compita que te interese, propón tres horarios para una videollamada de 20 minutos. El compita confirmará el que mejor le funcione.
-          </p>
-        </div>
-
-        <div style="background:white;border:2px solid #E8E0D4;border-radius:16px;padding:24px;margin-bottom:24px">
-          <p style="color:#FF6B2B;font-weight:800;font-size:13px;margin:0 0 8px;text-transform:uppercase;letter-spacing:1px">Paso 3</p>
-          <h2 style="color:#2D1464;font-size:18px;margin:0 0 10px">Agenda la primera visita</h2>
-          <p style="color:#4A3B6B;font-size:15px;line-height:1.6;margin:0">
-            Después de la entrevista, coordina directamente con el compita y agenda el primer día de visita. Recibirás actualizaciones en tiempo real.
-          </p>
-        </div>
-
-        <a href="${escapeHtml(enlaceAcceso)}" style="display:inline-block;background:#FF6B2B;color:white;padding:16px 32px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:17px;margin-bottom:12px">
-          Activar mi cuenta y entrar →
-        </a>
-        <p style="color:#6B5C90;font-size:13px;line-height:1.6;margin:0 0 28px">
-          Este enlace es personal, funciona una sola vez y <strong>vence en 1 hora</strong>. Después podrás entrar siempre desde micompaz.com/login: escribes tu correo y te enviamos un enlace nuevo. Si este enlace venció, entra a micompaz.com/login, escribe tu correo y te enviamos uno nuevo al instante.
-        </p>
-
-        <div style="background:#FFF3E8;border-left:4px solid #FF6B2B;border-radius:0 8px 8px 0;padding:14px 16px;margin-bottom:20px">
-          <p style="color:#B91C1C;font-weight:700;font-size:13px;margin:0 0 4px;font-family:Inter,sans-serif">Aviso de seguridad</p>
-          <p style="color:#1A0A3C;font-size:13px;line-height:1.6;margin:0">Compaz nunca te pedirá contraseñas, datos bancarios, números de cédula ni información privada por correo, chat ni ningún otro medio. Tampoco te pediremos que hagas transferencias de dinero directamente a una persona. Si alguien te lo solicita diciendo ser de Compaz, no respondas y avísanos a <a href="mailto:hola@micompaz.com" style="color:#FF6B2B">hola@micompaz.com</a>.</p>
-        </div>
-
-        <p style="color:#4A3B6B;font-size:15px;line-height:1.6;margin-top:8px">
-          Cualquier duda, responde este correo o escríbenos a <a href="mailto:hola@micompaz.com" style="color:#FF6B2B">hola@micompaz.com</a>.
-        </p>
-        <p style="color:#9990A8;font-size:13px;margin-top:8px">Compaz — <em>Cerca aunque estés lejos</em></p>
+        <h1 style="color:#2D1464;font-size:24px;margin:0 0 8px">Hola, ${primero}</h1>
+        <p style="color:#4A3B6B;font-size:16px;line-height:1.6;margin:0 0 12px">Activa tu cuenta y encuentra a quien acompañe a tu familiar:</p>
+        <ol style="color:#4A3B6B;font-size:16px;line-height:1.8;padding-left:22px;margin:0 0 20px">
+          <li>Mira los perfiles y elige a tu compita.</li>
+          <li>Propón horarios para una videollamada de 20 minutos.</li>
+          <li>Agenda la primera visita.</li>
+        </ol>
+        <a href="${escapeHtml(enlaceAcceso)}" style="display:inline-block;background:#FF6B2B;color:white;padding:16px 32px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:17px;margin-bottom:16px">Activar mi cuenta y entrar →</a>
+        <p style="color:#6B5C90;font-size:13px;line-height:1.6;margin:0 0 12px">El enlace vale 1 hora y se usa una sola vez. Después entras siempre desde micompaz.com/login.</p>
+        <p style="color:#6B5C90;font-size:13px;margin:0 0 6px">${AVISO_FRAUDE}</p>
+        <p style="color:#6B5C90;font-size:13px;margin:0">Dudas: <a href="mailto:hola@micompaz.com" style="color:#FF6B2B">hola@micompaz.com</a></p>
       </div>
     `,
   })
@@ -236,8 +201,7 @@ export function armarSolicitudCompita(
         <p style="color:#9990A8;font-size:13px;line-height:1.6">
           Cada botón funciona una sola vez. Si ya respondiste desde Telegram, ignora este correo.
         </p>
-        <p style="color:#9990A8;font-size:13px;margin-top:20px">Compaz — <em>Cerca aunque estés lejos</em></p>
-      </div>
+</div>
     `,
   }
 }
@@ -283,10 +247,7 @@ export async function sendVisitaInicio(
            style="display: inline-block; background: #FF6B2B; color: white; padding: 14px 28px; border-radius: 9999px; text-decoration: none; font-weight: 600; margin-top: 8px;">
           Ver visita en vivo
         </a>
-        <p style="color: #6B5C90; font-size: 14px; margin-top: 32px;">
-          Compaz — <em>Cerca aunque estés lejos</em>
-        </p>
-      </div>
+</div>
     `,
   })
 }
@@ -377,10 +338,7 @@ export function armarVisitaResumen(
             Agendar otra visita →
           </a>
         </div>`}
-        <p style="color: #6B5C90; font-size: 14px; margin-top: 32px;">
-          Compaz — <em>Cerca aunque estés lejos</em>
-        </p>
-      </div>
+</div>
     `,
   }
 }
@@ -459,8 +417,7 @@ export function armarResumenConReporte(
             Agendar otra visita →
           </a>
         </div>`}
-        <p style="color:#6B5C90;font-size:13px;margin-top:32px">Compaz — <em>Cerca aunque estés lejos</em></p>
-      </div>
+</div>
     `,
   }
 }

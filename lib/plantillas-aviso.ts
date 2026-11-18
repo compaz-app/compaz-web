@@ -291,8 +291,7 @@ const llamadaTerminadaCliente: Plantilla = {
                 <a href="${d.reagendarUrl}" style="display:block;background:#6B5C90;color:white;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:700;font-size:15px;text-align:center;margin-bottom:12px">${corta ? 'La llamada se cortó — quiero reagendar': 'Quiero reagendar para hablar más'}</a>
                 <a href="${d.noUrl}" style="display:block;background:#E8E0D4;color:#1A0A3C;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:700;font-size:15px;text-align:center">${corta ? 'No pude hablar — ver otros compitas': 'No es lo que busco — ver otros perfiles'}</a>
               </div>
-              <p style="color:#6B5C90;font-size:13px;margin-top:32px">Compaz — <em>Cerca aunque estés lejos</em></p>
-            </div>`,
+</div>`,
       },
     }
   },

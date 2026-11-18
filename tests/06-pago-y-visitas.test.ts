@@ -100,16 +100,16 @@ describe('Ciclo de la visita (cliente ↔ compita)', () => {
     assert.equal(v.estado, 'en_curso')
     assert.match(tgPara(910).at(-1)!.text, /confirmó tu llegada/)
     assert.match(tgPara(910).at(-1)!.text, /&lt;8am/, 'el "<" del familiar llega escapado')
-    assert.equal(emailsA('cli@mail.test').filter((e) => e.subject.includes('llegó con tu familiar')).length, 1)
+    assert.equal(emailsA('cli@mail.test').filter((e) => e.subject.includes('llegó con tu familiar')).length, 0, 'el cliente acaba de confirmar él mismo: no hace falta otro correo')
     assert.ok(avisosAdmin().some((m) => m.text.includes('Visita iniciada')))
   })
 
-  test('doble toque en "Sí, iniciar": una sola visita en curso y un solo correo', async () => {
+  test('doble toque en "Sí, iniciar": una sola visita en curso (y ningún correo de más)', async () => {
     const { v } = mundo()
     await webhook(tgText(910, '▶️ Iniciar visita'))
     await Promise.all([webhook(tgText(910, '✅ Sí, iniciar')), webhook(tgText(910, '✅ Sí, iniciar'))]); await confirmarLlegada()
     assert.equal(db.rows('visitas').filter((x) => x.estado === 'en_curso').length, 1)
-    assert.equal(emailsA('cli@mail.test').filter((e) => e.subject.includes('llegó con tu familiar')).length, 1)
+    assert.equal(emailsA('cli@mail.test').filter((e) => e.subject.includes('llegó con tu familiar')).length, 0)
     void v
   })
 
@@ -136,7 +136,25 @@ describe('Ciclo de la visita (cliente ↔ compita)', () => {
     const v2 = mkVisita(otro, compita, { estado: 'programada', fecha_programada: hoyVEstr(), hora_inicio_programada: '15:00', hora_fin_programada: '17:00' })
     await iniciar()
     assert.equal(v2.estado, 'en_curso'); assert.equal(v.estado, 'programada')
-    assert.equal(emailsA('otro@mail.test').length, 2, 'aviso de llegada + inicio confirmado'); assert.equal(emailsA('cli@mail.test').length, 0)
+    assert.equal(emailsA('otro@mail.test').length, 1, 'solo el aviso de llegada (confirmar el inicio lo hizo él mismo)'); assert.equal(emailsA('cli@mail.test').length, 0)
+  })
+
+  test('te escribió: DURANTE la visita llega UN solo correo (el portal muestra el resto en vivo); antes de la visita, uno cada 10 minutos', async () => {
+    const { v } = mundo()
+    // antes de la visita (programada): pasados 10 minutos vuelve a avisar
+    await webhook(tgText(910, 'Hola, ¿cómo estás?'))
+    for (const m of db.rows('mensajes')) if (m.contenido === 'email_notif_mensaje') m.created_at = new Date(Date.now() - 11 * 60_000).toISOString()
+    await webhook(tgText(910, 'Te escribo por la hora'))
+    assert.equal(emailsA('cli@mail.test').filter((e) => e.subject.includes('te escribió')).length, 2)
+    // en curso: aunque pasen 30 minutos, no hay segundo correo
+    await iniciar(); net.emails = []
+    await webhook(tgText(910, 'Ya llegué, todo bien'))
+    for (const m of db.rows('mensajes')) if (m.contenido === 'email_notif_mensaje') m.created_at = new Date(Date.now() - 30 * 60_000).toISOString()
+    await webhook(tgText(910, 'Comió muy bien'))
+    assert.ok(emailsA('cli@mail.test').filter((e) => e.subject.includes('te escribió')).length <= 1)
+    const correo = emailsA('cli@mail.test').find((e) => e.subject.includes('te escribió'))
+    if (correo) { assert.match(correo.html, /\/portal\?sec=visitas/); assert.doesNotMatch(correo.html, /dashboard/) }
+    void v
   })
 
   test('mensajes: se guardan, se limita el email a 1 cada 10 min, y si Resend falla el siguiente reintenta', async () => {

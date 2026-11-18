@@ -1175,8 +1175,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
               <a href="${SITE_URL_PUBLICA}/dashboard" style="display:inline-block;background:#FF6B2B;color:white;padding:12px 24px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:14px;margin-top:8px">
                 Ir al chat →
               </a>
-              <p style="color:#9990A8;font-size:13px;margin-top:32px">Compaz — <em>Cerca aunque estés lejos</em></p>
-            </div>
+</div>
           `,
         })
         emailEnviado = true
@@ -1463,8 +1462,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
               <p style="color:#4A3B6B;font-size:15px;line-height:1.6"><strong>${esc(compita.nombre)}</strong> está lista para empezar la visita. Entra al dashboard y confirma el inicio.</p>
               <a href="${SITE_URL_PUBLICA}/dashboard" style="display:inline-block;background:#FF6B2B;color:white;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:15px;margin-top:8px">Confirmar inicio →</a>
               <p style="color:#9990A8;font-size:13px;margin-top:24px">Si no confirmas en 5 minutos, la visita arranca sola.</p>
-              <p style="color:#9990A8;font-size:13px">Compaz — <em>Cerca aunque estés lejos</em></p>
-            </div>`,
+</div>`,
         }).catch(e => console.error('[telegram-webhook] email confirmando_inicio cliente:', e))
       }
 
@@ -1598,8 +1596,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
               <a href="${SITE_URL}/compitas?compita=${encodeURIComponent(compita.id)}&reagendar=${encodeURIComponent(solicitudId)}" style="display:inline-block;background:#FF6B2B;color:white;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:16px;margin-top:4px">
                 Agendar con ${esc(compita.nombre)} →
               </a>
-              <p style="color:#6B5C90;font-size:13px;margin-top:24px">Compaz — <em>Cerca aunque estés lejos</em></p>
-            </div>
+</div>
           `,
         })
         emailHorarioEnviado = true
@@ -1834,10 +1831,12 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
       await sendTelegramMessage(chatId, `Tu mensaje era muy largo: se envió solo la primera parte (1000 caracteres).`)
     }
 
-    // Email al cliente cuando la compita escribe — throttling: 1 email cada 10 min por visita
+    // Email al cliente cuando la compita escribe. Antes de la visita: 1 cada 10 min. DURANTE la visita (en curso): UNO solo por visita, porque el portal ya muestra los
+    // mensajes y las fotos en vivo y un correo cada 10 minutos llenaba el buzón (ver docs/versiones.md 1.3.23).
     if (visitaActiva.estado === 'programada' || visitaActiva.estado === 'en_curso') {
       try {
-        const hace10min = new Date(Date.now() - 10 * 60_000).toISOString()
+        const ventanaMs = visitaActiva.estado === 'en_curso' ? 12 * 3_600_000 : 10 * 60_000
+        const hace10min = new Date(Date.now() - ventanaMs).toISOString()
         const { count: emailsRecientes } = await supabase
           .from('mensajes')
           .select('id', { count: 'exact', head: true })
@@ -1868,11 +1867,10 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
                       <div style="background:#F5F0FF;border-left:4px solid #7C4DFF;border-radius:8px;padding:16px 20px;margin:16px 0;color:#1A0A3C;font-size:15px;line-height:1.6">
                         ${esc(contenido).replace(/\n/g, '<br>')}
                       </div>
-                      <a href="${SITE_URL_PUBLICA}/dashboard" style="display:inline-block;background:#FF6B2B;color:white;padding:12px 24px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:14px;margin-top:8px">
-                        Ver en el dashboard →
+                      <a href="${SITE_URL_PUBLICA}/portal?sec=visitas" style="display:inline-block;background:#FF6B2B;color:white;padding:12px 24px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:14px">
+                        Verlo en mi portal →
                       </a>
-                      <p style="color:#9990A8;font-size:13px;margin-top:32px">Compaz — <em>Cerca aunque estés lejos</em></p>
-                    </div>
+</div>
                   `,
                 })
               } catch (e) {

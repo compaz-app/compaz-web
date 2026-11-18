@@ -70,8 +70,7 @@ export async function POST(req: NextRequest) {
             <p style="color:#4A3B6B;font-size:15px;line-height:1.6">En breve recibirás otro correo con los horarios que propone ${esc(solicitud.compita_nombre ?? '')} para que elijas el que mejor te quede.</p>
             <p style="color:#4A3B6B;font-size:15px;line-height:1.6">También puedes verlo desde tu portal:</p>
             <a href="${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://micompaz.com'}/dashboard" style="display:inline-block;background:#FF6B2B;color:white;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:600;margin-top:8px">Ver mi portal →</a>
-            <p style="color:#6B5C90;font-size:13px;margin-top:24px">Compaz — <em>Cerca aunque estés lejos</em></p>
-          </div>`,
+</div>`,
       })
     } catch (e) { console.error('Email cliente reagendar:', e) }
   }

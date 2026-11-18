@@ -72,8 +72,7 @@ export async function POST(req: NextRequest) {
             <h2 style="color:#2D1464;font-size:22px">Nueva sala lista</h2>
             <p style="color:#4A3B6B;font-size:16px;line-height:1.6">La llamada se cortó pero <strong>${esc(solicitud.compita_nombre)}</strong> está lista para retomar ahora.</p>
             <a href="${salaClienteUrl}" style="display:inline-block;background:#FF6B2B;color:white;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:16px;margin-top:16px">Entrar a la nueva sala →</a>
-            <p style="color:#6B5C90;font-size:13px;margin-top:24px">Compaz — <em>Cerca aunque estés lejos</em></p>
-          </div>`,
+</div>`,
       })
     }
   } catch (e) { console.error('Aviso reconexión falló:', e) }

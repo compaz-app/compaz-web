@@ -77,8 +77,7 @@ export async function registrarRespuestaLlamada(token: string, quien: 'cliente' 
               <a href="${SITE_URL}/reagendar/${encodeURIComponent(token)}" style="display:inline-block;background:#FF6B2B;color:white;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:16px;margin-top:16px">
                 Proponer nuevos horarios →
               </a>
-              <p style="color:#6B5C90;font-size:13px;margin-top:32px">Compaz — <em>Cerca aunque estés lejos</em></p>
-            </div>`,
+</div>`,
         })
       } catch (e) {
         console.error('Email reagendar al cliente:', e)

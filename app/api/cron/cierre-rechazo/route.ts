@@ -90,8 +90,7 @@ export async function POST(req: NextRequest) {
               <p style="color:#4A3B6B;font-size:16px;line-height:1.6"><strong>${esc(compitaNombre)}</strong> no pudo proponer horarios alternativos para atenderte.</p>
               <p style="color:#4A3B6B;font-size:15px;line-height:1.6">No te preocupes. Hay más compitas disponibles. Explora otros perfiles y encuentra el que mejor se adapte a tu familiar.</p>
               <a href="${SITE_URL}/compitas" style="display:inline-block;background:#FF6B2B;color:white;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:16px;margin-top:4px">Ver otros compitas →</a>
-              <p style="color:#6B5C90;font-size:13px;margin-top:24px">Compaz — <em>Cerca aunque estés lejos</em></p>
-            </div>`,
+</div>`,
         })
       } catch (e) {
         console.error('Email cierre rechazo cliente:', e)
@@ -138,8 +137,7 @@ export async function POST(req: NextRequest) {
                 <h2 style="color:#2D1464;font-size:22px">Tu solicitud no recibió respuesta</h2>
                 <p style="color:#4A3B6B;font-size:16px;line-height:1.6"><strong>${esc(nombreCompita)}</strong> no alcanzó a responder tu solicitud de entrevista. Puedes elegir a otra compita disponible.</p>
                 <a href="${SITE_URL}/compitas" style="display:inline-block;background:#FF6B2B;color:white;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:16px;margin-top:4px">Ver compitas →</a>
-                <p style="color:#6B5C90;font-size:13px;margin-top:24px">Compaz — <em>Cerca aunque estés lejos</em></p>
-              </div>`,
+</div>`,
           })
         } catch (e) { console.error('Email cierre pendiente:', e) }
       }

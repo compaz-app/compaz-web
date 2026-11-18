@@ -53,7 +53,7 @@ export async function procesarSolicitudesSinHora(ahora: Date = new Date()): Prom
                   <h2 style="color:#2D1464;font-size:22px">Elige la hora de tu llamada</h2>
                   <p style="color:#4A3B6B;font-size:16px;line-height:1.6">Tu llamada con <strong>${esc(nombreCompita)}</strong> sigue sin hora. Elige una de las horas libres y ella la confirma.</p>
                   <a href="${enlace}" style="display:inline-block;background:#FF6B2B;color:white;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:16px;margin-top:8px">Elegir la hora →</a>
-                  <p style="color:#6B5C90;font-size:13px;margin-top:32px">Compaz — <em>Cerca aunque estés lejos</em></p></div>`,
+</div>`,
               })
             } catch (e) { console.error('[sin-hora] correo:', e) }
           }

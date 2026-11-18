@@ -72,8 +72,7 @@ export async function POST(req: NextRequest) {
               </div>
               <p style="color:#4A3B6B;font-size:14px;line-height:1.6">Si necesitas hacer algún cambio, entra al dashboard y comunícaselo a ${esc(compita?.nombre ?? 'tu compita')} por el chat. También puedes reagendar desde allí si surge algún imprevisto.</p>
               <a href="${SITE_URL}/dashboard" style="display:inline-block;background:#FF6B2B;color:white;padding:12px 24px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:14px;margin-top:8px">Ver en el dashboard →</a>
-              <p style="color:#9990A8;font-size:13px;margin-top:32px">Compaz — <em>Cerca aunque estés lejos</em></p>
-            </div>`,
+</div>`,
         })
         ok = true
       } catch (e) { console.error('Email recordatorio visita cliente:', e) }

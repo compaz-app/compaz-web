@@ -203,7 +203,7 @@ export async function avisarCompitaVerificada(compitaId: string): Promise<'teleg
           <h2 style="color:#2D1464;font-size:22px">¡Tu perfil fue verificado, ${esc(c.nombre.split(' ')[0])}!</h2>
           <p style="color:#4A3B6B;font-size:16px;line-height:1.6">Para aparecer ante las familias y recibir solicitudes, falta que conectes Telegram: abre el bot, pulsa <strong>Iniciar</strong>, escribe tu nombre tal como lo registraste y confirma el código que te llegará a este correo.</p>
           ${bot ? `<a href="https://t.me/${encodeURIComponent(bot)}" style="display:inline-block;background:#FF6B2B;color:white;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:16px;margin-top:8px">Abrir el bot de Telegram →</a>` : ''}
-          <p style="color:#9990A8;font-size:13px;margin-top:28px">Compaz, <em>Cerca aunque estés lejos</em></p></div>`,
+</div>`,
       })
       return 'correo'
     } catch (e) { console.error('[verificar] correo a la compita falló:', e) }

@@ -84,8 +84,7 @@ export async function POST(req: NextRequest) {
             <a href="${SITE_URL}/dashboard" style="display:inline-block;background:#FF6B2B;color:white;padding:12px 24px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:14px;margin-top:8px">
               Ir al chat →
             </a>
-            <p style="color:#9990A8;font-size:13px;margin-top:32px">Compaz — <em>Cerca aunque estés lejos</em></p>
-          </div>
+</div>
         `,
       })
     } catch (e) { console.error('Email reagendar cliente:', e) }

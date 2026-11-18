@@ -86,7 +86,7 @@ describe('el compita recibe la dirección 3 horas antes', () => {
     assert.ok(m, 'recibió la dirección')
     assert.match(m.text, /Av\. Francisco de Miranda/); assert.match(m.text, /conserjería/); assert.match(m.text, /Rosa, la vecina/); assert.match(m.text, /Rosa Linares/)
     assert.ok(!m.text.includes('555') && !m.text.includes('+58'), 'el teléfono del contacto NUNCA llega al compita')
-    assert.match(m.text, /nunca por el chat/); assert.match(m.text, /Compaz nunca te pedirá/, 'lleva la advertencia antifraude')
+    assert.match(m.text, /nunca por el chat/); assert.match(m.text, /Compaz nunca te pide/, 'lleva la advertencia antifraude')
     assert.match(m.text, /Quién más estará/)
     assert.deepEqual((m.markup?.inline_keyboard ?? []).flat().map((b: any) => b.callback_data), [`camino:${db.rows('visitas')[0].id}`, 'duda'])
     assert.ok(db.rows('eventos').some((e) => e.tipo === 'direccion_entregada'))

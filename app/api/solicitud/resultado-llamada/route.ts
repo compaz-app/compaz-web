@@ -140,8 +140,7 @@ async function ejecutar(req: NextRequest, p: NonNullable<ReturnType<typeof leer>
                   <strong>${esc(solicitud.compita_nombre)}</strong> tuvo un problema técnico y necesita reagendar.
                   En breve recibirás un correo con nuevos horarios disponibles.
                 </p>
-                <p style="color:#6B5C90;font-size:13px;margin-top:24px">Compaz — <em>Cerca aunque estés lejos</em></p>
-              </div>`,
+</div>`,
           })
         } catch (e) { console.error('Email reagendar al cliente desde compita:', e) }
       }

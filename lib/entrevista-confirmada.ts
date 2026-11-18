@@ -37,8 +37,7 @@ export async function anunciarEntrevistaConfirmada(i: { solicitud: Solicitud; co
             </p>
             <p style="color:#6B5C90;font-size:14px;line-height:1.6;margin-top:24px">¿Surgió algo y necesitas cambiar la fecha? Puedes proponer nuevos horarios desde aquí:</p>
             <a href="${SITE_URL_PUBLICA}/reagendar/${encodeURIComponent(solicitud.token_respuesta)}" style="display:inline-block;background:#6B5C90;color:white;padding:12px 24px;border-radius:9999px;text-decoration:none;font-weight:700;font-size:14px;margin-top:4px">Reagendar llamada</a>
-            <p style="color:#6B5C90;font-size:13px;margin-top:24px">Compaz — <em>Cerca aunque estés lejos</em></p>
-          </div>
+</div>
         `,
       })
       emailOk = true

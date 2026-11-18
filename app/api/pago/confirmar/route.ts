@@ -149,8 +149,7 @@ export async function POST(req: NextRequest) {
               <p style="color:#4A3B6B;font-size:14px;margin:0;line-height:1.6">Entra al dashboard, habla con ${corto} por el chat y acuerden la fecha y hora de la primera visita.</p>
             </div>
             <a href="${SITE_URL}/dashboard?contratado=1" style="display:inline-block;background:#FF6B2B;color:white;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:15px">Coordinar primera visita →</a>
-            <p style="color:#9990A8;font-size:13px;margin-top:32px">Compaz — <em>Cerca aunque estés lejos</em></p>
-          </div>`,
+</div>`,
       })
     } catch (e) { console.error('Email confirmación cliente contratado:', e) }
   }

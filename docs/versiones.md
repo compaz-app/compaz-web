@@ -4,6 +4,16 @@ La versión vigente está en `lib/version.ts` y se ve en el panel (menú lateral
 
 Reglas: mayor = cambio grande o lanzamiento; menor = función nueva; parche = arreglo. La etapa `beta` sale cuando el sistema corre una o dos semanas con uso real sin sorpresas.
 
+## 1.3.23-beta.1 (2026-11-18)
+Correos del cliente: menos y más cortos (tercera parte de la reducción de textos).
+1. Medido (correos reales de las pruebas): un cliente recibía unos 11 correos hasta su primera visita. El «trío» de la llamada (confirmada, empieza a las…, link de acceso) eran en realidad DOS normales más uno que solo manda el equipo a mano, así que ese no se junta.
+2. «Llegó con tu familiar»: ya no sale cuando el cliente confirma él mismo la llegada (acababa de pulsar el botón y el portal ya lo muestra). Sigue saliendo cuando la visita arranca sola porque no confirmó (aviso-inicio-visita). «Ya llegó, confirma el inicio» no cambia: es el aviso importante.
+3. «Te escribió en Compaz»: durante la visita llega UN solo correo por visita (antes uno cada 10 minutos; el portal muestra los mensajes y las fotos en vivo); antes de la visita sigue siendo uno cada 10 minutos. El correo dice «Verlo en mi portal» y apunta al portal nuevo.
+4. Bienvenida del cliente: de 227 a unas 65 palabras (3 pasos, el botón, la vigencia del enlace, el aviso de fraude y el correo de ayuda).
+5. El lema «Compaz, cerca aunque estés lejos» sale de los 30 correos y mensajes transaccionales (queda en la landing).
+6. Advertencias de seguridad, cortas y comunes: el aviso de 49 palabras de los correos de seguimiento pasa a la frase común de contacto por fuera; los textos por defecto de Ajustes pasan de 46 a 28 palabras (fraude del cliente), de 37 a 25 (fraude del compita) y de 30 a 24 (contacto detectado en el chat). Si ya cambiaron estos textos en Ajustes, sus textos propios se respetan.
+7. Prueba 128 (presupuestos y comportamiento). Pendiente: los mensajes largos de Telegram («¡Te contrataron!», «decidió no continuar», «Gracias por tu dedicación») y la prueba general de presupuestos. Sin migración.
+
 ## 1.3.22-beta.1 (2026-11-18)
 Inscripción del compita: el formulario de registro y su pantalla de activación son más cortos (segunda parte de la reducción de textos).
 1. Formulario: de 366 a 267 palabras visibles por defecto (la guía de cómo grabar y subir el video ya estaba plegada y no cuenta). Los textos de ayuda bajo cada campo pasan a una frase corta («Solo lo ve el equipo, nunca las familias.», «Aquí te llega el código para activar Telegram.»…). Se quitaron las repeticiones (la lista de ejemplos de habilidades salía dos veces) y la promesa de «triplicar las probabilidades».

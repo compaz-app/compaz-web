@@ -16,15 +16,12 @@ import { esc } from '@/lib/html'
 import { qRol } from '@/lib/links'
 import { cronAutorizado, latido } from '@/lib/cron'
 import { ok, err } from '@/lib/api'
+import { AVISO_FUERA } from '@/lib/avisos-seguridad'
 import { procesarSolicitudesSinHora } from '@/lib/sin-hora'
 import type { Solicitud } from '@/types'
 
 const AVISO_PLATAFORMA_CLIENTE = `
-  <div style="background:#FFF3E8;border:2px solid #FF6B2B;border-radius:12px;padding:14px 18px;margin-top:24px">
-    <p style="color:#C84B0E;font-size:13px;line-height:1.6;margin:0">
-      <strong>Importante:</strong> Para que Compaz pueda garantizarte el servicio, mantén toda la comunicación con tu compita dentro de la plataforma. Si coordinan por fuera, Compaz no podrá responder por lo que suceda ni ofrecer ningún tipo de cobertura o garantía. Estamos aquí para protegerte a ti y a tu familiar.
-    </p>
-  </div>`
+  <p style="color:#C84B0E;font-size:13px;line-height:1.6;margin:24px 0 0">${AVISO_FUERA}</p>`
 
 function emailDecision(s: Solicitud, asunto: string, titulo: string, intro: string): { subject: string; html: string } {
   const base = `${SITE_URL}/api/solicitud/seguimiento?token=${s.token_respuesta}`
@@ -42,8 +39,7 @@ function emailDecision(s: Solicitud, asunto: string, titulo: string, intro: stri
           <a href="${noUrl}" style="display:inline-block;background:#E8E0D4;color:#1A0A3C;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:700;font-size:15px;margin-top:8px">No por ahora</a>
         </div>
         ${AVISO_PLATAFORMA_CLIENTE}
-        <p style="color:#6B5C90;font-size:13px;margin-top:32px">Compaz — <em>Cerca aunque estés lejos</em></p>
-      </div>`,
+</div>`,
   }
 }
 
@@ -80,8 +76,7 @@ export async function POST(req: NextRequest) {
                   <a href="${url('cliente', 'si')}" style="display:inline-block;background:#22C55E;color:white;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:16px">Sí, todo bien</a><br>
                   <a href="${SITE_URL}/reagendar/${encodeURIComponent(t)}" style="display:inline-block;background:#E8E0D4;color:#1A0A3C;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:700;font-size:15px;margin-top:12px">No ocurrió — quiero reagendar</a>
                 </div>
-                <p style="color:#6B5C90;font-size:13px;margin-top:32px">Compaz — <em>Cerca aunque estés lejos</em></p>
-              </div>`,
+</div>`,
           })
           enviado = true
         } catch (e) { console.error('Email confirmacion cliente:', e) }
