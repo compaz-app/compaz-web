@@ -54,10 +54,10 @@ describe('el resumen de la visita', () => {
 
 describe('el reporte de bienestar', () => {
   const reporte = (v: any, o: any = {}) => db.seed('reportes_visita', { visita_id: v.id, animo: 5, fisico: 4, participacion: 4, entorno: 5, novedad: null, resumen_ia: 'Tu mamá estuvo de muy buen ánimo hoy.', ...o })
-  test('usa el resumen ya guardado (no llama a la IA al enviar) y es una actualización', async () => {
+  test('usa el resumen ya guardado (no llama a la IA al enviar) y es EL resumen de la visita (no una «actualización»)', async () => {
     const { v } = terminada(); const rep = reporte(v)
     const c = await PLANTILLAS.visita_reporte.render({ reporteId: rep.id })
-    assert.match(c!.correo!.asunto, /Actualización de la visita de hoy con María Pérez/); assert.match(c!.correo!.html, /muy buen ánimo/); assert.match(c!.correo!.html, /Indicadores de la visita/)
+    assert.match(c!.correo!.asunto, /^Resumen de la visita de hoy con María Pérez/); assert.match(c!.correo!.html, /muy buen ánimo/); assert.match(c!.correo!.html, /Indicadores de la visita/)
   })
   test('sin reporte no se manda; y sin resumen de IA igual sale con los indicadores', async () => {
     assert.equal(await PLANTILLAS.visita_reporte.render({ reporteId: crypto.randomUUID() }), null)
@@ -76,7 +76,7 @@ describe('el reporte de bienestar', () => {
 describe('Telegram usa el sistema de avisos', () => {
   test('al terminar y al guardar el reporte se llama a notificar, no al envío directo, y el compita sabe que la familia lo ve en su portal', () => {
     const w = readFileSync('app/api/telegram-webhook/route.ts', 'utf8')
-    assert.match(w, /plantilla: 'visita_resumen'/); assert.match(w, /plantilla: 'visita_reporte'/); assert.doesNotMatch(w, /sendVisitaResumen\(|sendResumenConReporte\(/)
-    assert.match(w, /en su portal/)
+    assert.match(w, /plantilla: 'visita_reporte'/); assert.doesNotMatch(w, /plantilla: 'visita_resumen'/, 'al terminar la visita ya no sale el resumen básico'); assert.doesNotMatch(w, /sendVisitaResumen\(|sendResumenConReporte\(/)
+    assert.match(w, /en su portal/); assert.match(w, /tipo: 'visita_terminada'/)
   })
 })

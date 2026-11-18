@@ -4,6 +4,15 @@ La versión vigente está en `lib/version.ts` y se ve en el panel (menú lateral
 
 Reglas: mayor = cambio grande o lanzamiento; menor = función nueva; parche = arreglo. La etapa `beta` sale cuando el sistema corre una o dos semanas con uso real sin sorpresas.
 
+## 1.3.20-beta.1 (2026-11-18)
+Un solo correo con el resumen de la visita, y se califica una sola vez.
+1. Antes, al terminar una visita el cliente recibía DOS correos casi iguales: uno al instante («resumen de la visita», con las estrellas) y otro cuando el compita completaba el cuestionario (el reporte, también con las estrellas, y hasta con asunto «Actualización»). Se podía calificar dos veces y la segunda decía «ya calificaste».
+2. Ahora, al terminar la visita NO sale ningún correo: solo un aviso en la campana del portal («La visita terminó. Estamos preparando el reporte.»). El cliente recibe UN correo, el resumen completo: la recomendación escrita por IA, los indicadores, lo que anotó el compita con sus propias palabras («Lo que anotó María») y la calificación con estrellas. Sale cuando el compita termina el cuestionario de bienestar.
+3. Respaldo: si el compita NO completa el cuestionario, a los 35 minutos de terminada la visita sale el resumen básico (mensajes, fotos y calificación), una sola vez (lo corre el cron `recordatorio-cuestionario`, código en `lib/resumen-visita.ts`). Si el cuestionario se completa, ese respaldo ya no sale. No se revisan visitas de más de 48 horas.
+4. Calificar una sola vez: el correo ya no ofrece las estrellas si el cliente ya calificó, y el enlace de una calificación ya hecha dice «Ya calificaste» sin pedir confirmar otra vez.
+5. El texto que ve el compita al terminar ya no promete un «resumen básico» a la familia: dice que con el cuestionario la familia recibe su reporte completo.
+6. Sin migración. Pendiente (no se tocó): revisar el resto de correos durante la visita (en camino, llegó, inicio de visita) por si se pueden juntar o dejar solo en el portal.
+
 ## 1.3.19-beta.1 (2026-11-18)
 Portal del cliente en el teléfono: tamaños fluidos y más compactos en pantallas bajas.
 1. Medido con los componentes reales en 375×667 (iPhone SE), 360×640 (Android chico), 390×844 (iPhone 14) y 430×932 (iPhone Pro Max): la tarjeta de siguiente paso ocupaba el 59 % de la pantalla en el iPhone SE y el 61 % en el Android chico, y el 37 % en el Pro Max, porque los tamaños eran fijos. El chat gastaba 144 px solo en marco (cabecera 58 y caja de escribir 86).

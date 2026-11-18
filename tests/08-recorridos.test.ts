@@ -343,9 +343,11 @@ describe('RECORRIDO 4: varios usuarios a la vez sobre la misma plataforma', () =
     // Terminan a la vez: un resumen por cliente, y cada cuestionario va a su visita
     await Promise.all([webhook(tgText(2300, '🔴 Terminar visita')), webhook(tgText(2301, '🔴 Terminar visita'))])
     await Promise.all([webhook(tgText(2300, '✅ Sí, terminar')), webhook(tgText(2301, '✅ Sí, terminar'))])
+    assert.equal(emailsA('carlos@mail.test').filter((e) => /^(Resumen|Actualización)/.test(e.subject)).length, 0, 'al terminar no sale correo')
+    for (const chat of [2300, 2301]) { for (const r of ['rr:5', 'rr:4', 'rr:3', 'rr:2']) await webhook(tgBtn(chat, r)); await webhook(tgBtn(chat, 'rn:skip')) }
+    // Cada cliente recibe UN resumen, al completar el cuestionario de SU visita
     assert.equal(emailsA('carlos@mail.test').filter((e) => e.subject.startsWith('Resumen')).length, 1)
     assert.equal(emailsA('pedro@mail.test').filter((e) => e.subject.startsWith('Resumen')).length, 1)
-    for (const chat of [2300, 2301]) { for (const r of ['rr:5', 'rr:4', 'rr:3', 'rr:2']) await webhook(tgBtn(chat, r)); await webhook(tgBtn(chat, 'rn:skip')) }
     assert.equal(db.rows('reportes_visita').length, 2)
     assert.deepEqual(db.rows('reportes_visita').map((r) => r.visita_id).sort(), [vCarlos.id, vPedro.id].sort())
   })

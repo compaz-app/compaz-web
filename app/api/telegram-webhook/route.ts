@@ -42,6 +42,7 @@ import { confirmarCita, rechazarCita } from '@/lib/citas'
 import { clientesReportables, reportarCliente, esMotivoReporte, MOTIVOS_REPORTE, MOTIVOS_DE_RIESGO, CUANDO, type MotivoReporte, type Cuando } from '@/lib/bloqueos-compita'
 import { llegadaConFotoObligatoria, registrarLlegada, declararNadieAbre, cerrarSinAcceso, tecladoLlegada } from '@/lib/llegada'
 import { notificar } from '@/lib/avisos'
+import { registrarNovedad } from '@/lib/novedades'
 import { confirmarPagoYAvisar } from '@/lib/confirmar-pago'
 import { anunciarEntrevistaConfirmada } from '@/lib/entrevista-confirmada'
 import { registrarMotivo, MOTIVOS } from '@/lib/motivos'
@@ -1515,12 +1516,9 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
       }
 
       if (visita.usuario) {
-        // El resumen básico sale por el sistema de avisos: el portal del cliente lo muestra en vivo y el correo es el respaldo (se cancela si el cliente ya lo vio).
-        const r = await notificar({ plantilla: 'visita_resumen', canal: 'correo', destinatario: { tipo: 'cliente', id: visita.usuario_id }, variables: { visitaId: visita.id }, entidad: 'visita', entidadId: visita.id, paso: 14 })
-        if (!r.ok && r.estado === 'fallido') {
-          console.error('Error correo básico al terminar:', r.error)
-          await alertaAdmin('actividad', `⚠️ No se pudo enviar el resumen de visita a <b>${esc(visita.usuario.nombre)}</b> (${esc(visita.usuario.email)}). Reenvíalo manualmente.`)
-        }
+        // Al terminar NO sale ningún correo: el cliente recibe UN solo correo con el resumen completo (resumen con IA, lo que anotó el compita y la calificación) cuando el
+        // compita termina el cuestionario, o el resumen básico si no lo completa en unos minutos (ver lib/resumen-visita.ts). Aquí solo se avisa en el portal.
+        await registrarNovedad({ usuarioId: visita.usuario_id, tipo: 'visita_terminada', nivel: 'informativo', titulo: 'La visita terminó. Estamos preparando el reporte.', ruta: '/portal?sec=visitas', entidad: 'visita', entidadId: visita.id, clave: `novedad:visita_terminada:${visita.id}` })
       }
 
       await setEstado(supabase, chatId, {
@@ -1530,7 +1528,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
 
       await sendTelegramMessage(
         chatId,
-        `🔴 <b>Visita terminada.</b>\n\n¡Gracias por tu trabajo de hoy, ${esc(compita.nombre)}! 🤝\n\nYa le dejamos el resumen básico a la familia en su portal. Ahora tómate un minuto para registrar cómo estuvo el familiar — ellos lo verán como una actualización. 📋`,
+        `🔴 <b>Visita terminada.</b>\n\n¡Gracias por tu trabajo de hoy, ${esc(compita.nombre)}! 🤝\n\nAhora tómate un minuto para registrar cómo estuvo el familiar: con eso la familia recibe su reporte completo. 📋`,
         TECLADO_SIN_VISITA,
       )
       await sendTelegramMessage(

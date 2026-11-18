@@ -4,6 +4,7 @@ import { beforeEach, test, describe, afterEach } from 'node:test'
 import assert from 'node:assert/strict'
 import { POST as pagoConfirmar } from '@/app/api/pago/confirmar/route'
 import { GET as pagoInfo } from '@/app/api/pago/info/route'
+import { enviarResumenesSinReporte } from '@/lib/resumen-visita'
 import { POST as webhook } from '@/app/api/telegram-webhook/route'
 import { PUT as fechaPut } from '@/app/api/visita/fecha/route'
 import { POST as reagendarCliente } from '@/app/api/visita/reagendar/route'
@@ -176,8 +177,10 @@ describe('Ciclo de la visita (cliente ↔ compita)', () => {
     const todo = JSON.stringify([db.rows('mensajes'), net.emails, net.tg])
     assert.ok(!todo.includes('TESTBOTTOKEN'), 'el token del bot no debe aparecer en datos persistidos ni notificaciones')
 
-    // terminar → correo resumen con foto firmada
+    // terminar → NO sale correo; si el compita no completa el cuestionario, a los 35 min sale el resumen básico (un solo correo) con la foto firmada
     await webhook(tgText(910, '🔴 Terminar visita')); await webhook(tgText(910, '✅ Sí, terminar'))
+    assert.equal(emailsA('cli@mail.test').filter((e) => e.subject.startsWith('Resumen')).length, 0, 'al terminar no sale correo')
+    await enviarResumenesSinReporte(new Date(Date.now() + 40 * 60_000))
     const resumen = emailsA('cli@mail.test').find((e) => e.subject.startsWith('Resumen'))!
     assert.match(resumen.html, /\/api\/foto\/[0-9a-f-]+\?e=\d+&amp;s=[0-9a-f]+/)
     assert.ok(!JSON.stringify(net.emails).includes('TESTBOTTOKEN'))
@@ -189,7 +192,8 @@ describe('Ciclo de la visita (cliente ↔ compita)', () => {
     await webhook(tgText(910, '🔴 Terminar visita'))
     await Promise.all([webhook(tgText(910, '✅ Sí, terminar')), webhook(tgText(910, '✅ Sí, terminar'))])
     assert.equal(v.estado, 'terminada')
-    assert.equal(emailsA('cli@mail.test').filter((e) => e.subject.startsWith('Resumen')).length, 1)
+    assert.equal(emailsA('cli@mail.test').filter((e) => e.subject.startsWith('Resumen') || e.subject.startsWith('Actualización')).length, 0, 'al terminar no sale ningún correo')
+    assert.ok(db.rows('novedades_cliente').some((n: any) => n.tipo === 'visita_terminada'), 'sí queda el aviso en el portal')
     assert.equal(compita.visitas_realizadas, 1)
     assert.match(tgPara(910).at(-1)!.text, /1 de 4/)
     for (const r of ['rr:5', 'rr:4', 'rr:N', 'rr:3']) await webhook(tgBtn(910, r))
@@ -197,7 +201,9 @@ describe('Ciclo de la visita (cliente ↔ compita)', () => {
     assert.equal(db.rows('reportes_visita').length, 1)
     const rep = db.rows('reportes_visita')[0]
     assert.deepEqual([rep.animo, rep.fisico, rep.participacion, rep.entorno], [5, 4, null, 3])
-    assert.equal(emailsA('cli@mail.test').filter((e) => e.subject.startsWith('Actualización')).length, 1)
+    // UN solo correo en total: el resumen completo, al terminar el cuestionario
+    assert.equal(emailsA('cli@mail.test').filter((e) => /^(Resumen|Actualización)/.test(e.subject)).length, 1)
+    assert.ok(emailsA('cli@mail.test').some((e) => e.subject.startsWith('Resumen de la visita de hoy')))
   })
 
   test('CRUCE: iniciar OTRA visita con el cuestionario pendiente NO borra el cuestionario', async () => {

@@ -748,7 +748,7 @@ const visitaReporte: Plantilla = {
     ])
     if (!usuario || !compita) return null
     const esRecurrente = ((previas ?? []) as { compita_id?: string }[]).some((x) => x.compita_id === vis.compita_id)
-    const c = armarResumenConReporte(usuario as never, compita as never, vis as never, (mensajes ?? []) as never, rep as never, String(rep.resumen_ia ?? ''), true, esRecurrente)
+    const c = armarResumenConReporte(usuario as never, compita as never, vis as never, (mensajes ?? []) as never, rep as never, String(rep.resumen_ia ?? ''), false, esRecurrente)
     return { correo: { asunto: c.asunto, html: c.html } }
   },
 }

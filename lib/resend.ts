@@ -418,12 +418,12 @@ export function armarVisitaResumen(
            style="display: inline-block; background: #2D1464; color: white; padding: 14px 28px; border-radius: 9999px; text-decoration: none; font-weight: 600; margin-top: 16px;">
           Ver historial completo
         </a>
-        <div style="margin-top:28px;padding-top:24px;border-top:1.5px solid #E8E0D4">
+        ${visita.rating_cliente ? '' : `<div style="margin-top:28px;padding-top:24px;border-top:1.5px solid #E8E0D4">
           <p style="color:#4A3B6B;font-size:14px;font-weight:600;margin:0 0 12px">¿Cómo estuvo la visita de hoy?</p>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
             ${[1,2,3,4,5].map(n => `<a href="${SITE_URL}/api/visita/rating?visita_id=${visita.id}&valor=${n}&t=${ratingToken(visita.id, n)}" style="display:inline-block;background:#F5F0FF;border:2px solid #D4C9E8;color:#2D1464;padding:8px 14px;border-radius:9999px;text-decoration:none;font-weight:700;font-size:16px">${'⭐'.repeat(n)}</a>`).join('')}
           </div>
-        </div>
+        </div>`}
         ${esRecurrente ? `
         <div style="margin-top:28px;padding-top:24px;border-top:1.5px solid #E8E0D4">
           <p style="color:#4A3B6B;font-size:15px;font-weight:600;margin:0 0 16px">¿Qué quieres hacer para la próxima visita?</p>
@@ -497,15 +497,15 @@ export function armarResumenConReporte(
         ${resumenIA ? `<div style="background:#F5F0FF;border-left:4px solid #7C4DFF;border-radius:8px;padding:16px 20px;margin-bottom:20px"><p style="color:#1A0A3C;font-size:15px;line-height:1.7;margin:0">${escapeHtml(resumenIA)}</p></div>` : ''}
         <h3 style="color:#2D1464;font-size:15px;margin-bottom:4px">Indicadores de la visita</h3>
         ${indicadoresHtml}
-        ${reporte.novedad ? `<div style="background:#FFF3E8;border:1.5px solid #FF6B2B;border-radius:10px;padding:14px 18px;margin-bottom:16px"><p style="color:#C84B0E;font-size:13px;font-weight:700;margin:0 0 4px">Novedad reportada</p><p style="color:#1A0A3C;font-size:14px;margin:0;line-height:1.6">${escapeHtml(reporte.novedad)}</p></div>` : ''}
+        ${reporte.novedad ? `<div style="background:#FFF3E8;border:1.5px solid #FF6B2B;border-radius:10px;padding:14px 18px;margin-bottom:16px"><p style="color:#C84B0E;font-size:13px;font-weight:700;margin:0 0 4px">Lo que anotó ${escapeHtml(compita.nombre.split(' ')[0])}</p><p style="color:#1A0A3C;font-size:14px;margin:0;line-height:1.6">${escapeHtml(reporte.novedad)}</p></div>` : ''}
         ${fotosHtml}
         <a href="${SITE_URL}/dashboard" style="display:inline-block;background:#2D1464;color:white;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:600;margin-top:16px">Ver historial completo</a>
-        <div style="margin-top:28px;padding-top:24px;border-top:1.5px solid #E8E0D4">
+        ${visita.rating_cliente ? '' : `<div style="margin-top:28px;padding-top:24px;border-top:1.5px solid #E8E0D4">
           <p style="color:#4A3B6B;font-size:14px;font-weight:600;margin:0 0 12px">¿Cómo estuvo la visita de hoy?</p>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
             ${[1,2,3,4,5].map(n => `<a href="${SITE_URL}/api/visita/rating?visita_id=${visita.id}&valor=${n}&t=${ratingToken(visita.id, n)}" style="display:inline-block;background:#F5F0FF;border:2px solid #D4C9E8;color:#2D1464;padding:8px 14px;border-radius:9999px;text-decoration:none;font-weight:700;font-size:16px">${'⭐'.repeat(n)}</a>`).join('')}
           </div>
-        </div>
+        </div>`}
         ${esRecurrente ? `
         <div style="margin-top:28px;padding-top:24px;border-top:1.5px solid #E8E0D4">
           <p style="color:#4A3B6B;font-size:15px;font-weight:600;margin:0 0 16px">¿Qué quieres hacer para la próxima visita?</p>

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { sendTelegramMessage, makeInlineKeyboard } from '@/lib/telegram'
 import { cronAutorizado, latido } from '@/lib/cron'
+import { enviarResumenesSinReporte } from '@/lib/resumen-visita'
 
 // POST /api/cron/recordatorio-cuestionario
 // Corre cada 10 min. Envía un recordatorio al compita si lleva ~15 min sin
@@ -55,6 +56,9 @@ export async function POST(req: NextRequest) {
     } catch (e) { console.error('Error recordatorio cuestionario:', e) }
   }
 
+  // El compita no completó el cuestionario: a los 35 min sale el resumen básico (un solo correo en total; ver lib/resumen-visita.ts).
+  const resumenes = await enviarResumenesSinReporte()
+
   // Limpiar estados expirados: reporte_r:, reporte_novedad: y reporte: ya vencidos
   for (const prefix of ['reporte_r:%', 'reporte_novedad:%', 'reporte:%']) {
     await admin
@@ -65,5 +69,5 @@ export async function POST(req: NextRequest) {
   }
 
   await latido('recordatorio-cuestionario')
-  return NextResponse.json({ ok: true, enviados })
+  return NextResponse.json({ ok: true, enviados, resumenes })
 }

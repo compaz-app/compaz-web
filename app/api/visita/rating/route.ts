@@ -21,6 +21,9 @@ function leer(req: NextRequest) {
 export async function GET(req: NextRequest) {
   const p = leer(req)
   if (!p) return pagina('Enlace inválido', 'Este enlace no es válido o ya expiró.', 400)
+  // Ya calificó: no se le vuelve a ofrecer calificar (antes la página de confirmación aparecía igual y recién al enviar decía «ya calificaste»).
+  const { data: v } = await createAdminSupabase().from('visitas').select('rating_cliente').eq('id', p.visita_id).maybeSingle()
+  if (v?.rating_cliente) return pagina('Ya calificaste', 'Ya registramos tu calificación para esta visita. ¡Gracias!')
   return puertaConfirmacion(req, `${'⭐'.repeat(p.valor)} Confirmar calificación`, `Vas a calificar la visita con ${p.valor} de 5 estrellas.`, 'Enviar calificación')
 }
 
