@@ -63,7 +63,7 @@ export default async function PortalPage({ searchParams }: { searchParams: Promi
   }
   const datos = pestana === 'inicio' ? null : await cargarDatosPortal(uid)
   return (
-    <main className="mx-auto max-w-xl space-y-5 px-4 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-4 lg:max-w-2xl lg:pb-12">
+    <main className="mx-auto max-w-xl space-y-5 px-4 pb-[calc(5rem+env(safe-area-inset-bottom))] pt-4 lg:max-w-2xl lg:pb-12">
       {esAdmin && <Aviso tono="advertencia">Vista previa del portal nuevo de {portal.nombre || 'este cliente'}. Los botones de acción no se ejecutan en la vista previa.</Aviso>}
       <header className="flex items-center justify-between">
         <span className="text-lg font-extrabold text-morado-medio">Compaz</span>

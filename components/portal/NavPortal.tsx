@@ -14,7 +14,7 @@ export default function NavPortal({ actual, preview, insignias = {} }: { actual:
         {PESTANAS.map((p) => item(p.id, p.texto, `flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl text-base ${actual === p.id ? 'bg-morado-medio text-blanco' : 'text-morado-claro hover:bg-fondo-claro'}`))}
       </nav>
       <nav aria-label="Secciones del portal" className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-3 border-t border-borde bg-blanco pb-[env(safe-area-inset-bottom)] lg:hidden [[data-teclado=abierto]_&]:hidden">
-        {PESTANAS.map((p) => item(p.id, p.texto, `flex min-h-16 flex-col items-center justify-center text-xs ${actual === p.id ? 'text-naranja-oscuro' : 'text-morado-claro'}`))}
+        {PESTANAS.map((p) => item(p.id, p.texto, `flex min-h-14 flex-col items-center justify-center text-xs ${actual === p.id ? 'text-naranja-oscuro' : 'text-morado-claro'}`))}
       </nav>
     </>
   )

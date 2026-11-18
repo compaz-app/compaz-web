@@ -19,13 +19,13 @@ export default function TarjetaEstado({ tarjeta, compita, visitaId, estado, vist
   return (
     <Tarjeta tono={TONO[tarjeta.tono]}>
       {compita && (
-        <div className="mb-3 flex items-center gap-3">
-          <div aria-hidden className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-morado-medio text-xl font-extrabold text-blanco">{compita[0]?.toUpperCase()}</div>
+        <div className="mb-3 flex items-center gap-3 [@media(max-height:759px)]:mb-2">
+          <div aria-hidden className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-morado-medio text-xl font-extrabold text-blanco [@media(max-height:759px)]:h-10 [@media(max-height:759px)]:w-10 [@media(max-height:759px)]:text-base">{compita[0]?.toUpperCase()}</div>
           <div><div className="text-sm text-morado-sutil">Tu compita</div><div className="font-extrabold text-morado-profundo">{compita}</div></div>
         </div>
       )}
-      <h2 className="text-2xl font-extrabold leading-tight text-morado-profundo">{tarjeta.titulo}</h2>
-      <p className="mt-2 text-lg leading-snug text-morado-claro">{tarjeta.texto}</p>
+      <h2 className="text-[length:clamp(1.25rem,5.6vw,1.5rem)] font-extrabold leading-tight text-morado-profundo">{tarjeta.titulo}</h2>
+      <p className="mt-2 text-[length:clamp(1rem,4.6vw,1.125rem)] leading-snug text-morado-claro">{tarjeta.texto}</p>
       {tarjeta.luego && <p className="mt-2 text-sm font-bold text-morado-sutil">{tarjeta.luego}</p>}
       {/* La foto se pide solo al cliente real: el endpoint la sirve únicamente al dueño de la visita, no al equipo en vista previa. */}
       {estado && !vistaPrevia && llevaFotoLlegada(estado) && (
@@ -33,7 +33,7 @@ export default function TarjetaEstado({ tarjeta, compita, visitaId, estado, vist
         <img src="/api/visita/llegada-foto" alt="Foto que mandó tu compita al llegar" className="mt-4 max-h-72 w-full rounded-2xl object-cover" />
       )}
       {(tarjeta.principal || tarjeta.secundario) && (
-        <div className="mt-5 grid gap-3">
+        <div className="mt-5 grid gap-3 [@media(max-height:759px)]:mt-4 [@media(max-height:759px)]:gap-2">
           {tarjeta.principal && <BotonDelPortal b={tarjeta.principal} principal tono={tarjeta.tono} visitaId={visitaId} estado={estado} vistaPrevia={vistaPrevia} />}
           {tarjeta.secundario && <BotonDelPortal b={tarjeta.secundario} principal={false} tono={tarjeta.tono} visitaId={visitaId} estado={estado} vistaPrevia={vistaPrevia} />}
         </div>

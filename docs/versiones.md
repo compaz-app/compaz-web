@@ -4,6 +4,16 @@ La versión vigente está en `lib/version.ts` y se ve en el panel (menú lateral
 
 Reglas: mayor = cambio grande o lanzamiento; menor = función nueva; parche = arreglo. La etapa `beta` sale cuando el sistema corre una o dos semanas con uso real sin sorpresas.
 
+## 1.3.19-beta.1 (2026-11-18)
+Portal del cliente en el teléfono: tamaños fluidos y más compactos en pantallas bajas.
+1. Medido con los componentes reales en 375×667 (iPhone SE), 360×640 (Android chico), 390×844 (iPhone 14) y 430×932 (iPhone Pro Max): la tarjeta de siguiente paso ocupaba el 59 % de la pantalla en el iPhone SE y el 61 % en el Android chico, y el 37 % en el Pro Max, porque los tamaños eran fijos. El chat gastaba 144 px solo en marco (cabecera 58 y caja de escribir 86).
+2. Tamaños fluidos: título de 20 a 24 px y texto de 16 a 18 px según el ancho de la pantalla (antes, 24 y 18 fijos). El botón grande y el texto de los botones también escalan.
+3. Modo compacto en pantallas con menos de 760 px de alto: menos relleno en las tarjetas, avatar más pequeño, menos espacio entre bloques y botón de 48 px (56 en las altas).
+4. Chat con menos marco en el teléfono: cabecera de 58 a 46 px, caja de escribir de 86 a 70 px, menos relleno en los mensajes, y la cabecera se esconde con el teclado abierto. Escritorio y la pantalla vieja no cambian.
+5. Menú de abajo de 65 a 57 px, y la página deja justo ese lugar.
+6. Resultado medido: la tarjeta pasa del 59 % al 50 % en el iPhone SE (54 % en el Android de 640 px de alto) y no cambia en los teléfonos grandes. El efecto del teclado abierto NO se pudo medir fuera de un teléfono real.
+7. Sin migración.
+
 ## 1.3.18-beta.1 (2026-11-18)
 Portal del cliente en el teléfono: el chat no queda a la mitad al escribir y el menú de abajo queda al fondo.
 1. Chat: al tocar la caja de texto el teléfono abre el teclado y mueve la página, y el chat quedaba a la mitad de la pantalla. Ahora el marco del chat se pega arriba de la zona visible al enfocarse (dos veces, mientras sube el teclado y cuando ya subió) y, con el teclado abierto, ocupa justo el alto visible (`--alto-visible`, medido con `visualViewport`).

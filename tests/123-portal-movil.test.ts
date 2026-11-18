@@ -21,7 +21,7 @@ describe('el portal en el teléfono', () => {
   const page = readFileSync('app/portal/page.tsx', 'utf8')
   test('el menú de abajo respeta la barra de inicio del teléfono y se esconde con el teclado abierto', () => {
     assert.match(nav, /fixed inset-x-0 bottom-0[^"]*pb-\[env\(safe-area-inset-bottom\)\][^"]*\[\[data-teclado=abierto\]_&\]:hidden/)
-    assert.match(page, /pb-\[calc\(6rem\+env\(safe-area-inset-bottom\)\)\]/, 'la página deja lugar al menú más la barra de inicio')
+    assert.match(page, /pb-\[calc\(5rem\+env\(safe-area-inset-bottom\)\)\]/, 'la página deja lugar al menú más la barra de inicio')
   })
   test('el chat se pega arriba de la zona visible al enfocarse y, con teclado, ocupa justo lo visible', () => {
     assert.match(chat, /onFocusCapture=\{alEnfocar\}/); assert.match(chat, /scrollIntoView\(\{ block: 'start'/); assert.match(chat, /\[\[data-teclado=abierto\]_&\]:h-\[calc\(var\(--alto-visible\)-1rem\)\]/)

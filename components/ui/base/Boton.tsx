@@ -15,7 +15,8 @@ const FOCO = 'transition-colors focus-visible:outline-2 focus-visible:outline-of
 // "normal" es el botón grande del portal de la familia (ancho completo, fácil de tocar). "compacto" es el del panel del equipo:
 // más pequeño, del ancho de su texto y con borde fino, para pantallas densas como la ficha.
 const TAMANOS = {
-  normal: `inline-flex w-full min-h-14 items-center justify-center rounded-2xl px-5 text-lg font-extrabold ${FOCO}`,
+  // 48 px de alto en pantallas bajas (sigue siendo cómodo al tacto) y 56 en las altas; el texto escala con el ancho (16 a 18 px).
+  normal: `inline-flex w-full min-h-14 items-center justify-center rounded-2xl px-5 text-[length:clamp(1rem,4.6vw,1.125rem)] font-extrabold [@media(max-height:759px)]:min-h-12 ${FOCO}`,
   compacto: `inline-flex min-h-10 items-center justify-center whitespace-nowrap rounded-xl px-4 text-sm font-bold ${FOCO}`,
 } as const
 const BORDE_FINO = (v: string) => v.replace('border-2', 'border')
