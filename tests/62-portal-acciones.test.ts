@@ -17,12 +17,12 @@ import { POST as llegada } from '@/app/api/visita/llegada/route'
 
 beforeEach(limpiar)
 const como = (c: any) => { session.user = { id: c.id, email: c.email, user_metadata: { nombre: c.nombre } } as any }
-const ACCIONES: AccionPortal[] = ['avisar_pago', 'confirmar_inicio', 'avisar_abrieron', 'avisar_equipo']
+const ACCIONES: AccionPortal[] = ['avisar_pago', 'confirmar_inicio', 'avisar_abrieron', 'avisar_equipo', 'confirmar_llamada']
 
 describe('qué llamada hace cada botón', () => {
   test('cada acción apunta a una ruta que EXISTE y exporta POST', () => {
     for (const a of ACCIONES) {
-      const p = peticionDeAccion(a, { visitaId: 'v1', estado: 'pagar' })!; assert.ok(p, a); assert.equal(p.metodo, 'POST')
+      const p = peticionDeAccion(a, { visitaId: 'v1', solicitudId: 's1', estado: 'pagar' })!; assert.ok(p, a); assert.equal(p.metodo, 'POST')
       const ruta = join(process.cwd(), 'app', p.url.replace(/^\//, ''), 'route.ts'); assert.ok(existsSync(ruta), `${a}: falta ${ruta}`); assert.match(readFileSync(ruta, 'utf8'), /export async function POST/, a)
     }
   })
@@ -31,6 +31,8 @@ describe('qué llamada hace cada botón', () => {
     assert.deepEqual(peticionDeAccion('confirmar_inicio', { visitaId: 'v9' }), { url: '/api/visita/confirmar-inicio', metodo: 'POST', cuerpo: { visitaId: 'v9' } })
     assert.deepEqual(peticionDeAccion('avisar_abrieron', {}), { url: '/api/visita/llegada', metodo: 'POST', cuerpo: { accion: 'ya_abro' } })
     assert.deepEqual(peticionDeAccion('avisar_equipo', { estado: 'pago_revision' }), { url: '/api/portal/avisar-equipo', metodo: 'POST', cuerpo: { estado: 'pago_revision' } })
+    assert.deepEqual(peticionDeAccion('confirmar_llamada', { solicitudId: 's7' }), { url: '/api/portal/llamada', metodo: 'POST', cuerpo: { solicitudId: 's7' } })
+    assert.equal(peticionDeAccion('confirmar_llamada', {}), null)
   })
   test('confirmar el inicio sin saber de qué visita se trata NO hace ninguna llamada (nunca a ciegas)', () => assert.equal(peticionDeAccion('confirmar_inicio', {}), null))
   test('el botón del navegador usa esta función y refresca el portal al terminar', () => {

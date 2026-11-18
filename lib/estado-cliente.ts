@@ -21,7 +21,7 @@ export const CODIGOS_ESTADO = [
   // 1 Entrevista
   'elegir_horario', 'horario_pedido', 'horario_rechazado', 'entrevista_programada', 'entrevista_ahora',
   // 2 Decidir
-  'decidir', 'motivo_no',
+  'confirmar_llamada', 'decidir', 'motivo_no',
   // 3 Pagar
   'directa_aceptada', 'pagar', 'pago_revision', 'ficha_lista_espera',
   // 4 Ficha
@@ -36,6 +36,8 @@ export type CodigoEstado = (typeof CODIGOS_ESTADO)[number]
 export interface SolicitudFoto {
   id: string; estado: string; tipo: string | null; compitaId: string; compitaNombre: string
   slotConfirmado: string | null; slotsPropuestos: number; seguimientoEnviado: boolean; tokenRespuesta: boolean
+  /** Ya se le preguntó «¿pudiste hablar?» y el cliente aún no contesta (en ningún canal). */
+  llamadaPorConfirmar: boolean
   /** El token de la sala de la entrevista (para el enlace de entrada del cliente). */
   token?: string | null
   /** true si el cliente dijo que NO contrata tras la entrevista. */
@@ -92,7 +94,7 @@ export interface EstadoCliente {
 const PASO: Record<CodigoEstado, number> = {
   bienvenida: 0, solicitud_enviada: 0, solicitud_recibida: 0, directa_enviada: 0, mandado_enviado: 0, todas_rechazadas: 0,
   elegir_horario: 1, horario_pedido: 1, horario_rechazado: 1, entrevista_programada: 1, entrevista_ahora: 1,
-  decidir: 2, motivo_no: 2,
+  confirmar_llamada: 2, decidir: 2, motivo_no: 2,
   directa_aceptada: 3, pagar: 3, pago_revision: 3, ficha_lista_espera: 3,
   ficha: 4,
   agendar_visita: 5, cita_pendiente: 5, visita_programada: 5, compita_llego: 5, nadie_abre: 5, visita_en_curso: 5, visita_interrumpida: 5, visita_cancelada_equipo: 5,
@@ -160,6 +162,8 @@ export function decidirEstado(f: FotoCliente): EstadoCliente {
   // 6. Decisión tras la entrevista.
   const sinCompita = f.solicitudes.filter((s) => s.compitaId !== f.compitaAsignado?.id)
   const tras = (s: SolicitudFoto) => s.slotConfirmado ? ahora >= new Date(s.slotConfirmado).getTime() + ENTREVISTA_DURACION_MIN * MIN : false
+  const porConfirmar = sinCompita.find((s) => s.tokenRespuesta && s.estado === 'aceptada' && s.llamadaPorConfirmar && !s.seguimientoEnviado)
+  if (porConfirmar) return e('confirmar_llamada', { solicitudId: porConfirmar.id, compitaNombre: porConfirmar.compitaNombre, ...(porConfirmar.token ? { sala: porConfirmar.token } : {}) })
   const porDecidir = sinCompita.find((s) => s.tokenRespuesta && (s.estado === 'completada' || (s.estado === 'aceptada' && (s.seguimientoEnviado || tras(s)))))
   if (porDecidir) return e('decidir', { solicitudId: porDecidir.id, compitaNombre: porDecidir.compitaNombre })
   const dijoNo = masReciente(sinCompita.filter((s) => s.clienteDijoNo && !s.motivoRegistrado && ahora - new Date(s.creadaEn).getTime() < 7 * 24 * HORA))
@@ -233,7 +237,7 @@ async function cargarTanda(ids: string[], ahora: Date): Promise<Map<string, Foto
   const hace30 = new Date(ahora.getTime() - 30 * 24 * HORA).toISOString()
   const [usR, solR, visR, cancR, pagoR, pausasR, cupos] = await Promise.all([
     admin.from('usuarios').select('*, compita:compitas(id, nombre)').in('id', ids),
-    admin.from('solicitudes').select('id, cliente_id, estado, tipo, compita_id, slot_confirmado, slots_propuestos, seguimiento_enviado, token_respuesta, confirmacion_cliente, created_at, compitas(nombre)').in('cliente_id', ids).gte('created_at', hace30).order('created_at', { ascending: false }),
+    admin.from('solicitudes').select('id, cliente_id, estado, tipo, compita_id, slot_confirmado, slots_propuestos, seguimiento_enviado, token_respuesta, confirmacion_cliente, confirmacion_llamada_enviada, created_at, compitas(nombre)').in('cliente_id', ids).gte('created_at', hace30).order('created_at', { ascending: false }),
     admin.from('visitas').select('id, usuario_id, estado, fecha_programada, hora_inicio_programada, llegada_en, sin_acceso_en, fin, created_at, cita_propuesta_fecha, cita_propuesta_inicio, reporte_visto_en, compita:compitas(nombre)').in('usuario_id', ids).in('estado', ['pre_visita', 'programada', 'confirmando_inicio', 'en_curso', 'terminada']).order('created_at', { ascending: false }).limit(ids.length === 1 ? 20 : TOPE_FILAS_BASE),
     admin.from('cancelaciones').select('usuario_id, visita_id, cancelado_por, justificada_por, creado_en').in('usuario_id', ids).gte('creado_en', new Date(ahora.getTime() - AVISO_CANCELACION_H * HORA).toISOString()),
     admin.from('solicitudes_pago').select('id, usuario_id').in('usuario_id', ids).eq('estado', 'pendiente'),
@@ -245,7 +249,7 @@ async function cargarTanda(ids: string[], ahora: Date): Promise<Map<string, Foto
     for (const id of ids) for (const [k, v] of await cargarTanda([id], ahora)) salida.set(k, v)
     return salida
   }
-  const solRows = (solR.data ?? []) as unknown as (Fila & { id: string; cliente_id: string; estado: string; tipo: string | null; compita_id: string; slot_confirmado: string | null; slots_propuestos: string[] | null; seguimiento_enviado: boolean | null; token_respuesta: string | null; confirmacion_cliente: boolean | null; created_at: string; compitas: { nombre: string } | null })[]
+  const solRows = (solR.data ?? []) as unknown as (Fila & { id: string; cliente_id: string; estado: string; tipo: string | null; compita_id: string; slot_confirmado: string | null; slots_propuestos: string[] | null; seguimiento_enviado: boolean | null; token_respuesta: string | null; confirmacion_cliente: boolean | null; confirmacion_llamada_enviada: boolean | null; created_at: string; compitas: { nombre: string } | null })[]
   const solIds = solRows.map((x) => x.id)
   const pagoPorUsuario = new Map<string, string>(); for (const p of (pagoR.data ?? []) as { id: string; usuario_id: string }[]) if (!pagoPorUsuario.has(p.usuario_id)) pagoPorUsuario.set(p.usuario_id, p.id)
   const pagoIds = [...pagoPorUsuario.values()]
@@ -281,7 +285,7 @@ async function cargarTanda(ids: string[], ahora: Date): Promise<Map<string, Foto
         const sr = x as unknown as (typeof solRows)[number]
         return {
           id: sr.id, estado: sr.estado, tipo: sr.tipo, compitaId: sr.compita_id, compitaNombre: sr.compitas?.nombre ?? '', slotConfirmado: sr.slot_confirmado,
-          slotsPropuestos: (sr.slots_propuestos ?? []).length, seguimientoEnviado: !!sr.seguimiento_enviado, tokenRespuesta: !!sr.token_respuesta, token: sr.token_respuesta,
+          slotsPropuestos: (sr.slots_propuestos ?? []).length, seguimientoEnviado: !!sr.seguimiento_enviado, tokenRespuesta: !!sr.token_respuesta, llamadaPorConfirmar: !!sr.confirmacion_llamada_enviada && sr.confirmacion_cliente === null, token: sr.token_respuesta,
           clienteDijoNo: sr.confirmacion_cliente === false, motivoRegistrado: conMotivo.has(sr.id), avisoEntregado: entregados.has(sr.id),
           reserva: (reservaDe.get(sr.id) as SolicitudFoto['reserva']) ?? null, reservaInicio: reservaInicioDe.get(sr.id) ?? null, creadaEn: sr.created_at,
         }

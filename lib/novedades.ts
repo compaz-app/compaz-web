@@ -97,18 +97,17 @@ export async function listarAvisosPortal(usuarioId: string, limite = 10, admin: 
   } catch { return [] }
 }
 
-/** ¿La novedad con esta clave ya fue vista por el cliente en su portal? Falla en «no vista» (mejor un correo de más que ninguno). */
-export async function novedadVista(clave: string, admin: Admin = createAdminSupabase()): Promise<boolean> {
+/**
+ * La pregunta de una solicitud («¿pudiste hablar?», «¿qué decidiste?») ya se contestó, en el canal que sea (correo, portal o Telegram): sus novedades quedan vistas, así
+ * el portal deja de mostrarla y ningún correo diferido la repite. NUNCA lanza.
+ */
+export async function cerrarPreguntasDeSolicitud(solicitudId: string, admin: Admin = createAdminSupabase()): Promise<void> {
   try {
-    const { data } = await admin.from('novedades_cliente').select('vista_en').eq('clave_unica', clave).maybeSingle()
-    return !!(data as { vista_en: string | null } | null)?.vista_en
-  } catch { return false }
-}
-
-/** ¿Ya salió por correo el aviso de fin de entrevista (llamada_terminada_cliente) de esta solicitud? */
-export async function correoDeDecisionEnviado(solicitudId: string, admin: Admin = createAdminSupabase()): Promise<boolean> {
-  try {
-    const { data } = await admin.from('avisos').select('id').eq('plantilla', 'llamada_terminada_cliente').eq('canal', 'correo').eq('entidad_id', solicitudId).eq('estado', 'enviado').limit(1)
-    return ((data ?? []) as unknown[]).length > 0
-  } catch { return false }
+    const { data } = await admin.from('novedades_cliente').update({ vista_en: new Date().toISOString() }).eq('entidad', 'solicitud').eq('entidad_id', solicitudId)
+      .in('tipo', ['seguimiento_llamada', 'seguimiento_decision', 'llamada_terminada_cliente']).is('vista_en', null).select('clave_unica')
+    for (const n of (data ?? []) as { clave_unica: string }[]) {
+      // el correo diferido que esperaba esa novedad ya no hace falta
+      await admin.from('avisos').update({ estado: 'cancelado', error: 'ya contestó' }).eq('clave_unica', n.clave_unica.replace(/^novedad:/, '')).eq('estado', 'pendiente')
+    }
+  } catch (e) { console.error('[novedades] cerrar preguntas:', e) }
 }

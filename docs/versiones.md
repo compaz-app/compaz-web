@@ -4,11 +4,14 @@ La versión vigente está en `lib/version.ts` y se ve en el panel (menú lateral
 
 Reglas: mayor = cambio grande o lanzamiento; menor = función nueva; parche = arreglo. La etapa `beta` sale cuando el sistema corre una o dos semanas con uso real sin sorpresas.
 
+## 1.3.26-beta.1 (2026-11-18)
+Los correos «¿Pudiste hablar?» y «¿qué te pareció?» vuelven a salir (el cliente podía cerrar la pestaña del portal sin enterarse) y el portal ahora también los muestra, con botones: tarjeta `confirmar_llamada` («Sí, hablamos» / «No se pudo, elegir otra hora»). Contestar en el portal, en el correo o (el compita) en Telegram cierra la pregunta en todos los canales y el tablero se actualiza solo. Prueba 130.
+
 ## 1.3.25-beta.1 (2026-11-18)
 Correos: quedan solo los que hacen falta, el resto va al portal o a un resumen (quinta parte de la reducción de textos). Decidido con Juan el 18-nov.
 1. «Va en camino» y «llegó» ya no mandan correo: el portal lo muestra y, si el cliente no entró, lo recoge el resumen diario. Siguen instantáneos «nadie abre», «se cerró: nadie abrió» y «ya llegó, confirma el inicio».
 2. Resumen diario (7 pm de Caracas, proceso `resumen-diario`, `lib/resumen-diario.ts`): un solo correo con lo que no tuvo correo propio. Solo si hay algo sin ver y el cliente no entró al portal ese día; una vez por día.
-3. Fin de entrevista y «¿qué decidiste?»: primero el portal. El correo sale a las 24 h solo si el cliente no lo vio, y es UNO (se quitaron el de «¿cómo te fue?» y el segundo recordatorio de la escalera; si tampoco decide, pasa a una tarea del equipo). La llamada muy corta sigue mandando el correo al instante. «¿Pudiste hablar?» y «¿qué te pareció?» ahora son novedades del portal; el correo de 24 h no sale si ya lo vio.
+3. Fin de entrevista y «¿qué decidiste?»: primero el portal. El correo sale a las 24 h solo si el cliente no lo vio, y es UNO (se quitó el segundo recordatorio de la escalera; si tampoco decide, pasa a una tarea del equipo). La llamada muy corta sigue mandando el correo al instante. «¿Pudiste hablar?» y «¿qué te pareció?» NO se quitan: siguen llegando por correo y además aparecen en el portal (tarjeta nueva `confirmar_llamada`, con «Sí, hablamos» y «No se pudo, elegir otra hora»; ruta `/api/portal/llamada`). Contestar en cualquier canal (portal, correo o Telegram del compita) cierra la pregunta en todos (`cerrarPreguntasDeSolicitud`): el portal deja de mostrarla y el correo diferido pendiente se cancela.
 4. Chat: un correo «te escribió» por visita, y otro solo si pasan más de 30 minutos sin que el cliente lea (antes: cada 10 minutos antes de la visita).
 5. Compitas: el recordatorio de una solicitud sin respuesta va por Telegram, no por correo (sin Telegram no se les puede contratar).
 6. «Visita confirmada» es ahora el resumen del proceso: plan, compita, fecha y hora; el correo de contratación es más corto y avisa que ese correo llegará. Se juntan en uno solo solo cuando coinciden, pero en el flujo actual la hora se acuerda DESPUÉS de contratar, así que son dos correos distintos y cada uno dice lo suyo.

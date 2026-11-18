@@ -11,6 +11,7 @@ import { esc } from '@/lib/html'
 import { rolValido, qRol } from '@/lib/links'
 import { registrarAccion } from '@/lib/avisos'
 import { registrarEvento } from '@/lib/eventos'
+import { cerrarPreguntasDeSolicitud } from '@/lib/novedades'
 import { esEntrevistaConHoras, reagendarEntrevista } from '@/lib/reagendar'
 import { pagina, paginaPara, puertaConfirmacion } from '@/lib/confirm'
 
@@ -77,6 +78,9 @@ async function ejecutar(req: NextRequest, p: NonNullable<ReturnType<typeof leer>
       return paginaPara('cliente', 'Enlace vencido', 'Esta sesión ya cerró. Si tienes alguna duda escríbenos a hola@micompaz.com.')
     }
   }
+
+  // Contestó (aquí, en el portal, en el correo o en Telegram): la pregunta se cierra en todos lados y no se repite.
+  if (quien === 'cliente' || resultado === 'reagendar') await cerrarPreguntasDeSolicitud(solicitud.id)
 
   const admin = createAdminSupabase()
   const [{ data: cliente }, { data: compita }] = await Promise.all([

@@ -70,11 +70,11 @@ export default async function PortalPage({ searchParams }: { searchParams: Promi
         <span className="flex items-center gap-1 text-base text-morado-claro">Hola, {portal.nombre.split(' ')[0] || 'bienvenido'}{!esAdmin && <CampanaAvisos avisos={avisos} nuevos={avisosNuevos} />}</span>
       </header>
       <NavPortal actual={pestana} preview={esAdmin ? preview : null} insignias={{ visitas: mensajesNuevos }} />
-      {pestana !== 'inicio' && <TarjetaEstado tarjeta={tarjetaParaPestana(portal.tarjeta, pestana)} compita={null} visitaId={portal.estado.visitaId} estado={portal.estado.codigo} vistaPrevia={esAdmin} />}
+      {pestana !== 'inicio' && <TarjetaEstado tarjeta={tarjetaParaPestana(portal.tarjeta, pestana)} compita={null} visitaId={portal.estado.visitaId} solicitudId={portal.estado.solicitudId} estado={portal.estado.codigo} vistaPrevia={esAdmin} />}
       {pestana === 'inicio' && (
         <>
           <Pasos pasos={portal.pasos} actual={portal.estado.paso} />
-          <TarjetaEstado tarjeta={tarjetaParaPestana(portal.tarjeta, 'inicio')} compita={portal.compita} visitaId={portal.estado.visitaId} estado={portal.estado.codigo} vistaPrevia={esAdmin} />
+          <TarjetaEstado tarjeta={tarjetaParaPestana(portal.tarjeta, 'inicio')} compita={portal.compita} visitaId={portal.estado.visitaId} solicitudId={portal.estado.solicitudId} estado={portal.estado.codigo} vistaPrevia={esAdmin} />
           <details className="group rounded-2xl border border-borde bg-blanco px-4 py-1">
             <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between text-base font-extrabold text-morado-claro [&::-webkit-details-marker]:hidden">Pronto en Compaz<span aria-hidden className="text-morado-sutil group-open:rotate-90">▸</span></summary>
             <div className="pb-3"><TarjetasProximamente grande={false} ids={['voluntariado', 'mascotas']} /></div>

@@ -82,3 +82,61 @@ describe('chat: otro correo solo si pasan 30 minutos sin leer', () => {
     assert.equal(await debeCorreoDeMensaje(cli.id, hace(40)), false)
   })
 })
+
+// ── «¿Pudiste hablar?»: correo Y portal, y contestar en cualquier lado lo cierra en todos ─────────────────────────────────────────────────────────────────────
+import { POST as seguimiento } from '@/app/api/cron/seguimiento/route'
+import { POST as portalLlamada } from '@/app/api/portal/llamada/route'
+import { POST as resultadoPost } from '@/app/api/solicitud/resultado-llamada/route'
+import { registrarRespuestaLlamada } from '@/lib/confirmacion-llamada'
+import { estadoDelCliente } from '@/lib/estado-cliente'
+import { session, req } from './harness'
+import { qRol } from '@/lib/links'
+
+describe('«¿Pudiste hablar?» en todos los canales', () => {
+  const armar = async () => {
+    const compita = mkCompita({ telegram_chat_id: '710', nombre: 'Lucía Pérez' }); const cli = mkCliente({ email: 'cli@mail.test' })
+    const sol = mkSolicitud(cli, compita, { estado: 'aceptada', slot_confirmado: hace(30), token_respuesta: 'tok-9' })
+    await seguimiento(cron('s'))
+    return { cli, sol }
+  }
+  const novedadesAbiertas = () => db.rows('novedades_cliente').filter((n) => n.tipo === 'seguimiento_llamada' && !n.vista_en)
+
+  test('llega por correo y el portal la muestra con sus dos botones', async () => {
+    const { cli } = await armar()
+    assert.equal(emailsA('cli@mail.test').length, 1)
+    const e = await estadoDelCliente(cli.id)
+    assert.equal(e.codigo, 'confirmar_llamada')
+  })
+
+  test('contestar «sí» en el portal: queda registrado, la novedad se cierra y el portal pasa a «¿contratas?»', async () => {
+    const { cli, sol } = await armar()
+    session.user = { id: cli.id, email: cli.email }
+    const r = await portalLlamada(req('/api/portal/llamada', { json: { solicitudId: sol.id } }))
+    assert.equal(r.status, 200)
+    assert.equal(db.rows('solicitudes').find((s) => s.id === sol.id)!.confirmacion_cliente, true)
+    assert.equal(novedadesAbiertas().length, 0)
+    assert.notEqual((await estadoDelCliente(cli.id)).codigo, 'confirmar_llamada')
+  })
+
+  test('contestar desde el correo cierra la pregunta del portal; y el portal rechaza una solicitud ajena', async () => {
+    const { cli, sol } = await armar()
+    await registrarRespuestaLlamada('tok-9', 'cliente', 'si')
+    assert.equal(novedadesAbiertas().length, 0)
+    const otro = mkCliente({ email: 'otro@mail.test' }); session.user = { id: otro.id, email: otro.email }
+    assert.equal((await portalLlamada(req('/api/portal/llamada', { json: { solicitudId: sol.id } }))).status, 404)
+    void cli
+  })
+
+  test('el compita dice «no se pudo» en Telegram: la pregunta al cliente se cierra (ya tiene su aviso de reagendar)', async () => {
+    await armar()
+    await registrarRespuestaLlamada('tok-9', 'compita', 'no')
+    assert.equal(novedadesAbiertas().length, 0)
+  })
+
+  test('decidir (contratar) desde el correo cierra también la pregunta de decisión', async () => {
+    const { cli, sol } = await armar()
+    db.seed('novedades_cliente', { usuario_id: cli.id, tipo: 'seguimiento_decision', nivel: 'accionable', titulo: 'x', entidad: 'solicitud', entidad_id: sol.id, clave_unica: `seguimiento_decision:${sol.id}`, vista_en: null })
+    await resultadoPost(req(`/api/solicitud/resultado-llamada?token=tok-9&resultado=contratar&${qRol('tok-9', 'cliente')}`, { method: 'POST' }))
+    assert.equal(db.rows('novedades_cliente').filter((n) => !n.vista_en).length, 0)
+  })
+})

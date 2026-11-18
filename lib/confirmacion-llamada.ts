@@ -5,7 +5,7 @@ import { getSolicitudPorToken, registrarConfirmacion } from '@/lib/solicitudes'
 import { alertaAdmin } from '@/lib/alertas-admin'
 import { sendEmail, SITE_URL } from '@/lib/email'
 import { esc } from '@/lib/html'
-import { registrarNovedad } from '@/lib/novedades'
+import { registrarNovedad, cerrarPreguntasDeSolicitud } from '@/lib/novedades'
 
 export type ResultadoRespuestaLlamada =
   | { tipo: 'pagina'; titulo: string; texto: string; status?: number }
@@ -25,6 +25,7 @@ export async function registrarRespuestaLlamada(token: string, quien: 'cliente' 
   if (!resultado) return { tipo: 'pagina', titulo: 'Error', texto: 'No pudimos registrar tu respuesta. Intenta de nuevo.', status: 500 }
 
   const { solicitud: sol, escrita } = resultado
+  if (quien === 'cliente' || !ocurrio) await cerrarPreguntasDeSolicitud(solicitud.id) // contestó (aquí o en el correo): no se le vuelve a preguntar
 
   // Segundo clic o reintento: ya estaba registrado, no re-notificar
   if (!escrita) {

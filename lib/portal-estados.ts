@@ -10,7 +10,7 @@ import { dosHoras } from '@/lib/zonas'
 /** Adónde lleva un botón: una ruta del portal o una acción que el portal sabe hacer. */
 export type Destino =
   | { ruta: string }
-  | { accion: 'avisar_pago' | 'confirmar_inicio' | 'avisar_abrieron' | 'avisar_equipo' }
+  | { accion: 'avisar_pago' | 'confirmar_inicio' | 'avisar_abrieron' | 'avisar_equipo' | 'confirmar_llamada' }
 
 export interface BotonPortal { texto: string; destino: Destino; /** Qué hace y qué provoca (el ⓘ). Obligatorio. */ info: string }
 export interface TarjetaPortal {
@@ -57,6 +57,7 @@ export const CATALOGO_PORTAL: Record<CodigoEstado, (c: ContextoPortal) => Tarjet
   entrevista_programada: (c) => ({ titulo: 'Tu entrevista está confirmada', texto: `${cuando(c)}. Te mandamos un recordatorio una hora antes, con el botón para entrar.`, tono: 'espera', secundario: { texto: 'Cambiar horario', destino: { ruta: `/solicitar/hora?solicitud=${c.estado.solicitudId ?? ''}` }, info: 'Te muestra las demás horas libres del compita para elegir otra. Tu hora actual se libera cuando elijas.' } }),
   entrevista_ahora: (c) => ({ titulo: `Tu entrevista con ${nombre(c)} es ahora`, texto: 'Ya puedes entrar. Si se corta la conexión, vuelve a pulsar el mismo botón y sigues donde estabas.', tono: 'accion', principal: { texto: 'Entrar a la entrevista', destino: c.rutaSala ? { ruta: c.rutaSala } : { ruta: '/dashboard' }, info: 'Abre la videollamada de la entrevista. Si se corta, vuelve a tocarlo y sigues donde estabas.' } }),
 
+  confirmar_llamada: (c) => ({ titulo: `¿Pudiste hablar con ${nombre(c)}?`, texto: 'Cuéntanos si la llamada se hizo. Si no se pudo, eliges otra hora sin costo.', tono: 'accion', principal: { texto: 'Sí, hablamos', destino: { accion: 'confirmar_llamada' }, info: 'Nos avisa que la llamada se hizo y te lleva a decidir si contratas. No se cobra nada.' }, secundario: { texto: 'No se pudo, elegir otra hora', destino: { ruta: `/reagendar/${c.estado.sala ?? ''}` }, info: 'Te deja elegir otra hora para la llamada y se lo avisamos a tu compita. No cuesta nada.' } }),
   decidir: (c) => ({ titulo: `¿Contratas a ${nombre(c)}?`, texto: 'Si dices que sí, pasamos al pago. Si dices que no, te mostramos otros compitas sin costo.', tono: 'accion', principal: { texto: 'Sí, quiero contratarla', destino: { ruta: '/pago' }, info: 'Te lleva al pago para empezar. Todavía no se cobra nada: primero ves los datos para pagar.' }, secundario: { texto: 'No, ver otras', destino: { ruta: '/compitas' }, info: 'Te muestra otros compitas sin costo. Tu compita actual no recibe ningún reproche.' } }),
   motivo_no: () => ({ titulo: 'Gracias por contarnos. ¿Qué pasó?', texto: 'Es opcional y de un toque: nos ayuda a mejorar. Después te mostramos otros compitas sin costo.', tono: 'accion', principal: OTROS }),
 
@@ -97,6 +98,7 @@ const LUEGO: Partial<Record<CodigoEstado, string>> = {
   horario_pedido: 'Después: la entrevista por video.',
   entrevista_programada: 'Después: la entrevista y tu decisión.',
   entrevista_ahora: 'Después: decides si la contratas.',
+  confirmar_llamada: 'Después: decides si la contratas.',
   decidir: 'Después: el pago.',
   directa_aceptada: 'Después: confirmamos el pago y completas la ficha.',
   pagar: 'Después: confirmamos el pago y completas la ficha.',

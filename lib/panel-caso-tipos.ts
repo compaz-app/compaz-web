@@ -19,6 +19,7 @@ export const SITUACION: Record<CodigoEstado, { que: string; espera: Espera }> = 
   horario_rechazado: { que: 'El compita no puede en la hora pedida. El cliente debe elegir otra.', espera: 'cliente' },
   entrevista_programada: { que: 'Entrevista confirmada. Todavía no llega la hora.', espera: 'nadie' },
   entrevista_ahora: { que: 'La entrevista es ahora o está por empezar.', espera: 'nadie' },
+  confirmar_llamada: { que: 'Terminó la hora de la entrevista y se le preguntó si la llamada se hizo. Aún no contesta.', espera: 'cliente' },
   decidir: { que: 'Terminó la entrevista. El cliente debe decidir si contrata.', espera: 'cliente' },
   motivo_no: { que: 'Dijo que no contrata. Falta que cuente el motivo.', espera: 'cliente' },
   directa_aceptada: { que: 'El compita aceptó la visita directa. Falta que el cliente pague.', espera: 'cliente' },

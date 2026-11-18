@@ -11,7 +11,7 @@ beforeEach(limpiar)
 const AHORA = new Date('2026-11-10T15:00:00.000Z') // 11:00 am en Caracas
 const min = (n: number) => new Date(AHORA.getTime() + n * 60_000).toISOString()
 const foto = (o: Partial<FotoCliente> = {}): FotoCliente => ({ ahora: AHORA, pausada: false, fichaCompleta: true, zonaHoraria: null, nombre: 'Carolina Rojas', compitaAsignado: null, solicitudes: [], pagoPendiente: null, cupo: null, visitas: [], cancelaciones: [], ...o })
-const sol = (o: Partial<SolicitudFoto> = {}): SolicitudFoto => ({ id: 's1', estado: 'pendiente', tipo: 'entrevista', compitaId: 'c1', compitaNombre: 'María Pérez Gómez', slotConfirmado: null, slotsPropuestos: 0, seguimientoEnviado: false, tokenRespuesta: true, clienteDijoNo: false, motivoRegistrado: false, avisoEntregado: false, reserva: null, creadaEn: min(-120), ...o })
+const sol = (o: Partial<SolicitudFoto> = {}): SolicitudFoto => ({ id: 's1', estado: 'pendiente', tipo: 'entrevista', compitaId: 'c1', compitaNombre: 'María Pérez Gómez', slotConfirmado: null, slotsPropuestos: 0, seguimientoEnviado: false, tokenRespuesta: true, llamadaPorConfirmar: false, clienteDijoNo: false, motivoRegistrado: false, avisoEntregado: false, reserva: null, creadaEn: min(-120), ...o })
 const vis = (o: Partial<VisitaFoto> = {}): VisitaFoto => ({ id: 'v1', estado: 'programada', compitaNombre: 'María Pérez Gómez', fechaProgramada: '2026-11-12', horaInicio: '10:00', llegadaEn: null, sinAccesoEn: null, fin: null, creadaEn: min(-5000), ...o })
 const COMPITA = { id: 'c1', nombre: 'María Pérez Gómez' }
 const codigo = (f: FotoCliente) => decidirEstado(f).codigo
@@ -29,6 +29,7 @@ const CASOS: Record<CodigoEstado, FotoCliente> = {
   horario_rechazado: foto({ solicitudes: [sol({ estado: 'aceptada', reserva: 'rechazada' })] }),
   entrevista_programada: foto({ solicitudes: [sol({ estado: 'aceptada', slotConfirmado: min(24 * 60) })] }),
   entrevista_ahora: foto({ solicitudes: [sol({ estado: 'aceptada', slotConfirmado: min(30) })] }),
+  confirmar_llamada: foto({ solicitudes: [sol({ estado: 'aceptada', slotConfirmado: min(-40), llamadaPorConfirmar: true })] }),
   decidir: foto({ solicitudes: [sol({ estado: 'aceptada', slotConfirmado: min(-40) })] }),
   motivo_no: foto({ solicitudes: [sol({ estado: 'rechazada', clienteDijoNo: true })] }),
   directa_aceptada: foto({ solicitudes: [sol({ estado: 'aceptada', tipo: 'directa' })] }),
@@ -124,7 +125,7 @@ describe('cada estado tiene su tarjeta completa', () => {
     for (const c of CODIGOS_ESTADO) { const t = tarjetaDelEstado(ctx(c)); const tiene = !!(t.principal || t.secundario); assert.equal(tiene, !SIN_BOTON_A_PROPOSITO.includes(c), `${c}: ${tiene ? 'tiene' : 'no tiene'} botón`) }
   })
   test('los destinos son rutas internas o acciones conocidas (nunca un enlace externo ni vacío)', () => {
-    for (const c of CODIGOS_ESTADO) { const t = tarjetaDelEstado(ctx(c)); for (const b of [t.principal, t.secundario].filter(Boolean)) { const d = b!.destino; if ('ruta' in d) assert.match(d.ruta, /^\/[a-z]/, c); else assert.ok(['avisar_pago', 'confirmar_inicio', 'avisar_abrieron', 'avisar_equipo'].includes(d.accion), c) } }
+    for (const c of CODIGOS_ESTADO) { const t = tarjetaDelEstado(ctx(c)); for (const b of [t.principal, t.secundario].filter(Boolean)) { const d = b!.destino; if ('ruta' in d) assert.match(d.ruta, /^\/[a-z]/, c); else assert.ok(['avisar_pago', 'confirmar_inicio', 'avisar_abrieron', 'avisar_equipo', 'confirmar_llamada'].includes(d.accion), c) } }
   })
   test('PRIVACIDAD: antes de pagar solo "María P."; con el pago, el nombre', () => {
     const antes = tarjetaDelEstado(ctx('solicitud_recibida')); assert.match(antes.titulo, /María P\./); assert.doesNotMatch(antes.titulo + antes.texto, /Pérez|Gómez/)

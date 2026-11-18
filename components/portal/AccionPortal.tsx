@@ -8,13 +8,13 @@ import { peticionDeAccion, type AccionPortal as Accion } from '@/lib/portal-acci
 
 // Un botón del portal que EJECUTA algo (avisar el pago, confirmar el inicio de la visita...). Hace la llamada, y según la respuesta: refresca el portal
 // (el estado cambia solo), o dice qué pasó. Si el servidor frena la acción (por ejemplo, ya se avisó hace poco) muestra una línea corta y la razón tras un ⓘ.
-export default function AccionPortal({ accion, texto, info, variante, visitaId, estado }: { accion: Accion; texto: string; info: string; variante: 'primario' | 'secundario'; visitaId?: string; estado?: string }) {
+export default function AccionPortal({ accion, texto, info, variante, visitaId, solicitudId, estado }: { accion: Accion; texto: string; info: string; variante: 'primario' | 'secundario'; visitaId?: string; solicitudId?: string; estado?: string }) {
   const router = useRouter()
   const [cargando, setCargando] = useState(false)
   const [aviso, setAviso] = useState<{ texto: string; porQue?: string; error?: boolean } | null>(null)
 
   async function ejecutar() {
-    const p = peticionDeAccion(accion, { visitaId, estado })
+    const p = peticionDeAccion(accion, { visitaId, solicitudId, estado })
     if (!p) { setAviso({ texto: 'No pudimos hacerlo desde aquí. Intenta de nuevo en unos minutos.', error: true }); return }
     setCargando(true); setAviso(null)
     try {

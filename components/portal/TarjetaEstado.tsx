@@ -7,15 +7,15 @@ import { llevaFotoLlegada, type BotonPortal, type TarjetaPortal } from '@/lib/po
 // Los destinos que son una RUTA son enlaces; los que son una ACCIÓN (avisar el pago, confirmar el inicio...) ejecutan la llamada real (AccionPortal).
 const TONO = { accion: 'destacada', espera: 'neutro', alerta: 'alerta' } as const
 
-function BotonDelPortal({ b, principal, tono, visitaId, estado, vistaPrevia }: { b: BotonPortal; principal: boolean; tono: TarjetaPortal['tono']; visitaId?: string; estado?: string; vistaPrevia?: boolean }) {
+function BotonDelPortal({ b, principal, tono, visitaId, solicitudId, estado, vistaPrevia }: { b: BotonPortal; principal: boolean; tono: TarjetaPortal['tono']; visitaId?: string; solicitudId?: string; estado?: string; vistaPrevia?: boolean }) {
   const variante = principal ? (tono === 'espera' ? 'secundario' : 'primario') : 'secundario'
   if ('ruta' in b.destino) return <Boton href={b.destino.ruta} variante={variante} info={b.info}>{b.texto}</Boton>
   // El equipo mira el portal de un cliente: ahí los botones de acción NO se ejecutan (actuarían con la sesión del equipo, no con la del cliente).
   if (vistaPrevia) return <Boton variante={variante} disabled info={`${b.info} (En la vista previa del equipo no se ejecuta.)`}>{b.texto}</Boton>
-  return <AccionPortal accion={b.destino.accion} texto={b.texto} info={b.info} variante={variante} visitaId={visitaId} estado={estado} />
+  return <AccionPortal accion={b.destino.accion} texto={b.texto} info={b.info} variante={variante} visitaId={visitaId} solicitudId={solicitudId} estado={estado} />
 }
 
-export default function TarjetaEstado({ tarjeta, compita, visitaId, estado, vistaPrevia }: { tarjeta: TarjetaPortal; compita?: string | null; visitaId?: string; estado?: string; vistaPrevia?: boolean }) {
+export default function TarjetaEstado({ tarjeta, compita, visitaId, solicitudId, estado, vistaPrevia }: { tarjeta: TarjetaPortal; compita?: string | null; visitaId?: string; solicitudId?: string; estado?: string; vistaPrevia?: boolean }) {
   return (
     <Tarjeta tono={TONO[tarjeta.tono]}>
       {compita && (
@@ -34,8 +34,8 @@ export default function TarjetaEstado({ tarjeta, compita, visitaId, estado, vist
       )}
       {(tarjeta.principal || tarjeta.secundario) && (
         <div className="mt-5 grid gap-3 [@media(max-height:759px)]:mt-4 [@media(max-height:759px)]:gap-2">
-          {tarjeta.principal && <BotonDelPortal b={tarjeta.principal} principal tono={tarjeta.tono} visitaId={visitaId} estado={estado} vistaPrevia={vistaPrevia} />}
-          {tarjeta.secundario && <BotonDelPortal b={tarjeta.secundario} principal={false} tono={tarjeta.tono} visitaId={visitaId} estado={estado} vistaPrevia={vistaPrevia} />}
+          {tarjeta.principal && <BotonDelPortal b={tarjeta.principal} principal tono={tarjeta.tono} visitaId={visitaId} solicitudId={solicitudId} estado={estado} vistaPrevia={vistaPrevia} />}
+          {tarjeta.secundario && <BotonDelPortal b={tarjeta.secundario} principal={false} tono={tarjeta.tono} visitaId={visitaId} solicitudId={solicitudId} estado={estado} vistaPrevia={vistaPrevia} />}
         </div>
       )}
     </Tarjeta>
