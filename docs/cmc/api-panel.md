@@ -2,6 +2,8 @@
 
 Estado: **2A preparada, sin instalar.** El código del panel está listo y probado con datos sintéticos. Para ver datos reales hace falta instalar la API en Apps Script y poner dos variables en Netlify. Las dos cosas requieren autorización de Luis (ver «Cambios en producción»).
 
+> **Instalación detenida (2026-11-18): incompatibilidad de seguridad.** El proyecto del CMC tiene un `doGet` (`WebAppV2.gs`) que sirve la V2 con `HtmlService` sin revisar quién la abre, y 108 funciones públicas (entre ellas escrituras como `v2_descartar`, `v2_habilitarCompita` o `registrarMovimiento`). La V2 está a salvo porque su implementación se ejecuta «como el usuario que accede» y exige cuenta de Google. Pero la implementación que pide esta API («ejecutar como yo», acceso «cualquier usuario») incluiría ese mismo `doGet`: cualquiera con la URL abriría la V2 y podría llamar a las funciones públicas con los permisos del propietario. **No se instaló nada.** Ver la sección 8.
+
 ## 1. Qué resuelve
 
 La pestaña «Operación real» del CMC (`/panel?sec=confianza`) mostraba solo las Compitas habilitadas desde Supabase. Con la fase 2A muestra toda la selección tal como está en el CMC original (Google Sheets + Apps Script): etapas, ficha, preentrevista, entrevistas, verificaciones, onboarding, disponibilidad, alertas, historial, requisitos de habilitación y próxima acción. Es solo lectura. La V2 sigue siendo el único lugar donde se decide.
@@ -119,3 +121,14 @@ Objetivo: operar desde el panel (cambiar etapa, registrar entrevista, verificaci
    - nunca con aspirantes reales sin autorización;
    - las pruebas automáticas ejecutan `ApiPanelWeb.gs` en la caja de arena, como hace la prueba 120.
 9. **Activación por pasos**: la lectura ya instalada → las escrituras en la copia → una acción (cerrar alerta) en producción con un solo operador → el resto.
+
+## 8. Corrección necesaria antes de instalar (2026-11-18)
+
+Una implementación anónima que se ejecuta como el propietario solo debe contener el código de la API. Dos caminos:
+
+| | A. Proyecto aparte, solo la API (recomendada) | B. Mismo proyecto, cerrar el `doGet` |
+|---|---|---|
+| Qué cambia en el CMC | Nada. El proyecto nuevo abre la hoja por su ID (propiedad del script) y solo lee. | Tres líneas en `doGet` de `WebAppV2.gs`: sin correo de usuario activo, responde texto plano (`ContentService`, sin página ni `google.script.run`). |
+| Lo que queda expuesto con la URL | Solo `doPost` firmado. | El proyecto entero; la protección depende del cierre de `doGet` y de que `google.script.run` exija una página servida. |
+| Reglas de habilitación | Hay que portar la lectura de requisitos (misma lógica que `panel_evaluarHabilitacion_`) con una prueba de paridad contra la V2. | Reutiliza los lectores de la V2 tal cual. |
+| Riesgo para la V2 | Ninguno. | Bajo, pero toca un archivo de la V2 (su implementación v30 no cambia hasta que se vuelva a publicar). |
