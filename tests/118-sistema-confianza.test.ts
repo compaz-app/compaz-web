@@ -179,19 +179,20 @@ describe('vista operativa (solo lectura) y sección', () => {
   beforeEach(limpiar)
   test('reconoce perfiles de prueba por código, por palabras y por cuenta del equipo', () => {
     assert.ok(esPerfilDePrueba({ codigo: 'COM-1064' }, []))
-    assert.ok(esPerfilDePrueba({ nombre: 'Luis M Prueba' }, []))
+    assert.ok(esPerfilDePrueba({ nombre: 'Perfil de Prueba' }, []))
     assert.ok(esPerfilDePrueba({ email: 'equipo@compaz.test' }, ['equipo@compaz.test']))
-    assert.equal(esPerfilDePrueba({ codigo: 'COM-0025', nombre: 'Carmen Pérez', email: 'carmen@correo.com' }, []), null)
+    assert.equal(esPerfilDePrueba({ codigo: 'COM-0300', nombre: 'Carmen Pérez', email: 'carmen@correo.com' }, []), null)
     assert.equal(esPerfilDePrueba({ nombre: 'Demóstenes Ruiz' }, []), null, 'una palabra que solo contiene demo no basta')
   })
   test('un perfil de prueba visible en el catálogo sale como alerta', () => {
-    const c = clasificarHabilitada({ id: '1', codigo: 'COM-1064', nombre: 'Luis M Prueba', email: null, estado: 'activo', verificado: true, cmc_permite: true, telegram_chat_id: '9' }, [])
+    const c = clasificarHabilitada({ id: '1', codigo: 'COM-1064', nombre: 'Perfil de Prueba', email: null, estado: 'activo', verificado: true, cmc_permite: true, telegram_chat_id: '9' }, [])
     assert.equal(c.enWeb, 'catalogo'); assert.ok(c.prueba); assert.match(c.nota!, /catálogo público/)
+    assert.match(clasificarHabilitada({ id: '3', codigo: 'COM-0301', nombre: 'Ana', email: null, estado: 'inactivo', verificado: false, cmc_permite: true, telegram_chat_id: '9' }, []).nota!, /confirma en el CMC/, 'nota genérica, sin hallazgos por persona')
     assert.equal(clasificarHabilitada({ id: '2', codigo: 'COM-0300', nombre: 'Ana', email: null, estado: 'activo', verificado: true, cmc_permite: false, telegram_chat_id: '9' }, []).enWeb, 'bloqueada')
   })
   test('lee de la base sin escribir nada y separa reales, pruebas y demos', async () => {
-    mkCompita({ codigo: 'COM-0025', nombre: 'Real Uno', email: 'real@correo.com', estado: 'inactivo', verificado: false, cmc_permite: true, telegram_chat_id: '1' } as any)
-    mkCompita({ codigo: 'COM-1064', nombre: 'Luis M Prueba', estado: 'activo', verificado: true, cmc_permite: true, telegram_chat_id: '2' } as any)
+    mkCompita({ codigo: 'COM-0300', nombre: 'Real Uno', email: 'real@correo.com', estado: 'inactivo', verificado: false, cmc_permite: true, telegram_chat_id: '1' } as any)
+    mkCompita({ codigo: 'COM-1064', nombre: 'Perfil de Prueba', estado: 'activo', verificado: true, cmc_permite: true, telegram_chat_id: '2' } as any)
     mkCompita({ codigo: null, nombre: 'Demo', es_demo: true, estado: 'activo', verificado: true } as any)
     db.tables.postulaciones = [
       { id: 'p1', tipo: 'compita', clasificacion: 'pendiente', nombre_declarado: 'Ana Real', email_declarado: 'ana@correo.com', resolucion: null },

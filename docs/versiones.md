@@ -5,7 +5,7 @@ La versión vigente está en `lib/version.ts` y se ve en el panel (menú lateral
 Reglas: mayor = cambio grande o lanzamiento; menor = función nueva; parche = arreglo. La etapa `beta` sale cuando el sistema corre una o dos semanas con uso real sin sorpresas.
 
 ## 1.4.0-beta.1 (2026-11-17)
-Sistema de Confianza en el panel (primera versión, en revisión: no fusionar sin aprobación de Luis y Juan).
+CMC · Centro de Mando Compitaz (Sistema de Confianza) en el panel.
 1. Nueva sección del panel, «Sistema de Confianza» (`/panel?sec=confianza`), con el permiso de monitorear. En el teléfono no cabe en la barra inferior: se entra desde Más.
 2. **Operación real (solo lectura):** postulaciones de Compitas, Compitas habilitadas por el CMC y su estado en la web, y lo que requiere atención. Separa perfiles de prueba (lista en `lib/confianza/operativo.ts`), repetidas y demos. Cada Compita abre la ficha que ya existe en Personas. Las etapas intermedias, entrevistas, verificaciones y onboarding siguen en el Centro Compitas V2: la web todavía no tiene canal de lectura del CMC (ver `docs/confianza.md`).
 3. **Demostración (`&cf_modo=demo`):** escenario sintético con 9 aspirantes ficticios. Se puede preseleccionar, entrevistar con los 8 criterios reales del CMC, verificar, hacer el onboarding, habilitar con los 7 controles, pasar a la operación y simular una solicitud con su aviso por Telegram (representado). Todo se guarda solo en el navegador; no llama a ninguna API ni a la base, no envía correos, mensajes ni pagos. Distingue lo comprobado, lo simulado y lo pendiente de validar.

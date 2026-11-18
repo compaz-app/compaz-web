@@ -51,16 +51,16 @@ export interface ResumenOperativo {
   leidoEn: string
 }
 
-/** Notas que el equipo debe ver junto a una Compita concreta (hallazgos de auditoría). */
-const NOTAS: Record<string, string> = {
-  'COM-0187': 'Su verificación en el CMC tiene una evidencia sin contenido real: verificar de nuevo antes de activarla.',
-  'COM-0025': 'Fue habilitada por «Habilitación directa», sin verificaciones: verificar antes de activarla.',
-}
+/**
+ * Nota genérica para una habilitada real que aún no está en el catálogo. A propósito NO hay notas por Compita en el código:
+ * el repositorio es público y los hallazgos sobre personas concretas viven en el CMC y en los informes internos, no aquí.
+ */
+const NOTA_SIN_ACTIVAR = 'Habilitada y todavía sin activar: antes de activarla, confirma en el CMC que sus verificaciones son reales y vigentes.'
 
 export function clasificarHabilitada(c: { id: string; codigo: string; nombre: string; email: string | null; estado: string; verificado: boolean; cmc_permite: boolean | null; telegram_chat_id: string | null }, internos?: string[]): CompitaHabilitada {
   const enWeb = c.cmc_permite === false ? 'bloqueada' : c.estado === 'activo' && c.verificado && c.telegram_chat_id ? 'catalogo' : 'inactiva'
   const prueba = esPerfilDePrueba(c, internos)
-  const nota = prueba && enWeb === 'catalogo' ? 'Perfil de prueba visible en el catálogo público: una familia real podría contratarlo. Desactívalo al terminar la prueba.' : NOTAS[c.codigo] ?? null
+  const nota = prueba && enWeb === 'catalogo' ? 'Perfil de prueba visible en el catálogo público: una familia real podría contratarlo. Desactívalo al terminar la prueba.' : !prueba && enWeb === 'inactiva' ? NOTA_SIN_ACTIVAR : null
   return { id: c.id, codigo: c.codigo, nombre: c.nombre, enWeb, telegram: !!c.telegram_chat_id, prueba, nota }
 }
 
