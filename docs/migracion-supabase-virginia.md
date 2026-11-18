@@ -50,3 +50,11 @@ Pendiente de comprobar por una persona: entrar con enlace mágico, abrir el pane
 ## Vuelta atrás (si algo falla)
 1. Devolver `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` y `SUPABASE_SERVICE_ROLE_KEY` a los valores del proyecto viejo (`qrhkzlzblaknzsxqfney`, panel de Supabase, API Keys, legacy).
 2. Netlify, Deploys, redesplegar sin caché (o publicar el despliegue anterior `main@43145b3` de las 3:47 PM).
+
+## Proyecto viejo archivado (2026-11-12)
+El proyecto de São Paulo (`qrhkzlzblaknzsxqfney`) se renombró a `ARCHIVO-NO-USAR-saopaulo-viejo` para que nadie lo confunda con producción. Verificado en sus registros: no recibe ninguna petición desde el cambio de producción (hacia las 19:00 UTC).
+Lo que todavía depende de él:
+1. Las `.env.local` de quien desarrolla (la de Juan y la de Luis) apuntan a él: hay que cambiarlas antes de pausarlo.
+2. Unas pocas compitas (por ejemplo Lorna Velazco y las de demostración) tienen `foto_url` apuntando a su almacenamiento público: sus fotos dejarían de verse al pausarlo o borrarlo.
+3. Es el punto de vuelta atrás si la base nueva diera problemas (los datos están como estaban al migrar, hacia las 18:30 UTC del 2026-11-12).
+Plan: dejarlo una o dos semanas, repasar esas tres cosas y después pausarlo (Settings, General, Pause project; se puede restaurar). Borrarlo solo cuando haya copias de seguridad probadas en `compaz-prod`.
