@@ -1,5 +1,6 @@
 // POST /api/visita/confirmar-inicio — el cliente confirma que el compita llegó.
 // Transiciona confirmando_inicio → en_curso y notifica al compita por Telegram.
+import { anotarEventoChat } from '@/lib/chat-eventos'
 import { getClienteActivo } from '@/lib/auth'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { sendTelegramMessage, avisarAdmin, TECLADO_DURANTE_VISITA } from '@/lib/telegram'
@@ -28,6 +29,7 @@ export async function POST(req: Request) {
     .maybeSingle() as { data: (Visita & { compita: { id: string; nombre: string; telegram_chat_id: string | null }; usuario: Usuario }) | null }
 
   if (!visita) return err('No hay visita pendiente de confirmación', 409)
+  await anotarEventoChat(visitaId, 'Visita iniciada')
 
   const compita = visita.compita
   const usuario = visita.usuario

@@ -25,6 +25,7 @@ import { registrarRespuestaLlamada } from '@/lib/confirmacion-llamada'
 import { getOrCreateDailyRoom } from '@/lib/daily'
 import { enlaceDeLlamada } from '@/lib/llamada-acceso'
 import { minutosLlamadaVisita } from '@/lib/llamada'
+import { anotarEventoChat } from '@/lib/chat-eventos'
 import { debeCorreoDeMensaje } from '@/lib/portal-mensajes'
 import { sendVisitaInicio, generarResumenIA, sendCodigoTelegram, sendCompletarPerfilCompita } from '@/lib/resend'
 import { perfilCompleto, PERFIL_MINIMO } from '@/lib/compita-perfil'
@@ -1484,6 +1485,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
         .eq('estado', 'en_curso')
         .select('*, usuario:usuarios(*)')
         .maybeSingle() as { data: (Visita & { usuario: Usuario | null }) | null; error: unknown }
+      if (visita) await anotarEventoChat(conf.visitaId, 'Visita terminada')
 
       if (errFin || !visita) {
         await sendTelegramMessage(chatId, `No hay ninguna visita en curso que puedas terminar ahora mismo.\n\nSi crees que es un error, escríbenos a hola@micompaz.com.`, TECLADO_SIN_VISITA)

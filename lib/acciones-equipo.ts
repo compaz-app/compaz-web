@@ -1,5 +1,6 @@
 // Acciones del equipo sobre cuentas, visitas, tareas y reseñas (A-02 de la auditoría). Antes cada ruta de /api/admin tenía sus consultas dentro; ahora
 // viven aquí y las rutas solo autentican, validan el cuerpo y responden. Cada función devuelve un resultado, nunca una respuesta HTTP.
+import { anotarEventoChat } from '@/lib/chat-eventos'
 import { randomBytes } from 'node:crypto'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { sendTelegramMessage, TECLADO_SIN_VISITA } from '@/lib/telegram'
@@ -77,6 +78,7 @@ export async function forzarCierreVisita(visitaId: string, actorCorreo: string):
     .maybeSingle() as { data: (Visita & { compita: Compita; usuario: Usuario }) | null; error: unknown }
   if (error) return mal(500, 'No se pudo cerrar la visita')
   if (!visita) return mal(404, 'Visita no encontrada o ya cerrada')
+  await anotarEventoChat(visitaId, 'Visita terminada')
   // Avisar al compita por Telegram
   if (visita.compita?.telegram_chat_id) {
     sendTelegramMessage(visita.compita.telegram_chat_id, 'ℹ️ El equipo cerró la visita manualmente. Si tienes preguntas, escríbenos a hola@micompaz.com.', TECLADO_SIN_VISITA)

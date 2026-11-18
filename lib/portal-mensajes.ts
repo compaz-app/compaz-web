@@ -14,7 +14,7 @@ export async function contarMensajesSinLeer(usuarioId: string, admin: Admin = cr
     const { data: visitas } = await admin.from('visitas').select('id').eq('usuario_id', usuarioId).in('estado', ESTADOS_CON_CHAT)
     const ids = ((visitas ?? []) as { id: string }[]).map((v) => v.id)
     if (ids.length === 0) return 0
-    let q = admin.from('mensajes').select('id', { count: 'exact', head: true }).in('visit_id', ids).in('origen', ['compita', 'admin'])
+    let q = admin.from('mensajes').select('id', { count: 'exact', head: true }).in('visit_id', ids).in('origen', ['compita', 'admin']).not('contenido', 'like', 'evento::%').not('contenido', 'like', 'plan:%').neq('contenido', 'email_notif_mensaje')
     if (leido) q = q.gt('created_at', leido)
     const { count, error } = await q
     if (error) { console.error('[portal] mensajes sin leer:', error.message); return 0 }

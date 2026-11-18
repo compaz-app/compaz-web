@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { createBrowserSupabase } from '@/lib/supabase'
 import type { Mensaje, Visita } from '@/types'
 import { fotoSrc } from '@/lib/fotos'
+import { esEventoChat, textoEventoChat } from '@/lib/chat-eventos-texto'
 
 interface ChatProps {
   visita: Visita & { estado?: string }
@@ -41,6 +42,20 @@ function MensajeSistema({ texto }: { texto: string }) {
   )
 }
 
+/** Aviso de estado en la conversación: «Visita agendada: …», «Visita iniciada». Se ve distinto a un mensaje y a las advertencias de seguridad. */
+function EventoChat({ texto, hora }: { texto: string; hora: string }) {
+  return (
+    <div role="status" className="flex items-center gap-2.5 py-2.5">
+      <div className="h-px flex-1 bg-borde" />
+      <div className="max-w-[80%] text-center">
+        <p className="m-0 text-sm font-extrabold leading-snug text-morado-profundo">{texto}</p>
+        <p className="m-0 mt-0.5 text-[11px] text-morado-sutil">{hora}</p>
+      </div>
+      <div className="h-px flex-1 bg-borde" />
+    </div>
+  )
+}
+
 export default function Chat({ visita, mensajesIniciales, compitaNombre }: ChatProps) {
   const [mensajes, setMensajes] = useState<Mensaje[]>(mensajesIniciales)
   const [texto, setTexto] = useState('')
@@ -72,7 +87,7 @@ export default function Chat({ visita, mensajesIniciales, compitaNombre }: ChatP
             if (nuevo.visit_id === visita.id) {
               setMensajes((prev) => [...prev, nuevo])
               // Lo tiene a la vista: queda leído y el círculo rojo del portal no se enciende por un mensaje que ya está viendo.
-              if (nuevo.origen !== 'cliente' && document.visibilityState === 'visible') fetch('/api/portal/chat/leido', { method: 'POST' }).catch(() => undefined)
+              if (nuevo.origen === 'compita' && document.visibilityState === 'visible') fetch('/api/portal/chat/leido', { method: 'POST' }).catch(() => undefined)
             }
           }
         )
@@ -137,7 +152,8 @@ export default function Chat({ visita, mensajesIniciales, compitaNombre }: ChatP
           </p>
         )}
 
-        {mensajes.filter((m) => m.origen !== 'admin').map((m, idx) => {
+        {mensajes.filter((m) => m.origen !== 'admin' || esEventoChat(m.contenido)).map((m, idx) => {
+          if (esEventoChat(m.contenido)) return <EventoChat key={m.id} texto={textoEventoChat(m.contenido)} hora={new Date(m.created_at).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Caracas' })} />
           const esCliente = m.origen === 'cliente'
           const esAdmin = m.origen === 'admin'
           const mostrarRecordatorio = (idx + 1) % 10 === 0

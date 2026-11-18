@@ -1,3 +1,4 @@
+import { esEventoChat, textoEventoChat } from '@/lib/chat-eventos-texto'
 // Chat entre un cliente y un compita, para el equipo (servidor). Es una conversación privada: hace falta el permiso 'chats',
 // un colaborador debe dar motivo, y la consulta se ANOTA en Actividad antes de entregar nada (si no se puede anotar, no se entrega).
 import { createAdminSupabase } from '@/lib/supabase-server'
@@ -43,7 +44,7 @@ async function leerMensajes(actor: Actor, ids: string[], desde?: string): Promis
   if (desde) q = q.gt('created_at', desde)
   const { data, error } = await q.order('created_at', { ascending: true }).limit(500)
   if (error) return { ok: false }
-  return { ok: true, mensajes: (data ?? []).map((m) => ({ de: DE[String(m.origen)] ?? 'Compaz', texto: m.tipo === 'foto' ? '' : recortarTexto(actor, String(m.contenido ?? '')), cuando: String(m.created_at), esFoto: m.tipo === 'foto' })) }
+  return { ok: true, mensajes: (data ?? []).map((m) => ({ de: DE[String(m.origen)] ?? 'Compaz', texto: m.tipo === 'foto' ? '' : recortarTexto(actor, esEventoChat(String(m.contenido ?? '')) ? textoEventoChat(String(m.contenido)) : String(m.contenido ?? '')), cuando: String(m.created_at), esFoto: m.tipo === 'foto' })) }
 }
 
 /** Cuánto tiempo después de abrir un chat se puede seguir actualizando sin volver a anotar el acceso. Pasado ese plazo hay que abrirlo de nuevo (y queda anotado otra vez). */

@@ -11,6 +11,7 @@ import { sendTelegramMessage, TECLADO_INICIO, makeInlineKeyboard } from '@/lib/t
 import { reclamarUnaVez } from '@/lib/cron'
 import { sendEmail, SITE_URL } from '@/lib/email'
 import { esc } from '@/lib/html'
+import { anotarEventoChat } from '@/lib/chat-eventos'
 import { PLANES, type PlanId } from '@/lib/planes'
 import { hoyVE, horaVE, formatFechaVE } from '@/lib/format'
 import { faltaDireccion } from '@/lib/direccion-tipos'
@@ -30,6 +31,7 @@ export async function anunciarCitaConfirmada(visitaId: string, usuarioId: string
   const admin = createAdminSupabase()
   const fechaFormateada = formatFechaVE(fecha, true)
   const horarioLabel = `${hora_inicio} – ${hora_fin}`
+  await anotarEventoChat(visitaId, `Visita agendada: ${fechaFormateada}, ${horarioLabel}`)
 
   const [{ data: compita }, { data: cliente }] = await Promise.all([
     admin.from('compitas').select('telegram_chat_id, nombre').eq('id', compitaId).single(),
