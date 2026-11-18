@@ -1,6 +1,6 @@
 /* eslint-disable */
 // Recorridos completos y encadenados: admin + compita + cliente + crons + Daily sobre la MISMA base de datos.
-import { db, net, session, limpiar, req, tgText, tgBtn, tgFoto, ultimoTg, tgPara, emailsA, cron, ahoraMas, hoyVEstr, firmaDaily, mkCompita, mkCliente, confirmarLlegada, avisosAdmin, confirmarPropuesta, conDireccion } from './harness'
+import { db, net, session, limpiar, req, tgText, tgBtn, tgFoto, ultimoTg, tgPara, emailsA, cron, ahoraMas, hoyVEstr, firmaDaily, mkCompita, mkCliente, confirmarLlegada, avisosAdmin, confirmarPropuesta, conDireccion, despacharDiferidos } from './harness'
 import { beforeEach, test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import { tokenRating } from '@/lib/links'
@@ -108,6 +108,7 @@ describe('RECORRIDO 1: de la invitación de la compita hasta la valoración, tod
     net.emails = []
     const body = JSON.stringify({ event_type: 'meeting.ended', payload: { room_name: net.rooms[0].name, room_url: sol().room_url, duration: 1100 } })
     await dailyWebhook(req('/api/webhooks/daily', { body, headers: { 'content-type': 'application/json', ...firmaDaily(body) } }))
+    await despacharDiferidos() // el correo espera 24 h por si lo ve antes en el portal; aquí pasaron sin verlo
     const contratarUrl = href(emailsA('carlos@mail.test')[0].html, /\/api\/solicitud\/resultado-llamada\?token=[^"]*resultado=contratar/)
     const rc = await resultadoGet(req(contratarUrl))
     assert.equal(rc.status, 303)
@@ -187,7 +188,7 @@ describe('RECORRIDO 2: rechazos, horarios alternativos, llamada caída y decisi�
     const { qRol } = await import('@/lib/links')
     assert.equal((await reconectar(req(`/api/solicitud/reconectar-llamada?token=${t}&${qRol(t, 'cliente')}`, { method: 'POST' }))).status, 200)
     net.emails = []
-    await dailyWebhook(ev(900, sol().room_url))
+    await dailyWebhook(ev(900, sol().room_url)); await despacharDiferidos()
     assert.ok(emailsA('carlos@mail.test')[0].html.includes('Sí, quiero contratar'), 'tras reconectar, la llamada completa sí ofrece contratar')
 
     // decide NO (POST firmado) → la compita recibe el cierre amable → el cliente puede pedir a otra

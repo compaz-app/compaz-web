@@ -30,3 +30,21 @@ export async function marcarChatLeido(usuarioId: string, admin: Admin = createAd
     return true
   } catch (e) { console.error('[portal] error al marcar el chat leído:', e); return false }
 }
+
+/** Minutos que debe pasar sin que el cliente lea para que un mensaje nuevo del compita genere otro correo. */
+export const ESPERA_OTRO_CORREO_CHAT_MIN = 30
+
+/**
+ * ¿Hay que mandar el correo «te escribió»? El primero de la visita sale siempre. Después, otro solo si pasaron más de 30 minutos desde el último correo y el cliente
+ * no abrió su chat en ese tiempo (así un mensaje urgente llega, y una conversación larga no llena el buzón). `ultimoCorreo` es la hora del último correo de la visita.
+ */
+export async function debeCorreoDeMensaje(usuarioId: string, ultimoCorreo: string | null, ahora: Date = new Date(), admin: Admin = createAdminSupabase()): Promise<boolean> {
+  if (!ultimoCorreo) return true
+  const t = new Date(ultimoCorreo).getTime()
+  if (Number.isNaN(t) || ahora.getTime() - t < ESPERA_OTRO_CORREO_CHAT_MIN * 60_000) return false
+  try {
+    const { data } = await admin.from('usuarios').select('chat_leido_en').eq('id', usuarioId).maybeSingle()
+    const leido = (data as { chat_leido_en: string | null } | null)?.chat_leido_en
+    return !leido || new Date(leido).getTime() < t
+  } catch { return false }
+}

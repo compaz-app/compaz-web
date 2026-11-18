@@ -2,7 +2,7 @@
 // Paso 1.4 (flujo C): al terminar la entrevista, la pregunta de contratar sale con notificar().
 // Queda registrada, un fallo se puede reintentar, una sala nueva (tras reconectar) tiene su propio aviso
 // y la decisión del cliente anota la acción y el evento.
-import { db, net, limpiar, req, mkCompita, mkCliente, mkSolicitud, tgPara, emailsA, firmaDaily, ahoraMas, avisosAdmin } from './harness'
+import { db, net, limpiar, req, mkCompita, mkCliente, mkSolicitud, tgPara, emailsA, firmaDaily, ahoraMas, avisosAdmin, despacharDiferidos } from './harness'
 import { beforeEach, test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import { POST as dailyWebhook } from '@/app/api/webhooks/daily/route'
@@ -18,9 +18,11 @@ function escenario() {
   const sol = mkSolicitud(cli, compita, { estado: 'aceptada', slot_confirmado: new Date(Date.now() - 5 * 60_000).toISOString(), room_url: 'https://compaz.daily.co/ent-x-1' })
   return { compita, cli, sol }
 }
-const terminar = (sol: any, duracion: number) => {
+const terminar = async (sol: any, duracion: number, conCorreo = true) => {
   const body = JSON.stringify({ event_type: 'meeting.ended', payload: { room_name: 'ent-x', room_url: sol.room_url, duration: duracion } })
-  return dailyWebhook(req('/api/webhooks/daily', { body, headers: { 'content-type': 'application/json', ...firmaDaily(body) } }))
+  const r = await dailyWebhook(req('/api/webhooks/daily', { body, headers: { 'content-type': 'application/json', ...firmaDaily(body) } }))
+  if (conCorreo) await despacharDiferidos() // el correo espera 24 h por si el cliente lo ve antes en el portal; aquí se simula que pasaron
+  return r
 }
 const avisos = (canal: string) => db.rows('avisos').filter((a) => a.canal === canal && a.paso === 10)
 
@@ -61,7 +63,7 @@ describe('webhook de Daily: avisos post-llamada con registro', () => {
     const { sol } = escenario()
     net.resendFail = true
     await terminar(sol, 900)
-    assert.ok(avisosAdmin().some((m) => m.text.includes('No se pudo enviar el correo post-llamada')))
+    assert.ok(avisosAdmin().some((m) => m.text.includes('No se pudo enviar un correo a un cliente')))
     const a = avisos('correo')[0]
     assert.equal(a.estado, 'fallido')
     net.resendFail = false

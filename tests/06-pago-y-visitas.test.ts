@@ -139,21 +139,24 @@ describe('Ciclo de la visita (cliente ↔ compita)', () => {
     assert.equal(emailsA('otro@mail.test').length, 1, 'solo el aviso de llegada (confirmar el inicio lo hizo él mismo)'); assert.equal(emailsA('cli@mail.test').length, 0)
   })
 
-  test('te escribió: DURANTE la visita llega UN solo correo (el portal muestra el resto en vivo); antes de la visita, uno cada 10 minutos', async () => {
+  test('te escribió: un correo por visita, y otro solo si pasan más de 30 minutos sin que el cliente lo lea', async () => {
     const { v } = mundo()
-    // antes de la visita (programada): pasados 10 minutos vuelve a avisar
+    const correos = () => emailsA('cli@mail.test').filter((e) => e.subject.includes('te escribió'))
+    const envejecer = (min: number) => { for (const m of db.rows('mensajes')) if (m.contenido === 'email_notif_mensaje') m.created_at = new Date(Date.now() - min * 60_000).toISOString() }
     await webhook(tgText(910, 'Hola, ¿cómo estás?'))
-    for (const m of db.rows('mensajes')) if (m.contenido === 'email_notif_mensaje') m.created_at = new Date(Date.now() - 11 * 60_000).toISOString()
-    await webhook(tgText(910, 'Te escribo por la hora'))
-    assert.equal(emailsA('cli@mail.test').filter((e) => e.subject.includes('te escribió')).length, 2)
-    // en curso: aunque pasen 30 minutos, no hay segundo correo
-    await iniciar(); net.emails = []
-    await webhook(tgText(910, 'Ya llegué, todo bien'))
-    for (const m of db.rows('mensajes')) if (m.contenido === 'email_notif_mensaje') m.created_at = new Date(Date.now() - 30 * 60_000).toISOString()
-    await webhook(tgText(910, 'Comió muy bien'))
-    assert.ok(emailsA('cli@mail.test').filter((e) => e.subject.includes('te escribió')).length <= 1)
-    const correo = emailsA('cli@mail.test').find((e) => e.subject.includes('te escribió'))
-    if (correo) { assert.match(correo.html, /\/portal\?sec=visitas/); assert.doesNotMatch(correo.html, /dashboard/) }
+    assert.equal(correos().length, 1)
+    // 11 minutos después: no hay otro (antes salía uno cada 10)
+    envejecer(11); await webhook(tgText(910, 'Te escribo por la hora'))
+    assert.equal(correos().length, 1)
+    // 31 minutos después y el cliente no lo leyó: sale otro
+    envejecer(31); await webhook(tgText(910, 'Sigo por aquí'))
+    assert.equal(correos().length, 2)
+    // 31 minutos después pero el cliente abrió su chat: no hay otro
+    envejecer(31); db.rows('usuarios').find((u) => u.email === 'cli@mail.test')!.chat_leido_en = new Date().toISOString()
+    await webhook(tgText(910, 'Ya casi'))
+    assert.equal(correos().length, 2)
+    const correo = correos()[0]
+    assert.match(correo.html, /\/portal\?sec=visitas/); assert.doesNotMatch(correo.html, /dashboard/)
     void v
   })
 

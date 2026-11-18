@@ -58,7 +58,9 @@ describe('llegada con foto obligatoria', () => {
     assert.equal(f.tipo, 'llegada'); assert.equal(f.visita_id, fila().id); assert.equal(f.id, fila().llegada_foto_id)
     assert.equal(db.objetos.size, 1, 'la foto quedó en nuestro almacenamiento')
     assert.ok(!JSON.stringify(db.rows('visitas')).includes('ABC'), 'no se guarda el file_id de Telegram')
-    assert.ok(emailsA('caro@mail.test').some((e) => /llegó/.test(e.subject) && /dashboard/.test(e.html)))
+    // «Llegó» ya no manda correo: el portal lo muestra y el resumen diario lo recoge (decidido 2026-11-18).
+    assert.ok(!emailsA('caro@mail.test').some((e) => /llegó/.test(e.subject)))
+    assert.ok(db.rows('novedades_cliente').some((n) => n.tipo === 'compita_llego'))
     assert.ok(db.rows('eventos').some((e) => e.tipo === 'llegada_registrada'))
     const m = tgPara(CHAT).at(-1)!; assert.match(m.text, /Llegada registrada/)
     assert.deepEqual(botones(m), ['✅ Sí, iniciar', `nadie:${fila().id}`, 'seguro', 'reagendar_visita'])

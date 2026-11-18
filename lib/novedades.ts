@@ -96,3 +96,19 @@ export async function listarAvisosPortal(usuarioId: string, limite = 10, admin: 
       .map((n) => ({ id: n.id, titulo: n.titulo, ruta: n.ruta?.startsWith('/') ? n.ruta : '/portal', creada_en: n.creada_en, nueva: !n.actuada_en }))
   } catch { return [] }
 }
+
+/** ¿La novedad con esta clave ya fue vista por el cliente en su portal? Falla en «no vista» (mejor un correo de más que ninguno). */
+export async function novedadVista(clave: string, admin: Admin = createAdminSupabase()): Promise<boolean> {
+  try {
+    const { data } = await admin.from('novedades_cliente').select('vista_en').eq('clave_unica', clave).maybeSingle()
+    return !!(data as { vista_en: string | null } | null)?.vista_en
+  } catch { return false }
+}
+
+/** ¿Ya salió por correo el aviso de fin de entrevista (llamada_terminada_cliente) de esta solicitud? */
+export async function correoDeDecisionEnviado(solicitudId: string, admin: Admin = createAdminSupabase()): Promise<boolean> {
+  try {
+    const { data } = await admin.from('avisos').select('id').eq('plantilla', 'llamada_terminada_cliente').eq('canal', 'correo').eq('entidad_id', solicitudId).eq('estado', 'enviado').limit(1)
+    return ((data ?? []) as unknown[]).length > 0
+  } catch { return false }
+}

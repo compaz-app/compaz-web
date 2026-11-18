@@ -25,6 +25,7 @@ import { registrarRespuestaLlamada } from '@/lib/confirmacion-llamada'
 import { getOrCreateDailyRoom } from '@/lib/daily'
 import { enlaceDeLlamada } from '@/lib/llamada-acceso'
 import { minutosLlamadaVisita } from '@/lib/llamada'
+import { debeCorreoDeMensaje } from '@/lib/portal-mensajes'
 import { sendVisitaInicio, generarResumenIA, sendCodigoTelegram, sendCompletarPerfilCompita } from '@/lib/resend'
 import { perfilCompleto, PERFIL_MINIMO } from '@/lib/compita-perfil'
 import { responderSolicitud, getSolicitudPorToken, getSolicitudPorId, aceptarSolicitudDirecta } from '@/lib/solicitudes'
@@ -1831,21 +1832,14 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
       await sendTelegramMessage(chatId, `Tu mensaje era muy largo: se envió solo la primera parte (1000 caracteres).`)
     }
 
-    // Email al cliente cuando la compita escribe. Antes de la visita: 1 cada 10 min. DURANTE la visita (en curso): UNO solo por visita, porque el portal ya muestra los
-    // mensajes y las fotos en vivo y un correo cada 10 minutos llenaba el buzón (ver docs/versiones.md 1.3.23).
+    // Email al cliente cuando el compita escribe: UN correo por visita, y otro solo si pasan más de 30 minutos sin que el cliente lo lea (el portal ya muestra el
+    // chat en vivo con su círculo rojo; ver docs/versiones.md 1.3.25).
     if (visitaActiva.estado === 'programada' || visitaActiva.estado === 'en_curso') {
       try {
-        const ventanaMs = visitaActiva.estado === 'en_curso' ? 12 * 3_600_000 : 10 * 60_000
-        const hace10min = new Date(Date.now() - ventanaMs).toISOString()
-        const { count: emailsRecientes } = await supabase
-          .from('mensajes')
-          .select('id', { count: 'exact', head: true })
-          .eq('visit_id', visitaActiva.id)
-          .eq('origen', 'admin')
-          .eq('contenido', 'email_notif_mensaje')
-          .gt('created_at', hace10min)
-
-        if ((emailsRecientes ?? 0) === 0) {
+        const { data: ultimo } = await supabase.from('mensajes').select('created_at').eq('visit_id', visitaActiva.id).eq('origen', 'admin').eq('contenido', 'email_notif_mensaje')
+          .order('created_at', { ascending: false }).limit(1).maybeSingle() as { data: { created_at: string } | null }
+        const { data: dueno } = await supabase.from('visitas').select('usuario_id').eq('id', visitaActiva.id).maybeSingle() as { data: { usuario_id: string } | null }
+        if (dueno?.usuario_id && (await debeCorreoDeMensaje(dueno.usuario_id, ultimo?.created_at ?? null))) {
           const { data: clienteMensaje } = await supabase
             .from('visitas')
             .select('usuario:usuarios(nombre, email)')
@@ -1876,7 +1870,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
               } catch (e) {
                 // Si el email falló, soltar el marcador para que el próximo mensaje reintente.
                 console.error('Email compita→cliente en mensaje:', e)
-                await supabase.from('mensajes').delete().eq('visit_id', visitaActiva.id).eq('origen', 'admin').eq('contenido', 'email_notif_mensaje').gt('created_at', hace10min)
+                await supabase.from('mensajes').delete().eq('visit_id', visitaActiva.id).eq('origen', 'admin').eq('contenido', 'email_notif_mensaje').gt('created_at', new Date(Date.now() - 60_000).toISOString())
               }
             }
           }

@@ -23,6 +23,7 @@ export const ESPERADOS: Record<string, number> = {
   recordatorios: 5, seguimiento: 5, 'escalera-avisos': 5, 'recordatorio-cuestionario': 10, 'cierre-rechazo': 30, 'recordatorio-visita': 30,
   // Los que antes nadie vigilaba (S-09). Minutos entre ejecuciones; se alerta pasado el triple.
   limpieza: 1440, 'recordatorio-pago': 1440, 'recordatorio-primera-visita': 1440, 'aviso-inicio-visita': 15, 'noshow-alerta': 15, 'churn-alerta': 10080,
+  'resumen-diario': 1440,
   'cmc-compitas': 60, // foto horaria del CMC (solo cuenta desde la primera foto aplicada)
 }
 

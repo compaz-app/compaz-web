@@ -1,5 +1,5 @@
 /* eslint-disable */
-import { db, net, limpiar, req, cron, tgPara, emailsA, ahoraMas, firmaDaily, mkCompita, mkCliente, mkSolicitud, avisosAdmin } from './harness'
+import { db, net, limpiar, req, cron, tgPara, emailsA, ahoraMas, firmaDaily, despacharDiferidos, mkCompita, mkCliente, mkSolicitud, avisosAdmin } from './harness'
 import { beforeEach, test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import { qRol, firmaRol, tokenRating } from '@/lib/links'
@@ -55,6 +55,9 @@ describe('Webhook de Daily (fin de llamada)', () => {
   test('llamada normal: un solo correo de decisión; reintentos de Daily no duplican; el cron no repite', async () => {
     const { t } = mundo()
     await dailyWebhook(eventoDaily(900)); await dailyWebhook(eventoDaily(900)); await dailyWebhook(eventoDaily(900))
+    assert.equal(emailsA('cli@mail.test').length, 0, 'primero el portal: el correo espera 24 h')
+    assert.equal(db.rows('novedades_cliente').filter((n) => n.tipo === 'llamada_terminada_cliente').length, 1)
+    await despacharDiferidos()
     const mails = emailsA('cli@mail.test')
     assert.equal(mails.length, 1)
     assert.match(mails[0].html, new RegExp(`resultado=no_contratar&amp;quien=cliente&amp;s=|resultado=no_contratar&quien=cliente&s=`))
@@ -84,8 +87,8 @@ describe('Webhook de Daily (fin de llamada)', () => {
 
   test('Resend caído en el webhook: el admin es avisado de que debe reenviar', async () => {
     mundo(); net.resendFail = true
-    await dailyWebhook(eventoDaily(900))
-    assert.ok(avisosAdmin().some((m) => m.text.includes('No se pudo enviar el correo post-llamada')))
+    await dailyWebhook(eventoDaily(900)); await despacharDiferidos()
+    assert.ok(avisosAdmin().some((m) => m.text.includes('No se pudo enviar un correo a un cliente')))
   })
 
   test('evento de otra sala (no "ent-") o de otro tipo se ignora', async () => {
@@ -110,6 +113,7 @@ describe('Reconectar llamada', () => {
     const nuevaUrl = solRow().room_url as string
     const body = JSON.stringify({ event_type: 'meeting.ended', payload: { room_name: 'ent-nueva', room_url: nuevaUrl, duration: 700 } })
     await dailyWebhook(req('/api/webhooks/daily', { body, headers: { 'content-type': 'application/json', ...firmaDaily(body) } }))
+    await despacharDiferidos()
     assert.equal(emailsA('cli@mail.test').length, 1)
   })
 

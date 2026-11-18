@@ -192,3 +192,10 @@ export async function confirmarPropuesta(visitaId: string): Promise<boolean> {
 /** Una visita lista para agendar: con dirección y contacto en el sitio (sin ellos la cita no se puede pedir ni confirmar). */
 export const DIRECCION_PRUEBA = { direccion: 'Av. Francisco de Miranda, Edif. Sol, piso 3, Chacao', contacto_nombre: 'Rosa Linares', contacto_tel: '+584145550101' }
 export const conDireccion = (visitaId: string) => { const r = db.rows('visitas').find((x: any) => x.id === visitaId); if (r) Object.assign(r, DIRECCION_PRUEBA) }
+
+/** Hace que los correos que esperan su hora (primero el portal, correo después) salgan ya, como si hubieran pasado las 24 horas sin que el cliente los viera. */
+export async function despacharDiferidos(): Promise<void> {
+  const { procesarCorreosDiferidos } = await import('@/lib/correos-diferidos')
+  for (const a of db.rows('avisos')) if (a.estado === 'pendiente' && a.canal === 'correo') a.programado_para = new Date(Date.now() - 1000).toISOString()
+  await procesarCorreosDiferidos()
+}

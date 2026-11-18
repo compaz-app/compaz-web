@@ -12,6 +12,8 @@ import {
 } from '@/lib/solicitudes'
 import { sendTelegramMessage, makeInlineKeyboard } from '@/lib/telegram'
 import { sendEmail, SITE_URL } from '@/lib/email'
+import { registrarNovedad, novedadVista, correoDeDecisionEnviado } from '@/lib/novedades'
+import { TITULO_SEGUIMIENTO } from '@/lib/novedades-politica'
 import { esc } from '@/lib/html'
 import { qRol } from '@/lib/links'
 import { cronAutorizado, latido } from '@/lib/cron'
@@ -61,26 +63,9 @@ export async function POST(req: NextRequest) {
       const url = (quien: 'cliente' | 'compita', r: 'si' | 'no') =>
         `${SITE_URL}/api/solicitud/confirmacion-llamada?token=${t}&respuesta=${r}&${qRol(t, quien)}`
 
+      // El cliente se entera en su portal (novedad); el único correo de esta etapa es el de las 24 horas (paso 3). Decidido 2026-11-18.
       let enviado = false
-      if (cliente?.email) {
-        try {
-          await sendEmail({
-            to: cliente.email,
-            subject: `¿Pudiste hablar con ${sol.compita_nombre}?`,
-            html: `
-              <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px">
-                <h2 style="color:#2D1464;font-size:22px">¿Cómo estuvo la llamada?</h2>
-                <p style="color:#4A3B6B;font-size:16px;line-height:1.6">Hola${cliente.nombre ? `, <strong>${esc(cliente.nombre.split(' ')[0])}</strong>` : ''}. Tu llamada con <strong>${esc(sol.compita_nombre)}</strong> ya debería haber ocurrido.</p>
-                <p style="color:#4A3B6B;font-size:15px;line-height:1.6">¿Pudiste hablar con ${esc(sol.compita_nombre)}?</p>
-                <div style="margin-top:24px">
-                  <a href="${url('cliente', 'si')}" style="display:inline-block;background:#22C55E;color:white;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:16px">Sí, todo bien</a><br>
-                  <a href="${SITE_URL}/reagendar/${encodeURIComponent(t)}" style="display:inline-block;background:#E8E0D4;color:#1A0A3C;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:700;font-size:15px;margin-top:12px">No ocurrió — quiero reagendar</a>
-                </div>
-</div>`,
-          })
-          enviado = true
-        } catch (e) { console.error('Email confirmacion cliente:', e) }
-      }
+      if (await registrarNovedad({ usuarioId: sol.cliente_id, tipo: 'seguimiento_llamada', nivel: 'accionable', titulo: TITULO_SEGUIMIENTO.seguimiento_llamada, entidad: 'solicitud', entidadId: sol.id, clave: `seguimiento_llamada:${sol.id}` })) enviado = true
       if (compita?.telegram_chat_id) {
         try {
           const n = esc(cliente?.nombre?.split(' ')[0] ?? 'el cliente')
@@ -105,18 +90,8 @@ export async function POST(req: NextRequest) {
   for (const s of await getSolicitudesParaSeguimiento()) {
     try {
       if (!(await reclamarFlag(s.id, 'seguimiento_enviado'))) continue
-      const { data: cliente } = await admin.from('usuarios').select('email').eq('id', s.cliente_id).single()
-      if (!cliente?.email) { procesados++; continue }
-      try {
-        await sendEmail({ to: cliente.email, ...emailDecision(
-          s, `¿Cómo te fue con ${s.compita_nombre}?`, `¿Qué te pareció ${esc(s.compita_nombre)}?`,
-          `Esperamos que tu llamada con <strong>${esc(s.compita_nombre)}</strong> haya ido bien. ¿Te gustaría contratarla?`,
-        ) })
-        procesados++
-      } catch (e) {
-        console.error('Email seguimiento:', e)
-        await liberarFlag(s.id, 'seguimiento_enviado')
-      }
+      await registrarNovedad({ usuarioId: s.cliente_id, tipo: 'seguimiento_decision', nivel: 'accionable', titulo: TITULO_SEGUIMIENTO.seguimiento_decision, entidad: 'solicitud', entidadId: s.id, clave: `seguimiento_decision:${s.id}` })
+      procesados++
     } catch (e) { console.error(`[seguimiento] paso 2 fallo ${s.id}:`, e) }
   }
 
@@ -126,6 +101,8 @@ export async function POST(req: NextRequest) {
       if (!(await reclamarFlag(s.id, 'seguimiento2_enviado'))) continue
       const { data: cliente } = await admin.from('usuarios').select('email').eq('id', s.cliente_id).single()
       if (!cliente?.email) { procesados++; continue }
+      // UN solo correo por decisión: si ya lo vio en el portal, o ya le llegó el aviso de fin de entrevista por correo, no se repite.
+      if ((await novedadVista(`seguimiento_decision:${s.id}`)) || (await correoDeDecisionEnviado(s.id))) { procesados++; continue }
       try {
         await sendEmail({ to: cliente.email, ...emailDecision(
           s, `Recordatorio: ¿qué decidiste sobre ${s.compita_nombre}?`, '¿Tomaste una decisión?',

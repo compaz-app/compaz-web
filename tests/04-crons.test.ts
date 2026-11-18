@@ -93,20 +93,21 @@ describe('seguimiento (¿ocurrió la llamada? / ¿contratas?)', () => {
     const compita = mkCompita({ telegram_chat_id: '710' }); const cli = mkCliente({ email: 'cli@mail.test' })
     mkSolicitud(cli, compita, { estado: 'aceptada', slot_confirmado: hace(30) })
     await seguimiento(cron('s')); await seguimiento(cron('s'))
-    assert.equal(emailsA('cli@mail.test').length, 1)
+    // El cliente se entera en su portal (novedad, una sola vez) y NO recibe correo: el único correo de esta etapa es el de las 24 h.
+    assert.equal(emailsA('cli@mail.test').length, 0)
+    assert.equal(db.rows('novedades_cliente').filter((n) => n.tipo === 'seguimiento_llamada').length, 1)
     assert.equal(tgPara(710).length, 1)
-    // El compita responde con un toque en Telegram (callback), sin página web de por medio; el cliente sí recibe enlaces firmados por correo.
+    // El compita responde con un toque en Telegram (callback), sin página web de por medio.
     const botones = tgPara(710)[0].markup.inline_keyboard.flat()
     assert.ok(botones.every((b: any) => !b.url && /^ll:(si|no):[0-9a-f-]{36}$/.test(b.callback_data)))
-    assert.match(emailsA('cli@mail.test')[0].html, /quien=cliente&(amp;)?s=[0-9a-f]{24}/)
   })
 
   test('CASO CRÍTICO: nadie respondió y pasaron 4 h → igual se pregunta "¿quieres contratar?" (antes el NULL lo bloqueaba)', async () => {
     const compita = mkCompita(); const cli = mkCliente({ email: 'cli@mail.test' })
     mkSolicitud(cli, compita, { estado: 'aceptada', slot_confirmado: hace(5 * 60), confirmacion_llamada_enviada: true, confirmacion_cliente: null, confirmacion_compita: null })
     await seguimiento(cron('s')); await seguimiento(cron('s'))
-    const mails = emailsA('cli@mail.test').filter((e) => e.subject.includes('¿Cómo te fue'))
-    assert.equal(mails.length, 1, 'exactamente un correo de decisión')
+    assert.equal(emailsA('cli@mail.test').length, 0, 'primero el portal: sin correo')
+    assert.equal(db.rows('novedades_cliente').filter((n) => n.tipo === 'seguimiento_decision').length, 1, 'exactamente una novedad de decisión')
   })
 
   test('si alguien dijo que la llamada NO ocurrió, no se pregunta por contratar', async () => {
@@ -120,7 +121,7 @@ describe('seguimiento (¿ocurrió la llamada? / ¿contratas?)', () => {
     const compita = mkCompita(); const cli = mkCliente({ email: 'cli@mail.test' })
     mkSolicitud(cli, compita, { estado: 'completada', slot_confirmado: hace(5 * 60), confirmacion_llamada_enviada: true })
     await seguimiento(cron('s'))
-    assert.equal(emailsA('cli@mail.test').length, 1)
+    assert.equal(db.rows('novedades_cliente').filter((n) => n.tipo === 'seguimiento_decision').length, 1)
   })
 
   test('recordatorio de 24 h: una sola vez, y los enlaces "no" llevan firma de cliente', async () => {
@@ -130,6 +131,14 @@ describe('seguimiento (¿ocurrió la llamada? / ¿contratas?)', () => {
     const mails = emailsA('cli@mail.test')
     assert.equal(mails.length, 1)
     assert.match(mails[0].html, /respuesta=no&quien=cliente&s=[0-9a-f]{24}/)
+  })
+
+  test('recordatorio de 24 h: si el cliente ya vio la decisión en su portal, no sale ningún correo', async () => {
+    const compita = mkCompita(); const cli = mkCliente({ email: 'cli@mail.test' })
+    const sol = mkSolicitud(cli, compita, { estado: 'aceptada', slot_confirmado: hace(30 * 60), confirmacion_llamada_enviada: true, seguimiento_enviado: true })
+    db.seed('novedades_cliente', { usuario_id: cli.id, tipo: 'seguimiento_decision', nivel: 'accionable', titulo: 'x', clave_unica: `seguimiento_decision:${sol.id}`, vista_en: new Date().toISOString() })
+    await seguimiento(cron('s'))
+    assert.equal(emailsA('cli@mail.test').length, 0)
   })
 
   test('Resend caído: libera el flag y reintenta sin duplicar', async () => {

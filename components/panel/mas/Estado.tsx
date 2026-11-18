@@ -10,7 +10,7 @@ import type { EstadoSistema } from '@/lib/panel-estado'
 const TEXTO = { ok: { u: 'verde', t: 'Corriendo' }, caido: { u: 'rojo', t: 'Dejó de correr' }, sin_registro: { u: 'neutro', t: 'Sin registro todavía' } } as const
 const NOMBRE_PROCESO: Record<string, string> = {
   recordatorios: 'Recordatorios a clientes', seguimiento: 'Seguimiento tras la entrevista', 'escalera-avisos': 'Revisión de avisos sin respuesta', 'recordatorio-cuestionario': 'Recordatorio del cuestionario',
-  'cierre-rechazo': 'Cierre de solicitudes rechazadas', 'recordatorio-visita': 'Recordatorio de visitas',
+  'cierre-rechazo': 'Cierre de solicitudes rechazadas', 'recordatorio-visita': 'Recordatorio de visitas', 'resumen-diario': 'Resumen diario al cliente',
 }
 const hace = (iso: string, ahora: number) => { const m = Math.max(0, Math.round((ahora - new Date(iso).getTime()) / 60_000)); return m < 1 ? 'hace menos de 1 min' : m < 60 ? `hace ${m} min` : m < 1440 ? `hace ${Math.round(m / 60)} h` : `hace ${Math.round(m / 1440)} d` }
 

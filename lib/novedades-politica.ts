@@ -56,6 +56,15 @@ export const TITULO_NOVEDAD: Partial<Record<NombrePlantilla, string>> = {
 }
 export const TITULO_NOVEDAD_GENERICO = 'Tienes una novedad en tu portal.'
 
+/** Avisos que NO mandan correo: el portal los muestra y, si el cliente no entró, los recoge el resumen diario (lib/resumen-diario.ts). Decidido 2026-11-18. */
+export const SOLO_PORTAL: ReadonlySet<string> = new Set(['compita_en_camino', 'compita_llego'])
+/** Avisos cuyo correo espera un tiempo fijo (minutos) aunque el correo diferido esté apagado: primero el portal, y el correo solo sale si no lo vio. No aplica a la llamada muy corta (`corta: true`): ahí hubo un problema y el correo sale ya. */
+export const ESPERA_FIJA_MIN: Readonly<Record<string, number>> = { llamada_terminada_cliente: 24 * 60 }
+/** Tipos de novedad que recoge el resumen diario (los que no mandaron correo propio). */
+export const TIPOS_RESUMEN_DIARIO: readonly string[] = ['compita_en_camino', 'compita_llego', 'seguimiento_llamada', 'seguimiento_decision']
+/** Frases de las novedades que no nacen de una plantilla de correo. */
+export const TITULO_SEGUIMIENTO = { seguimiento_llamada: 'Tu llamada ya debería haber ocurrido. Cuéntanos cómo estuvo.', seguimiento_decision: 'Cuéntanos si quieres contratar a tu compita.' } as const
+
 export const nivelDe = (plantilla: string): NivelNovedad => NIVEL_POR_PLANTILLA[plantilla as NombrePlantilla] ?? 'accionable'
 export const tituloDe = (plantilla: string): string => TITULO_NOVEDAD[plantilla as NombrePlantilla] ?? TITULO_NOVEDAD_GENERICO
 

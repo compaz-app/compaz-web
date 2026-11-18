@@ -4,6 +4,16 @@ La versión vigente está en `lib/version.ts` y se ve en el panel (menú lateral
 
 Reglas: mayor = cambio grande o lanzamiento; menor = función nueva; parche = arreglo. La etapa `beta` sale cuando el sistema corre una o dos semanas con uso real sin sorpresas.
 
+## 1.3.25-beta.1 (2026-11-18)
+Correos: quedan solo los que hacen falta, el resto va al portal o a un resumen (quinta parte de la reducción de textos). Decidido con Juan el 18-nov.
+1. «Va en camino» y «llegó» ya no mandan correo: el portal lo muestra y, si el cliente no entró, lo recoge el resumen diario. Siguen instantáneos «nadie abre», «se cerró: nadie abrió» y «ya llegó, confirma el inicio».
+2. Resumen diario (7 pm de Caracas, proceso `resumen-diario`, `lib/resumen-diario.ts`): un solo correo con lo que no tuvo correo propio. Solo si hay algo sin ver y el cliente no entró al portal ese día; una vez por día.
+3. Fin de entrevista y «¿qué decidiste?»: primero el portal. El correo sale a las 24 h solo si el cliente no lo vio, y es UNO (se quitaron el de «¿cómo te fue?» y el segundo recordatorio de la escalera; si tampoco decide, pasa a una tarea del equipo). La llamada muy corta sigue mandando el correo al instante. «¿Pudiste hablar?» y «¿qué te pareció?» ahora son novedades del portal; el correo de 24 h no sale si ya lo vio.
+4. Chat: un correo «te escribió» por visita, y otro solo si pasan más de 30 minutos sin que el cliente lea (antes: cada 10 minutos antes de la visita).
+5. Compitas: el recordatorio de una solicitud sin respuesta va por Telegram, no por correo (sin Telegram no se les puede contratar).
+6. «Visita confirmada» es ahora el resumen del proceso: plan, compita, fecha y hora; el correo de contratación es más corto y avisa que ese correo llegará. Se juntan en uno solo solo cuando coinciden, pero en el flujo actual la hora se acuerda DESPUÉS de contratar, así que son dos correos distintos y cada uno dice lo suyo.
+7. Si el correo de las 24 h falla, el equipo recibe una tarea para reenviarlo.
+
 ## 1.3.24-beta.1 (2026-11-18)
 Mensajes largos de Telegram, más cortos (cuarta parte de la reducción de textos).
 1. Medido: 54 de 283 mensajes distintos pasaban de 40 palabras; los peores eran «¡Te contrataron!» (129), «el cliente decidió no continuar» (116) y «Gracias por tu dedicación» (105).

@@ -142,11 +142,7 @@ export async function POST(req: NextRequest) {
           <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px">
             <h2 style="color:#2D1464;font-size:22px;margin-bottom:12px">¡Todo listo, ${esc(clienteNombre.split(' ')[0])}!</h2>
             <p style="color:#4A3B6B;font-size:15px;line-height:1.6">Acabas de contratar a <strong>${esc(sol.compitas?.nombre ?? 'tu compita')}</strong> con el plan <strong>${esc(planInfo.nombre)}</strong>.</p>
-            <p style="color:#4A3B6B;font-size:15px;line-height:1.6">Le enviamos una notificación a ${corto} para que te escriba pronto. También puedes escribirle tú desde el dashboard para coordinar la fecha de la primera visita.</p>
-            <div style="background:#F5F0FF;border:2px solid #7C4DFF;border-radius:12px;padding:16px 20px;margin:20px 0">
-              <p style="color:#2D1464;font-size:13px;font-weight:700;margin:0 0 4px">Próximo paso</p>
-              <p style="color:#4A3B6B;font-size:14px;margin:0;line-height:1.6">Entra al dashboard, habla con ${corto} por el chat y acuerden la fecha y hora de la primera visita.</p>
-            </div>
+            <p style="color:#4A3B6B;font-size:15px;line-height:1.6">Ya le avisamos a ${corto}. Entra a tu portal, escríbele por el chat y acuerden la fecha y la hora de la primera visita. Cuando la confirme te mandamos un correo con la fecha, la hora y el resumen de tu plan.</p>
             <a href="${SITE_URL}/dashboard?contratado=1" style="display:inline-block;background:#FF6B2B;color:white;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:15px">Coordinar primera visita →</a>
 </div>`,
       })

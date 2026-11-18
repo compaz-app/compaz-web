@@ -10,7 +10,8 @@ import { POST as seguimiento } from '@/app/api/cron/seguimiento/route'
 beforeEach(limpiar)
 
 const hace = (min: number) => ahoraMas(-min)
-const decision = () => emailsA('cli@mail.test').filter((e) => e.subject.includes('¿Cómo te fue'))
+// La pregunta de decidir ahora va primero al portal (novedad); el correo solo sale a las 24 h.
+const decision = () => db.rows('novedades_cliente').filter((n) => n.tipo === 'seguimiento_decision')
 const caso = (o: Record<string, any>) => {
   const compita = mkCompita({ telegram_chat_id: '950' })
   const cli = mkCliente({ email: 'cli@mail.test' })

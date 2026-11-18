@@ -146,10 +146,11 @@ describe('si el cliente no registró la dirección', () => {
 })
 
 describe('"Voy en camino"', () => {
-  test('avisa al cliente por correo una sola vez y deja el evento', async () => {
+  test('avisa al cliente en su portal (sin correo) una sola vez y deja el evento', async () => {
     const { cliente, visita } = mundo(2); await guardar(cliente, buena())
     await webhook(tgBtn(CHAT, `camino:${visita.id}`)); await webhook(tgBtn(CHAT, `camino:${visita.id}`))
-    assert.equal(emailsA('caro@mail.test').filter((e) => /va en camino/.test(e.subject)).length, 1)
+    assert.equal(emailsA('caro@mail.test').filter((e) => /va en camino/.test(e.subject)).length, 0, 'ya no hay correo: lo muestra el portal')
+    assert.equal(db.rows('novedades_cliente').filter((n) => n.tipo === 'compita_en_camino').length, 1)
     assert.ok(db.rows('eventos').some((e) => e.tipo === 'compita_en_camino'))
     assert.match(tgPara(CHAT).at(-1)!.text, /vas en camino/)
   })

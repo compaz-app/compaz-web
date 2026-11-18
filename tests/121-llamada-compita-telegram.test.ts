@@ -54,11 +54,11 @@ describe('el cliente se entera, y por el camino más corto', () => {
     const n = db.rows('novedades_cliente').find((x: any) => x.usuario_id === cli.id)!
     assert.equal(n.tipo, 'llamada_no_ocurrio'); assert.equal(n.ruta, '/reagendar/tok-123'); assert.match(n.titulo, /no se pudo/)
   })
-  test('el correo «¿Pudiste hablar?» lleva «No se pudo» DIRECTO a elegir otra hora, sin la página intermedia de confirmación', async () => {
-    const { compita, cli } = armar(); void compita
+  test('«¿Pudiste hablar?»: el cliente lo ve en su portal (sin correo propio) y el compita recibe sus botones en Telegram', async () => {
+    const { compita, cli } = armar(); void compita; void cli
     await seguimiento(cron('s'))
-    const html = emailsA('cli@mail.test')[0].html
-    assert.match(html, /href="[^"]*\/reagendar\/tok-123"/); assert.doesNotMatch(html, /respuesta=no/)
+    assert.equal(emailsA('cli@mail.test').length, 0)
+    assert.equal(db.rows('novedades_cliente').filter((n: any) => n.tipo === 'seguimiento_llamada').length, 1)
   })
   test('desde el correo, pedir otra hora cuando la llamada ya pasó suelta la hora y deja elegir otra (una sola acción en la página)', async () => {
     const { sol } = armar()
