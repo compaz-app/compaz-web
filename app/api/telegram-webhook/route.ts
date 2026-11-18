@@ -43,6 +43,7 @@ import { clientesReportables, reportarCliente, esMotivoReporte, MOTIVOS_REPORTE,
 import { llegadaConFotoObligatoria, registrarLlegada, declararNadieAbre, cerrarSinAcceso, tecladoLlegada } from '@/lib/llegada'
 import { notificar } from '@/lib/avisos'
 import { registrarNovedad } from '@/lib/novedades'
+import { AVISO_FRAUDE, AVISO_FUERA } from '@/lib/avisos-seguridad'
 import { confirmarPagoYAvisar } from '@/lib/confirmar-pago'
 import { anunciarEntrevistaConfirmada } from '@/lib/entrevista-confirmada'
 import { registrarMotivo, MOTIVOS } from '@/lib/motivos'
@@ -55,19 +56,15 @@ import { randomInt } from 'crypto'
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? ''
 
-const GUIA_COMPITA = `📋 <b>Guía rápida Compaz</b>
+const GUIA_COMPITA = `📋 <b>Cómo funciona</b>
 
-<b>▶️ Al llegar</b> — Toca <b>Iniciar visita</b>. La familia sabe que llegaste.
-<b>📸 Durante la visita</b> — Manda fotos o mensajes. La familia los ve en tiempo real.
-<b>🔴 Al irte</b> — Toca <b>Terminar visita</b>. La familia recibe el resumen automáticamente.
-<b>🚨 Emergencia</b> — Toca ese botón y te contactamos de inmediato. Para peligro inmediato llama al 911.
-<b>/perfil</b> — Edita tu foto, descripción y horarios.
+▶️ <b>Al llegar:</b> toca Iniciar visita.
+📸 <b>Durante:</b> manda fotos o mensajes; la familia los ve.
+🔴 <b>Al irte:</b> toca Terminar visita.
+🚨 <b>Emergencia:</b> toca el botón. Peligro inmediato: llama al 911.
+✏️ /perfil para editar tu perfil. Dudas: hola@micompaz.com
 
-¿Dudas? Escríbenos a <b>hola@micompaz.com</b>
-
-━━━━━━━━━━━━━━━━━━━
-
-🔒 <b>Aviso de seguridad:</b> Compaz nunca te pedirá contraseñas, datos bancarios, números de cédula ni información privada por este chat ni por ningún otro medio. Si alguien te los solicita diciendo ser de Compaz, no respondas y avísanos de inmediato a hola@micompaz.com.`
+🔒 ${AVISO_FRAUDE} ${AVISO_FUERA}`
 
 const PREGUNTAS_REPORTE = [
   { emoji: '😊', label: 'Ánimo', texto: '¿Cómo estaba el <b>ánimo</b> de la persona durante la visita?' },
@@ -374,8 +371,8 @@ async function iniciarVerificacion(
     await sendTelegramMessage(
       chatId,
       enviado
-        ? `Encontré tu cuenta 👀\n\nAntes de activar Telegram debes llenar tu <b>perfil público</b> (${PERFIL_MINIMO}). Es lo que ven las familias para elegirte.\n\nTe enviamos el enlace al correo <b>${esc(enmascarar(c.email!))}</b>. Vale 24 horas. Cuando lo guardes, vuelve aquí, toca /start y escribe tu nombre otra vez.`
-        : `Encontré tu cuenta 👀\n\nAntes de activar Telegram debes llenar tu <b>perfil público</b> (${PERFIL_MINIMO}), pero no pudimos enviarte el enlace. Escríbenos a hola@micompaz.com y te lo mandamos.`,
+        ? `Antes de activar Telegram, completa tu <b>perfil público</b> (${PERFIL_MINIMO}).\nTe enviamos el enlace a <b>${esc(enmascarar(c.email!))}</b> (vale 24 horas). Al guardarlo, vuelve aquí, toca /start y escribe tu nombre.`
+        : `Antes de activar Telegram, completa tu <b>perfil público</b> (${PERFIL_MINIMO}). No pudimos enviarte el enlace: escríbenos a hola@micompaz.com.`,
       QUITAR_TECLADO,
     )
     return
@@ -394,7 +391,7 @@ async function iniciarVerificacion(
       await sendTelegramMessage(chatId, `No pudimos enviar el correo con tu código. Escríbenos a hola@micompaz.com y te activamos la cuenta. ✍️ O intenta de nuevo escribiendo tu nombre:`, QUITAR_TECLADO)
       return
     }
-    await sendTelegramMessage(chatId, `Encontré tu cuenta 👀\n\nTe enviamos un <b>código de 6 dígitos</b> al correo <b>${esc(enmascarar(c.email))}</b>.\n\n✍️ Escríbelo aquí cuando lo recibas.\n\n🚨 <b>Alerta de fraude:</b> el código llega únicamente por correo. Compaz nunca te llamará por teléfono. No compartas este código con nadie.`, QUITAR_TECLADO)
+    await sendTelegramMessage(chatId, `Te enviamos un <b>código de 6 dígitos</b> a <b>${esc(enmascarar(c.email))}</b>.\n✍️ Escríbelo aquí.\n\n🔒 ${AVISO_FRAUDE}`, QUITAR_TECLADO)
   } else {
     const entregado = await avisarAdmin(`🔐 <b>Verificación de Compita</b>\n\n<b>${esc(c.nombre)}</b> quiere activar su cuenta.\n\nCódigo: <code>${codigo}</code>\n\nExpira en 15 minutos.`)
     if (!entregado) {
@@ -402,7 +399,7 @@ async function iniciarVerificacion(
       await sendTelegramMessage(chatId, `No pudimos generar tu código. Escríbenos a hola@micompaz.com. ✍️ O intenta de nuevo escribiendo tu nombre:`, QUITAR_TECLADO)
       return
     }
-    await sendTelegramMessage(chatId, `Encontré tu cuenta 👀\n\nPor seguridad, te enviamos un <b>código de 6 dígitos</b> a través del admin de Compaz.\n\n✍️ Escríbelo aquí cuando lo recibas:`, QUITAR_TECLADO)
+    await sendTelegramMessage(chatId, `Te enviamos un <b>código de 6 dígitos</b> por medio del equipo de Compaz.\n✍️ Escríbelo aquí.\n\n🔒 ${AVISO_FRAUDE}`, QUITAR_TECLADO)
   }
 }
 
@@ -566,7 +563,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
       await setEstado(supabase, chatId, { registro_pendiente: true, pendiente_accion: null, pendiente_expira: null })
       await sendTelegramMessage(
         chatId,
-        `¡Bienvenido a Compaz! 👋\n\nPara verificar tu cuenta escríbeme tu <b>nombre completo</b> tal como lo pusiste al registrarte.\n\n<i>Ejemplo: María González</i>\n\n🔔 <b>Activa las notificaciones de Telegram</b> para no perderte solicitudes ni avisos de visita.\n\n🔒 Compaz nunca te pedirá contraseñas, datos bancarios ni información privada. Si alguien lo hace, avísanos a hola@micompaz.com.`,
+        `👋 <b>¡Hola!</b> Escribe tu <b>nombre completo</b>, tal como te registraste.\n<i>Ej.: María González</i>`,
         QUITAR_TECLADO,
       )
     }
@@ -667,15 +664,10 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
       return NextResponse.json({ ok: true })
     }
     const nombre = esc(encontrada?.nombre ?? 'Compita')
+    // UN solo mensaje (antes eran tres: confirmación, guía completa y «eso es todo»). La guía sigue disponible con el botón «📋 Menú».
     await sendTelegramMessage(
       chatId,
-      `✅ <b>¡Listo, ${nombre}!</b> Tu cuenta ya está activa en Compaz. ¡Ya eres parte del equipo! 🎉\n\n🔔 <b>Importante:</b> activa las notificaciones de Telegram ahora para no perderte solicitudes de clientes ni avisos de visita. Ve a Configuración → Notificaciones en Telegram y asegúrate de que estén activadas.\n\nAquí te explico cómo funciona todo:`,
-      QUITAR_TECLADO,
-    )
-    await sendTelegramMessage(chatId, GUIA_COMPITA, TECLADO_SIN_VISITA)
-    await sendTelegramMessage(
-      chatId,
-      `🙌 <b>Eso es todo. Tu registro ya terminó.</b>\n\nNo tienes que hacer nada más de tu lado. Ahora solo falta que una familia te contrate — en cuanto eso pase, te va a aparecer aquí mismo, en este chat.\n\nMientras tanto, si quieres, completa tu perfil con /perfil para que las familias te conozcan mejor.`,
+      `✅ <b>¡Listo, ${nombre}!</b> Tu cuenta está activa.\n\n🔔 Activa las notificaciones de Telegram para no perderte solicitudes.\n\nCuando una familia te contrate, te avisamos aquí. Toca <b>📋 Menú</b> para ver cómo funciona.\n\n🔒 ${AVISO_FRAUDE}`,
       TECLADO_SIN_VISITA,
     )
     const adminChatId = process.env.TELEGRAM_ADMIN_CHAT_ID

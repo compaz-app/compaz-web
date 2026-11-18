@@ -4,6 +4,16 @@ La versión vigente está en `lib/version.ts` y se ve en el panel (menú lateral
 
 Reglas: mayor = cambio grande o lanzamiento; menor = función nueva; parche = arreglo. La etapa `beta` sale cuando el sistema corre una o dos semanas con uso real sin sorpresas.
 
+## 1.3.21-beta.1 (2026-11-18)
+Inscripción del compita: correos y mensajes de Telegram mucho más cortos (primera parte de la reducción de textos).
+1. Medido antes con los mensajes reales de las pruebas: el compita leía unas 1.300 palabras para inscribirse (formulario 647, correo de bienvenida 322, cinco mensajes de Telegram 305, correo del código 50).
+2. Correo de bienvenida: de 322 a 66 palabras. Tres pasos (abrir el bot, tocar Iniciar y escribir el nombre, escribir el código), botón al bot, descargas de iPhone y Android, aviso de notificaciones y de fraude. Se quitaron el «Paso 2: completa tu perfil» (el perfil ya es obligatorio antes de activar Telegram) y la tabla de comandos.
+3. Correo del código: de 50 a 39 palabras. Correo para completar el perfil: de 56 a 49.
+4. Telegram: el registro pasa de cinco mensajes (305 palabras) a tres (12 + 22 + 39 palabras): pedir el nombre, enviar el código y UNA sola confirmación de activación. Ya no llegan la guía completa ni el «Eso es todo»; la guía sigue disponible con el botón «Menú» y pasó de 109 a 21 palabras de texto más las dos advertencias.
+5. Las advertencias de seguridad se QUEDAN y se repiten, pero con dos frases cortas comunes en `lib/avisos-seguridad.ts`: «Compaz nunca te pide claves, dinero ni datos bancarios.» (fraude) y «Mantén todo dentro de Compaz: acordar por fuera viola los términos y puedes perder la garantía.» (contacto por fuera). Acompañan al código, a la activación y a la guía.
+6. Prueba 126: presupuestos de palabras (correos máx. 80, 45 y 50; mensajes de Telegram máx. 45; guía máx. 75) para que no vuelvan a crecer.
+7. Falta: el formulario de registro (647 palabras) y llevar las dos frases comunes a los demás correos y mensajes. Sin migración.
+
 ## 1.3.20-beta.1 (2026-11-18)
 Un solo correo con el resumen de la visita, y se califica una sola vez.
 1. Antes, al terminar una visita el cliente recibía DOS correos casi iguales: uno al instante («resumen de la visita», con las estrellas) y otro cuando el compita completaba el cuestionario (el reporte, también con las estrellas, y hasta con asunto «Actualización»). Se podía calificar dos veces y la segunda decía «ya calificaste».
