@@ -181,6 +181,8 @@ export const ENTRADAS: EntradaManual[] = [
       'Entra a CMC en el menú (en el teléfono, desde Más).',
       'En Operación real ves las postulaciones, las Compitas que el CMC habilitó y si ya están en el catálogo. Los perfiles de prueba, repetidos y demos no cuentan en las cifras.',
       'Toca una Compita para abrir su ficha de siempre. Las entrevistas, verificaciones y el onboarding reales se siguen registrando en el Centro Compitas V2.',
+      'Si eres administrador y la conexión con el CMC está activa, Operación real muestra a todos los aspirantes del CMC por etapa, con búsqueda y filtros. Los colaboradores siguen viendo la vista de habilitadas.',
+      'Al abrir un aspirante ves su ficha del CMC: requisitos de habilitación, preentrevista, entrevistas, verificaciones, onboarding, disponibilidad, alertas e historial. Es solo lectura: para decidir, usa Abrir la V2.',
       'Para enseñar el proceso, elige Demostración: abre un aspirante ficticio, regístrale la entrevista, las verificaciones y el onboarding, y habilítalo. Las reglas son las mismas del CMC: si falta algo, el botón Habilitar sale apagado y dice qué falta.',
       'Al terminar, toca Reiniciar demostración para volver al escenario inicial.',
     ],
