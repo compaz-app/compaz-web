@@ -267,6 +267,14 @@ describe('identidad del CMC (rediseño visual)', () => {
   test('no se usa el símbolo anterior ni un logo provisional; el del CMC sale de su archivo original', () => {
     for (const f of readdirSync('components/panel/confianza')) assert.doesNotMatch(readFileSync(`components/panel/confianza/${f}`, 'utf8'), /simbolo-compaz|logo-nav|logo-icon/, f)
     assert.match(readFileSync('components/panel/confianza/LogoCmc.tsx', 'utf8'), /export const LOGO_CMC: string \| null =/)
+    assert.match(readFileSync('components/panel/confianza/LogoCmc.tsx', 'utf8'), /LOGO_CMC: string \| null = '\/confianza\/logo-cmc\.png'/)
+    const png = readFileSync('public/confianza/logo-cmc.png')
+    assert.equal(png.readUInt32BE(16), 74); assert.equal(png.readUInt32BE(20), 74, 'el logo original es de 74×74: no se escala hacia arriba')
+    // Solo el CMC lo usa.
+    const fuera: string[] = []
+    const recorrer = (d: string) => { for (const f of readdirSync(d, { withFileTypes: true })) { const p = `${d}/${f.name}`; if (f.isDirectory()) { if (f.name !== 'node_modules') recorrer(p) } else if (/\.(tsx?|css)$/.test(f.name) && /logo-cmc|LogoCmc/.test(readFileSync(p, 'utf8'))) fuera.push(p) } }
+    recorrer('app'); recorrer('components'); recorrer('lib')
+    assert.deepEqual(fuera.filter((p) => !p.startsWith('components/panel/confianza/')), [])
   })
   test('el fondo blanco del área principal se aplica SOLO en el CMC; el resto del panel sigue igual', () => {
     assert.match(readFileSync('components/panel/MarcoPanel.tsx', 'utf8'), /actual === 'confianza' \? 'bg-blanco' : 'bg-fondo-claro'/)
