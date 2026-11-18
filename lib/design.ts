@@ -49,6 +49,18 @@ export const colors = {
   naranjaOscuro: '#C84B0E',    // texto naranja con buen contraste
   naranjaClaro: '#FFF3E8',     // fondo de apoyo naranja
 
+  // Sistema de Confianza (SOLO el módulo /panel?sec=confianza, decidido 2026-11-17 para la presentación a inversionistas).
+  // Paleta clara propia del módulo; el prefijo «cf» (clases bg-cf-*, text-cf-*, border-cf-*) evita que otra pantalla la use por error.
+  cfFondo: '#F5F3EF',          // fondo del módulo
+  cfLateral: '#F3F2F0',        // navegación interna de la ficha
+  cfBorde: '#E7E2DA',          // bordes de tarjetas y divisores
+  cfMorado: '#5B3FA6',         // acción principal y etapa actual (contraste 7:1 sobre blanco)
+  cfMoradoHover: '#4A3290',    // hover de la acción principal
+  cfLavanda: '#E8DDFC',        // elemento activo (pestaña, filtro)
+  cfLavandaSuave: '#EDE5FF',   // fondos de apoyo (vista de Telegram, catálogo)
+  cfTexto: '#2B2B2B',          // texto principal
+  cfTextoSuave: '#6F6A64',     // texto secundario (4.9:1 sobre el fondo del módulo)
+
   // Neutros
   blanco: '#FFFFFF',
   negro: '#000000',

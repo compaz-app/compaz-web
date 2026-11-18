@@ -5,7 +5,7 @@ import { beforeEach, test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync, readdirSync } from 'node:fs'
 import { evaluarHabilitacion, transicionDisponible, siguienteAccion, CRITERIOS_PUNTAJE, CRITERIOS_SI_NO, VERIF_ATRIBUTOS, VERIF_METODOS, VERIF_RESULTADOS, VERIF_ESTADOS, CAPACIDADES, type ExpedienteSeleccion } from '@/lib/confianza/reglas'
-import { aplicar, escenarioInicial, leerEstadoGuardado, resumenDemo, PASOS_OPERACION, PASOS_SOLICITUD, type EstadoDemo } from '@/lib/confianza/demo'
+import { aplicar, escenarioInicial, leerEstadoGuardado, resumenDemo, proximaAccion, sinPrefijoDemo, PASOS_OPERACION, PASOS_SOLICITUD, type EstadoDemo } from '@/lib/confianza/demo'
 import { cargarResumenOperativo, clasificarHabilitada, esPerfilDePrueba } from '@/lib/confianza/operativo'
 import { seccionesVisibles } from '@/lib/panel-secciones'
 import { NINGUNO, TODOS } from '@/lib/permisos-catalogo'
@@ -153,7 +153,7 @@ describe('motor de la demostración', () => {
 })
 
 describe('aislamiento de la demostración', () => {
-  const ARCHIVOS = ['lib/confianza/demo.ts', 'lib/confianza/reglas.ts', 'components/panel/confianza/ConfianzaDemo.tsx', 'components/panel/confianza/FichaDemo.tsx', 'components/panel/confianza/FormulariosDemo.tsx', 'components/panel/confianza/piezas.tsx']
+  const ARCHIVOS = ['lib/confianza/demo.ts', 'lib/confianza/reglas.ts', 'components/panel/confianza/MarcoConfianza.tsx', 'components/panel/confianza/ConfianzaDemo.tsx', 'components/panel/confianza/FichaDemo.tsx', 'components/panel/confianza/FormulariosDemo.tsx', 'components/panel/confianza/piezas.tsx']
   test('ni el motor ni la pantalla de la demo pueden escribir fuera del navegador', () => {
     const PROHIBIDO = [/\bfetch\s*\(/, /['"`]\/api\//, /from ['"][^'"]*supabase/i, /createClient|createBrowserClient/, /@\/lib\/(telegram|resend|daily|compitas|solicitudes|usuarios|acciones-equipo|cmc-compitas)\b/, /XMLHttpRequest|sendBeacon|WebSocket|EventSource/, /'use server'/, /router\.(push|replace|refresh)/]
     for (const f of ARCHIVOS) { const s = readFileSync(f, 'utf8'); for (const re of PROHIBIDO) assert.doesNotMatch(s, re, `${f} no debe contener ${re}`) }
@@ -212,5 +212,48 @@ describe('vista operativa (solo lectura) y sección', () => {
     assert.ok(seccionesVisibles(colab({ monitorear: true })).some((s) => s.id === 'confianza'))
     assert.ok(!seccionesVisibles(colab({ atender: true })).some((s) => s.id === 'confianza'))
     assert.equal(seccionesVisibles({ rol: 'admin', permisos: TODOS }).find((s) => s.id === 'confianza')!.enBarraMovil, false)
+  })
+})
+
+describe('correcciones del rediseño (17-nov-2026)', () => {
+  const paso = (e: EstadoDemo, acc: any) => { const r = aplicar(e, acc, AHORA); assert.ok(r.ok, r.ok ? '' : r.error); return (r as any).estado as EstadoDemo }
+  test('la evidencia nunca queda con el prefijo duplicado, lo escriba quien lo escriba', () => {
+    for (const t of ['DEMOSTRACIÓN: DEMOSTRACIÓN: verificación ficticia', 'demostracion: verificación ficticia', '  DEMOSTRACIÓN:DEMOSTRACIÓN:   verificación ficticia', 'verificación ficticia']) {
+      const e = paso(escenarioInicial(AHORA), { tipo: 'registrarVerificacion', id: 'DEMO-104', atributo: 'Referencia', metodo: 'Otro', resultado: 'Verificado', evidencia: t, vence: null })
+      assert.equal(e.aspirantes.find((x) => x.id === 'DEMO-104')!.verificaciones.at(-1)!.evidencia, 'DEMOSTRACIÓN: verificación ficticia', t)
+    }
+    assert.equal(sinPrefijoDemo('DEMOSTRACIÓN: '), '')
+  })
+  test('próxima acción según el estado efectivo: incorporación, disponible y solicitud en curso, sin confundirlas', () => {
+    let e = escenarioInicial(AHORA)
+    const a = () => e.aspirantes.find((x) => x.id === 'DEMO-105')!
+    assert.equal(proximaAccion(a(), e.solicitudes).tipo, 'seleccion')
+    e = paso(e, { tipo: 'cerrarAlerta', id: 'DEMO-105', alertaId: 'ALT-D01', resolucion: 'Confirmó su zona' })
+    e = paso(e, { tipo: 'habilitar', id: 'DEMO-105' })
+    assert.match(proximaAccion(a(), e.solicitudes).texto, /^Incorporación: falta perfil/)
+    for (let i = 1; i < PASOS_OPERACION.length; i++) e = paso(e, { tipo: 'avanzarOperacion', id: 'DEMO-105' })
+    const disp = proximaAccion(a(), e.solicitudes)
+    assert.equal(disp.texto, 'Disponible para recibir solicitudes.'); assert.equal(disp.solicitud, null)
+    assert.doesNotMatch(disp.texto, /pasa al panel operativo/)
+    e = paso(e, { tipo: 'crearSolicitud', id: 'DEMO-105' })
+    const s = e.solicitudes.at(-1)!
+    assert.match(proximaAccion(a(), e.solicitudes).solicitud!.texto, /aviso al Compita/i)
+    e = paso(e, { tipo: 'avanzarSolicitud', solicitudId: s.id }); e = paso(e, { tipo: 'avanzarSolicitud', solicitudId: s.id })
+    assert.match(proximaAccion(a(), e.solicitudes).solicitud!.texto, /videollamada/i)
+    e = paso(e, { tipo: 'avanzarSolicitud', solicitudId: s.id })
+    const fin = proximaAccion(a(), e.solicitudes)
+    assert.equal(fin.texto, 'Disponible para recibir solicitudes.'); assert.match(fin.solicitud!.texto, /pendiente de validación real/)
+  })
+  test('una solicitud aceptada no muestra los botones Aceptar / No puedo, y el pago nunca se da por hecho', () => {
+    const f = readFileSync('components/panel/confianza/FichaDemo.tsx', 'utf8')
+    assert.match(f, /s\.paso === 1\s*\n?\s*\? <p aria-hidden/, 'los botones del mensaje solo se ven mientras espera respuesta, y no son interactivos')
+    assert.match(f, /Solicitud aceptada por el Compita/)
+    assert.match(f, /Pago del cliente: pendiente de validación real/)
+  })
+  test('los colores del módulo viven en lib/design.ts con prefijo cf y solo los usa el Sistema de Confianza', () => {
+    const fuera: string[] = []
+    const recorrer = (d: string) => { for (const f of readdirSync(d, { withFileTypes: true })) { const p = `${d}/${f.name}`; if (f.isDirectory()) { if (f.name !== 'node_modules') recorrer(p) } else if (/\.(tsx?|css)$/.test(f.name) && /\b(bg|text|border|divide|ring|accent|outline)-cf-/.test(readFileSync(p, 'utf8'))) fuera.push(p) } }
+    recorrer('app'); recorrer('components'); recorrer('lib')
+    assert.deepEqual(fuera.filter((p) => !p.startsWith('components/panel/confianza/') && p !== 'app/tokens.generated.css' && p !== 'lib/design.ts'), [])
   })
 })

@@ -60,9 +60,8 @@ import DetalleVisita from '@/components/panel/DetalleVisita'
 import { consultarVisitas, leerVisitaUrl } from '@/lib/panel-visitas-tipos'
 import ConfianzaOperativo from '@/components/panel/confianza/ConfianzaOperativo'
 import ConfianzaDemo from '@/components/panel/confianza/ConfianzaDemo'
-import { ChipLink } from '@/components/panel/ui'
+import MarcoConfianza from '@/components/panel/confianza/MarcoConfianza'
 import { cargarResumenOperativo } from '@/lib/confianza/operativo'
-import { INFO_CONFIANZA } from '@/lib/confianza/textos'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Panel', robots: { index: false, follow: false } }
@@ -164,16 +163,7 @@ async function ContenidoPanel({ sp, actual, actor, comoActor, comoColaborador }:
         : <Aviso tamano="compacto" tono="peligro">No se pudieron leer los datos de selección. Vuelve a intentarlo en un momento; si sigue, revisa Más, Estado del sistema.</Aviso>
     }
     const modo = (d: boolean) => enlace({ cf_modo: d ? 'demo' : null, cf_etapa: null, cf_q: null, cf_id: null, cf_tab: null, persona: null })
-    cuerpo = (
-      <div className="space-y-3">
-        <Encabezado titulo="Sistema de Confianza" descripcion="Cómo se selecciona, verifica y habilita a cada Compita." info={INFO_CONFIANZA} infoQue="Para qué sirve el Sistema de Confianza" />
-        <div role="group" aria-label="Modalidad" className="flex flex-wrap gap-1.5">
-          <ChipLink href={modo(false)} activo={!demo}>Operación real</ChipLink>
-          <ChipLink href={modo(true)} activo={demo}>Demostración</ChipLink>
-        </div>
-        {vista}
-      </div>
-    )
+    cuerpo = <MarcoConfianza demo={demo} hrefReal={modo(false)} hrefDemo={modo(true)}>{vista}</MarcoConfianza>
   } else if (actual === 'seguimiento') {
     cuerpo = <Seguimiento enlace={enlace} d={{ ...consultarSeguimiento(await listarSeguimiento(), un('etapa'), un('pag')), umbrales: umbralesDeAjustes(await getAjustes()) }} />
   } else if (actual === 'visitas') {

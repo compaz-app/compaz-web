@@ -11,7 +11,7 @@
 // (espejo del CMC), así la demo se comporta igual que la operación real.
 // ══════════════════════════════════════════════════════════════════════════════
 import {
-  evaluarHabilitacion, transicionDisponible, CRITERIOS_SI_NO, CRITERIOS_PUNTAJE, ONBOARDING_CONTROLES,
+  evaluarHabilitacion, transicionDisponible, siguienteAccion, CRITERIOS_SI_NO, CRITERIOS_PUNTAJE, ONBOARDING_CONTROLES,
   type Alerta, type Entrevista, type Etapa, type ExpedienteSeleccion, type Onboarding, type OnboardingResultado,
   type Verificacion, type VerifAtributo, type VerifMetodo, type VerifResultado,
 } from '@/lib/confianza/reglas'
@@ -19,6 +19,9 @@ import {
 export const VERSION_DEMO = 1
 /** «Aviso al Compita por Telegram» → «aviso al Compita por Telegram» (solo la primera letra, para no romper nombres propios). */
 export const enFrase = (t: string) => t.charAt(0).toLowerCase() + t.slice(1)
+/** Marca de las evidencias de la demostración. Se agrega UNA vez: si quien escribe ya la puso (una o varias veces, con o sin tilde), se quita antes. */
+export const PREFIJO_EVIDENCIA = 'DEMOSTRACIÓN:'
+export const sinPrefijoDemo = (t: string) => t.replace(/^(?:\s*DEMOSTRACI[OÓ]N\s*:\s*)+/i, '').trim()
 export const OPERADOR_DEMO = 'Operador de demostración'
 
 export interface Pregunta { pregunta: string; respuesta: string }
@@ -173,9 +176,9 @@ export function aplicar(e: EstadoDemo, acc: AccionDemo, ahora: string): Resultad
     case 'registrarVerificacion': {
       if (!ETAPAS_VERIFICACION.includes(a.etapa)) return { ok: false, error: `Las verificaciones se registran después de la entrevista; está en «${a.etapa}».` }
       // La evidencia es obligatoria (como en el CMC) y en la demostración SIEMPRE dice que es ficticia, para que nunca pase por real.
-      const texto = acc.evidencia.trim().replace(/^DEMOSTRACIÓN:\s*/i, '')
+      const texto = sinPrefijoDemo(acc.evidencia)
       if (texto.length < 5) return { ok: false, error: 'La evidencia o referencia es obligatoria: describe qué se revisó.' }
-      const v: Verificacion = { id: `VER-D${String(e.seq).padStart(3, '0')}`, atributo: acc.atributo, metodo: acc.metodo, resultado: acc.resultado, evidencia: `DEMOSTRACIÓN: ${texto}`.slice(0, 500), verificadoPor: OPERADOR_DEMO, fecha, vence: acc.vence, estado: 'Vigente' }
+      const v: Verificacion = { id: `VER-D${String(e.seq).padStart(3, '0')}`, atributo: acc.atributo, metodo: acc.metodo, resultado: acc.resultado, evidencia: `${PREFIJO_EVIDENCIA} ${texto}`.slice(0, 500), verificadoPor: OPERADOR_DEMO, fecha, vence: acc.vence, estado: 'Vigente' }
       return cambia({ ...a, verificaciones: [...a.verificaciones, v] }, [ev(a.id, 'Verificación', acc.atributo, '', `${acc.resultado} · ${acc.metodo}`, v.evidencia)], `Verificación de ${acc.atributo.toLowerCase()} registrada: ${acc.resultado}.`)
     }
     case 'anularVerificacion': {
@@ -224,6 +227,23 @@ export function aplicar(e: EstadoDemo, acc: AccionDemo, ahora: string): Resultad
 // ── Lecturas para la pantalla ─────────────────────────────────────────────────
 
 export const EN_EVALUACION: Etapa[] = ['Preseleccionado', 'Entrevistado', 'En verificación']
+
+/** Lo que falta en una solicitud (el pago nunca se simula: queda pendiente de validación real). */
+const SIGUIENTE_EN_SOLICITUD = ['Enviar el aviso al Compita por Telegram', 'Esperar la respuesta del Compita', 'Agendar la videollamada de presentación', 'Pago del cliente: pendiente de validación real'] as const
+export const siguienteEnSolicitud = (s: SolicitudDemo) => SIGUIENTE_EN_SOLICITUD[Math.min(s.paso, SIGUIENTE_EN_SOLICITUD.length - 1)]
+
+export type TipoProxima = 'seleccion' | 'incorporacion' | 'disponible' | 'cerrado'
+/**
+ * Próxima acción según el estado EFECTIVO: etapa de selección, incorporación a la operación o, si ya está activo,
+ * «Disponible para recibir solicitudes». Una solicitud en curso va aparte (no se confunde con la etapa de selección).
+ */
+export function proximaAccion(a: AspiranteDemo, solicitudes: SolicitudDemo[]): { tipo: TipoProxima; texto: string; solicitud: { familia: string; texto: string } | null } {
+  if (a.etapa === 'Descartado') return { tipo: 'cerrado', texto: siguienteAccion(a), solicitud: null }
+  if (a.etapa !== 'Habilitado') return { tipo: 'seleccion', texto: siguienteAccion(a), solicitud: null }
+  if (a.operacion < PASOS_OPERACION.length) return { tipo: 'incorporacion', texto: `Incorporación: falta ${enFrase(PASOS_OPERACION[a.operacion])}.`, solicitud: null }
+  const s = [...solicitudes].reverse().find((x) => x.compitaId === a.id)
+  return { tipo: 'disponible', texto: 'Disponible para recibir solicitudes.', solicitud: s ? { familia: s.familia, texto: siguienteEnSolicitud(s) } : null }
+}
 
 /** ¿Necesita que alguien del equipo haga algo? (para el indicador «Pendientes»). */
 export function requiereAtencion(a: AspiranteDemo): boolean {

@@ -1,8 +1,7 @@
 import Link from 'next/link'
 import Aviso from '@/components/ui/base/Aviso'
 import InfoBoton from '@/components/ui/InfoBoton'
-import { CLASE_LISTA, Flecha, Rol, TituloSeccion } from '@/components/panel/ui'
-import { Cifra } from '@/components/panel/confianza/piezas'
+import { Cifra, EtiquetaAtencion, LISTA_CF, TarjetaCf } from '@/components/panel/confianza/piezas'
 import type { CompitaHabilitada, ResumenOperativo } from '@/lib/confianza/operativo'
 
 // Vista operativa del Sistema de Confianza: datos reales y SOLO LECTURA. Las fichas se abren con la ficha que ya existe en el panel
@@ -19,49 +18,56 @@ export default function ConfianzaOperativo({ r, fichaHref, urlV2 }: { r: Resumen
   const atencion = porActivar.length + pruebaVisible.length + r.postulaciones.porResolver
 
   return (
-    <div className="space-y-4">
-      <Aviso tamano="compacto" tono="info">
-        Datos reales, solo lectura.{' '}
-        {urlV2 ? <a href={urlV2} target="_blank" rel="noopener noreferrer" className="underline">Entrevistas, verificaciones y onboarding: Centro Compitas V2 ›</a> : 'Entrevistas, verificaciones y onboarding se registran en el Centro Compitas V2.'}
-      </Aviso>
-
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <Cifra valor={r.postulaciones.recibidas} texto="Postulaciones" info="Compitas que se registraron desde la web. No cuenta repetidas, spam ni perfiles de prueba." />
-        <Cifra valor={reales.length} texto="Habilitadas" info="Compitas que el CMC habilitó (pasaron los 7 controles) y publicó en la web. No cuenta perfiles de prueba." />
-        <Cifra valor={enCatalogo} texto="En el catálogo" info="Habilitadas reales que el equipo ya activó y verificó, con Telegram vinculado: las familias pueden pedirlas." />
-        <Cifra valor={atencion} texto="Requieren atención" alerta={atencion > 0} info="Habilitadas sin activar, perfiles de prueba visibles al público y postulaciones por resolver." />
-      </div>
-      <p className="flex flex-wrap items-center gap-1 text-xs text-texto-sutil">
-        No cuentan en las cifras: {pruebas.length + r.postulaciones.pruebas} de prueba · {r.postulaciones.repetidas} repetidas · {r.demos} perfiles demo del catálogo.
-        <InfoBoton que="Qué no cuenta" texto="Los perfiles de prueba se reconocen por su código (lista en lib/confianza/operativo.ts), por palabras como prueba o test en el nombre o el correo, y por ser cuentas del equipo. Los perfiles demo son los de muestra del catálogo." />
+    <div className="space-y-5">
+      <p className="flex flex-wrap items-center gap-2 rounded-xl border border-cf-borde bg-blanco px-3 py-2 text-sm">
+        <span className="rounded-md bg-verde-claro px-1.5 py-px text-xs font-extrabold text-verde-oscuro">Datos reales · solo lectura</span>
+        <span className="text-cf-texto-suave">Las entrevistas, verificaciones y el onboarding se registran en el Centro Compitas V2.</span>
+        {urlV2 && <a href={urlV2} target="_blank" rel="noopener noreferrer" className="font-bold text-cf-morado underline">Abrir la V2 ›</a>}
       </p>
+
+      <section aria-label="Resumen">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          <Cifra valor={r.postulaciones.recibidas} texto="Postulaciones" detalle="Desde la web" info="Compitas que se registraron desde la web. No cuenta repetidas, spam ni perfiles de prueba." />
+          <Cifra valor={reales.length} texto="Habilitadas" detalle="Pasaron los 7 controles" tono="exito" info="Compitas que el CMC habilitó y publicó en la web. No cuenta perfiles de prueba." />
+          <Cifra valor={enCatalogo} texto="En el catálogo" detalle="Reciben solicitudes" info="Habilitadas reales que el equipo ya activó y verificó, con Telegram vinculado: las familias pueden pedirlas." />
+          <Cifra valor={atencion} texto="Requieren atención" detalle="Ver abajo" tono={atencion > 0 ? 'atencion' : 'neutro'} info="Habilitadas sin activar, perfiles de prueba visibles al público y postulaciones por resolver." />
+        </div>
+        <p className="mt-2 flex flex-wrap items-center gap-1 text-xs text-cf-texto-suave">
+          No cuentan en las cifras: {pruebas.length + r.postulaciones.pruebas} de prueba · {r.postulaciones.repetidas} repetidas · {r.demos} perfiles demo del catálogo.
+          <InfoBoton que="Qué no cuenta" texto="Los perfiles de prueba se reconocen por su código (lista en lib/confianza/operativo.ts), por palabras como prueba o test en el nombre o el correo, y por ser cuentas del equipo. Se siguen mostrando en la lista, marcados, para poder revisarlos; los perfiles demo son los de muestra del catálogo." />
+        </p>
+      </section>
 
       {(pruebaVisible.length > 0 || porActivar.length > 0 || r.postulaciones.porResolver > 0) && (
         <section className="space-y-2">
-          <TituloSeccion>Requieren atención</TituloSeccion>
-          <ul className={CLASE_LISTA}>
+          <h2 className="text-sm font-extrabold">Requieren atención</h2>
+          <ul className={LISTA_CF}>
             {pruebaVisible.map((c) => <FilaHabilitada key={c.id} c={c} href={fichaHref(c.id)} conNota />)}
             {porActivar.map((c) => <FilaHabilitada key={c.id} c={c} href={fichaHref(c.id)} conNota />)}
             {r.postulaciones.porResolver > 0 && (
-              <li className="px-3 py-2.5 text-sm"><span className="font-bold">{r.postulaciones.porResolver} postulaciones por resolver.</span> <span className="text-texto-medio">Se revisan en Más, Postulaciones y origen.</span></li>
+              <li className="px-4 py-3 text-sm"><span className="font-bold">{r.postulaciones.porResolver} postulaciones por resolver.</span> <span className="text-cf-texto-suave">Se revisan en Más, Postulaciones y origen.</span></li>
             )}
           </ul>
         </section>
       )}
 
       <section className="space-y-2">
-        <TituloSeccion>Compitas habilitadas por el CMC</TituloSeccion>
-        {r.habilitadas.length === 0 ? <p className="text-sm text-texto-medio">Todavía no hay ninguna.</p> : (
-          <ul className={CLASE_LISTA}>{r.habilitadas.map((c) => <FilaHabilitada key={c.id} c={c} href={fichaHref(c.id)} />)}</ul>
+        <h2 className="flex flex-wrap items-center gap-1 text-sm font-extrabold">
+          Compitas habilitadas por el CMC
+          <span className="font-semibold text-cf-texto-suave">· {r.habilitadas.length} {r.habilitadas.length === 1 ? 'ficha' : 'fichas'}, {reales.length} {reales.length === 1 ? 'cuenta' : 'cuentan'} en las cifras</span>
+          {pruebas.length > 0 && <InfoBoton que="Por qué hay más fichas que habilitadas" texto={`La lista muestra todas las fichas que el CMC publicó, también ${pruebas.length === 1 ? 'el perfil de prueba' : `los ${pruebas.length} perfiles de prueba`}, para poder revisarlos. Esos perfiles no cuentan en las cifras de arriba.`} />}
+        </h2>
+        {r.habilitadas.length === 0 ? <p className="text-sm text-cf-texto-suave">Todavía no hay ninguna.</p> : (
+          <ul className={LISTA_CF}>{r.habilitadas.map((c) => <FilaHabilitada key={c.id} c={c} href={fichaHref(c.id)} />)}</ul>
         )}
       </section>
 
-      <Aviso tamano="compacto" tono="advertencia">
-        Pendiente de integrar: las etapas intermedias (preseleccionado, entrevistado, en verificación) viven en el CMC y la web aún no las lee. Por eso aquí no se cuentan los aspirantes en evaluación.
-      </Aviso>
-      <p className="text-xs text-texto-sutil">
-        Leído el {fecha(r.leidoEn)}.{r.ultimaSincronizacion ? ` Última publicación del CMC: ${fecha(r.ultimaSincronizacion.cuando)} (${r.ultimaSincronizacion.estado}).` : ''}
-      </p>
+      <TarjetaCf>
+        <Aviso tamano="compacto" tono="advertencia">Pendiente de integrar: las etapas intermedias (preselección, entrevista, verificación) viven en el CMC y la web aún no las lee. Por eso aquí no se cuentan los aspirantes en evaluación.</Aviso>
+        <p className="text-xs text-cf-texto-suave">
+          Leído el {fecha(r.leidoEn)}.{r.ultimaSincronizacion ? ` Última publicación del CMC: ${fecha(r.ultimaSincronizacion.cuando)}, ${r.ultimaSincronizacion.estado}.` : ''}
+        </p>
+      </TarjetaCf>
     </div>
   )
 }
@@ -69,16 +75,17 @@ export default function ConfianzaOperativo({ r, fichaHref, urlV2 }: { r: Resumen
 function FilaHabilitada({ c, href, conNota = false }: { c: CompitaHabilitada; href: string; /** La nota se muestra solo en «Requieren atención», para no repetirla en la lista completa. */ conNota?: boolean }) {
   return (
     <li>
-      <Link prefetch={false} href={href} className="flex items-center gap-3 px-3 py-2.5 hover:bg-lavanda-sutil">
+      <Link prefetch={false} href={href} className="flex items-center gap-3 px-4 py-3 hover:bg-cf-fondo">
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="font-bold">{c.nombre}</span><span className="text-xs text-texto-sutil">{c.codigo}</span>
-            {c.prueba && <Rol>Prueba</Rol>}
-            <span className="text-xs font-bold text-texto-medio">{EN_WEB[c.enWeb]}{c.telegram ? '' : ' · sin Telegram'}</span>
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span className="font-bold">{c.nombre}</span><span className="text-xs text-cf-texto-suave">{c.codigo}</span>
+            <span className="text-xs font-bold text-cf-texto-suave">· {EN_WEB[c.enWeb]}{c.telegram ? '' : ' · sin Telegram'}</span>
+            {c.prueba && <span title={c.prueba}><EtiquetaAtencion estado="excluido" /></span>}
+            {c.prueba && <span className="text-xs text-cf-texto-suave">perfil de prueba</span>}
           </div>
-          {conNota && c.nota && <p className={`text-xs ${c.prueba ? 'font-bold text-rojo-oscuro' : 'text-ambar-oscuro'}`}>{c.nota}</p>}
+          {conNota && c.nota && <p className={`mt-0.5 text-xs ${c.prueba ? 'font-bold text-rojo-oscuro' : 'text-ambar-oscuro'}`}>{c.nota}</p>}
         </div>
-        <Flecha />
+        <span aria-hidden className="text-lg text-cf-texto-suave">›</span>
       </Link>
     </li>
   )
