@@ -175,17 +175,17 @@ export const ENTRADAS: EntradaManual[] = [
     permiso: 'monitorear', pantalla: 'personas', busca: ['compitas', 'clientes', 'buscar', 'ficha'],
   },
   {
-    id: 'sistema-confianza', seccion: 'dia_a_dia', titulo: '¿Qué es el Sistema de Confianza y cuándo uso la demostración?',
-    paraQue: 'Reúne cómo se selecciona, verifica y habilita a cada Compita. Tiene dos modalidades: Operación real, para leer, y Demostración, con personas ficticias.',
+    id: 'sistema-confianza', seccion: 'dia_a_dia', titulo: '¿Qué es el CMC (Sistema de Confianza) y cuándo uso la demostración?',
+    paraQue: 'El CMC, Centro de Mando Compaz, reúne cómo se selecciona, verifica y habilita a cada Compita. Tiene dos modalidades: Operación real, para leer, y Demostración, con personas ficticias.',
     pasos: [
-      'Entra a Sistema de Confianza en el menú (en el teléfono, desde Más).',
+      'Entra a CMC en el menú (en el teléfono, desde Más).',
       'En Operación real ves las postulaciones, las Compitas que el CMC habilitó y si ya están en el catálogo. Los perfiles de prueba, repetidos y demos no cuentan en las cifras.',
       'Toca una Compita para abrir su ficha de siempre. Las entrevistas, verificaciones y el onboarding reales se siguen registrando en el Centro Compitas V2.',
       'Para enseñar el proceso, elige Demostración: abre un aspirante ficticio, regístrale la entrevista, las verificaciones y el onboarding, y habilítalo. Las reglas son las mismas del CMC: si falta algo, el botón Habilitar sale apagado y dice qué falta.',
       'Al terminar, toca Reiniciar demostración para volver al escenario inicial.',
     ],
     despues: 'La demostración se guarda solo en tu navegador: no envía correos, mensajes de Telegram, solicitudes ni pagos, y no toca la base. Mientras está abierta, el panel esconde tu correo y los puntos rojos. Si Requiere atención marca un perfil de prueba visible en el catálogo, desactívalo desde su ficha al terminar la prueba.',
-    permiso: 'monitorear', pantalla: 'confianza', busca: ['confianza', 'cmc', 'habilitar', 'verificacion', 'entrevista', 'onboarding', 'demo', 'inversionistas', 'presentacion'],
+    permiso: 'monitorear', pantalla: 'confianza', busca: ['confianza', 'sistema de confianza', 'centro de mando', 'cmc', 'habilitar', 'verificacion', 'entrevista', 'onboarding', 'demo', 'inversionistas', 'presentacion'],
   },
   {
     id: 'chats', seccion: 'dia_a_dia', titulo: '¿Cómo veo el chat entre un cliente y su compita?',

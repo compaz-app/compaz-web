@@ -34,7 +34,8 @@ export default function MarcoPanel({ actor, actual, comoColaborador, puedeElegir
       className={`flex min-h-10 flex-1 items-center justify-center rounded-lg px-2 text-sm ${comoColaborador === como ? 'bg-morado-medio font-extrabold text-blanco' : 'font-bold text-morado-claro hover:bg-fondo-claro'}`}>{texto}</Link>
   )
   return (
-    <div className="min-h-dvh bg-fondo-claro lg:flex">
+    // Solo el CMC (sec=confianza) usa fondo blanco en el área principal; el menú y las demás secciones no cambian.
+    <div className={`min-h-dvh lg:flex ${actual === 'confianza' ? 'bg-blanco' : 'bg-fondo-claro'}`}>
       <aside className="hidden w-60 shrink-0 flex-col gap-1 border-r border-borde bg-blanco p-3 lg:flex">
         <div className="px-3 pb-3 pt-2"><span className="text-lg font-extrabold text-morado-medio">Compaz</span> <span className="text-sm font-bold text-texto-medio">Panel</span> <span className="text-xs text-texto-sutil" title="Versión del sistema">v{VERSION}</span></div>
         <nav aria-label="Secciones del panel" className="flex flex-col gap-1">{secciones.map(lateral)}</nav>

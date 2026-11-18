@@ -35,23 +35,25 @@ function Progreso({ a }: { a: AspiranteDemo }) {
   const descartado = a.etapa === 'Descartado'
   const actual = descartado ? (a.entrevistas.length ? 2 : 1) : enOperacion(a) ? 5 : INDICE[a.etapa] ?? 0
   return (
-    <ol aria-label="Progreso de selección" className="grid grid-cols-6 gap-1">
-      {PASOS_FICHA.map((p, i) => {
-        const hecho = i < actual || (i === actual && enOperacion(a))
-        const esActual = i === actual && !enOperacion(a)
-        const estado = descartado && i === actual ? 'descartado' : hecho ? 'hecho' : esActual ? 'actual' : 'pendiente'
-        const barra = { hecho: 'bg-verde-vivo', actual: 'bg-cf-morado', descartado: 'bg-rojo', pendiente: 'bg-cf-borde' }[estado]
-        const texto = { hecho: 'text-verde-oscuro', actual: 'font-extrabold text-cf-morado', descartado: 'font-extrabold text-rojo-oscuro', pendiente: 'text-cf-texto-suave' }[estado]
-        return (
-          <li key={p} aria-current={esActual ? 'step' : undefined} className={descartado && i > actual ? 'opacity-40' : ''}>
-            <span className={`block h-1.5 rounded-full ${barra}`} />
-            <span className={`mt-1 block truncate text-[11px] font-bold sm:text-xs ${texto}`}>
-              {estado === 'hecho' ? '✓ ' : estado === 'descartado' ? '✕ ' : ''}{estado === 'descartado' ? 'Descartado' : p}
-            </span>
-          </li>
-        )
-      })}
-    </ol>
+    <div className="-mx-4 overflow-x-auto px-4">
+      <ol aria-label="Progreso de selección" className="relative grid min-w-[30rem] grid-cols-6">
+        <span aria-hidden className="absolute left-[8.33%] right-[8.33%] top-3 h-px bg-cf-borde" />
+        <span aria-hidden className="absolute left-[8.33%] top-3 h-px bg-verde-vivo" style={{ width: `${(Math.min(actual, 5) / 6) * 100}%` }} />
+        {PASOS_FICHA.map((p, i) => {
+          const hecho = i < actual || (i === actual && enOperacion(a))
+          const esActual = i === actual && !enOperacion(a)
+          const estado = descartado && i === actual ? 'descartado' : hecho ? 'hecho' : esActual ? 'actual' : 'pendiente'
+          const nodo = { hecho: 'bg-verde-vivo text-blanco', actual: 'bg-cf-morado text-blanco ring-4 ring-cf-lavanda', descartado: 'bg-rojo text-blanco', pendiente: 'border border-cf-borde bg-blanco text-cf-texto-suave' }[estado]
+          const texto = { hecho: 'text-cf-texto', actual: 'font-extrabold text-cf-morado', descartado: 'font-extrabold text-rojo-oscuro', pendiente: 'text-cf-texto-suave' }[estado]
+          return (
+            <li key={p} aria-current={esActual ? 'step' : undefined} className={`relative flex flex-col items-center gap-1 ${descartado && i > actual ? 'opacity-40' : ''}`}>
+              <span className={`relative z-10 grid h-6 w-6 place-items-center rounded-full text-[11px] font-extrabold ${nodo}`}>{estado === 'hecho' ? '✓' : estado === 'descartado' ? '✕' : i + 1}</span>
+              <span className={`whitespace-nowrap text-xs font-semibold ${texto}`}>{estado === 'descartado' ? 'Descartado' : p}</span>
+            </li>
+          )
+        })}
+      </ol>
+    </div>
   )
 }
 
@@ -69,16 +71,16 @@ export default function FichaDemo({ a, estado, tab, setTab, hacer, volver, mensa
   a: AspiranteDemo; estado: EstadoDemo; tab: TabFicha; setTab: (t: TabFicha) => void; hacer: Hacer; volver: () => void; mensaje: React.ReactNode
 }) {
   const p = proximaAccion(a, estado.solicitudes)
-  const tonoProxima = p.tipo === 'disponible' ? 'border-verde-vivo/50 bg-verde-claro' : p.tipo === 'cerrado' ? 'border-cf-borde bg-cf-lateral' : 'border-cf-morado/30 bg-cf-lavanda-suave'
+  const tonoProxima = p.tipo === 'disponible' ? 'border-verde-vivo' : p.tipo === 'cerrado' ? 'border-cf-borde' : 'border-cf-morado'
   return (
     <div className="space-y-4">
       <button type="button" onClick={volver} className="inline-flex min-h-9 items-center gap-1 text-sm font-bold text-cf-morado">‹ Volver a la lista</button>
 
-      <header className="space-y-4 rounded-2xl border border-cf-borde bg-blanco p-4 sm:p-5">
+      <header className="space-y-4 border-b border-cf-borde pb-5">
         <div className="flex flex-wrap items-start gap-x-3 gap-y-1">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-md bg-amarillo-claro px-1.5 py-px text-[11px] font-extrabold tracking-wide text-ambar-oscuro">DEMO · ficticio</span>
+              <span className="rounded-full bg-amarillo-claro px-2 py-0.5 text-xs font-bold text-ambar-oscuro">Demo · ficticio</span>
               <span className="text-xs font-bold text-cf-texto-suave">{a.id}</span>
             </div>
             <h2 className="mt-1 text-2xl font-extrabold leading-tight">{a.nombre}</h2>
@@ -87,7 +89,7 @@ export default function FichaDemo({ a, estado, tab, setTab, hacer, volver, mensa
           <span className="ml-auto"><EtiquetaEtapa etapa={enOperacion(a) ? 'En operación' : a.etapa} /></span>
         </div>
         <Progreso a={a} />
-        <div className={`rounded-xl border px-3 py-2 ${tonoProxima}`}>
+        <div className={`border-l-[3px] py-0.5 pl-3 ${tonoProxima}`}>
           <p className="text-sm"><span className="font-extrabold">Próxima acción:</span> {p.texto}</p>
           {p.solicitud && <p className="mt-0.5 text-sm"><span className="font-extrabold">Solicitud en curso · {p.solicitud.familia}:</span> {p.solicitud.texto}.</p>}
         </div>
@@ -95,17 +97,17 @@ export default function FichaDemo({ a, estado, tab, setTab, hacer, volver, mensa
 
       {mensaje}
 
-      <div className="grid gap-4 lg:grid-cols-[12.5rem_minmax(0,1fr)]">
-        <nav aria-label="Partes de la ficha" className="-mx-4 overflow-x-auto px-4 lg:mx-0 lg:overflow-visible lg:px-0">
-          <ul role="tablist" className="flex w-max gap-1 rounded-2xl bg-cf-lateral p-1 lg:sticky lg:top-20 lg:w-auto lg:flex-col">
+      <div className="space-y-5">
+        <nav aria-label="Partes de la ficha" className="-mx-4 overflow-x-auto border-b border-cf-borde px-4">
+          <ul role="tablist" className="flex w-max gap-1">
             {TABS_FICHA.map(([id, texto]) => {
               const s = estadoTab(a, id)
               return (
                 <li key={id}>
                   <button type="button" role="tab" aria-selected={tab === id} onClick={() => setTab(id)}
-                    className={`flex min-h-9 w-full items-center gap-2 whitespace-nowrap rounded-xl px-3 text-sm font-bold ${tab === id ? 'bg-cf-lavanda text-cf-morado' : 'text-cf-texto-suave hover:bg-blanco hover:text-cf-texto'}`}>
+                    className={`-mb-px flex min-h-11 items-center gap-1.5 whitespace-nowrap border-b-2 px-3 text-sm font-semibold transition-colors ${tab === id ? 'border-cf-morado text-cf-morado' : 'border-transparent text-cf-texto-suave hover:text-cf-texto'}`}>
                     {texto}
-                    {s && <span className="ml-auto"><Marca estado={s === 'hecho' ? 'hecho' : 'bloqueo'} /></span>}
+                    {s && <span className={`h-1.5 w-1.5 rounded-full ${s === 'hecho' ? 'bg-verde-vivo' : 'bg-rojo'}`} aria-label={s === 'hecho' ? '(completo)' : '(bloqueado)'} />}
                   </button>
                 </li>
               )
@@ -230,8 +232,8 @@ function ResultadoEntrevista({ e }: { e: Entrevista }) {
       </ul>
       {(e.positivas || e.pendientes) && (
         <div className="grid gap-3 sm:grid-cols-2">
-          {e.positivas && <p className="rounded-xl bg-cf-fondo px-3 py-2 text-sm"><span className="block text-xs font-bold text-cf-texto-suave">Observación: señales positivas</span>{e.positivas}</p>}
-          {e.pendientes && <p className="rounded-xl bg-cf-fondo px-3 py-2 text-sm"><span className="block text-xs font-bold text-cf-texto-suave">Observación: aspectos pendientes</span>{e.pendientes}</p>}
+          {e.positivas && <p className="rounded-xl bg-cf-lateral px-3 py-2 text-sm"><span className="block text-xs font-bold text-cf-texto-suave">Observación: señales positivas</span>{e.positivas}</p>}
+          {e.pendientes && <p className="rounded-xl bg-cf-lateral px-3 py-2 text-sm"><span className="block text-xs font-bold text-cf-texto-suave">Observación: aspectos pendientes</span>{e.pendientes}</p>}
         </div>
       )}
       {e.alertas && <p className="rounded-xl border border-amarillo-marca bg-amarillo-claro px-3 py-2 text-sm text-ambar-oscuro"><span className="block text-xs font-extrabold">Señal de alerta · requiere revisión, no bloquea por sí sola</span>{e.alertas}</p>}
@@ -248,7 +250,7 @@ function Entrevistas({ a, hacer }: { a: AspiranteDemo; hacer: Hacer }) {
     <>
       {ult && <TarjetaCf titulo="Resultado de la entrevista" extra={<EtiquetaMadurez madurez="comprobado" />}><ResultadoEntrevista e={ult} /></TarjetaCf>}
       {anteriores.length > 0 && (
-        <details className="group rounded-2xl border border-cf-borde bg-blanco p-4">
+        <details className="group rounded-xl border border-cf-borde bg-blanco p-4">
           <summary className="flex cursor-pointer list-none items-center gap-2 text-sm font-extrabold"><span aria-hidden className="transition-transform group-open:rotate-90">›</span>Entrevistas anteriores ({anteriores.length})</summary>
           <div className="mt-3 space-y-4 divide-y divide-cf-borde">{anteriores.map((e, i) => <div key={i} className="pt-4 first:pt-0"><ResultadoEntrevista e={e} /></div>)}</div>
         </details>
@@ -276,7 +278,7 @@ function Verificaciones({ a, hacer }: { a: AspiranteDemo; hacer: Hacer }) {
       <TarjetaCf titulo="Requisitos para habilitar">
         <ul className="grid gap-2 sm:grid-cols-2">
           {req.map(([r, ok]) => (
-            <li key={r} className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-sm ${ok ? 'border-verde-vivo/40 bg-verde-claro' : 'border-cf-borde bg-cf-fondo'}`}>
+            <li key={r} className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-sm ${ok ? 'border-verde-vivo/40 bg-verde-claro' : 'border-cf-borde bg-cf-lateral'}`}>
               <Marca estado={ok ? 'hecho' : 'pendiente'} /><span className="font-bold">{r}</span><span className="ml-auto text-xs font-bold">{ok ? 'Verificada y vigente' : 'Pendiente'}</span>
             </li>
           ))}
@@ -361,7 +363,7 @@ function Habilitacion({ a, hacer, setTab }: { a: AspiranteDemo; hacer: Hacer; se
     : [`${pendientes.length === 1 ? 'Falta 1' : `Faltan ${pendientes.length}`} de 7 controles`, 'border-amarillo-marca bg-amarillo-claro text-ambar-oscuro']
   return (
     <>
-      <section className={`flex flex-wrap items-center gap-3 rounded-2xl border p-4 ${tono}`}>
+      <section className={`flex flex-wrap items-center gap-3 rounded-xl border p-4 ${tono}`}>
         <div className="min-w-0 flex-1">
           <p className="text-xs font-bold uppercase tracking-wide opacity-80">Decisión de habilitación</p>
           <p className="text-lg font-extrabold">{titulo}</p>
@@ -463,7 +465,7 @@ function Solicitud({ s, hacer }: { s: SolicitudDemo; hacer: Hacer }) {
           : <p className="text-xs text-cf-texto-suave">El pago no se simula: es lo que falta validar en la operación real.</p>}
       </div>
       {s.paso >= 1 && (
-        <figure aria-label="Vista del mensaje de Telegram" className="h-fit rounded-2xl border border-cf-borde bg-cf-lavanda-suave p-3 text-sm">
+        <figure aria-label="Vista del mensaje de Telegram" className="h-fit rounded-xl border border-cf-borde bg-cf-lavanda-suave p-3 text-sm">
           <figcaption className="text-[11px] font-bold text-cf-texto-suave">Mensaje que recibe el Compita · vista, no se envía</figcaption>
           <p className="mt-2 rounded-xl rounded-tl-sm bg-blanco px-3 py-2">Nueva solicitud: {familia} quiere conocerte para {s.servicio.toLowerCase()}. ¿Aceptas?</p>
           {s.paso === 1

@@ -257,3 +257,21 @@ describe('correcciones del rediseño (17-nov-2026)', () => {
     assert.deepEqual(fuera.filter((p) => !p.startsWith('components/panel/confianza/') && p !== 'app/tokens.generated.css' && p !== 'lib/design.ts'), [])
   })
 })
+
+describe('identidad del CMC (rediseño visual)', () => {
+  test('el menú dice solo «CMC» y el encabezado «CMC» con el subtítulo pedido', () => {
+    assert.equal(seccionesVisibles({ rol: 'admin', permisos: TODOS }).find((s) => s.id === 'confianza')!.texto, 'CMC')
+    const marco = readFileSync('components/panel/confianza/MarcoConfianza.tsx', 'utf8')
+    assert.match(marco, /<LogoCmc \/>CMC<\/span>/); assert.match(marco, /descripcion="Centro de Mando Compaz · Sistema de Confianza"/)
+  })
+  test('no se usa el símbolo anterior ni un logo provisional; el del CMC sale de su archivo original', () => {
+    for (const f of readdirSync('components/panel/confianza')) assert.doesNotMatch(readFileSync(`components/panel/confianza/${f}`, 'utf8'), /simbolo-compaz|logo-nav|logo-icon/, f)
+    assert.match(readFileSync('components/panel/confianza/LogoCmc.tsx', 'utf8'), /export const LOGO_CMC: string \| null =/)
+  })
+  test('el fondo blanco del área principal se aplica SOLO en el CMC; el resto del panel sigue igual', () => {
+    assert.match(readFileSync('components/panel/MarcoPanel.tsx', 'utf8'), /actual === 'confianza' \? 'bg-blanco' : 'bg-fondo-claro'/)
+  })
+  test('el módulo no trae tipografías propias: usa la del panel', () => {
+    for (const f of readdirSync('components/panel/confianza')) assert.doesNotMatch(readFileSync(`components/panel/confianza/${f}`, 'utf8'), /font-(display|serif|mono|bricolage)|fontFamily|next\/font/, f)
+  })
+})
