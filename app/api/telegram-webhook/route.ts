@@ -1575,6 +1575,13 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
       .update({ mensaje_compita_reagendar: sugerido.textoCensurado })
       .eq('id', solicitudId)
 
+    // El cliente lo ve también en su portal (tarjeta y campana): el correo deja de ser el único aviso.
+    const { data: solPortal } = await supabase.from('solicitudes').select('cliente_id').eq('id', solicitudId).maybeSingle()
+    if (solPortal?.cliente_id) {
+      await registrarNovedad({ usuarioId: solPortal.cliente_id as string, tipo: 'horarios_sugeridos', nivel: 'accionable', titulo: `${compita.nombre.split(' ')[0]} te propone otros horarios.`,
+        ruta: `/compitas?compita=${encodeURIComponent(compita.id)}&reagendar=${encodeURIComponent(solicitudId)}`, entidad: 'solicitud', entidadId: solicitudId, clave: `horarios_sugeridos:${solicitudId}:${Date.now()}` })
+    }
+
     // Enviar email al cliente con los horarios sugeridos
     let emailHorarioEnviado = false
     if (clienteEmail) {

@@ -140,3 +140,26 @@ describe('«¿Pudiste hablar?» en todos los canales', () => {
     assert.equal(db.rows('novedades_cliente').filter((n) => !n.vista_en).length, 0)
   })
 })
+
+// ── El compita sugiere otras horas por escrito: el cliente lo ve en el portal, no solo por correo ────────────────────────────────────────────────────────────
+import { decidirEstado } from '@/lib/estado-cliente'
+import { tarjetaDelEstado } from '@/lib/portal-estados'
+
+describe('horarios sugeridos por el compita', () => {
+  const sol = (o: Record<string, any> = {}) => ({ id: 's1', estado: 'rechazada', tipo: 'entrevista', compitaId: 'c1', compitaNombre: 'Lucía Pérez Gómez', slotConfirmado: null, slotsPropuestos: 0, seguimientoEnviado: false, tokenRespuesta: true, llamadaPorConfirmar: false, clienteDijoNo: false, motivoRegistrado: false, avisoEntregado: true, reserva: null, creadaEn: new Date(Date.now() - 3600_000).toISOString(), mensajeCompita: 'El lunes 6 a las 3:00 pm', ...o })
+  const foto = (solicitudes: any[]) => ({ ahora: new Date(), pausada: false, fichaCompleta: true, zonaHoraria: null, nombre: 'Carlos', compitaAsignado: null, solicitudes, pagoPendiente: null, cupo: null, visitas: [], cancelaciones: [] })
+
+  test('el portal muestra la tarjeta con el texto del compita y el botón para volver a pedirle', () => {
+    const e = decidirEstado(foto([sol()]) as any)
+    assert.equal(e.codigo, 'horarios_sugeridos')
+    const t = tarjetaDelEstado({ estado: e, pagado: false } as any)
+    assert.match(t.texto, /lunes 6 a las 3:00 pm/)
+    assert.match(tarjetaDelEstado({ estado: { ...e, mensaje: undefined }, pagado: false } as any).texto, /sugirió otras/)
+    assert.match((t.principal!.destino as any).ruta, /\/compitas\?compita=c1&reagendar=s1/)
+  })
+  test('si ya le volvió a pedir a ese compita, la tarjeta desaparece; sin mensaje no hay tarjeta', () => {
+    const nueva = sol({ id: 's2', estado: 'pendiente', mensajeCompita: null, creadaEn: new Date().toISOString() })
+    assert.notEqual(decidirEstado(foto([sol(), nueva]) as any).codigo, 'horarios_sugeridos')
+    assert.notEqual(decidirEstado(foto([sol({ mensajeCompita: null })]) as any).codigo, 'horarios_sugeridos')
+  })
+})

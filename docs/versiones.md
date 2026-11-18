@@ -4,6 +4,9 @@ La versión vigente está en `lib/version.ts` y se ve en el panel (menú lateral
 
 Reglas: mayor = cambio grande o lanzamiento; menor = función nueva; parche = arreglo. La etapa `beta` sale cuando el sistema corre una o dos semanas con uso real sin sorpresas.
 
+## 1.3.27-beta.1 (2026-11-18)
+Hueco cerrado: cuando el compita rechaza las horas pedidas y sugiere otras por escrito, el cliente solo lo veía por correo (y en el dashboard viejo). Ahora el portal muestra una tarjeta («X te propone otros horarios», con el texto ya censurado de contactos y el botón «Agendar con X»), suena la campana y se mantiene el correo como respaldo. La tarjeta desaparece cuando el cliente vuelve a pedirle a ese compita. Estado nuevo `horarios_sugeridos`.
+
 ## 1.3.26-beta.1 (2026-11-18)
 Los correos «¿Pudiste hablar?» y «¿qué te pareció?» vuelven a salir (el cliente podía cerrar la pestaña del portal sin enterarse) y el portal ahora también los muestra, con botones: tarjeta `confirmar_llamada` («Sí, hablamos» / «No se pudo, elegir otra hora»). Contestar en el portal, en el correo o (el compita) en Telegram cierra la pregunta en todos los canales y el tablero se actualiza solo. Prueba 130.
 
