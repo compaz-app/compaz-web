@@ -4,6 +4,14 @@ La versión vigente está en `lib/version.ts` y se ve en el panel (menú lateral
 
 Reglas: mayor = cambio grande o lanzamiento; menor = función nueva; parche = arreglo. La etapa `beta` sale cuando el sistema corre una o dos semanas con uso real sin sorpresas.
 
+## 1.3.16-beta.1 (2026-11-18)
+«¿Cómo estuvo la llamada?»: el compita se queda en Telegram, y el cliente se entera y llega más rápido a reagendar.
+1. Compita: «Sí, ocurrió» y «No se pudo» ahora son botones de Telegram que responden al toque (callback `ll:`), sin página web de por medio. Antes lo mandaban a una página que volvía a preguntar «¿la llamada no se pudo realizar?» y, al responder, mostraba «Ir a mi portal», que es el portal del CLIENTE. Solo la compita de esa solicitud puede responder.
+2. Causa del «Ir a mi portal»: `pagina()` ponía ese botón por defecto en toda página de éxito, también las del compita. Ahora el botón depende de quién mira (`paginaPara`): el cliente vuelve a su portal; el compita vuelve a Telegram (o no ve botón). Aplica a todas las páginas de respuesta de solicitudes (responder, reagendar, seguimiento, resultado de la llamada, calificación).
+3. Cliente: cuando el compita dice que la llamada no se pudo, además del correo llega un aviso en la campana del portal con el enlace directo a elegir otra hora. Y el botón «No se pudo» del correo «¿Pudiste hablar?» ya no pasa por la página intermedia de confirmación: va directo a la página de cambiar la hora (de 3 pasos a 2). El enlace «Sí, todo bien» conserva su confirmación.
+4. Se probó que el correo al cliente SÍ sale cuando el compita dice que no se pudo (prueba 121); si en la prueba real no llegó, revisar spam y el registro de avisos (Más, Avisos). Si el cliente toca «No se pudo» y no termina de elegir hora, ya no queda anotado que la llamada no ocurrió, y más tarde puede recibir la pregunta de contratar.
+5. Sin migración.
+
 ## 1.3.15-beta.1 (2026-11-17)
 Un compita nuevo no cuenta en el sistema hasta tener el perfil lleno y Telegram activo.
 1. En Personas, un compita sin verificar al que le falta el perfil (descripción y al menos un servicio) o Telegram sale como «Pendiente», con lo que le falta en la columna Estado («Falta perfil», «Falta Telegram» o «Falta perfil y Telegram»). Ya no aparece en «Todos» ni en los conteos de esa lista: se ve en el filtro nuevo «Pendientes».

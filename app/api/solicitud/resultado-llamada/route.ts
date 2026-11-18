@@ -12,7 +12,7 @@ import { rolValido, qRol } from '@/lib/links'
 import { registrarAccion } from '@/lib/avisos'
 import { registrarEvento } from '@/lib/eventos'
 import { esEntrevistaConHoras, reagendarEntrevista } from '@/lib/reagendar'
-import { pagina, puertaConfirmacion } from '@/lib/confirm'
+import { pagina, paginaPara, puertaConfirmacion } from '@/lib/confirm'
 
 type Resultado = 'contratar' | 'reagendar' | 'no_contratar' | 'bien'
 
@@ -70,11 +70,11 @@ async function ejecutar(req: NextRequest, p: NonNullable<ReturnType<typeof leer>
 
   if (resultado !== 'bien' && resultado !== 'reagendar') {
     if (solicitud.estado === 'contratada') {
-      return pagina('Ya registrado', `Ya registramos que querías contratar a ${solicitud.compita_nombre ?? 'tu compita'}. El equipo de Compaz está coordinando los detalles.`)
+      return paginaPara('cliente', 'Ya registrado', `Ya registramos que querías contratar a ${solicitud.compita_nombre ?? 'tu compita'}. El equipo de Compaz está coordinando los detalles.`)
     }
     if (solicitud.estado === 'rechazada' && resultado === 'no_contratar') return NextResponse.redirect(`${origin}/compitas`, 303)
     if (solicitud.estado === 'rechazada' && resultado === 'contratar') {
-      return pagina('Enlace vencido', 'Esta sesión ya cerró. Si tienes alguna duda escríbenos a hola@micompaz.com.')
+      return paginaPara('cliente', 'Enlace vencido', 'Esta sesión ya cerró. Si tienes alguna duda escríbenos a hola@micompaz.com.')
     }
   }
 
@@ -97,7 +97,7 @@ async function ejecutar(req: NextRequest, p: NonNullable<ReturnType<typeof leer>
         await sendTelegramMessage(compita.telegram_chat_id, `✅ <b>Llamada registrada</b>\n\nGracias por tu tiempo. Ahora esperamos que la familia nos confirme su decisión. Te avisamos en cuanto sepamos. ¡Gracias por ser parte de Compaz!`)
       } catch (e) { console.error('Telegram bien compita:', e) }
     }
-    return pagina('¡Gracias!', 'Registramos que la llamada fue bien. Estaremos en contacto según lo que decida la familia.')
+    return paginaPara('compita', '¡Gracias!', 'Registramos que la llamada fue bien. Estaremos en contacto según lo que decida la familia.')
   }
 
   // ── Reagendar ─────────────────────────────────────────────────────────────
@@ -106,7 +106,7 @@ async function ejecutar(req: NextRequest, p: NonNullable<ReturnType<typeof leer>
     if (await esEntrevistaConHoras(solicitud.id)) {
       if (quien === 'compita') {
         const r = await reagendarEntrevista(solicitud.id, 'compita')
-        return r.ok ? pagina('Reagendado', 'Listo. Le avisamos al cliente para que elija otra de tus horas libres.') : pagina('Error', 'No pudimos procesar el reagendado (la solicitud ya cambió de estado).', 409)
+        return r.ok ? paginaPara('compita', 'Reagendado', 'Listo. Le avisamos al cliente para que elija otra de tus horas libres.') : pagina('Error', 'No pudimos procesar el reagendado (la solicitud ya cambió de estado).', 409)
       }
       return NextResponse.redirect(`${origin}/reagendar/${encodeURIComponent(token)}`, 303)
     }
@@ -145,7 +145,7 @@ async function ejecutar(req: NextRequest, p: NonNullable<ReturnType<typeof leer>
           })
         } catch (e) { console.error('Email reagendar al cliente desde compita:', e) }
       }
-      return pagina('Reagendado iniciado', 'Escríbenos en Telegram los nuevos horarios y se los haremos llegar al cliente.')
+      return paginaPara('compita', 'Reagendado iniciado', 'Escríbenos en Telegram los nuevos horarios y se los haremos llegar al cliente.')
     }
     await anotarDecision(solicitud, 'reagendar')
     return NextResponse.redirect(`${origin}/compitas?compita=${encodeURIComponent(solicitud.compita_id)}&reagendar=${encodeURIComponent(solicitud.id)}`, 303)

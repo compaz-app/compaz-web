@@ -5,7 +5,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { ratingValido, tokenFeedback } from '@/lib/links'
 import { SITE_URL } from '@/lib/email'
-import { pagina, puertaConfirmacion } from '@/lib/confirm'
+import { pagina as paginaSola, paginaPara, puertaConfirmacion } from '@/lib/confirm'
+// Esta ruta la ve siempre el cliente: sus páginas de éxito vuelven a donde él trabaja (ver botonDe).
+const pagina = (titulo: string, texto: string, status = 200, boton?: { texto: string; href: string }) => (boton ? paginaSola(titulo, texto, status, boton) : paginaPara('cliente', titulo, texto, status))
 
 function leer(req: NextRequest) {
   const sp = req.nextUrl.searchParams

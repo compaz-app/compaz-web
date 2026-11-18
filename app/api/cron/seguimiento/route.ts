@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
                 <p style="color:#4A3B6B;font-size:15px;line-height:1.6">¿Pudiste hablar con ${esc(sol.compita_nombre)}?</p>
                 <div style="margin-top:24px">
                   <a href="${url('cliente', 'si')}" style="display:inline-block;background:#22C55E;color:white;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:16px">Sí, todo bien</a><br>
-                  <a href="${url('cliente', 'no')}" style="display:inline-block;background:#E8E0D4;color:#1A0A3C;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:700;font-size:15px;margin-top:12px">No ocurrió — quiero reagendar</a>
+                  <a href="${SITE_URL}/reagendar/${encodeURIComponent(t)}" style="display:inline-block;background:#E8E0D4;color:#1A0A3C;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:700;font-size:15px;margin-top:12px">No ocurrió — quiero reagendar</a>
                 </div>
                 <p style="color:#6B5C90;font-size:13px;margin-top:32px">Compaz — <em>Cerca aunque estés lejos</em></p>
               </div>`,
@@ -91,8 +91,9 @@ export async function POST(req: NextRequest) {
             compita.telegram_chat_id,
             `🤙 <b>¿Cómo estuvo la llamada con ${n}?</b>\n\n¿Pudiste conectarte y hablar con ${n}?`,
             makeInlineKeyboard([[
-              { text: '✅ Sí, ocurrió', url: url('compita', 'si') },
-              { text: '❌ No se pudo', url: url('compita', 'no') },
+              // Callback, no enlace: el compita responde con un toque y se queda en Telegram (sin página web de por medio ni «Ir al portal»).
+              { text: '✅ Sí, ocurrió', callback_data: `ll:si:${sol.id}` },
+              { text: '❌ No se pudo', callback_data: `ll:no:${sol.id}` },
             ]]),
           )
           enviado = true

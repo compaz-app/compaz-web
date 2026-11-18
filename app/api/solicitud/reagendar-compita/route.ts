@@ -9,7 +9,9 @@ import { alertaAdmin } from '@/lib/alertas-admin'
 import { sendEmail } from '@/lib/email'
 import { esc } from '@/lib/html'
 import { rolValido } from '@/lib/links'
-import { pagina, puertaConfirmacion } from '@/lib/confirm'
+import { pagina as paginaSola, paginaPara, puertaConfirmacion } from '@/lib/confirm'
+// Esta ruta la ve siempre el compita: sus páginas de éxito vuelven a donde él trabaja (ver botonDe).
+const pagina = (titulo: string, texto: string, status = 200, boton?: { texto: string; href: string }) => (boton ? paginaSola(titulo, texto, status, boton) : paginaPara('compita', titulo, texto, status))
 
 function leer(req: NextRequest) {
   const sp = req.nextUrl.searchParams

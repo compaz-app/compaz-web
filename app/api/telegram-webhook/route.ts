@@ -21,6 +21,7 @@ import {
   makeInlineKeyboard,
 } from '@/lib/telegram'
 import { generarTokenPerfil } from '@/lib/compita-tokens'
+import { registrarRespuestaLlamada } from '@/lib/confirmacion-llamada'
 import { getOrCreateDailyRoom } from '@/lib/daily'
 import { enlaceDeLlamada } from '@/lib/llamada-acceso'
 import { minutosLlamadaVisita } from '@/lib/llamada'
@@ -940,6 +941,16 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
     const uid = text.slice(4)
     if (!compita || !(await clientesReportables(compita.id)).some((c) => c.id === uid)) return NextResponse.json({ ok: true })
     await sendTelegramMessage(chatId, `¿Qué pasó?`, makeInlineKeyboard((Object.keys(MOTIVOS_REPORTE) as MotivoReporte[]).map((m) => [{ text: MOTIVOS_REPORTE[m], callback_data: `xpm:${uid}:${m}` }])))
+    return NextResponse.json({ ok: true })
+  }
+  // ── «¿Cómo estuvo la llamada?»: el compita responde con un toque y todo queda en Telegram (callback `ll:<si|no>:<solicitud>`). Solo la compita de ESA solicitud.
+  if (isCallback && text.startsWith('ll:')) {
+    const [, respuesta, solicitudId] = text.split(':')
+    if (!compita || (respuesta !== 'si' && respuesta !== 'no') || !/^[0-9a-f-]{36}$/i.test(solicitudId ?? '')) return NextResponse.json({ ok: true })
+    const { data: sol } = await supabase.from('solicitudes').select('token_respuesta, compita_id').eq('id', solicitudId).maybeSingle()
+    if (!sol || sol.compita_id !== compita.id) return NextResponse.json({ ok: true })
+    const r = await registrarRespuestaLlamada(String(sol.token_respuesta), 'compita', respuesta)
+    await sendTelegramMessage(chatId, r.tipo === 'pagina' ? r.texto : 'Gracias, ya registramos tu respuesta.', await tecladoSegunEstado())
     return NextResponse.json({ ok: true })
   }
   // ── Confirmar o rechazar la hora que el cliente eligió para la visita ─────────────────────────────────────────

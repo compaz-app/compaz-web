@@ -16,13 +16,31 @@ export function paginaHtml(titulo: string, cuerpoHtml: string, status = 200): Ne
   )
 }
 
+export type RolPagina = 'cliente' | 'compita'
+
+/**
+ * El botón para volver, según QUIÉN está viendo la página. El cliente vuelve a su portal; el compita trabaja desde Telegram, así que vuelve al bot
+ * (y si no hay bot configurado, no se muestra ningún botón). Antes TODA página con éxito llevaba «Ir a mi portal», también la del compita: lo mandaba
+ * al portal del cliente, que no es suyo.
+ */
+export function botonDe(rol: RolPagina): { texto: string; href: string } | undefined {
+  if (rol === 'cliente') return { texto: '← Ir a mi portal', href: '/dashboard' }
+  const bot = (process.env.TELEGRAM_BOT_USERNAME ?? '').replace(/^@/, '').trim()
+  return bot ? { texto: 'Volver a Telegram', href: `https://t.me/${bot}` } : undefined
+}
+
+/** Página de resultado SIN botón de regreso (a menos que se pase uno). Para saber a quién se le muestra, usa `paginaPara`. */
 export function pagina(titulo: string, texto: string, status = 200, boton?: { texto: string; href: string }): NextResponse {
-  const btnEfectivo = boton ?? (status === 200 ? { texto: '← Ir a mi portal', href: '/dashboard' } : undefined)
   return paginaHtml(
     titulo,
-    `<p>${esc(texto)}</p>${btnEfectivo ? `<a class="btn" href="${esc(btnEfectivo.href)}">${esc(btnEfectivo.texto)}</a>` : ''}`,
+    `<p>${esc(texto)}</p>${boton ? `<a class="btn" href="${esc(boton.href)}">${esc(boton.texto)}</a>` : ''}`,
     status,
   )
+}
+
+/** Página de resultado para un rol: con éxito lleva el botón de regreso de ese rol; los errores no llevan botón. */
+export function paginaPara(rol: RolPagina, titulo: string, texto: string, status = 200, boton?: { texto: string; href: string }): NextResponse {
+  return pagina(titulo, texto, status, boton ?? (status === 200 ? botonDe(rol) : undefined))
 }
 
 /** Página intermedia: botón que hace POST a la misma URL (con su query string). */

@@ -95,8 +95,10 @@ describe('seguimiento (¿ocurrió la llamada? / ¿contratas?)', () => {
     await seguimiento(cron('s')); await seguimiento(cron('s'))
     assert.equal(emailsA('cli@mail.test').length, 1)
     assert.equal(tgPara(710).length, 1)
-    const urls = tgPara(710)[0].markup.inline_keyboard.flat().map((b: any) => b.url)
-    assert.ok(urls.every((u: string) => /quien=compita&s=[0-9a-f]{24}/.test(u)))
+    // El compita responde con un toque en Telegram (callback), sin página web de por medio; el cliente sí recibe enlaces firmados por correo.
+    const botones = tgPara(710)[0].markup.inline_keyboard.flat()
+    assert.ok(botones.every((b: any) => !b.url && /^ll:(si|no):[0-9a-f-]{36}$/.test(b.callback_data)))
+    assert.match(emailsA('cli@mail.test')[0].html, /quien=cliente&(amp;)?s=[0-9a-f]{24}/)
   })
 
   test('CASO CRÍTICO: nadie respondió y pasaron 4 h → igual se pregunta "¿quieres contratar?" (antes el NULL lo bloqueaba)', async () => {
