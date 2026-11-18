@@ -14,7 +14,8 @@ export type TabReal = (typeof TABS_REAL)[number][0]
 type Obj = Record<string, unknown>
 const OCULTAS = /^(ok|error|v2ms|v2uc|ms|interno|_.*|cache.*)$/i
 const esObj = (x: unknown): x is Obj => !!x && typeof x === 'object' && !Array.isArray(x)
-const etiqueta = (k: string) => k.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase())
+const NOMBRES_CLAVE: Record<string, string> = { id: 'Código', idAlerta: 'Alerta', idVerificacion: 'Verificación', etapaSeleccion: 'Etapa de selección', estadoPreentrevista: 'Estado de la preentrevista', estadoOperativo: 'Estado operativo', bloqueaMatching: 'Bloquea asignaciones', masReciente: 'Más reciente', puedeHabilitar: 'Se puede habilitar', pendientesHabilitacion: 'Requisitos pendientes', pendienteConfirmar: 'Pendiente de confirmar', aceptaNuevos: 'Acepta nuevos servicios', fechaVencimiento: 'Vence', verificadoPor: 'Verificado por' }
+const etiqueta = (k: string) => NOMBRES_CLAVE[k] ?? k.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase())
 const vacio = (x: unknown) => x == null || x === '' || (Array.isArray(x) && x.length === 0) || (esObj(x) && Object.keys(x).filter((k) => !OCULTAS.test(k)).length === 0)
 function texto(x: unknown): string {
   if (x == null) return ''
@@ -112,7 +113,7 @@ export default function FichaReal({ id, fila, carga, tab, hrefTab, hrefVolver, u
 
       {carga.estado === 'ok' && (
         <>
-          <nav aria-label="Partes de la ficha" className="-mx-4 overflow-x-auto border-b border-cf-borde px-4">
+          <nav aria-label="Partes de la ficha" className="-mx-4 overflow-x-auto overflow-y-hidden border-b border-cf-borde px-4">
             <ul className="flex w-max gap-1">
               {TABS_REAL.map(([t, nombre]) => (
                 <li key={t}><Link prefetch={false} href={hrefTab(t)} aria-current={tab === t ? 'page' : undefined}
@@ -144,7 +145,7 @@ export default function FichaReal({ id, fila, carga, tab, hrefTab, hrefVolver, u
           )}
           {tab === 'alertas' && <TarjetaCf titulo="Alertas"><VistaDatos datos={pick(f, 'alertas')} /></TarjetaCf>}
           {tab === 'historial' && <TarjetaCf titulo="Historial de eventos (hoja 17)"><VistaDatos datos={pick(pick(p, 'historial'), 'eventos')} /></TarjetaCf>}
-          <p className="text-xs text-cf-texto-suave">Leído del CMC el {texto(carga.generado)}.</p>
+          <p className="text-xs text-cf-texto-suave">{carga.fuente === 'cmc' ? 'Leído del CMC' : 'Datos inventados, generados'} el {texto(carga.generado)}.</p>
         </>
       )}
     </div>

@@ -21,7 +21,9 @@ const FLUJO: { id: string; texto: string; que: string; etapa: EtapaReal; enCatal
 const OTROS = [{ id: 'todos', texto: 'Todos' }, { id: 'sin-etapa', texto: 'Sin etapa' }, { id: 'descartados', texto: 'Descartados' }, { id: 'no-cuentan', texto: 'No cuentan' }] as const
 const FILTROS = [...FLUJO.map((f) => f.id), ...OTROS.map((o) => o.id)]
 const POR_PAGINA = 50
-const COLUMNAS = 'md:grid-cols-[minmax(0,1.7fr)_9.5rem_minmax(0,2fr)_9rem_1.25rem]'
+const plural = (n: number, uno: string, varios: string) => `${n} ${n === 1 ? uno : varios}`
+// La tabla de columnas aparece desde 1024 px: a 768 el nombre quedaba cortado; por debajo, cada fila es una tarjeta.
+const COLUMNAS = 'lg:grid-cols-[minmax(0,1.7fr)_9.5rem_minmax(0,2fr)_9rem_1.25rem]'
 
 const cuenta = (f: FilaReal) => !f.duplicado && !f.prueba
 function enFiltro(f: FilaReal, filtro: string): boolean {
@@ -71,7 +73,7 @@ export default function ConfianzaReal({ filas, resumen, generado, fuente, descar
     <div className="space-y-5" data-clarity-mask="True">
       <p className="flex flex-wrap items-center gap-2 text-sm text-cf-texto-suave">
         <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${fuente === 'cmc' ? 'bg-verde-claro text-verde-oscuro' : 'bg-amarillo-claro text-ambar-oscuro'}`}>{fuente === 'cmc' ? 'Datos reales del CMC · solo lectura' : 'Fuente sintética de prueba · solo en este preview'}</span>
-        <span>Leído del CMC el {fecha(generado)}. Se actualiza cada minuto.</span>
+        <span>{fuente === 'cmc' ? `Leído del CMC el ${fecha(generado)}. Se actualiza cada minuto.` : `Datos inventados, generados el ${fecha(generado)}. No son del CMC.`}</span>
         {descartadas > 0 && <span className="font-semibold text-ambar-oscuro">{descartadas} filas del CMC sin código válido no se muestran.</span>}
       </p>
 
@@ -83,8 +85,8 @@ export default function ConfianzaReal({ filas, resumen, generado, fuente, descar
           <Cifra icono="alerta" tono={resumen.requierenAtencion > 0 ? 'atencion' : 'neutro'} valor={resumen.requierenAtencion} texto="Requieren atención" detalle="Con una acción del equipo" info="Preentrevista respondida sin decidir, preseleccionados, entrevistados, en verificación, sin etapa, alertas que bloquean y habilitadas sin activar." />
         </div>
         <p className="mt-2 px-1 text-sm text-cf-texto-suave">
-          No cuentan: {resumen.duplicados} duplicados confirmados y {resumen.pruebas} perfiles de prueba.
-          {resumen.sinEtapa > 0 && ` ${resumen.sinEtapa} fichas sin etapa (normalización pendiente en el CMC).`}
+          No cuentan: {plural(resumen.duplicados, 'duplicado confirmado', 'duplicados confirmados')} y {plural(resumen.pruebas, 'perfil de prueba', 'perfiles de prueba')}.
+          {resumen.sinEtapa > 0 && ` ${plural(resumen.sinEtapa, 'ficha sin etapa', 'fichas sin etapa')} (normalización pendiente en el CMC).`}
           {porResolverWeb > 0 && ` ${porResolverWeb} postulaciones de la web todavía no entraron al CMC (Más, Postulaciones).`}
         </p>
       </section>
@@ -132,12 +134,12 @@ export default function ConfianzaReal({ filas, resumen, generado, fuente, descar
           <label className="relative w-full sm:w-64">
             <span className="sr-only">Buscar aspirante</span>
             <IconoCmc nombre="lupa" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-cf-texto-suave" />
-            <input type="search" value={q} maxLength={60} onChange={(e) => { setQ(e.target.value); setPagina(1) }} placeholder="Buscar nombre, código o zona" className="min-h-11 w-full rounded-xl border border-cf-borde bg-blanco pl-9 pr-3 text-sm placeholder:text-cf-texto-suave focus-visible:outline-2 focus-visible:outline-cf-morado" />
+            <input type="search" value={q} maxLength={60} onChange={(e) => { setQ(e.target.value); setPagina(1) }} placeholder="Nombre, código o zona" className="min-h-11 w-full rounded-xl border border-cf-borde bg-blanco pl-9 pr-3 text-sm placeholder:text-cf-texto-suave focus-visible:outline-2 focus-visible:outline-cf-morado" />
           </label>
         </div>
         {visibles.length === 0 ? <p className="rounded-xl border border-cf-borde py-8 text-center text-sm text-cf-texto-suave">Nadie coincide con este filtro.</p> : (
           <ul className={LISTA_CF}>
-            <li aria-hidden className={`hidden ${COLUMNAS} gap-4 bg-cf-cabecera px-4 py-2.5 text-sm font-semibold md:grid`}><span>Aspirante</span><span>Etapa</span><span>Próxima acción</span><span>Atención</span><span /></li>
+            <li aria-hidden className={`hidden ${COLUMNAS} gap-4 bg-cf-cabecera px-4 py-2.5 text-sm font-semibold lg:grid`}><span>Aspirante</span><span>Etapa</span><span>Próxima acción</span><span>Atención</span><span /></li>
             {pagFilas.map((f) => (
               <li key={f.id}>
                 <Link prefetch={false} href={hrefFicha(f.id)} className={`grid w-full grid-cols-1 items-center gap-x-4 gap-y-1.5 px-4 py-3 transition-colors hover:bg-cf-superficie ${COLUMNAS}`}>
@@ -148,10 +150,10 @@ export default function ConfianzaReal({ filas, resumen, generado, fuente, descar
                       <span className="block truncate text-sm text-cf-texto-suave">{f.id}{f.zona ? ` · ${f.zona}` : ''}{f.duplicado ? ` · duplicado de ${f.duplicadoDe ?? '?'}` : ''}{f.prueba ? ' · perfil de prueba' : ''}</span>
                     </span>
                   </span>
-                  <span className="pl-12 md:pl-0"><EtiquetaEtapa etapa={f.etapa === 'Habilitado' && f.enWeb === 'catalogo' ? 'En operación' : f.etapa} /></span>
-                  <span className="min-w-0 pl-12 text-sm md:pl-0">{f.proxima}</span>
-                  <span className="pl-12 md:pl-0"><EtiquetaAtencion estado={f.atencion} /></span>
-                  <IconoCmc nombre="chevron" className="hidden h-5 w-5 text-cf-texto-suave md:block" />
+                  <span className="pl-12 lg:pl-0"><EtiquetaEtapa etapa={f.etapa === 'Habilitado' && f.enWeb === 'catalogo' ? 'En operación' : f.etapa} /></span>
+                  <span className="min-w-0 pl-12 text-sm lg:pl-0">{f.proxima}</span>
+                  <span className="pl-12 lg:pl-0"><EtiquetaAtencion estado={f.atencion} /></span>
+                  <IconoCmc nombre="chevron" className="hidden h-5 w-5 text-cf-texto-suave lg:block" />
                 </Link>
               </li>
             ))}

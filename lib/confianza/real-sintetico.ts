@@ -8,7 +8,7 @@ const NOMBRES = ['Ana Ficticia', 'Bruno Inventado', 'Carla Ejemplar', 'Diego Sim
 const ZONAS = ['Chacao, Caracas', 'Baruta, Miranda', 'El Hatillo, Miranda', 'Sucre, Miranda', 'Libertador, Caracas']
 const ETAPAS = ['Registrado', 'Registrado', 'Registrado', 'Preseleccionado', 'Preseleccionado', 'Entrevistado', 'En verificación', 'Habilitado', 'Descartado', '']
 
-export function listaSintetica(n = 48): FilaCmc[] {
+export function listaSintetica(n = 120): FilaCmc[] {
   return Array.from({ length: n }, (_, i) => {
     const etapa = ETAPAS[i % ETAPAS.length]
     return {
@@ -37,6 +37,7 @@ export function fichaSintetica(id: string): FichaCmc | null {
         ],
       },
       alertas: f.alertasAbiertas ? [{ idAlerta: 'ALT-S01', tipo: 'Inconsistencia', severidad: 'Media', estado: 'Abierta', bloqueaMatching: 'Sí', motivo: 'Dato ficticio de prueba' }] : [],
+      ops: { ok: true, estadoOperativo: f.estadoOperativo || 'Sin estado', aceptaNuevos: f.aceptaNuevos || 'No' },
       onboarding: { ok: true, masReciente: null, historial: [] },
       disponibilidad: { ok: true, declarada: 'Lunes a viernes, mañanas', pendienteConfirmar: true },
       cobertura: { ok: true, zonas: [f.zona] },

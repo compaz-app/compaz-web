@@ -27,7 +27,7 @@ export async function cargarListaReal(habilitadasWeb: CompitaHabilitada[]): Prom
   try {
     const { lista, descartadas, generado } = fuente === 'cmc'
       ? await leerListaCmc()
-      : { lista: { filas: listaSintetica(), filasLeidas: 48 }, descartadas: 0, generado: new Date().toISOString() }
+      : { lista: { filas: listaSintetica(), filasLeidas: listaSintetica().length }, descartadas: 0, generado: new Date().toISOString() }
     const filas = construirFilas(lista.filas, mapaWeb(habilitadasWeb))
     return { estado: 'ok', fuente, filas, resumen: resumenReal(filas), generado, descartadas }
   } catch (e) {
