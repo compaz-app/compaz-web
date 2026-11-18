@@ -2,6 +2,7 @@
 // Paso 1 (respaldo del webhook de Daily): 25 min post-slot, "¿ocurrió la llamada?" a ambas partes.
 // Paso 2: "¿quieres contratar?" cuando ambos confirmaron (o timeout de 4 h sin que nadie diga NO).
 // Paso 3: recordatorio a las 24 h si el cliente no respondió.
+// Paso 4: entrevistas que se quedaron sin hora: recordatorio al cliente a las 24 h y tarea para el equipo a las 48 h (lib/sin-hora.ts).
 // Cada envío reclama su flag de forma atómica antes de enviar (sin duplicados) y lo libera si falla.
 import { NextRequest } from 'next/server'
 import { createAdminSupabase } from '@/lib/supabase-server'
@@ -15,6 +16,7 @@ import { esc } from '@/lib/html'
 import { qRol } from '@/lib/links'
 import { cronAutorizado, latido } from '@/lib/cron'
 import { ok, err } from '@/lib/api'
+import { procesarSolicitudesSinHora } from '@/lib/sin-hora'
 import type { Solicitud } from '@/types'
 
 const AVISO_PLATAFORMA_CLIENTE = `
@@ -141,6 +143,10 @@ export async function POST(req: NextRequest) {
       }
     } catch (e) { console.error(`[seguimiento] paso 3 fallo ${s.id}:`, e) }
   }
+
+  // ── Paso 4: entrevistas sin hora ──────────────────────────────────────────────
+  const sinHora = await procesarSolicitudesSinHora()
+  procesados += sinHora.recordatorios + sinHora.tareas
 
   await latido('seguimiento')
   return ok({ procesados })

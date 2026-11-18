@@ -68,6 +68,9 @@ export default function ReagendarPage({ params }: { params: Promise<{ token: str
 
   const dias = generarSlots()
 
+  // Si el cliente llegó desde «No se pudo» y la llamada ya pasó, queda anotado de una vez (el servidor decide; es idempotente y no hace falta otro clic).
+  useEffect(() => { fetch('/api/solicitud/llamada-no-ocurrio', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }) }).catch(() => undefined) }, [token])
+
   useEffect(() => {
     fetch(`/api/solicitud/info-reagendar?token=${token}`)
       .then(r => r.json())

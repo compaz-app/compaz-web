@@ -4,6 +4,13 @@ La versión vigente está en `lib/version.ts` y se ve en el panel (menú lateral
 
 Reglas: mayor = cambio grande o lanzamiento; menor = función nueva; parche = arreglo. La etapa `beta` sale cuando el sistema corre una o dos semanas con uso real sin sorpresas.
 
+## 1.3.17-beta.1 (2026-11-18)
+Una entrevista que se queda sin hora ya no se pierde (cierra los dos huecos de 1.3.16).
+1. «No se pudo» desde el correo: al abrirse la página de cambiar la hora, el sistema anota que la llamada NO ocurrió (si la hora de la llamada ya pasó), sin pedirle otro clic al cliente. Va por POST desde la página, que los escáneres de correo no ejecutan, y es idempotente. Así deja de llegarle el correo equivocado «¿Quieres contratarla?» a quien dijo que no se pudo.
+2. Recordatorio escalonado para las entrevistas aceptadas que están sin hora (porque el cliente la soltó o nunca llegó a elegir): a las 24 h, correo al cliente con su enlace y aviso en la campana del portal; a las 48 h, tarea en la Bandeja («Cliente sin elegir hora», con el nombre) y aviso al compita en Telegram para que no espere sin saber (sin contactos ni enlaces). Cada peldaño sale una sola vez por cada vez que se quedó sin hora. La tarea se cierra sola cuando la solicitud vuelve a tener hora o se cierra.
+3. Lo corre el cron `seguimiento` (paso 4, cada 5 minutos): no hay función programada nueva. Código en `lib/sin-hora.ts`.
+4. Solo cubre entrevistas con horas libres (las de propuestas de horario son otro flujo). Sin migración.
+
 ## 1.3.16-beta.1 (2026-11-18)
 «¿Cómo estuvo la llamada?»: el compita se queda en Telegram, y el cliente se entera y llega más rápido a reagendar.
 1. Compita: «Sí, ocurrió» y «No se pudo» ahora son botones de Telegram que responden al toque (callback `ll:`), sin página web de por medio. Antes lo mandaban a una página que volvía a preguntar «¿la llamada no se pudo realizar?» y, al responder, mostraba «Ir a mi portal», que es el portal del CLIENTE. Solo la compita de esa solicitud puede responder.
