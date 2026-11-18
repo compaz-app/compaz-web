@@ -21,6 +21,7 @@ import { registrarAcceso } from '@/lib/alertas-admin'
 import { ventanaVigente, marcarVentana } from '@/lib/cron'
 import { pestanaDeSec, esParteCuenta } from '@/lib/portal-secciones'
 import { contarNovedadesSinAbrir, marcarNovedadesAbiertas, listarAvisosPortal, type AvisoPortal } from '@/lib/novedades'
+import AjusteMovil from '@/components/portal/AjusteMovil'
 import CampanaAvisos from '@/components/portal/CampanaAvisos'
 import { marcarReporteVisto } from '@/lib/reporte-visto'
 import { contarMensajesSinLeer, marcarChatLeido } from '@/lib/portal-mensajes'
@@ -62,7 +63,7 @@ export default async function PortalPage({ searchParams }: { searchParams: Promi
   }
   const datos = pestana === 'inicio' ? null : await cargarDatosPortal(uid)
   return (
-    <main className="mx-auto max-w-xl space-y-5 px-4 pb-24 pt-4 lg:max-w-2xl lg:pb-12">
+    <main className="mx-auto max-w-xl space-y-5 px-4 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-4 lg:max-w-2xl lg:pb-12">
       {esAdmin && <Aviso tono="advertencia">Vista previa del portal nuevo de {portal.nombre || 'este cliente'}. Los botones de acción no se ejecutan en la vista previa.</Aviso>}
       <header className="flex items-center justify-between">
         <span className="text-lg font-extrabold text-morado-medio">Compaz</span>
@@ -84,6 +85,7 @@ export default async function PortalPage({ searchParams }: { searchParams: Promi
       {datos && pestana === 'cuenta' && <SeccionCuenta d={datos} vistaPrevia={esAdmin} pedida={esParteCuenta(sec) ? sec : null} />}
       {!esAdmin && <VisitaWatcher usuarioId={uid} visitaActivaId={portal.estado.visitaId ?? null} compitaNombre={portal.compita ?? undefined} />}
       {!esAdmin && <UnaSolaPestana />}
+      <AjusteMovil />
       {!esAdmin && <NovedadesEnVivo usuarioId={uid} />}
       {!esAdmin && <AutoRefresh intervaloSeg={15} rapido={refrescoRapido(portal.estado)} reposoSeg={90} />}
     </main>

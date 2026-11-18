@@ -4,6 +4,14 @@ La versión vigente está en `lib/version.ts` y se ve en el panel (menú lateral
 
 Reglas: mayor = cambio grande o lanzamiento; menor = función nueva; parche = arreglo. La etapa `beta` sale cuando el sistema corre una o dos semanas con uso real sin sorpresas.
 
+## 1.3.18-beta.1 (2026-11-18)
+Portal del cliente en el teléfono: el chat no queda a la mitad al escribir y el menú de abajo queda al fondo.
+1. Chat: al tocar la caja de texto el teléfono abre el teclado y mueve la página, y el chat quedaba a la mitad de la pantalla. Ahora el marco del chat se pega arriba de la zona visible al enfocarse (dos veces, mientras sube el teclado y cuando ya subió) y, con el teclado abierto, ocupa justo el alto visible (`--alto-visible`, medido con `visualViewport`).
+2. Menú de abajo (Inicio, Visitas, Mi cuenta): ya no queda «atravesado». Se apoya en el borde de la pantalla respetando la barra de inicio del iPhone (`safe-area-inset-bottom`) y se esconde mientras el teclado está abierto (en iPhone un menú fijo se quedaba flotando a media pantalla).
+3. Solo el portal usa la pantalla completa (`viewport-fit=cover`) y, en Chrome de Android, el teclado achica la página en vez de taparla. La landing y las demás pantallas no cambian.
+4. NO se probó en un teléfono real (no hay forma de abrir el teclado en el navegador de escritorio): hay que probarlo en iPhone y en Android. Si algo queda raro, lo más probable es el desfase al subir el teclado en iPhone (ver `MarcoChat`).
+5. Sin migración.
+
 ## 1.3.17-beta.1 (2026-11-18)
 Una entrevista que se queda sin hora ya no se pierde (cierra los dos huecos de 1.3.16).
 1. «No se pudo» desde el correo: al abrirse la página de cambiar la hora, el sistema anota que la llamada NO ocurrió (si la hora de la llamada ya pasó), sin pedirle otro clic al cliente. Va por POST desde la página, que los escáneres de correo no ejecutan, y es idempotente. Así deja de llegarle el correo equivocado «¿Quieres contratarla?» a quien dijo que no se pudo.
