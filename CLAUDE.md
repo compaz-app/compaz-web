@@ -33,7 +33,7 @@ Al instalar Stripe (usar Stripe Checkout, la página de pago alojada por Stripe,
 
 Pendientes de seguridad antes de abrir al público (informes completos en `~/security-audit-skill/compaz/run-2/`, ver `REPORT.md` y `NEEDS-VALIDATION.md`):
 1. `requireAuth` en `lib/auth.ts` debe devolver el usuario verificado de `getUser()`, no el de `getSession()`; `app/dashboard/page.tsx` decide admin y dueño con él.
-2. Sacar Clarity, GA y Meta Pixel de las rutas con token (`/sala`, `/reagendar`, `/onboarding`, `/compita/perfil`, `/pago`, `/dashboard`, `/admin`) en `app/layout.tsx` y actualizar `/privacidad`.
+2. HECHO 2026-11-18 (1.3.42): Clarity, GA y Meta Pixel ya NO cargan en las pantallas privadas ni con token: solo en `/`, `/privacidad` y `/se-compita` (`lib/analitica-rutas.ts`, `components/ScriptsAnaliticos.tsx`; lista de lo permitido). Falta: actualizar `/privacidad` con lo que se mide y añadir un aviso de cookies con permiso previo (revisión legal).
 3. Claves de Turnstile en Netlify.
 4. Telegram: comando de admin para liberar `codfail:<compita>`, y límite de intentos en el paso de desambiguación por correo.
 5. Extender el filtro de partes bloqueadas a `responderSolicitud` e `iniciarReagendadoPorCompita`, y cancelar solicitudes abiertas al bloquear.

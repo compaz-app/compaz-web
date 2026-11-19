@@ -4,6 +4,9 @@ La versión vigente está en `lib/version.ts` y se ve en el panel (menú lateral
 
 Reglas: mayor = cambio grande o lanzamiento; menor = función nueva; parche = arreglo. La etapa `beta` sale cuando el sistema corre una o dos semanas con uso real sin sorpresas.
 
+## 1.3.42-beta.1 (2026-11-18)
+Los scripts de medición de terceros (Microsoft Clarity, Google Analytics y el píxel de Meta) se cargaban en TODAS las pantallas, incluidos el portal del cliente, el panel y los enlaces con token (Clarity graba la pantalla; ahí se ven datos de la familia y de su salud) y hacían más lenta cada página. Ahora solo cargan en las páginas públicas de presentación (`/`, `/privacidad`, `/se-compita`; `lib/analitica-rutas.ts`), con una lista de lo PERMITIDO: una pantalla nueva queda sin medición hasta que se agregue. Los pone `components/ScriptsAnaliticos.tsx`, que mira la dirección; si alguien ya los tenía cargados y pasa a una pantalla privada sin recargar, se les pide parar (mejor esfuerzo; al iniciar sesión el servidor redirige y la página se carga de nuevo). Turnstile (captcha) no cambia. Pendiente: aviso de cookies con permiso previo y actualizar `/privacidad` (texto legal, revisión humana). Prueba 137.
+
 ## 1.3.41-beta.1 (2026-11-18)
 La tarjeta de llegada del portal (`LlegadaVisita`, foto de llegada y «nadie abre») consultaba cada 30 segundos aunque la pestaña estuviera oculta. Ahora solo consulta con la pestaña a la vista y, al volver, consulta de inmediato; menos datos y menos servidor en el celular. Queda sin tocar `VisitasSection`, que pertenece al dashboard viejo (ya redirige al portal) y no se usa. Prueba en 136.
 
