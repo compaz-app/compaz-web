@@ -1,14 +1,14 @@
 /* eslint-disable */
-// CMC fase 2A: lectura real del CMC (solo lectura). Contrato con la API de Apps Script (docs/cmc/api-panel.gs, ejecutada aquí
+// CMC fase 2A: lectura real del CMC (solo lectura). Contrato con la API de Apps Script (docs/cmc/api-lectura/, ejecutada aquí
 // en una caja de arena con hojas SINTÉTICAS), cliente firmado, minimización de datos, clasificación y permiso de administrador.
 // Todos los datos son inventados (COM-9xxx y nombres ficticios): ningún dato real de aspirantes entra al repositorio.
 import { net } from './harness'
 import { test, describe, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync, readdirSync, statSync } from 'node:fs'
-import { createHmac } from 'node:crypto'
+import { createHash, createHmac } from 'node:crypto'
 import vm from 'node:vm'
-import { CLAVES_PRIVADAS, CmcError, configuracionCmc, firmar, leerFichaCmc, leerListaCmc, limpiarPrivados, pingCmc, urlValida, validarLista, type FilaCmc } from '@/lib/cmc-api'
+import { CLAVES_PRIVADAS, HUELLAS_REGLAS_CMC, compararReglas, CmcError, configuracionCmc, firmar, leerFichaCmc, leerListaCmc, limpiarPrivados, pingCmc, urlValida, validarLista, type FilaCmc } from '@/lib/cmc-api'
 import { construirFilas, normalizarEtapa, resumenReal, cuentaComoAspirante } from '@/lib/confianza/real'
 import { fichaSintetica, fuenteSinteticaPermitida, listaSintetica } from '@/lib/confianza/real-sintetico'
 import { fuenteDisponible } from '@/lib/confianza/lectura-real'
@@ -17,44 +17,76 @@ const TOKEN = 'x'.repeat(24) + 'y'.repeat(24) + 'z'.repeat(8) // 56 caracteres, 
 const URL_API = 'https://script.google.com/macros/s/AKfycbSINTETICO_de_prueba-123/exec'
 
 // ── Caja de arena de Apps Script con hojas sintéticas ────────────────────────────────────────────────────────────────────
-function cajaGas(opts: { activa?: string; token?: string; hojas03?: any[][]; hojas11?: any[][]; ficha?: (id: string) => any } = {}) {
+// Carga HojaSoloLectura.gs + ApiPanel.gs (los mismos archivos del proyecto independiente) con un servicio «Sheets» falso.
+// ReglasCMC.gs (copia literal del CMC) no está en el repositorio: sus funciones se sustituyen aquí por dobles sintéticos.
+const SERIE = (d: Date) => d.getTime() / 86400000 + 25569 // serie de Sheets en UTC (zona de la hoja: UTC en la prueba)
+function cajaGas(opts: { activa?: string; token?: string; hojas03?: any[][]; hojas11?: any[][] } = {}) {
   const props: Record<string, string> = { CMC_API_ACTIVA: opts.activa ?? 'si', CMC_API_TOKEN: opts.token ?? TOKEN }
   const cache = new Map<string, string>()
-  const escrituras: string[] = []
-  const hoja = (nombre: string, v: any[][]) => ({
-    getDataRange: () => ({ getValues: () => v.map((f) => f.slice()) }), getLastRow: () => v.length,
-    setValue: () => escrituras.push(nombre), setValues: () => escrituras.push(nombre), appendRow: () => escrituras.push(nombre), getRange: () => ({ setValue: () => escrituras.push(nombre), setValues: () => escrituras.push(nombre) }),
-  })
+  const lecturas: string[] = []
   const h03 = opts.hojas03 ?? [
-    ['ID Compita', 'Fecha registro', 'Nombre', 'WhatsApp', 'Email', 'Ubicación declarada', 'Estado preentrevista', 'Estado operativo', 'Acepta nuevos servicios', 'Etapa de selección', 'Duplicado de (ID)', 'Clasificación duplicado'],
-    ['COM-9001', new Date('2026-10-01T12:00:00Z'), 'Ana Ficticia', '+580000000000', 'ana@correo.com', 'Chacao', 'Respondida', '', '', 'Registrado', '', ''],
-    ['COM-9002', '', 'Bruno Inventado', '+580000000001', 'bruno@correo.com', 'Baruta', 'Enviada', 'Activo', 'Sí', 'Habilitado', '', ''],
-    ['COM-9003', '', 'Bruno Inventado', '', '', 'Baruta', '', '', '', 'Registrado', 'COM-9002', 'Duplicado confirmado'],
-    ['', '', 'Fila vacía', '', '', '', '', '', '', '', '', ''],
+    ['ID Compita', 'Fecha registro', 'Nombre', 'WhatsApp', 'Email', 'Ubicación declarada', 'Estado preentrevista', 'Estado operativo', 'Acepta nuevos servicios', 'Enlace preentrevista', 'Etapa de selección', 'Duplicado de (ID)', 'Clasificación duplicado'],
+    ['COM-9001', new Date('2026-10-01T12:00:00Z'), 'Ana Ficticia', '+580000000000', 'ana@correo.com', 'Chacao', 'Respondida', '', '', 'https://forms.example/x', 'Registrado'],
+    ['COM-9002', '', 'Bruno Inventado', '+580000000001', 'bruno@correo.com', 'Baruta', 'Enviada', 'Activo', 'Sí', '', 'Habilitado', '', ''],
+    ['COM-9003', '', 'Bruno Inventado', '', '', 'Baruta', '', '', '', '', 'Registrado', 'COM-9002', 'Duplicado confirmado'],
+    ['', '', 'Fila vacía'],
   ]
   const h11 = opts.hojas11 ?? [['ID Alerta', 'ID Compita', 'Estado', 'Bloquea matching'], ['A1', 'COM-9001', 'Abierta', 'Sí'], ['A2', 'COM-9001', 'Cerrada', 'Sí']]
+  const hojas: Record<string, any[][]> = { '03 · Compitas': h03, '11 · Alertas Compitas': h11 }
+  const recortar = (v: any[][]) => v.map((f) => { const g = f.slice(); while (g.length && (g[g.length - 1] === '' || g[g.length - 1] == null)) g.pop(); return g })
+  const Sheets = {
+    Spreadsheets: {
+      get: () => ({ properties: { timeZone: 'Etc/UTC' } }),
+      Values: {
+        get: (id: string, rango: string, o: any) => {
+          if (id !== 'HOJA-SINTETICA') throw new Error('otra hoja')
+          const n = rango.replace(/^'|'$/g, '').replace(/''/g, "'"); lecturas.push(n)
+          if (!hojas[n]) throw new Error('Unable to parse range: ' + rango)
+          const v = recortar(hojas[n])
+          return { values: v.map((f) => f.map((x) => (x instanceof Date ? (o.valueRenderOption === 'FORMATTED_VALUE' ? x.toISOString().slice(0, 10).split('-').reverse().join('/') : SERIE(x)) : x))) }
+        },
+      },
+    },
+  }
   const ctx: any = {
     console: { log() {}, error() {} },
+    Sheets,
+    V2_SS_ID: 'HOJA-SINTETICA',
     PropertiesService: { getScriptProperties: () => ({ getProperty: (k: string) => props[k] ?? null }) },
     CacheService: { getScriptCache: () => ({ get: (k: string) => cache.get(k) ?? null, put: (k: string, v: string) => void cache.set(k, v) }) },
-    Utilities: { computeHmacSha256Signature: (m: string, k: string) => [...createHmac('sha256', k).update(m).digest()].map((b) => (b > 127 ? b - 256 : b)) },
+    Utilities: {
+      computeHmacSha256Signature: (m: string, k: string) => [...createHmac('sha256', k).update(m).digest()].map((b) => (b > 127 ? b - 256 : b)),
+      formatDate: () => '+0000', DigestAlgorithm: { SHA_256: 'sha256' }, Charset: { UTF_8: 'utf8' },
+      computeDigest: (_a: string, t: string) => [...createHash('sha256').update(t).digest()].map((b) => (b > 127 ? b - 256 : b)),
+    },
     ContentService: { MimeType: { JSON: 'json' }, createTextOutput: (s: string) => ({ setMimeType: () => ({ contenido: s }) }) },
-    SpreadsheetApp: { getActive: () => ({ getSheetByName: (n: string) => (n === '03 · Compitas' ? hoja(n, h03) : n === '11 · Alertas Compitas' ? hoja(n, h11) : null) }) },
-    v2_obtenerFichaRaw_: (id: string) => (opts.ficha ? opts.ficha(id) : id === 'COM-9001' ? { ok: true, ficha: { id, nombre: 'Ana Ficticia', whatsapp: '+580000000000', email: 'ana@correo.com', cedula: 'V-0', direccion: 'Calle 0' }, elegibilidad: { requisitos: [{ clave: 'identidad', etiqueta: 'Identidad', estado: 'Pendiente', detalle: { enlaceEvidencia: 'https://x' } }] } } : { ok: false }),
-    v2_obtenerTabRaw_: (id: string, t: string) => ({ ok: true, tab: t, items: [{ atributo: 'Identidad', telefonoReferencia: '+580000000002' }] }),
+    SpreadsheetApp: {},
+    // Dobles de las funciones copiadas del CMC (ReglasCMC.gs): leen por la vía real (SpreadsheetApp.getActive()) para probar la hoja de solo lectura.
+    panel_obtenerPanelElegibilidad_core_: (id: string) => {
+      const filas = ctx.SpreadsheetApp.getActive().getSheetByName('03 · Compitas').getDataRange().getValues()
+      const f = filas.find((r: any[]) => r[0] === id)
+      return { ok: true, id, etapaSeleccion: f[10], elegible: false, requisitos: [{ clave: 'identidad', etiqueta: 'Identidad', estado: 'Pendiente', detalle: { enlaceEvidencia: 'https://x', correoVerificador: 'v@correo.com' } }, { clave: 'operador', etiqueta: 'Operador', estado: 'Bloqueado' }] }
+    },
+    panel_obtenerAlertas: () => [{ idAlerta: 'A1', motivo: 'Llamar al 0412-555-0101 o escribir a ana@correo.com', estado: 'Abierta' }],
+    panel_obtenerOnboarding: () => ({ historial: [], masReciente: null }),
+    v2_obtenerTabRaw_: (id: string, t: string) => t === 'entrevista'
+      ? { ok: true, campos: [{ campo: 'Decision', valor: 'Avanza a verificación' }, { campo: 'Datos de las referencias', valor: 'Pedro 04145550000' }, { campo: 'En que zona especifica vives actualmente?', valor: 'Calle 0, casa 1' }] }
+      : { ok: true, tab: t, items: [{ atributo: 'Identidad', telefonoReferencia: '+580000000002', evidencia: 'V-12.345.678' }] },
     Date, JSON, Math, Number, String, Array, Object, isFinite, Error, RegExp,
   }
+  ctx.globalThis = ctx
   vm.createContext(ctx)
-  vm.runInContext(readFileSync('docs/cmc/api-panel.gs', 'utf8'), ctx)
-  const post = (cuerpo: string) => JSON.parse(ctx.doPost({ postData: { contents: cuerpo } }).contenido)
-  return { post, props, cache, escrituras }
+  vm.runInContext(readFileSync('docs/cmc/api-lectura/HojaSoloLectura.gs', 'utf8'), ctx)
+  vm.runInContext(readFileSync('docs/cmc/api-lectura/ApiPanel.gs', 'utf8'), ctx)
+  const post = (cuerpo: string) => { ctx.CMC_SL_MEMO_ = {}; return JSON.parse(ctx.doPost({ postData: { contents: cuerpo } }).contenido) }
+  return { post, props, cache, lecturas, ctx }
 }
 const peticion = (op: string, id = '', extra: any = {}) => {
   const p = { v: 1, op, id, ts: Math.floor(Date.now() / 1000), nonce: `n-${Math.random().toString(36).slice(2)}-abcdefgh`, ...extra }
   return JSON.stringify({ ...p, firma: firmar(TOKEN, p), ...(extra.firma ? { firma: extra.firma } : {}) })
 }
 
-describe('API de lectura en Apps Script (docs/cmc/api-panel.gs)', () => {
+describe('API de lectura en Apps Script (proyecto independiente: docs/cmc/api-lectura/)', () => {
   test('la firma del panel es la que comprueba Apps Script y la lista sale sin contactos', () => {
     const g = cajaGas()
     const r = g.post(peticion('lista'))
@@ -81,26 +113,54 @@ describe('API de lectura en Apps Script (docs/cmc/api-panel.gs)', () => {
     const p = JSON.parse(peticion('ficha', 'COM-9001')); p.id = 'COM-9002'
     assert.equal(g.post(JSON.stringify(p)).error, 'firma_invalida')
   })
-  test('la ficha se limpia en cualquier nivel (teléfono, correo, cédula, dirección, enlaces)', () => {
+  test('la ficha sale con lista blanca de la hoja 03 y se limpia en cualquier nivel (teléfono, correo, cédula, enlaces, referencias, dónde vive)', () => {
     const r = cajaGas().post(peticion('ficha', 'COM-9001'))
-    assert.equal(r.ok, true); assert.equal(r.datos.ficha.ficha.nombre, 'Ana Ficticia')
-    assert.doesNotMatch(JSON.stringify(r), /\+58|@correo|V-0|Calle 0|https:\/\/x/)
+    assert.equal(r.ok, true); assert.equal(r.datos.ficha.ficha['Nombre'], 'Ana Ficticia')
+    assert.equal(r.datos.ficha.ficha['Fecha registro'], '2026-10-01T12:00:00.000Z', 'las fechas llegan como fecha (no como número de serie)')
+    assert.deepEqual(Object.keys(r.datos.ficha.ficha).filter((k) => /WhatsApp|Email|Enlace/.test(k)), [])
+    const txt = JSON.stringify(r)
+    assert.doesNotMatch(txt, /\+58|@correo|V-12|Calle 0|https:\/\/|0412|04145|Pedro/)
+    assert.match(txt, /\[teléfono\]/); assert.match(txt, /\[correo\]/)
+    assert.deepEqual(r.datos.pestanas.entrevista.campos.map((c: any) => c.campo), ['Decision'], 'sin referencias ni dónde vive')
     assert.deepEqual(Object.keys(r.datos.pestanas).sort(), ['entrevista', 'historial', 'preentrevista', 'verificaciones'])
+    assert.equal(r.datos.ficha.elegibilidad.etapaSeleccion, 'Registrado', 'las funciones copiadas leen la hoja por la vía de solo lectura')
     assert.equal(cajaGas().post(peticion('ficha', 'COM-9999')).error, 'no_existe')
+  })
+  test('la hoja de solo lectura no tiene ningún método de escritura y no abre otras hojas', () => {
+    const g = cajaGas(); g.post(peticion('lista'))
+    const hoja = g.ctx.CMC_SL_LIBRO_.getSheetByName('03 · Compitas')
+    const metodos = [...Object.keys(g.ctx.CMC_SL_LIBRO_), ...Object.keys(hoja), ...Object.keys(hoja.getRange(1, 1, 1, 1))]
+    assert.deepEqual(metodos.filter((m) => /^(set|append|insert|delete|clear|copy|move|sort|protect|hide|add|remove)/i.test(m)), [])
+    assert.equal(g.ctx.SpreadsheetApp.getActive(), g.ctx.CMC_SL_LIBRO_)
+    assert.throws(() => g.ctx.SpreadsheetApp.openById('OTRA-HOJA'), /solo_hoja_cmc/)
+    assert.equal(g.ctx.CMC_SL_LIBRO_.getSheetByName('No existe'), null)
+    assert.equal(hoja.getRange(2, 1, 1, 3).getValues()[0][0], 'COM-9001')
+    assert.equal(hoja.getRange(5, 13).getValue(), '', 'celdas vacías como en getValues()')
+    assert.equal(hoja.createTextFinder('COM-9003').matchEntireCell(true).findNext().getRow(), 4)
   })
   test('el tope por minuto corta a partir de 120 peticiones', () => {
     const g = cajaGas(); let ultima: any
     for (let i = 0; i < 121; i++) ultima = g.post(peticion('ping'))
     assert.equal(ultima.error, 'limite')
   })
-  test('nunca escribe en una hoja y el archivo no trae datos, tokens ni direcciones', () => {
-    const g = cajaGas(); g.post(peticion('lista')); g.post(peticion('ficha', 'COM-9001'))
-    assert.equal(g.escrituras.length, 0)
-    const s = readFileSync('docs/cmc/api-panel.gs', 'utf8')
-    assert.doesNotMatch(s, /\.(setValue|setValues|appendRow|deleteRow|insertRow|clear|setFormula)\s*\(/)
-    assert.doesNotMatch(s, /ScriptApp\.newTrigger|UrlFetchApp|MailApp|GmailApp|DriveApp/)
-    assert.doesNotMatch(s, /COM-\d{4}\b|AKfyc|script\.google\.com\/macros\/s\/[A-Za-z0-9_-]{10}/)
+  test('los archivos del proyecto no escriben, no tienen doGet ni página, y no traen datos, tokens ni direcciones', () => {
+    const archivos = ['ApiPanel.gs', 'HojaSoloLectura.gs'].map((f) => readFileSync('docs/cmc/api-lectura/' + f, 'utf8'))
+    for (const s of archivos) {
+      assert.doesNotMatch(s, /\.(setValue|setValues|appendRow|deleteRow|insertRow|insertSheet|clear|clearContent|setFormula)\s*\(/)
+      assert.doesNotMatch(s, /function\s+doGet|HtmlService|ScriptApp\.newTrigger|UrlFetchApp|MailApp|GmailApp|DriveApp/)
+      assert.doesNotMatch(s, /COM-\d{4}\b|AKfyc|script\.google\.com\/macros\/s\/[A-Za-z0-9_-]{10}|1-ZOER7V|1V1GXmUk|1FtEuRUp/)
+    }
+    const s = archivos[0]
     assert.equal(String(CLAVES_PRIVADAS), s.match(/CMC_API_CLAVES_PRIVADAS_ = (\/.*\/i);/)![1], 'las claves privadas de la web y de Apps Script deben ser las mismas')
+    const man = JSON.parse(readFileSync('docs/cmc/api-lectura/appsscript.json', 'utf8'))
+    assert.deepEqual(man.oauthScopes, ['https://www.googleapis.com/auth/spreadsheets.readonly'], 'único permiso: ver hojas de cálculo')
+    assert.deepEqual(man.dependencies.enabledAdvancedServices.map((x: any) => x.serviceId), ['sheets'])
+    assert.equal(man.webapp, undefined, 'el acceso de la implementación se elige al publicarla, no en el manifiesto')
+  })
+  test('version devuelve la huella de cada función copiada del CMC', () => {
+    const r = cajaGas().post(peticion('version'))
+    assert.equal(r.ok, true); assert.equal(r.datos.reglas.panel_obtenerPanelElegibilidad_core_.length, 16)
+    assert.equal(r.datos.reglas.panel_evaluarHabilitacion_, 'falta', 'en la caja de arena no está la copia')
   })
 })
 
@@ -160,6 +220,15 @@ describe('cliente del panel (lib/cmc-api.ts)', () => {
     assert.equal(descartadas, 4); assert.equal(lista.filas.length, 1)
     assert.equal(lista.filas[0].zona, ''); assert.equal(lista.filas[0].alertasAbiertas, 0)
     assert.throws(() => validarLista({}), (e: any) => e.codigo === 'contrato_distinto')
+  })
+  test('control de divergencia: las huellas de las reglas copiadas deben ser las comprobadas contra el CMC', () => {
+    assert.equal(Object.keys(HUELLAS_REGLAS_CMC).length, 15)
+    assert.ok(Object.values(HUELLAS_REGLAS_CMC).every((h) => /^[0-9a-f]{16}$/.test(h)))
+    assert.deepEqual(compararReglas({ ...HUELLAS_REGLAS_CMC }), { estado: 'iguales', distintas: [] })
+    assert.deepEqual(compararReglas({ ...HUELLAS_REGLAS_CMC, panel_evaluarHabilitacion_: '0000000000000000' }), { estado: 'distintas', distintas: ['panel_evaluarHabilitacion_'] })
+    assert.equal(compararReglas(null).estado, 'sin_comprobar')
+    const gs = readFileSync('docs/cmc/api-lectura/ApiPanel.gs', 'utf8')
+    for (const f of Object.keys(HUELLAS_REGLAS_CMC)) assert.match(gs, new RegExp(`'${f}'`), `${f} debe estar en la lista de version de la API`)
   })
   test('el cliente solo pide operaciones de lectura', () => {
     const s = readFileSync('lib/cmc-api.ts', 'utf8')
@@ -232,7 +301,7 @@ describe('fuente sintética y permisos', () => {
     assert.deepEqual(usan, ['app/panel/page.tsx'])
   })
   test('el repositorio no trae datos reales de aspirantes en los archivos de esta fase', () => {
-    const archivos = ['lib/cmc-api.ts', 'lib/confianza/real.ts', 'lib/confianza/real-sintetico.ts', 'lib/confianza/lectura-real.ts', 'components/panel/confianza/ConfianzaReal.tsx', 'components/panel/confianza/FichaReal.tsx', 'docs/cmc/api-panel.gs', 'docs/cmc/api-panel.md']
+    const archivos = ['lib/cmc-api.ts', 'lib/confianza/real.ts', 'lib/confianza/real-sintetico.ts', 'lib/confianza/lectura-real.ts', 'components/panel/confianza/ConfianzaReal.tsx', 'components/panel/confianza/FichaReal.tsx', 'docs/cmc/api-lectura/ApiPanel.gs', 'docs/cmc/api-lectura/HojaSoloLectura.gs', 'docs/cmc/api-panel.md']
     for (const f of archivos) {
       const s = readFileSync(f, 'utf8')
       assert.doesNotMatch(s, /COM-[0-8]\d{3}\b/, `${f}: solo códigos ficticios COM-9xxx`)

@@ -23,28 +23,28 @@ export function listaSintetica(n = 120): FilaCmc[] {
 export function fichaSintetica(id: string): FichaCmc | null {
   const f = listaSintetica().find((x) => x.id === id)
   if (!f) return null
+  // Misma forma que la API real (docs/cmc/api-lectura/ApiPanel.gs, cmcApi_ficha_), con datos inventados.
   return {
     ficha: {
-      ok: true, id,
-      ficha: { id, nombre: f.nombre, zona: f.zona, etapaSeleccion: f.etapa || 'Sin etapa', estadoPreentrevista: f.preentrevista },
+      ficha: { 'ID Compita': id, Nombre: f.nombre, 'Ubicación declarada': f.zona, 'Etapa de selección': f.etapa, 'Estado preentrevista': f.preentrevista, 'Estado operativo': f.estadoOperativo },
+      ops: { estadoOperativo: f.estadoOperativo || '', aceptaNuevos: f.aceptaNuevos || '', motivo: '' },
       elegibilidad: {
-        ok: true, id, etapaSeleccion: f.etapa, puedeHabilitar: false, pendientesHabilitacion: 3,
+        ok: true, id, etapaSeleccion: f.etapa, elegible: f.etapa === 'Habilitado', razones: f.etapa === 'Habilitado' ? [] : ['Dato ficticio de prueba'], puedeHabilitar: false,
+        pendientesHabilitacion: ['Identidad sin verificación Verificada + Vigente', 'Ninguna Referencia Verificada + Vigente', 'Onboarding más reciente no es «Completado»'],
         requisitos: [
-          { clave: 'entrevista', etiqueta: 'Entrevista con decisión «Avanza a verificación»', estado: 'Cumple', detalle: 'Entrevista registrada' },
-          { clave: 'identidad', etiqueta: 'Identidad verificada', estado: 'Pendiente', detalle: 'Sin verificación vigente' },
-          { clave: 'referencia', etiqueta: 'Referencia verificada', estado: 'Pendiente', detalle: 'Sin verificación vigente' },
-          { clave: 'onboarding', etiqueta: 'Onboarding completado', estado: 'Pendiente', detalle: 'Sin registro' },
+          { clave: 'identidad', etiqueta: 'Identidad verificada', estado: 'Pendiente', detalle: 'Identidad sin verificación Verificada + Vigente' },
+          { clave: 'referencia', etiqueta: 'Referencia verificada', estado: 'Pendiente', detalle: 'Ninguna Referencia Verificada + Vigente' },
+          { clave: 'onboarding', etiqueta: 'Onboarding completado', estado: 'Pendiente', detalle: 'Sin registros' },
+          { clave: 'alertas', etiqueta: 'Sin alertas que bloqueen', estado: f.alertasBloquean ? 'Bloqueado' : 'Cumplido', detalle: '' },
+          { clave: 'operador', etiqueta: 'Operador autorizado', estado: 'Bloqueado', detalle: 'Depende de quién habilita' },
         ],
       },
       alertas: f.alertasAbiertas ? [{ idAlerta: 'ALT-S01', tipo: 'Inconsistencia', severidad: 'Media', estado: 'Abierta', bloqueaMatching: 'Sí', motivo: 'Dato ficticio de prueba' }] : [],
-      ops: { ok: true, estadoOperativo: f.estadoOperativo || 'Sin estado', aceptaNuevos: f.aceptaNuevos || 'No' },
-      onboarding: { ok: true, masReciente: null, historial: [] },
-      disponibilidad: { ok: true, declarada: 'Lunes a viernes, mañanas', pendienteConfirmar: true },
-      cobertura: { ok: true, zonas: [f.zona] },
+      onboarding: { historial: [], masReciente: null },
     },
     pestanas: {
       preentrevista: { ok: true, respuestas: [{ pregunta: '¿Por qué te interesa ser Compita?', respuesta: 'Respuesta ficticia de prueba.' }] },
-      entrevista: { ok: true, entrevistas: [] },
+      entrevista: { ok: false, error: 'No hay entrevistas registradas' },
       verificaciones: { ok: true, items: [] },
       historial: { ok: true, eventos: [{ fecha: f.registro, tipo: 'Alta', detalle: 'Registro ficticio' }] },
     },

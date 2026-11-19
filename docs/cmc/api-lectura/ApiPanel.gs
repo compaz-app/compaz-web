@@ -155,7 +155,7 @@ function cmcApi_ficha_(id) {
   if (!fila) return null;
   var ficha = {};
   CMC_API_COLUMNAS_03_.forEach(function (n) { var i = enc.indexOf(n); if (i >= 0) ficha[n] = cmcApi_valor_(fila[i]); });
-  var seguro = function (fn) { try { return fn(); } catch (x) { console.error('[cmcApi] ficha ' + id, String(x)); return { ok: false, error: 'no_disponible' }; } };
+  var seguro = function (fn) { try { return fn(); } catch (x) { console.error('[cmcApi] ficha ' + id, cmcApi_tachar_(String(x)).slice(0, 120)); return { ok: false, error: 'no_disponible' }; } };
   var pestanas = {};
   ['preentrevista', 'entrevista', 'verificaciones', 'historial'].forEach(function (tab) { pestanas[tab] = seguro(function () { return v2_obtenerTabRaw_(id, tab); }); });
   return {

@@ -3,7 +3,7 @@
 //   · «sintetica»: datos inventados, SOLO en un deploy preview sin la API configurada (para probar la pantalla).
 //   · sin ninguna de las dos: «no_configurado» y el panel muestra la vista anterior (habilitadas desde Supabase).
 // Los errores salen como códigos cortos: nunca se muestra el contenido de la respuesta del CMC.
-import { CmcError, CmcNoConfigurado, configuracionCmc, leerFichaCmc, leerListaCmc, type FichaCmc } from '@/lib/cmc-api'
+import { CmcError, CmcNoConfigurado, configuracionCmc, leerFichaCmc, leerListaCmc, leerReglasCmc, type EstadoReglas, type FichaCmc } from '@/lib/cmc-api'
 import { construirFilas, resumenReal, type EnWeb, type FilaReal } from '@/lib/confianza/real'
 import { fichaSintetica, fuenteSinteticaPermitida, listaSintetica } from '@/lib/confianza/real-sintetico'
 import type { CompitaHabilitada } from '@/lib/confianza/operativo'
@@ -38,18 +38,18 @@ export async function cargarListaReal(habilitadasWeb: CompitaHabilitada[]): Prom
   }
 }
 
-export type FichaReal = { estado: 'ok'; fuente: FuenteReal; datos: FichaCmc; generado: string } | { estado: 'no_existe' } | { estado: 'error'; codigo: string } | { estado: 'no_configurado' }
+export type FichaReal = { estado: 'ok'; fuente: FuenteReal; datos: FichaCmc; generado: string; reglas: EstadoReglas } | { estado: 'no_existe' } | { estado: 'error'; codigo: string } | { estado: 'no_configurado' }
 
 export async function cargarFichaReal(id: string): Promise<FichaReal> {
   const fuente = fuenteDisponible()
   if (!fuente) return { estado: 'no_configurado' }
   if (fuente === 'sintetica') {
     const datos = fichaSintetica(id)
-    return datos ? { estado: 'ok', fuente, datos, generado: new Date().toISOString() } : { estado: 'no_existe' }
+    return datos ? { estado: 'ok', fuente, datos, generado: new Date().toISOString(), reglas: 'sin_comprobar' } : { estado: 'no_existe' }
   }
   try {
-    const r = await leerFichaCmc(id)
-    return { estado: 'ok', fuente, ...r }
+    const [r, reglas] = await Promise.all([leerFichaCmc(id), leerReglasCmc()])
+    return { estado: 'ok', fuente, ...r, reglas: reglas.estado }
   } catch (e) {
     const codigo = e instanceof CmcError ? e.codigo : 'error_inesperado'
     if (codigo === 'no_existe' || codigo === 'id_invalido') return { estado: 'no_existe' }

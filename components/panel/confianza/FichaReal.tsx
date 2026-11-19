@@ -8,7 +8,7 @@ import type { FichaReal as FichaCargada } from '@/lib/confianza/lectura-real'
 // Lo normalizado (requisitos de habilitación) es lo que calcula el propio CMC; el resto se muestra tal como llega, sin rellenar
 // lo que falte. Las pestañas son enlaces (cada una vuelve a leer la ficha, que el servidor guarda 30 segundos).
 
-export const TABS_REAL = [['resumen', 'Resumen'], ['preentrevista', 'Preentrevista'], ['entrevista', 'Entrevista'], ['verificaciones', 'Verificaciones'], ['onboarding', 'Onboarding'], ['disponibilidad', 'Disponibilidad'], ['alertas', 'Alertas'], ['historial', 'Historial']] as const
+export const TABS_REAL = [['resumen', 'Resumen'], ['preentrevista', 'Preentrevista'], ['entrevista', 'Entrevista'], ['verificaciones', 'Verificaciones'], ['onboarding', 'Onboarding'], ['alertas', 'Alertas'], ['historial', 'Historial']] as const
 export type TabReal = (typeof TABS_REAL)[number][0]
 
 type Obj = Record<string, unknown>
@@ -64,20 +64,25 @@ function VistaDatos({ datos, nivel = 0 }: { datos: unknown; nivel?: number }) {
 
 const pick = (o: unknown, k: string): unknown => (esObj(o) ? o[k] : undefined)
 
-/** Los requisitos de habilitación tal como los calcula el CMC (panel_obtenerPanelElegibilidad). */
+/** Los requisitos de habilitación tal como los calcula el CMC (panel_obtenerPanelElegibilidad_core_, copiado literalmente en la API).
+ *  El requisito «operador» depende de QUIÉN mira (en el CMC solo Luis o Juan pueden habilitar): en esta vista de lectura no aplica y se omite. */
 function Requisitos({ eleg }: { eleg: unknown }) {
   const reqs = pick(eleg, 'requisitos')
   if (!Array.isArray(reqs) || reqs.length === 0) return <VistaDatos datos={eleg} />
-  const cumple = (e: unknown) => /cumple|ok|verificad|complet|s[ií]$/i.test(String(e ?? '')) && !/no cumple|pendiente|falta/i.test(String(e ?? ''))
+  const marca = (e: unknown): 'hecho' | 'pendiente' | 'bloqueo' => { const t = String(e ?? ''); return /bloque/i.test(t) ? 'bloqueo' : /cumpl|ok|verificad|complet/i.test(t) && !/no cumpl|pendiente|falta/i.test(t) ? 'hecho' : 'pendiente' }
+  const elegible = pick(eleg, 'elegible')
   return (
-    <ul className="space-y-2">
-      {(reqs as Obj[]).map((r, i) => (
-        <li key={i} className="flex items-start gap-2 text-sm">
-          <Marca estado={cumple(r.estado) ? 'hecho' : 'pendiente'} />
-          <span><span className="font-semibold">{String(r.etiqueta ?? r.clave ?? 'Requisito')}</span>{r.estado != null && <span className="text-cf-texto-suave"> · {String(r.estado)}</span>}{r.detalle != null && r.detalle !== '' && <span className="block text-cf-texto-suave">{texto(r.detalle)}</span>}</span>
-        </li>
-      ))}
-    </ul>
+    <div className="space-y-3">
+      {typeof elegible === 'boolean' && <p className="text-sm"><span className="font-semibold">Puede recibir servicios:</span> {elegible ? 'Sí' : 'No'}</p>}
+      <ul className="space-y-2">
+        {(reqs as Obj[]).filter((r) => r.clave !== 'operador').map((r, i) => (
+          <li key={i} className="flex items-start gap-2 text-sm">
+            <Marca estado={marca(r.estado)} />
+            <span><span className="font-semibold">{String(r.etiqueta ?? r.clave ?? 'Requisito')}</span>{r.estado != null && <span className="text-cf-texto-suave"> · {String(r.estado)}</span>}{r.detalle != null && r.detalle !== '' && <span className="block text-cf-texto-suave">{texto(r.detalle)}</span>}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
   )
 }
 
@@ -123,26 +128,20 @@ export default function FichaReal({ id, fila, carga, tab, hrefTab, hrefVolver, u
           </nav>
           {tab === 'resumen' && (
             <div className="grid gap-4 md:grid-cols-2">
-              <TarjetaCf titulo="Requisitos de habilitación (según el CMC)"><Requisitos eleg={eleg} /></TarjetaCf>
+              <TarjetaCf titulo="Requisitos de habilitación (según el CMC)">
+                <Requisitos eleg={eleg} />
+                {carga.reglas === 'iguales' && <p className="text-xs text-cf-texto-suave">Calculado con las reglas del CMC (copia comprobada).</p>}
+                {carga.reglas === 'distintas' && <Aviso tamano="compacto" tono="advertencia">Las reglas de la API ya no coinciden con las comprobadas: confirma estos requisitos en la V2.</Aviso>}
+                {carga.reglas === 'sin_comprobar' && carga.fuente === 'cmc' && <p className="text-xs text-cf-texto-suave">No se pudo comprobar la versión de las reglas; confirma en la V2 antes de decidir.</p>}
+              </TarjetaCf>
               <TarjetaCf titulo="Estado operativo"><VistaDatos datos={pick(f, 'ops')} /></TarjetaCf>
               <TarjetaCf titulo="Ficha" className="md:col-span-2"><VistaDatos datos={pick(f, 'ficha')} /></TarjetaCf>
             </div>
           )}
           {tab === 'preentrevista' && <TarjetaCf titulo="Preentrevista"><VistaDatos datos={pick(p, 'preentrevista')} /></TarjetaCf>}
           {tab === 'entrevista' && <TarjetaCf titulo="Entrevistas registradas"><VistaDatos datos={pick(p, 'entrevista')} /></TarjetaCf>}
-          {tab === 'verificaciones' && (
-            <div className="space-y-4">
-              <TarjetaCf titulo="Estado de identidad y referencias"><VistaDatos datos={pick(f, 'atributos')} /></TarjetaCf>
-              <TarjetaCf titulo="Historial de verificaciones"><VistaDatos datos={pick(pick(p, 'verificaciones'), 'items')} /></TarjetaCf>
-            </div>
-          )}
+          {tab === 'verificaciones' && <TarjetaCf titulo="Verificaciones registradas"><VistaDatos datos={pick(pick(p, 'verificaciones'), 'items')} /></TarjetaCf>}
           {tab === 'onboarding' && <TarjetaCf titulo="Onboarding"><VistaDatos datos={pick(f, 'onboarding')} /></TarjetaCf>}
-          {tab === 'disponibilidad' && (
-            <div className="space-y-4">
-              <TarjetaCf titulo="Disponibilidad"><VistaDatos datos={pick(f, 'disponibilidad')} /></TarjetaCf>
-              <TarjetaCf titulo="Cobertura"><VistaDatos datos={pick(f, 'cobertura')} /></TarjetaCf>
-            </div>
-          )}
           {tab === 'alertas' && <TarjetaCf titulo="Alertas"><VistaDatos datos={pick(f, 'alertas')} /></TarjetaCf>}
           {tab === 'historial' && <TarjetaCf titulo="Historial de eventos (hoja 17)"><VistaDatos datos={pick(pick(p, 'historial'), 'eventos')} /></TarjetaCf>}
           <p className="text-xs text-cf-texto-suave">{carga.fuente === 'cmc' ? 'Leído del CMC' : 'Datos inventados, generados'} el {texto(carga.generado)}.</p>

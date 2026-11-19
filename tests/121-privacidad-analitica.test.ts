@@ -112,9 +112,9 @@ describe('registros y errores sin datos personales', () => {
     } finally { globalThis.fetch = antes; console.error = err; process.env.CMC_API_URL = env.CMC_API_URL; process.env.CMC_API_TOKEN = env.CMC_API_TOKEN; if (!env.CMC_API_URL) delete process.env.CMC_API_URL; if (!env.CMC_API_TOKEN) delete process.env.CMC_API_TOKEN }
   })
   test('la API de Apps Script solo registra la operación y el código', () => {
-    const gs = leer('docs/cmc/api-panel.gs')
+    const gs = leer('docs/cmc/api-lectura/ApiPanel.gs')
     const logs = [...gs.matchAll(/console\.(log|error)\(([^;]*)\);/g)].map((m) => m[2])
-    assert.deepEqual(logs, ["'[cmcApi] error', String((err && err.stack) || err)", "'[cmcApi] ' + p.op + (id ? ' ' + id : '') + ' ' + (Date.now() - t0) + ' ms'"])
+    assert.deepEqual(logs, ["'[cmcApi] error', String((err && err.stack) || err)", "'[cmcApi] ' + p.op + (id ? ' ' + id : '') + ' ' + (Date.now() - t0) + ' ms'", "'[cmcApi] ficha ' + id, cmcApi_tachar_(String(x)).slice(0, 120)"])
   })
   test('existe la política de privacidad pública que hay que actualizar al cambiar la analítica', () => assert.ok(existsSync('app/privacidad/page.tsx')))
 })

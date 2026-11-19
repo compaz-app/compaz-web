@@ -17,7 +17,7 @@ const TIEMPO_MAX_MS = 25_000
 export const TTL_LISTA_MS = 60_000
 export const TTL_FICHA_MS = 30_000
 
-export type OperacionLectura = 'ping' | 'lista' | 'ficha'
+export type OperacionLectura = 'ping' | 'lista' | 'ficha' | 'version'
 export class CmcNoConfigurado extends Error { constructor() { super('La API del CMC no está configurada.') } }
 export class CmcError extends Error { constructor(public codigo: string) { super(`El CMC respondió con un error (${codigo}).`) } }
 
@@ -123,3 +123,30 @@ export async function leerFichaCmc(id: string): Promise<{ datos: FichaCmc; gener
 }
 
 export async function pingCmc(): Promise<boolean> { await llamar('ping'); return true }
+
+// ── Reglas copiadas del CMC: control de divergencia ────────────────────────────────────────────────────────────────────
+// La API vive en un proyecto aparte y lleva una COPIA LITERAL de las funciones del CMC que calculan los requisitos
+// (docs/cmc/api-lectura/ReglasCMC, no está en el repositorio). Estas son las huellas SHA-256 (16 primeros caracteres) de
+// cada función tal como estaba en el proyecto del CMC el 2026-11-19; la copia se comprobó igual función por función.
+// Si la API devuelve otra huella, la copia cambió: los requisitos se muestran como «sin comprobar».
+// Si el CMC cambia sus reglas, hay que volver a copiar y actualizar esta lista (docs/cmc/api-panel.md, «Paridad»).
+export const HUELLAS_REGLAS_CMC: Record<string, string> = {
+  panel_obtenerPanelElegibilidad_core_: '5444a46942f169d3', panel_evaluarHabilitacion_: 'f24d05be2fb6d339', panel_calcularElegibilidad_: 'da5ad6c807ca88ef',
+  panel_obtenerElegibilidad: 'a7d41d7063a671ed', panel_obtenerEtapaSeleccion_: '36f851b6be52afdd', entrevista_masReciente_: '1900a6bfba2476cc',
+  panel_obtenerAlertas: '861a82e557e7882a', panel_obtenerVerificaciones: '1dfb98ecb687ba18', panel_obtenerOnboarding: '8653b53efac1eb4c',
+  panel_leerFull03_: '6908be9dc3fe94e0', v2_obtenerTabRaw_: '2bc283861950e00c', v2_obtenerPreentrevista: 'a9962a961d1f3c03',
+  obtenerEvaluacionCompita: 'b64c0e2bc58b0cee', v2_timeline_: '5bd4e48b5c4135b6', panel_obtenerEventos: '670dea6623b999c2',
+}
+export type EstadoReglas = 'iguales' | 'distintas' | 'sin_comprobar'
+export function compararReglas(reglas: unknown): { estado: EstadoReglas; distintas: string[] } {
+  if (!reglas || typeof reglas !== 'object') return { estado: 'sin_comprobar', distintas: [] }
+  const r = reglas as Record<string, unknown>
+  const distintas = Object.keys(HUELLAS_REGLAS_CMC).filter((k) => r[k] !== HUELLAS_REGLAS_CMC[k])
+  return { estado: distintas.length ? 'distintas' : 'iguales', distintas }
+}
+export const TTL_VERSION_MS = 10 * 60_000
+export async function leerReglasCmc(): Promise<{ estado: EstadoReglas; distintas: string[] }> {
+  try {
+    return await conCacheCorto('cmc_api_version', TTL_VERSION_MS, async () => compararReglas(((await llamar<{ reglas?: unknown }>('version')).datos || {}).reglas))
+  } catch { return { estado: 'sin_comprobar', distintas: [] } }
+}
