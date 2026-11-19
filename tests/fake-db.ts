@@ -42,6 +42,7 @@ const DEFAULTS: Record<string, () => Row> = {
   pagos_plan: () => ({ id: randomUUID(), estado: 'activo', horas: null, referencia: null, created_at: nowIso() }),
   admin_flags: () => ({ id: randomUUID(), resuelto: false, created_at: nowIso() }),
   resenas: () => ({ id: randomUUID(), publicada: false, created_at: nowIso() }),
+  web_vitals: () => ({ id: randomUUID(), creado_en: nowIso() }),
   novedades_cliente: () => ({ id: randomUUID(), ruta: '/portal', entidad: null, entidad_id: null, creada_en: nowIso(), vista_en: null, actuada_en: null }),
   eventos: () => ({ id: randomUUID(), modulo: 'operacion', actor: 'sistema', datos: {}, creado_en: nowIso() }),
   admin_emails: () => ({}),

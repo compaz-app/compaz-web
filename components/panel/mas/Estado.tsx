@@ -4,6 +4,7 @@ import { PuntoUrgencia } from '@/components/panel/Personas'
 import AutoRefresh from '@/components/ui/AutoRefresh'
 import BotonReintentar from '@/components/panel/mas/BotonReintentar'
 import MedirVelocidad from '@/components/panel/mas/MedirVelocidad'
+import VelocidadReal from '@/components/panel/mas/VelocidadReal'
 import { cuandoLinea } from '@/lib/panel-personas-tipos'
 import type { EstadoSistema } from '@/lib/panel-estado'
 
@@ -73,6 +74,7 @@ export default function Estado({ e, ahora, puedeReintentar, esAdmin = false }: {
         <div>
           <div className="flex items-center gap-1"><TituloSeccion>Velocidad</TituloSeccion><InfoBoton que="Qué es Velocidad" texto="Mide cuánto tarda el servidor en consultar la base de datos. Si el panel se siente lento, aquí se ve si es por la distancia entre ambos. Solo la ve el administrador." /></div>
           <div className="mt-2"><MedirVelocidad /></div>
+          <div className="mt-3"><VelocidadReal /></div>
         </div>
       )}
     </section>

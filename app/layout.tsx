@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Bricolage_Grotesque, Inter } from "next/font/google";
 import Script from "next/script";
+import MedirVelocidadReal from "@/components/MedirVelocidadReal";
 import "./globals.css";
 import JsonLd from "@/components/JsonLd";
 import ScrollRestoration from "@/components/ScrollRestoration";
@@ -202,6 +203,7 @@ export default function RootLayout({
       <body className={`${bricolage.variable} ${inter.variable}`}>
         <ScrollRestoration />
         {children}
+        <MedirVelocidadReal />
         {/* Microsoft Clarity — strategy afterInteractive evita conflicto con hidratación de React */}
         <Script id="clarity-init" strategy="afterInteractive">
           {`(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y)})(window,document,"clarity","script","y62sqpjuto");`}
