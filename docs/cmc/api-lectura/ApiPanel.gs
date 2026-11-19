@@ -4,8 +4,9 @@
  * Vive en un proyecto de Apps Script INDEPENDIENTE («CMC · API de lectura del panel»), no en el proyecto del CMC:
  *   · El proyecto del CMC tiene un doGet que sirve la V2 y más de cien funciones públicas (también de escritura).
  *     Una implementación anónima que se ejecuta como el propietario no puede contener ese código.
- *   · Este proyecto solo tiene: ApiPanel.gs (este archivo, sin doGet) y ReglasCMC.gs (copia literal de las funciones
- *     de LECTURA del CMC que calculan los requisitos y leen las pestañas, sin ninguna escritura).
+ *   · Este proyecto solo tiene: ApiPanel.gs (este archivo, sin doGet), HojaSoloLectura.gs (la hoja vista con la API de
+ *     Sheets, sin ningún método de escritura) y ReglasCMC.gs (copia literal de las funciones de LECTURA del CMC que
+ *     calculan los requisitos y leen las pestañas).
  *   · appsscript.json declara SOLO el permiso https://www.googleapis.com/auth/spreadsheets.readonly: aunque el código
  *     intentara escribir en la hoja, Google lo rechazaría.
  *
@@ -33,16 +34,14 @@ var CMC_API_COLUMNAS_03_ = ['ID Compita', 'Fecha registro', 'Nombre', 'Ubicació
   'Fecha respuesta preentrevista', 'Estado selección', 'Entrevistador', 'Último contacto', 'Estado operativo', 'Acepta nuevos servicios',
   'Motivo estado operativo', 'Etapa de selección', 'Duplicado de (ID)', 'Clasificación duplicado'];
 
-/* ── La hoja: siempre la del CMC, abierta por su ID (V2_SS_ID, copiado en ReglasCMC.gs), solo con permiso de lectura ── */
-var CMC_API_LIBRO_ = null;
-function cmcApi_libro_() {
-  if (!CMC_API_LIBRO_) CMC_API_LIBRO_ = SpreadsheetApp.openById(V2_SS_ID);
-  return CMC_API_LIBRO_;
-}
-// Las funciones copiadas del CMC usan SpreadsheetApp.getActive(); en un proyecto independiente no hay hoja activa.
-// El propio CMC reasigna estas funciones del mismo modo (capa de caché del panel), así que el comportamiento es el mismo.
+/* ── La hoja: siempre la del CMC, SOLO PARA LEER (HojaSoloLectura.gs, con la API de Sheets y el permiso de solo lectura) ── */
+function cmcApi_libro_() { return CMC_SL_LIBRO_; }
+// Las funciones copiadas del CMC piden la hoja con SpreadsheetApp.getActive(), getActiveSpreadsheet() u openById(V2_SS_ID).
+// Las tres devuelven aquí el libro de solo lectura (el propio CMC reasigna getActive del mismo modo en su capa de caché).
+// openById con cualquier otro ID falla: este proyecto no lee otras hojas.
 SpreadsheetApp.getActive = cmcApi_libro_;
 SpreadsheetApp.getActiveSpreadsheet = cmcApi_libro_;
+SpreadsheetApp.openById = function (id) { if (id !== V2_SS_ID) throw new Error('solo_hoja_cmc'); return CMC_SL_LIBRO_; };
 
 /* ── Punto de entrada único. No hay doGet: abrir la URL en un navegador no muestra nada. ── */
 function doPost(e) {
