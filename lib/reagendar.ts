@@ -31,7 +31,8 @@ export async function reagendarEntrevista(solicitudId: string, quien: 'cliente' 
   const yaEstabaSinHora = !s.slot_confirmado
   const ahora = new Date().toISOString()
   // 1) La hora vuelve a estar libre para otros.
-  await admin.from('reservas_horario').update({ estado: 'liberada', resuelta_en: ahora }).eq('solicitud_id', s.id).in('estado', ['reservada', 'confirmada'])
+  // Si lo pide el compita, la reserva queda «rechazada»: el portal lo dice («X no puede a esa hora»). Si lo pide el cliente, solo se libera.
+  await admin.from('reservas_horario').update({ estado: quien === 'compita' ? 'rechazada' : 'liberada', resuelta_en: ahora }).eq('solicitud_id', s.id).in('estado', ['reservada', 'confirmada'])
   // 2) La solicitud queda sin hora ni sala y con los recordatorios en cero (igual que el reagendado anterior).
   const { data: act, error } = await admin.from('solicitudes').update({
     slot_confirmado: null, room_url: null, recordatorio_enviado: false, seguimiento_enviado: false, seguimiento2_enviado: false,

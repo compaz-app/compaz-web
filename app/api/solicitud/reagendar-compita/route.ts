@@ -6,6 +6,7 @@ import { esEntrevistaConHoras, reagendarEntrevista } from '@/lib/reagendar'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { sendTelegramMessage, avisarAdmin } from '@/lib/telegram'
 import { alertaAdmin } from '@/lib/alertas-admin'
+import { registrarNovedad } from '@/lib/novedades'
 import { sendEmail } from '@/lib/email'
 import { esc } from '@/lib/html'
 import { rolValido } from '@/lib/links'
@@ -40,6 +41,8 @@ export async function POST(req: NextRequest) {
   if (!solicitud) return pagina('Enlace inválido', 'Este enlace ya no es válido o la solicitud está cerrada.', 410)
 
   const admin = createAdminSupabase()
+  // El cliente lo ve también en su portal (campana), no solo en el correo: el compita le enviará horarios por escrito.
+  await registrarNovedad({ usuarioId: solicitud.cliente_id, tipo: 'entrevista_reagendada_compita', nivel: 'accionable', titulo: `${(solicitud.compita_nombre ?? 'Tu compita').split(' ')[0]} necesita cambiar la fecha de la llamada. Te enviará otros horarios.`, ruta: '/portal', entidad: 'solicitud', entidadId: solicitud.id, clave: `entrevista_reagendada_compita:${solicitud.id}:${Date.now()}` })
   const [{ data: cliente }, { data: compita }] = await Promise.all([
     admin.from('usuarios').select('nombre, email').eq('id', solicitud.cliente_id).single(),
     admin.from('compitas').select('telegram_chat_id').eq('id', solicitud.compita_id).single(),

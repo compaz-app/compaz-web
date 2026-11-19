@@ -263,6 +263,7 @@ describe('Enlaces de correo/Telegram: GET no cambia estado (escÃ¡neres), POST sÃ
     assert.equal(solRow().estado, 'rechazada'); assert.equal(solRow().slot_confirmado, null)
     assert.equal((await reagPost(req(u, { method: 'POST' }))).status, 410)
     assert.ok(db.rows('telegram_estados').some((e) => e.pendiente_accion?.startsWith('sugerir_r:')))
+    assert.equal(db.rows('novedades_cliente').filter((n) => n.tipo === 'entrevista_reagendada_compita').length, 1, 'el cliente lo ve en su campana, una sola vez')
   })
 
   test('proponer-reagendado: valida slots y notifica con enlaces firmados', async () => {

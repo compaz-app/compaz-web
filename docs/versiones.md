@@ -4,6 +4,9 @@ La versión vigente está en `lib/version.ts` y se ve en el panel (menú lateral
 
 Reglas: mayor = cambio grande o lanzamiento; menor = función nueva; parche = arreglo. La etapa `beta` sale cuando el sistema corre una o dos semanas con uso real sin sorpresas.
 
+## 1.3.33-beta.1 (2026-11-18)
+Auditoría de huecos, hallazgo 5: cuando el compita cambiaba la hora de la entrevista, el portal mostraba «X aceptó. Elige tu horario», como si nada hubiera cambiado. Ahora, si el compita reagenda una entrevista con horas libres, la reserva queda «rechazada» y el portal muestra «X no puede a esa hora» (estado `horario_rechazado`, que ya existía); si lo pide el cliente, solo se libera como antes. Cuando el compita reagenda por el camino de horarios escritos (el que termina en «X te propone otros horarios»), el cliente además ve en la campana «X necesita cambiar la fecha de la llamada. Te enviará otros horarios.». Limitación conocida: entre ese aviso y que el compita escriba los horarios, la tarjeta del portal sigue diciendo «Busquemos a otro compita».
+
 ## 1.3.32-beta.1 (2026-11-18)
 Auditoría de huecos, hallazgo 4: cuando el equipo anulaba un pago, el cliente no recibía nada y su plan desaparecía sin explicación. Ahora recibe un correo («Anulamos el registro de tu pago», con el monto y qué era, sin el motivo interno, y el correo de ayuda) y un aviso en la campana del portal. Aviso nuevo `pago_anulado`. Una segunda anulación del mismo pago no avisa otra vez. Pendiente conocido: el portal sin plan sigue mostrando «Agenda tu próxima visita» en lugar de pedir un nuevo pago (ver auditoría).
 
