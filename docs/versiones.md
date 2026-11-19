@@ -4,6 +4,9 @@ La versión vigente está en `lib/version.ts` y se ve en el panel (menú lateral
 
 Reglas: mayor = cambio grande o lanzamiento; menor = función nueva; parche = arreglo. La etapa `beta` sale cuando el sistema corre una o dos semanas con uso real sin sorpresas.
 
+## 1.3.41-beta.1 (2026-11-18)
+La tarjeta de llegada del portal (`LlegadaVisita`, foto de llegada y «nadie abre») consultaba cada 30 segundos aunque la pestaña estuviera oculta. Ahora solo consulta con la pestaña a la vista y, al volver, consulta de inmediato; menos datos y menos servidor en el celular. Queda sin tocar `VisitasSection`, que pertenece al dashboard viejo (ya redirige al portal) y no se usa. Prueba en 136.
+
 ## 1.3.40-beta.1 (2026-11-18)
 Medición de la velocidad que viven los usuarios reales (cuarta tarea de velocidad). Sin esto todo lo demás era adivinar. `MedirVelocidadReal` (en el diseño general) mide en el navegador de cada persona las 5 métricas de Google (LCP, INP, CLS, FCP, TTFB) y las manda, una vez al salir de la pantalla, a `/api/vitals`. La ruta es estricta: máximo 4 KB, solo las métricas conocidas, números sanos, la dirección reducida a su primer tramo (nunca enlaces con token), tope de 120 señales por hora por conexión, no guarda IP ni usuario y siempre responde 204. Se guardan en la tabla nueva `web_vitals` (migración `20261118_web_vitals.sql`, SOLO AGREGA, **sin aplicar**: la aplica Juan) y se borra lo de más de 30 días en la limpieza diaria. En Más, Estado, Velocidad hay un botón «Ver velocidad de los usuarios»: el valor que alcanzan 3 de cada 4 personas (percentil 75, como mide Google) con «Bien / Mejorable / Lento», aparte las conexiones lentas (3G o peor) y las 5 pantallas que más tardan. Todo tolera que la tabla aún no exista: no rompe nada y el panel lo dice. Ruta `velocidad-real` registrada con permiso `raiz`. Prueba 136.
 

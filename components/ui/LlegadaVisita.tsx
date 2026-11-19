@@ -14,7 +14,14 @@ export default function LlegadaVisita() {
   async function cargar() {
     try { const r = await fetch('/api/visita/llegada'); const d = await r.json(); if (d.ok) setE(d.data) } catch { /* sin datos no se muestra */ }
   }
-  useEffect(() => { void cargar(); const t = setInterval(() => void cargar(), 30_000); return () => clearInterval(t) }, [])
+  // Solo consulta con la pestaña a la vista (nadie mira lo que pasa en una oculta, y cada consulta gasta datos y servidor). Al volver, consulta de inmediato.
+  useEffect(() => {
+    void cargar()
+    const t = setInterval(() => { if (document.visibilityState === 'visible') void cargar() }, 30_000)
+    const alVolver = () => { if (document.visibilityState === 'visible') void cargar() }
+    document.addEventListener('visibilitychange', alVolver)
+    return () => { clearInterval(t); document.removeEventListener('visibilitychange', alVolver) }
+  }, [])
 
   async function yaAbri() {
     setEnviando(true); setError('')

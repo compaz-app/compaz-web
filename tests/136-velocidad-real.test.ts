@@ -84,3 +84,11 @@ describe('está conectado', () => {
     assert.match(readFileSync('components/panel/mas/Estado.tsx', 'utf8'), /<VelocidadReal \/>/)
   })
 })
+
+describe('consultas automáticas del portal', () => {
+  test('la tarjeta de llegada solo consulta con la pestaña a la vista y al volver consulta de inmediato', () => {
+    const c = readFileSync('components/ui/LlegadaVisita.tsx', 'utf8')
+    assert.match(c, /document\.visibilityState === 'visible'\) void cargar\(\)\s*\}, 30_000\)/)
+    assert.match(c, /addEventListener\('visibilitychange'/); assert.match(c, /removeEventListener\('visibilitychange'/)
+  })
+})
