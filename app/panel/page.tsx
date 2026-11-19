@@ -62,6 +62,9 @@ import ConfianzaOperativo from '@/components/panel/confianza/ConfianzaOperativo'
 import ConfianzaDemo from '@/components/panel/confianza/ConfianzaDemo'
 import MarcoConfianza from '@/components/panel/confianza/MarcoConfianza'
 import { cargarResumenOperativo } from '@/lib/confianza/operativo'
+import ConfianzaReal from '@/components/panel/confianza/ConfianzaReal'
+import FichaReal, { TABS_REAL, type TabReal } from '@/components/panel/confianza/FichaReal'
+import { cargarFichaReal, cargarListaReal, fuenteDisponible } from '@/lib/confianza/lectura-real'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Panel', robots: { index: false, follow: false } }
@@ -69,7 +72,8 @@ export const metadata = { title: 'Panel', robots: { index: false, follow: false 
 /** Qué parámetros de la dirección pertenecen a cada sección (los demás se descartan al cambiar de sección). */
 const CLAVES: Record<string, string[]> = {
   personas: ['lista', 'q', 'vista', 'orden', 'dir', 'pag', 'estado'],
-  confianza: ['cf_modo', 'cf_etapa', 'cf_q', 'cf_id', 'cf_tab'],
+  // cf_q (la búsqueda) no se propaga en los enlaces del servidor: puede ser un nombre (ver ConfianzaReal).
+  confianza: ['cf_modo', 'cf_etapa', 'cf_id', 'cf_tab', 'cf_pag'],
   seguimiento: ['etapa', 'pag'],
   visitas: ['vv', 'pv'],
   pagos: ['pag_ver', 'pag_pag'],
@@ -158,11 +162,37 @@ async function ContenidoPanel({ sp, actual, actor, comoActor, comoColaborador }:
     } else {
       let r: Awaited<ReturnType<typeof cargarResumenOperativo>> | null = null
       try { r = await cargarResumenOperativo() } catch (e) { console.error('[panel/confianza]', e) }
-      vista = r
-        ? <ConfianzaOperativo r={r} fichaHref={(id) => enlace({ persona: `compita:${id}` })} urlV2={process.env.CMC_V2_URL || null} />
-        : <Aviso tamano="compacto" tono="peligro">No se pudieron leer los datos de selección. Vuelve a intentarlo en un momento; si sigue, revisa Más, Estado del sistema.</Aviso>
+      const urlV2 = process.env.CMC_V2_URL || null
+      // Fase 2A: los datos reales del CMC (con nombres de aspirantes) solo los ve un administrador, y se decide aquí, en el servidor.
+      // "Ver como colaborador" también los esconde. Sin la conexión configurada, queda la vista anterior (habilitadas desde Supabase).
+      const lecturaReal = actor.rol === 'admin' && fuenteDisponible() !== null
+      if (!r) {
+        vista = <Aviso tamano="compacto" tono="peligro">No se pudieron leer los datos de selección. Vuelve a intentarlo en un momento; si sigue, revisa Más, Estado del sistema.</Aviso>
+      } else if (!lecturaReal) {
+        vista = <ConfianzaOperativo r={r} fichaHref={(id) => enlace({ persona: `compita:${id}` })} urlV2={urlV2} />
+      } else {
+        const lista = await cargarListaReal(r.habilitadas)
+        const idPedido = un('cf_id')
+        if (lista.estado !== 'ok') {
+          vista = (
+            <div className="space-y-4">
+              <Aviso tamano="compacto" tono={lista.estado === 'error' ? 'peligro' : 'info'}>{lista.estado === 'error' ? `No se pudo leer el CMC (${lista.codigo}). Mientras tanto se muestran las habilitadas desde la base.` : 'La conexión con el CMC no está configurada.'}</Aviso>
+              <ConfianzaOperativo r={r} fichaHref={(id) => enlace({ persona: `compita:${id}` })} urlV2={urlV2} />
+            </div>
+          )
+        } else if (/^COM-\d{4,6}$/.test(idPedido)) {
+          const tabPedida = un('cf_tab')
+          const tab: TabReal = (TABS_REAL.find(([t]) => t === tabPedida)?.[0]) ?? 'resumen'
+          const carga = await cargarFichaReal(idPedido)
+          vista = <FichaReal id={idPedido} fila={lista.filas.find((f) => f.id === idPedido) ?? null} carga={carga} tab={tab}
+            hrefTab={(t) => enlace({ cf_tab: t === 'resumen' ? null : t })} hrefVolver={enlace({ cf_id: null, cf_tab: null })} urlV2={urlV2} />
+        } else {
+          const qsInicial = new URLSearchParams(Object.entries(sp).filter((e): e is [string, string] => typeof e[1] === 'string')).toString()
+          vista = <ConfianzaReal filas={lista.filas} resumen={lista.resumen} generado={lista.generado} fuente={lista.fuente} descartadas={lista.descartadas} porResolverWeb={r.postulaciones.porResolver} qsInicial={qsInicial} />
+        }
+      }
     }
-    const modo = (d: boolean) => enlace({ cf_modo: d ? 'demo' : null, cf_etapa: null, cf_q: null, cf_id: null, cf_tab: null, persona: null })
+    const modo = (d: boolean) => enlace({ cf_modo: d ? 'demo' : null, cf_etapa: null, cf_q: null, cf_id: null, cf_tab: null, cf_pag: null, persona: null })
     cuerpo = <MarcoConfianza demo={demo} hrefReal={modo(false)} hrefDemo={modo(true)}>{vista}</MarcoConfianza>
   } else if (actual === 'seguimiento') {
     cuerpo = <Seguimiento enlace={enlace} d={{ ...consultarSeguimiento(await listarSeguimiento(), un('etapa'), un('pag')), umbrales: umbralesDeAjustes(await getAjustes()) }} />

@@ -53,10 +53,11 @@ export function EtiquetaEtapa({ etapa }: { etapa: string }) {
   return <span className={`inline-flex items-center gap-1.5 whitespace-nowrap text-sm ${etapa === 'Descartado' ? 'text-cf-texto-suave' : 'text-cf-texto'}`}><span aria-hidden className={`h-2 w-2 rounded-full ${punto}`} />{etapa}</span>
 }
 
-export type Atencion = 'accion' | 'bloqueado' | 'al-dia' | 'cerrado' | 'excluido'
+export type Atencion = 'accion' | 'bloqueado' | 'espera' | 'al-dia' | 'cerrado' | 'excluido'
 const ATENCION: Record<Atencion, [string, string]> = {
   accion: ['Requiere acción', 'bg-amarillo-claro text-ambar-oscuro'],
   bloqueado: ['Bloqueado', 'bg-rojo-claro text-rojo-oscuro'],
+  espera: ['En espera', 'text-cf-texto-suave'],
   'al-dia': ['Al día', 'bg-verde-claro text-verde-oscuro'],
   cerrado: ['Cerrado', 'text-cf-texto-suave'],
   excluido: ['No cuenta', 'text-cf-texto-suave'],

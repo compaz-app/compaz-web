@@ -2,6 +2,7 @@
 
 ## 1. URL state persistence (obligatorio)
 Toda página o sección con tabs, filtros, selecciones o pasos multi-nivel debe persistir su estado en URL params (`useSearchParams` + `router.replace`) y restaurarlo al hacer refresh. El componente visual (mapa, lista, tab activo) también debe sincronizarse desde esos params al montar — no solo los dropdowns o la UI de texto.
+**Excepción (2026-11-17):** el texto libre de una búsqueda que pueda ser un nombre, correo o teléfono (p. ej. la búsqueda del CMC) NO va en la dirección: se guarda en `sessionStorage` de la pestaña. Las direcciones quedan en el historial, en registros y en herramientas de terceros.
 
 ## 2. Diseño responsive (obligatorio)
 Todo componente y página debe funcionar correctamente en mobile (≥375px) y desktop (≥1024px). Nunca diseñar solo para uno. Usar `flexWrap`, breakpoints con `@media`, o lógica condicional cuando la diferencia entre mobile y desktop sea significativa.
@@ -33,7 +34,7 @@ Al instalar Stripe (usar Stripe Checkout, la página de pago alojada por Stripe,
 
 Pendientes de seguridad antes de abrir al público (informes completos en `~/security-audit-skill/compaz/run-2/`, ver `REPORT.md` y `NEEDS-VALIDATION.md`):
 1. `requireAuth` en `lib/auth.ts` debe devolver el usuario verificado de `getUser()`, no el de `getSession()`; `app/dashboard/page.tsx` decide admin y dueño con él.
-2. Sacar Clarity, GA y Meta Pixel de las rutas con token (`/sala`, `/reagendar`, `/onboarding`, `/compita/perfil`, `/pago`, `/dashboard`, `/admin`) en `app/layout.tsx` y actualizar `/privacidad`.
+2. ~~Sacar Clarity, GA y Meta Pixel de las rutas con token y actualizar `/privacidad`.~~ Hecho en el PR #26 (1.5.0-beta.1): la analítica solo se carga en las rutas de `lib/analitica.ts` (`/`, `/se-compita`, `/privacidad`); toda ruta nueva queda fuera por defecto. Prueba 121. Pendiente fuera del código: en el Administrador de eventos de Meta, revisar que la «coincidencia avanzada automática» esté desactivada (lee los formularios), y borrar las grabaciones de Clarity del panel ya hechas.
 3. Claves de Turnstile en Netlify.
 4. Telegram: comando de admin para liberar `codfail:<compita>`, y límite de intentos en el paso de desambiguación por correo.
 5. Extender el filtro de partes bloqueadas a `responderSolicitud` e `iniciarReagendadoPorCompita`, y cancelar solicitudes abiertas al bloquear.
