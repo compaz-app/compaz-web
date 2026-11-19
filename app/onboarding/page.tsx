@@ -6,6 +6,7 @@ import { ZONAS_MUNICIPIOS as ZONAS } from '@/lib/venezuela'
 import { colors } from '@/lib/design'
 import { OpcionesProximamenteCompita, SeccionCuidadorMascotas } from '@/components/ui/Proximamente'
 import { AVISO_FRAUDE } from '@/lib/avisos-seguridad'
+import { reducirFoto } from '@/lib/reducir-foto'
 
 // ── Servicios ─────────────────────────────────────────────────────────────────
 
@@ -284,7 +285,7 @@ function OnboardingForm() {
 
       if (fotoFile) {
         const fd = new FormData()
-        fd.append('foto', fotoFile)
+        fd.append('foto', await reducirFoto(fotoFile)) // se reduce en el teléfono antes de subirla
         fd.append('nombre', form.nombre)
         fd.append('token', token)
         const uploadRes = await fetch('/api/onboarding/upload-foto', { method: 'POST', body: fd })

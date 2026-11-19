@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Boton from '@/components/ui/base/Boton'
+import { reducirFoto } from '@/lib/reducir-foto'
 
 const CAMPO = 'min-h-9 w-full rounded-lg border border-borde bg-blanco px-2 text-sm'
 export interface PerfilCompita { zona: string; descripcion: string; servicios: string[]; youtube: string; fotoUrl: string | null; intereses?: string[] }
@@ -28,7 +29,7 @@ export default function FormCompita({ modo, id, inicial, onListo }: { modo: 'reg
 
   async function subirFoto(): Promise<string | null> {
     if (!foto) return null
-    const f = new FormData(); f.append('foto', foto); f.append('nombre', nombre || 'compita')
+    const f = new FormData(); f.append('foto', await reducirFoto(foto)); f.append('nombre', nombre || 'compita')
     const r = await fetch('/api/admin/upload-foto', { method: 'POST', body: f })
     const j = await r.json().catch(() => null) as { ok?: boolean; data?: { url?: string }; error?: string } | null
     if (!r.ok || !j?.data?.url) throw new Error(j?.error ?? 'No se pudo subir la foto')

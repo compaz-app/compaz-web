@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
+import { reducirFoto } from '@/lib/reducir-foto'
 import { ZONAS_MUNICIPIOS as ZONAS } from '@/lib/venezuela'
 import { OpcionesProximamenteCompita, SeccionCuidadorMascotas } from '@/components/ui/Proximamente'
 
@@ -161,7 +162,7 @@ export default function EditarPerfil({ token, inicial }: Props) {
     setErrorForm(null)
     try {
       const fd = new FormData()
-      fd.append('foto', file)
+      fd.append('foto', await reducirFoto(file)) // se reduce en el teléfono: sube en segundos aun con datos lentos
       fd.append('token', token)
       const res = await fetch('/api/compita/upload-foto', { method: 'POST', body: fd })
       const data = await res.json() as { url?: string; error?: string }
