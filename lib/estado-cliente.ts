@@ -37,6 +37,8 @@ export type CodigoEstado = (typeof CODIGOS_ESTADO)[number]
 export interface SolicitudFoto {
   id: string; estado: string; tipo: string | null; compitaId: string; compitaNombre: string
   slotConfirmado: string | null; slotsPropuestos: number; seguimientoEnviado: boolean; tokenRespuesta: boolean
+  /** Cuándo se retomó la llamada de la entrevista (sala nueva tras cortarse), si pasó. Con eso el portal vuelve a ofrecer «Entrar a la entrevista». */
+  retomadaEn?: string | null
   /** Ya se le preguntó «¿pudiste hablar?» y el cliente aún no contesta (en ningún canal). */
   llamadaPorConfirmar: boolean
   /** Lo que escribió el compita al rechazar las horas pedidas («sugiere otros horarios»), ya censurado de contactos. */
@@ -120,6 +122,7 @@ export const inicioVisita = (v: Pick<VisitaFoto, 'fechaProgramada' | 'horaInicio
 // Ventanas (en minutos) alrededor de la hora de una entrevista.
 const ENTREVISTA_ANTES_MIN = 60   // desde 1 hora antes aparece "es ahora" con el botón de entrar
 const ENTREVISTA_DURACION_MIN = 25 // 20 de llamada + 5 de margen: después toca decidir
+const RETOMADA_VISIBLE_MIN = 40   // la sala nueva de una llamada retomada dura unos 28 minutos
 const LLAMADA_VISIBLE_MIN = 15     // cuánto tiempo se ofrece «te está llamando» (la sala de la llamada dura poco)
 const AVISO_CANCELACION_H = 72     // cuánto tiempo se muestra "tu visita se canceló / se interrumpió"
 const VISITA_TERMINADA_H = 12      // cuánto tiempo se muestra "¿cómo te fue?" tras terminar
@@ -178,6 +181,9 @@ export function decidirEstado(f: FotoCliente): EstadoCliente {
   // 6. Decisión tras la entrevista.
   const sinCompita = f.solicitudes.filter((s) => s.compitaId !== f.compitaAsignado?.id)
   const tras = (s: SolicitudFoto) => s.slotConfirmado ? ahora >= new Date(s.slotConfirmado).getTime() + ENTREVISTA_DURACION_MIN * MIN : false
+  // La llamada se cortó y se retomó con una sala nueva: manda sobre «¿pudiste hablar?» y «¿contratas?» mientras la sala siga abierta.
+  const retomada = sinCompita.find((s) => s.tokenRespuesta && s.estado === 'aceptada' && !s.seguimientoEnviado && s.retomadaEn && ahora - new Date(s.retomadaEn).getTime() < RETOMADA_VISIBLE_MIN * MIN)
+  if (retomada) return e('entrevista_ahora', { solicitudId: retomada.id, compitaNombre: retomada.compitaNombre, cuando: retomada.slotConfirmado ?? undefined, ...(retomada.token ? { sala: retomada.token } : {}) })
   const porConfirmar = sinCompita.find((s) => s.tokenRespuesta && s.estado === 'aceptada' && s.llamadaPorConfirmar && !s.seguimientoEnviado)
   if (porConfirmar) return e('confirmar_llamada', { solicitudId: porConfirmar.id, compitaNombre: porConfirmar.compitaNombre, ...(porConfirmar.token ? { sala: porConfirmar.token } : {}) })
   const porDecidir = sinCompita.find((s) => s.tokenRespuesta && (s.estado === 'completada' || (s.estado === 'aceptada' && (s.seguimientoEnviado || tras(s)))))
@@ -283,6 +289,8 @@ async function cargarTanda(ids: string[], ahora: Date): Promise<Map<string, Foto
   const reservaDe = new Map<string, string>(); const reservaInicioDe = new Map<string, string>()
   for (const r of (reservas ?? []) as { solicitud_id: string; estado: string; inicio: string | null }[]) if (!reservaDe.has(r.solicitud_id)) { reservaDe.set(r.solicitud_id, r.estado); if (r.inicio) reservaInicioDe.set(r.solicitud_id, r.inicio) }
   const entregados = new Set(((avisos ?? []) as { entidad_id: string }[]).map((a) => a.entidad_id))
+  const { data: reconRows } = await admin.from('telegram_estados').select('chat_id, updated_at').in('chat_id', solRows.map((x) => `recon:${x.id}`))
+  const retomadaDe = new Map(((reconRows ?? []) as { chat_id: string; updated_at: string }[]).map((r) => [r.chat_id.slice('recon:'.length), r.updated_at]))
   const conMotivo = new Set(((motivos ?? []) as { entidad_id: string }[]).map((m) => m.entidad_id))
   const insistidos = new Set(((insistencias ?? []) as { entidad_id: string }[]).map((e) => e.entidad_id))
   const pausadas = new Set(((pausasR.data ?? []) as { persona_id: string }[]).map((x) => x.persona_id))
@@ -306,7 +314,7 @@ async function cargarTanda(ids: string[], ahora: Date): Promise<Map<string, Foto
         const sr = x as unknown as (typeof solRows)[number]
         return {
           id: sr.id, estado: sr.estado, tipo: sr.tipo, compitaId: sr.compita_id, compitaNombre: sr.compitas?.nombre ?? '', slotConfirmado: sr.slot_confirmado,
-          slotsPropuestos: (sr.slots_propuestos ?? []).length, seguimientoEnviado: !!sr.seguimiento_enviado, tokenRespuesta: !!sr.token_respuesta, llamadaPorConfirmar: !!sr.confirmacion_llamada_enviada && sr.confirmacion_cliente === null, mensajeCompita: sr.mensaje_compita_reagendar, token: sr.token_respuesta,
+          slotsPropuestos: (sr.slots_propuestos ?? []).length, seguimientoEnviado: !!sr.seguimiento_enviado, tokenRespuesta: !!sr.token_respuesta, llamadaPorConfirmar: !!sr.confirmacion_llamada_enviada && sr.confirmacion_cliente === null, mensajeCompita: sr.mensaje_compita_reagendar, retomadaEn: retomadaDe.get(sr.id) ?? null, token: sr.token_respuesta,
           clienteDijoNo: sr.confirmacion_cliente === false, motivoRegistrado: conMotivo.has(sr.id), avisoEntregado: entregados.has(sr.id),
           reserva: (reservaDe.get(sr.id) as SolicitudFoto['reserva']) ?? null, reservaInicio: reservaInicioDe.get(sr.id) ?? null, creadaEn: sr.created_at,
         }

@@ -1,6 +1,6 @@
 /* eslint-disable */
 // Cuando el compita llama durante la visita, el portal lo muestra al cargar («te está llamando» + botón), no solo con el timbre en vivo: el cliente que entra desde el correo la ve.
-import { db, limpiar, mkCompita, mkCliente, mkVisita } from './harness'
+import { db, limpiar, mkCompita, mkCliente, mkVisita, mkSolicitud, req } from './harness'
 import { beforeEach, test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
@@ -27,5 +27,37 @@ describe('llamada del compita durante la visita', () => {
   })
   test('el aviso en vivo también refresca el portal', () => {
     assert.match(readFileSync('components/ui/VisitaWatcher.tsx', 'utf8'), /sonarTimbre\(\)\s*\n\s*router\.refresh\(\)/)
+  })
+})
+
+// ── El compita retoma la llamada de la entrevista: el portal vuelve a ofrecer entrar ─────────────────────────────────────────────────────────────────────────
+import { POST as reconectar } from '@/app/api/solicitud/reconectar-llamada/route'
+import { qRol } from '@/lib/links'
+
+describe('llamada de la entrevista retomada', () => {
+  const armar = () => {
+    const cmp = mkCompita({ telegram_chat_id: '800', nombre: 'Lucía Pérez' }); const cli = mkCliente({ email: 'cli@mail.test' })
+    const sol = mkSolicitud(cli, cmp, { estado: 'aceptada', slot_confirmado: hace(30), token_respuesta: 'tok-r', room_url: 'https://compaz.daily.co/ent-x-1', seguimiento_enviado: true })
+    return { cli, sol }
+  }
+  const retomar = (quien: 'compita' | 'cliente') => reconectar(req(`/api/solicitud/reconectar-llamada?token=tok-r&${qRol('tok-r', quien)}`, { method: 'POST' }))
+
+  test('el compita retoma: el cliente tiene su aviso (campana) y el portal vuelve a «Entrar a la entrevista»', async () => {
+    const { cli } = armar()
+    assert.equal((await retomar('compita')).status, 200)
+    assert.ok(db.rows('novedades_cliente').some((n) => n.usuario_id === cli.id && n.tipo === 'llamada_retomada'))
+    assert.equal((await estadoDelCliente(cli.id)).codigo, 'entrevista_ahora')
+    assert.equal((await estadoDelCliente(cli.id)).sala, 'tok-r')
+  })
+  test('cuando el cliente es quien retoma, no se le avisa a sí mismo', async () => {
+    const { cli } = armar()
+    assert.equal((await retomar('cliente')).status, 200)
+    assert.ok(!db.rows('novedades_cliente').some((n) => n.tipo === 'llamada_retomada' && n.usuario_id === cli.id))
+  })
+  test('pasada la sala (más de 40 minutos), el portal sigue con lo que toca', async () => {
+    const { cli } = armar()
+    await retomar('compita')
+    db.rows('telegram_estados').find((r) => r.chat_id.startsWith('recon:'))!.updated_at = hace(45)
+    assert.notEqual((await estadoDelCliente(cli.id)).codigo, 'entrevista_ahora')
   })
 })

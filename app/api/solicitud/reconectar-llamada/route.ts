@@ -9,6 +9,7 @@ import { createAdminSupabase } from '@/lib/supabase-server'
 import { sendTelegramMessage } from '@/lib/telegram'
 import { sendEmail, SITE_URL } from '@/lib/email'
 import { esc } from '@/lib/html'
+import { registrarNovedad } from '@/lib/novedades'
 import { qRol, rolValido } from '@/lib/links'
 import { enlaceDeLlamada } from '@/lib/llamada-acceso'
 import { ok, err, notFound, serverError, errEspera } from '@/lib/api'
@@ -63,7 +64,11 @@ export async function POST(req: NextRequest) {
           `⚡ <b>La llamada se cayó</b>\n\n<b>${esc(cliente?.nombre ?? 'El cliente')}</b> quiere retomar la llamada ahora mismo. Se creó una sala nueva.\n\n👉 Toca el enlace de abajo para entrar. La sala estará abierta por 30 minutos.\n\n<a href="${salaCompitaUrl}">Entrar a la nueva sala →</a>`,
         )
       }
-    } else if (cliente?.email) {
+    } else {
+      // El cliente lo ve también en su portal (campana y botón para entrar), no solo en el correo.
+      await registrarNovedad({ usuarioId: solicitud.cliente_id, tipo: 'llamada_retomada', nivel: 'critico', titulo: `${(solicitud.compita_nombre ?? 'Tu compita').split(' ')[0]} quiere retomar la llamada. Entra ahora.`, ruta: '/portal', entidad: 'solicitud', entidadId: solicitud.id, clave: `llamada_retomada:${solicitud.id}:${Date.now()}` })
+    }
+    if (quien !== 'cliente' && cliente?.email) {
       await sendEmail({
         to: cliente.email,
         subject: `${solicitud.compita_nombre} quiere retomar la llamada`,
