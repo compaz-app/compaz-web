@@ -40,6 +40,7 @@ export const SITUACION: Record<CodigoEstado, { que: string; espera: Espera }> = 
   visita_cancelada_equipo: { que: 'El equipo canceló una visita hace poco.', espera: 'nadie' },
   visita_terminada: { que: 'Terminó una visita hace poco. Se espera su valoración.', espera: 'cliente' },
   agendar_otra: { que: 'Tiene plan y compita. Puede agendar otra visita.', espera: 'cliente' },
+  sin_plan: { que: 'Tiene compita pero ningún plan activo (por ejemplo, se anuló su pago). El cliente debe elegir un plan para agendar.', espera: 'cliente' },
   plan_agotado: { que: 'Se le acabaron las visitas del plan. Debe renovar.', espera: 'cliente' },
   cuenta_pausada: { que: 'La cuenta está en pausa por compartir contactos. El equipo debe decidir.', espera: 'equipo' },
 }

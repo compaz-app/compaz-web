@@ -29,7 +29,7 @@ export const CODIGOS_ESTADO = [
   'ficha',
   // 5 Visitas
   'agendar_visita', 'visita_reagendada_compita', 'cita_pendiente', 'visita_programada', 'compita_llego', 'nadie_abre', 'visita_en_curso', 'compita_llamando', 'visita_interrumpida', 'visita_cancelada_equipo',
-  'visita_terminada', 'agendar_otra', 'plan_agotado', 'cuenta_pausada',
+  'visita_terminada', 'agendar_otra', 'sin_plan', 'plan_agotado', 'cuenta_pausada',
 ] as const
 export type CodigoEstado = (typeof CODIGOS_ESTADO)[number]
 
@@ -110,7 +110,7 @@ const PASO: Record<CodigoEstado, number> = {
   directa_aceptada: 3, pagar: 3, pago_revision: 3, ficha_lista_espera: 3,
   ficha: 4,
   agendar_visita: 5, visita_reagendada_compita: 5, cita_pendiente: 5, visita_programada: 5, compita_llego: 5, nadie_abre: 5, visita_en_curso: 5, compita_llamando: 5, visita_interrumpida: 5, visita_cancelada_equipo: 5,
-  visita_terminada: 5, agendar_otra: 5, plan_agotado: 5, cuenta_pausada: 5,
+  visita_terminada: 5, agendar_otra: 5, sin_plan: 5, plan_agotado: 5, cuenta_pausada: 5,
 }
 export const pasoDe = (c: CodigoEstado) => PASO[c]
 
@@ -225,6 +225,8 @@ export function decidirEstado(f: FotoCliente): EstadoCliente {
   if (f.compitaAsignado) {
     if (!f.fichaCompleta) return e('ficha', { compitaNombre: f.compitaAsignado.nombre })
     if (f.cupo && f.cupo.restantes <= 0) return e('plan_agotado', { compitaNombre: f.compitaAsignado.nombre })
+    // Sin plan activo (por ejemplo, el equipo anuló el pago) no se ofrece agendar: se pide pagar. Antes el portal seguía diciendo «Agenda tu próxima visita».
+    if (!f.cupo) return e('sin_plan', { compitaNombre: f.compitaAsignado.nombre })
     return e('agendar_otra', { compitaNombre: f.compitaAsignado.nombre })
   }
   if (f.solicitudes.length > 0 && f.solicitudes.every((s) => s.estado === 'rechazada')) return e('todas_rechazadas')

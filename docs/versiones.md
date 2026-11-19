@@ -4,6 +4,9 @@ La versión vigente está en `lib/version.ts` y se ve en el panel (menú lateral
 
 Reglas: mayor = cambio grande o lanzamiento; menor = función nueva; parche = arreglo. La etapa `beta` sale cuando el sistema corre una o dos semanas con uso real sin sorpresas.
 
+## 1.3.35-beta.1 (2026-11-18)
+Con compita pero sin plan activo (por ejemplo, tras anular un pago) el portal seguía diciendo «Agenda tu próxima visita». Ahora muestra «No tienes un plan activo» con el botón «Elegir un plan» (estado nuevo `sin_plan`). El caso «plan agotado» (ya tenía plan y se le acabaron las visitas) no cambia. Pendiente de mirar en pantalla.
+
 ## 1.3.34-beta.1 (2026-11-18)
 Al anular un pago, el equipo puede decidir si avisa al cliente: casilla «Avisar al cliente por correo y en su portal» (marcada por defecto). Se desmarca en un error de captura (por ejemplo, un registro duplicado) para no confundirlo. Si se desmarca, queda en el historial como `pago_anulado_sin_aviso` con quién lo decidió. La anulación en sí siempre queda registrada.
 

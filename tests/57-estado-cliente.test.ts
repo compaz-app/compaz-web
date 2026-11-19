@@ -50,6 +50,7 @@ const CASOS: Record<CodigoEstado, FotoCliente> = {
   visita_cancelada_equipo: foto({ cancelaciones: [{ visitaId: 'v1', por: 'compita', justificadaPor: 'admin: equipo@compaz.com', creadaEn: min(-60) }] }),
   visita_terminada: foto({ compitaAsignado: COMPITA, visitas: [vis({ estado: 'terminada', fin: min(-90) })] }),
   agendar_otra: foto({ compitaAsignado: COMPITA, cupo: { restantes: 2 } }),
+  sin_plan: foto({ compitaAsignado: COMPITA, cupo: null }),
   plan_agotado: foto({ compitaAsignado: COMPITA, cupo: { restantes: 0 } }),
   cuenta_pausada: foto({ pausada: true }),
 }
