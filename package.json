@@ -1,6 +1,6 @@
 {
   "name": "compaz",
-  "version": "1.3.36-beta.1",
+  "version": "1.3.37-beta.1",
   "private": true,
   "scripts": {
     "dev": "next dev",

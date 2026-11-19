@@ -8,6 +8,7 @@ import { TarjetaProximamente } from '@/components/ui/Proximamente'
 import { SERVICIOS_PROXIMOS } from '@/lib/servicios-proximos'
 import type { Precios } from '@/lib/precios'
 import IconoPersona from '@/components/ui/IconoPersona'
+import FotoRedonda from '@/components/ui/FotoRedonda'
 
 // ── Planes (precios y visitas vienen de lib/planes.ts, única fuente) ─────────
 const DETALLES: Record<PlanId, string[]> = {
@@ -147,8 +148,7 @@ function PagoContent() {
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '36px' }}>
           {info.compitaFoto
-            // eslint-disable-next-line @next/next/no-img-element
-            ? <img src={info.compitaFoto} alt={info.compitaNombre} style={{ width: '80px', height: '80px', borderRadius: '50%', objectFit: 'cover', marginBottom: '16px', border: '3px solid #FF6B2B' }} />
+            ? <FotoRedonda src={info.compitaFoto} alt={info.compitaNombre} size={80} style={{ marginBottom: '16px', border: '3px solid #FF6B2B' }} />
             : <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: '#F5F0E8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '36px', margin: '0 auto 16px' }}><IconoPersona /></div>
           }
           <h1 style={{ fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '24px', color: '#1A0A3C', margin: '0 0 8px' }}>

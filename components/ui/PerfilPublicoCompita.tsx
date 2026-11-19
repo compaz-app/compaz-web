@@ -5,6 +5,7 @@
 import { useState, useEffect } from 'react'
 import type { Compita } from '@/types'
 import IconoPersona from '@/components/ui/IconoPersona'
+import FotoRedonda from '@/components/ui/FotoRedonda'
 
 const estilo = {
   badge: { background: 'white', border: '2px solid #E8E0D4', borderRadius: '9999px', padding: '2px 8px', fontSize: '11px', color: '#2D1464', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, whiteSpace: 'nowrap' as const, display: 'inline-flex', alignItems: 'center', gap: '3px' },
@@ -45,8 +46,7 @@ export default function PerfilPublicoCompita({ compita }: { compita: Compita }) 
     <>
       <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '12px', paddingRight: '28px' }}>
         {compita.foto_url
-          // eslint-disable-next-line @next/next/no-img-element
-          ? <img src={compita.foto_url} alt={compita.nombre} style={{ width: '80px', height: '80px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+          ? <FotoRedonda src={compita.foto_url} alt={compita.nombre} size={80} />
           : <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: '#F0EBF8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '36px', flexShrink: 0 }}><IconoPersona /></div>
         }
         <div style={{ minWidth: 0 }}>

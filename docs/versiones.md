@@ -4,6 +4,9 @@ La versión vigente está en `lib/version.ts` y se ve en el panel (menú lateral
 
 Reglas: mayor = cambio grande o lanzamiento; menor = función nueva; parche = arreglo. La etapa `beta` sale cuando el sistema corre una o dos semanas con uso real sin sorpresas.
 
+## 1.3.37-beta.1 (2026-11-18)
+Fotos de compitas optimizadas (primera tarea de velocidad). Las fotos redondas (marketplace, perfil público, visitas del portal, pago) se bajaban en su tamaño original, de hasta 5 MB, para mostrarse en 32 a 80 píxeles. Ahora pasan por el optimizador de imágenes de Next (`components/ui/FotoRedonda.tsx`): AVIF o WebP según el navegador, al tamaño exacto y con caché de 30 días. La foto subida no se toca: se convierte al verla, una vez por tamaño. Se autoriza solo el almacenamiento público de Supabase, con la dirección sacada de `NEXT_PUBLIC_SUPABASE_URL` (como la CSP). Quedan sin optimizar a propósito: la foto de llegada y las del chat (privadas, se sirven por la API), el panel del equipo y el dashboard viejo (ya redirige al portal). Prueba 133. Pendiente de medir con red lenta en el celular.
+
 ## 1.3.36-beta.1 (2026-11-18)
 Auditoría de huecos, hallazgo 6: cuatro avisos que solo existían como correo o como tarjeta del portal ahora también suenan en la campana (y encienden el círculo rojo): «Tu llamada con X está confirmada: día y hora» (una por hora; si cambia, vuelve a sonar), «X no pudo coordinarse contigo / no pudo responder tu solicitud, elige a otro» (cierre automático de solicitudes), «Tu compita está lista: X» (asignación del equipo) y «Ya pasó un mes de tu plan, es hora de renovarlo». Todos informativos, una sola vez por hecho (`novedadInformativa` en `lib/novedades.ts`). El «perfil verificado» de la auditoría es un correo al compita, no al cliente: no aplica. Correos sin cambios.
 

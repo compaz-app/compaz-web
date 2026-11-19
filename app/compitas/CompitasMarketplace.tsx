@@ -18,6 +18,7 @@ interface Props {
 import type { Solicitud } from '@/types'
 import PerfilPublicoCompita from '@/components/ui/PerfilPublicoCompita'
 import IconoPersona from '@/components/ui/IconoPersona'
+import FotoRedonda from '@/components/ui/FotoRedonda'
 
 export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEmail, backHref = '/dashboard', backLabel = '← Mi portal' }: Props) {
   const router = useRouter()
@@ -434,8 +435,7 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
                 {solicitudesPendientes.map((s) => (
                   <div key={s.id} style={{ background: 'white', borderRadius: '12px', padding: '11px 14px', display: 'flex', alignItems: 'center', gap: '10px', border: '1.5px solid #E8E0D4' }}>
                     {s.compita_foto
-                      // eslint-disable-next-line @next/next/no-img-element
-                      ? <img src={s.compita_foto} alt={s.compita_nombre ?? ''} style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                      ? <FotoRedonda src={s.compita_foto} alt={s.compita_nombre ?? ''} size={32} />
                       : <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#F0EBF8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}><IconoPersona /></div>
                     }
                     <span style={{ flex: 1, color: '#1A0A3C', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.compita_nombre}</span>
@@ -501,8 +501,7 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
                 >
                   {/* Avatar */}
                   {compita.foto_url
-                    // eslint-disable-next-line @next/next/no-img-element
-                    ? <img src={compita.foto_url} alt={compita.nombre} style={{ width: '52px', height: '52px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                    ? <FotoRedonda src={compita.foto_url} alt={compita.nombre} size={52} />
                     : <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: '#F0EBF8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', flexShrink: 0 }}><IconoPersona /></div>
                   }
                   {/* Info principal */}
