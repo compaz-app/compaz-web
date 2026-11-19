@@ -174,7 +174,12 @@ describe('Registrar pago (panel admin)', () => {
     assert.equal((await cupoDelPlan(carlos.id))!.restantes, 4)
     admin(); assert.equal((await anularPago(req('/api/admin/anular-pago', { json: { pago_id: id, motivo: 'Zelle no llegó' } }))).status, 200)
     assert.equal((await cupoDelPlan(carlos.id))?.restantes ?? 0, 0)
+    // El cliente se entera: campana del portal y correo (sin el motivo interno). Una segunda anulación no avisa otra vez.
+    assert.ok(db.rows('novedades_cliente').some((n) => n.usuario_id === carlos.id && n.tipo === 'pago_anulado'))
+    const aviso = emailsA(carlos.email).find((e) => /Anulamos el registro/.test(e.subject))!
+    assert.ok(aviso); assert.doesNotMatch(aviso.html, /Zelle no llegó/); assert.match(aviso.html, /hola@micompaz\.com/)
     assert.equal((await anularPago(req('/api/admin/anular-pago', { json: { pago_id: id } }))).status, 400)
+    assert.equal(emailsA(carlos.email).filter((e) => /Anulamos el registro/.test(e.subject)).length, 1)
     const h = await (await listarPagos(req(`/api/admin/pagos?usuario_id=${carlos.id}`))).json()
     assert.equal(h.data.pagos[0].estado, 'anulado')
   })

@@ -4,6 +4,9 @@ La versión vigente está en `lib/version.ts` y se ve en el panel (menú lateral
 
 Reglas: mayor = cambio grande o lanzamiento; menor = función nueva; parche = arreglo. La etapa `beta` sale cuando el sistema corre una o dos semanas con uso real sin sorpresas.
 
+## 1.3.32-beta.1 (2026-11-18)
+Auditoría de huecos, hallazgo 4: cuando el equipo anulaba un pago, el cliente no recibía nada y su plan desaparecía sin explicación. Ahora recibe un correo («Anulamos el registro de tu pago», con el monto y qué era, sin el motivo interno, y el correo de ayuda) y un aviso en la campana del portal. Aviso nuevo `pago_anulado`. Una segunda anulación del mismo pago no avisa otra vez. Pendiente conocido: el portal sin plan sigue mostrando «Agenda tu próxima visita» en lugar de pedir un nuevo pago (ver auditoría).
+
 ## 1.3.31-beta.1 (2026-11-18)
 Auditoría de huecos, hallazgo 3: cuando la llamada de la entrevista se cortaba y el compita la retomaba con una sala nueva, el enlace llegaba solo por correo; el portal ya había pasado a «¿pudiste hablar?» o «¿contratas?» y el botón de entrar desaparecía. Ahora el portal vuelve a mostrar «Entrar a la entrevista» durante los 40 minutos que dura la sala nueva (se sabe por la marca de reconexión `recon:<solicitud>`), suena la campana («X quiere retomar la llamada. Entra ahora.») y se mantiene el correo. Si el cliente es quien retoma, no se avisa a sí mismo. Prueba 132.
 

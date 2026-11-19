@@ -3,6 +3,7 @@ import { NextRequest } from 'next/server'
 import { requierePermiso } from '@/lib/permisos'
 import { anularPago } from '@/lib/pagos'
 import { cupoDelPlan } from '@/lib/visitas'
+import { notificar } from '@/lib/avisos'
 import { ok, err } from '@/lib/api'
 
 export async function POST(req: NextRequest) {
@@ -11,5 +12,7 @@ export async function POST(req: NextRequest) {
   if (!b?.pago_id) return err('Falta pago_id')
   const r = await anularPago(b.pago_id, b.motivo ?? '', { correo: g.actor.correo, rol: g.actor.rol })
   if (!r.ok) return err(r.error, 400)
+  // El cliente se entera (campana del portal y correo); antes su plan desaparecía sin explicación.
+  await notificar({ plantilla: 'pago_anulado', canal: 'correo', destinatario: { tipo: 'cliente', id: r.usuarioId }, variables: { pagoId: b.pago_id }, entidad: 'pago', entidadId: b.pago_id, paso: 12 })
   return ok({ cupo: await cupoDelPlan(r.usuarioId) })
 }

@@ -35,7 +35,7 @@ export type NombrePlantilla = 'solicitud_nueva' | 'directa_aceptada' | 'pago_con
   | 'entrevista_aceptada' | 'reserva_pedida' | 'reserva_rechazada' | 'reserva_vencida' | 'lugar_respuesta' | 'direccion_visita' | 'direccion_faltante_cliente' | 'compita_en_camino'
   | 'compita_llego' | 'nadie_abre_cliente' | 'visita_sin_acceso_cliente' | 'nadie_abre_cerrar'
   | 'salida_seguridad_cliente' | 'todo_bien' | 'recordatorio_cliente' | 'cancelacion_equipo_cliente' | 'pausa_cuenta_cliente' | 'pausa_cuenta_decision' | 'cita_propuesta_cliente' | 'cita_rechazada_cliente' | 'cita_sin_respuesta_cliente'
-  | 'visita_resumen' | 'visita_reporte'
+  | 'visita_resumen' | 'visita_reporte' | 'pago_anulado'
 
 const etiquetaSlot = (iso: string) =>
   new Date(iso).toLocaleString('es-VE', {
@@ -236,6 +236,31 @@ const pagoConfirmado: Plantilla = {
           ${cuerpo}
           ${boton}
           ${reembolso}</div>`,
+      },
+    }
+  },
+}
+
+// El equipo anuló el registro de un pago: el cliente se entera (antes su plan desaparecía sin ninguna explicación). El motivo es interno y no se muestra.
+const pagoAnulado: Plantilla = {
+  canales: ['correo'],
+  async render(v) {
+    const pagoId = String(v.pagoId ?? '')
+    if (!pagoId) return null
+    const admin = createAdminSupabase()
+    const { data: p } = await admin.from('pagos_plan').select('*').eq('id', pagoId).maybeSingle()
+    if (!p || p.estado !== 'anulado') return null
+    const { data: cli } = await admin.from('usuarios').select('nombre').eq('id', p.usuario_id).maybeSingle()
+    const primero = esc(String(cli?.nombre ?? '').split(' ')[0])
+    const que = p.tipo === 'plan' ? `plan ${PLANES[p.plan as PlanId]?.nombre ?? ''}`.trim() : `visita extra de ${p.horas} horas`
+    return {
+      correo: {
+        asunto: 'Anulamos el registro de tu pago en Compaz',
+        html: `<div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px">
+          <h2 style="color:#2D1464;font-size:22px">Anulamos el registro de tu pago</h2>
+          <p style="color:#4A3B6B;font-size:16px;line-height:1.6">Hola, ${primero}. Anulamos el registro del pago de <strong>$${esc(String(p.monto_usd))}</strong> (${esc(que)}). Las visitas sin usar de ese pago ya no están disponibles.</p>
+          <p style="color:#4A3B6B;font-size:15px;line-height:1.6">Si no lo esperabas, escríbenos a hola@micompaz.com y lo revisamos contigo.</p>
+        </div>`,
       },
     }
   },
@@ -756,6 +781,7 @@ export const PLANTILLAS: Record<NombrePlantilla, Plantilla> = {
   solicitud_nueva: solicitudNueva,
   directa_aceptada: directaAceptada,
   pago_confirmado: pagoConfirmado,
+  pago_anulado: pagoAnulado,
   llamada_terminada_cliente: llamadaTerminadaCliente,
   llamada_terminada_compita: llamadaTerminadaCompita,
   entrevista_aceptada: entrevistaAceptada,

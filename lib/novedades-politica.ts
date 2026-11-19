@@ -25,7 +25,7 @@ export const NIVEL_POR_PLANTILLA: Partial<Record<NombrePlantilla, NivelNovedad>>
   directa_aceptada: 'accionable', entrevista_aceptada: 'accionable', llamada_terminada_cliente: 'accionable', reserva_rechazada: 'accionable',
   reserva_vencida: 'accionable', direccion_faltante_cliente: 'accionable', cita_rechazada_cliente: 'accionable', cita_sin_respuesta_cliente: 'accionable',
   recordatorio_cliente: 'accionable',
-  compita_en_camino: 'informativo', lugar_respuesta: 'informativo', cita_propuesta_cliente: 'informativo', pago_confirmado: 'informativo',
+  compita_en_camino: 'informativo', lugar_respuesta: 'informativo', cita_propuesta_cliente: 'informativo', pago_confirmado: 'informativo', pago_anulado: 'accionable',
   visita_resumen: 'informativo', visita_reporte: 'informativo',
 }
 
@@ -34,6 +34,7 @@ export const TITULO_NOVEDAD: Partial<Record<NombrePlantilla, string>> = {
   directa_aceptada: 'Tu compita aceptó. Falta el pago.',
   entrevista_aceptada: 'Tu compita aceptó hablar contigo. Elige la hora.',
   pago_confirmado: 'Confirmamos tu pago.',
+  pago_anulado: 'Anulamos el registro de uno de tus pagos.',
   llamada_terminada_cliente: 'Terminó tu entrevista. Cuéntanos si contratas.',
   reserva_rechazada: 'Tu compita no puede a esa hora. Elige otra.',
   reserva_vencida: 'La hora que pediste venció. Elige otra.',
