@@ -4,15 +4,18 @@ import { useEffect, useRef } from 'react'
 import { usePathname } from 'next/navigation'
 import Script from 'next/script'
 import { esRutaConAnalitica } from '@/lib/analitica-rutas'
+import { useDecisionCookies } from '@/lib/consentimiento-cliente'
 
-// Los scripts de medición de terceros (Clarity, Google Analytics, Meta) viven aquí y SOLO se cargan en las páginas públicas (lib/analitica-rutas.ts). Si alguien entra a
-// una pantalla pública y luego navega dentro de la misma sesión a una privada, los scripts ya cargados siguen vivos: se les pide que paren (mejor esfuerzo; al
+// Los scripts de medición de terceros (Clarity, Google Analytics, Meta) viven aquí y SOLO se cargan en las páginas públicas (lib/analitica-rutas.ts) y con el permiso de la persona (lib/consentimiento.ts). Si alguien entra a
+// una pantalla pública y luego navega a una privada, o retira el permiso, sin recargar, los scripts ya cargados siguen vivos: se les pide que paren (mejor esfuerzo; al
 // iniciar sesión el servidor redirige y la página se carga de nuevo, sin ellos).
 type Ventana = Window & { clarity?: (...a: unknown[]) => void; fbq?: (...a: unknown[]) => void; [k: string]: unknown }
 
 export default function ScriptsAnaliticos({ gaId, metaPixelId, clarityId }: { gaId?: string; metaPixelId?: string; clarityId?: string }) {
   const pathname = usePathname()
-  const permitido = esRutaConAnalitica(pathname)
+  // Se mide solo en las páginas públicas Y solo si la persona aceptó. Sin decisión (o rechazando) no se carga nada.
+  const decision = useDecisionCookies() // el hook se llama siempre, antes de cualquier condición
+  const permitido = esRutaConAnalitica(pathname) && decision === 'si'
   const cargados = useRef(false)
   if (permitido) cargados.current = true
 

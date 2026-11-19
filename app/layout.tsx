@@ -3,6 +3,7 @@ import { Bricolage_Grotesque, Inter } from "next/font/google";
 import Script from "next/script";
 import MedirVelocidadReal from "@/components/MedirVelocidadReal";
 import ScriptsAnaliticos from "@/components/ScriptsAnaliticos";
+import AvisoCookies from "@/components/AvisoCookies";
 import "./globals.css";
 import JsonLd from "@/components/JsonLd";
 import ScrollRestoration from "@/components/ScrollRestoration";
@@ -206,6 +207,7 @@ export default function RootLayout({
         {children}
         <MedirVelocidadReal />
         {/* Clarity, Google Analytics y Meta: solo en las páginas públicas (lib/analitica-rutas.ts), nunca en el portal, el panel ni los enlaces con token */}
+        <AvisoCookies />
         <ScriptsAnaliticos gaId={GA_ID} metaPixelId={metaPixelId} clarityId="y62sqpjuto" />
         {/* Cloudflare Turnstile — carga solo cuando se necesita */}
         <Script
