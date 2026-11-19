@@ -164,7 +164,7 @@ function cmcApi_ficha_(id) {
       ops: { estadoOperativo: ficha['Estado operativo'] || '', aceptaNuevos: ficha['Acepta nuevos servicios'] || '', motivo: ficha['Motivo estado operativo'] || '' },
       elegibilidad: seguro(function () { return panel_obtenerPanelElegibilidad_core_(id); }),
       alertas: seguro(function () { return panel_obtenerAlertas(id); }),
-      onboarding: seguro(function () { return { historial: panel_obtenerOnboarding(id) }; })
+      onboarding: seguro(function () { return panel_obtenerOnboarding(id); })
     },
     pestanas: pestanas
   };
