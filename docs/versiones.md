@@ -4,6 +4,9 @@ La versión vigente está en `lib/version.ts` y se ve en el panel (menú lateral
 
 Reglas: mayor = cambio grande o lanzamiento; menor = función nueva; parche = arreglo. La etapa `beta` sale cuando el sistema corre una o dos semanas con uso real sin sorpresas.
 
+## 1.3.34-beta.1 (2026-11-18)
+Al anular un pago, el equipo puede decidir si avisa al cliente: casilla «Avisar al cliente por correo y en su portal» (marcada por defecto). Se desmarca en un error de captura (por ejemplo, un registro duplicado) para no confundirlo. Si se desmarca, queda en el historial como `pago_anulado_sin_aviso` con quién lo decidió. La anulación en sí siempre queda registrada.
+
 ## 1.3.33-beta.1 (2026-11-18)
 Auditoría de huecos, hallazgo 5: cuando el compita cambiaba la hora de la entrevista, el portal mostraba «X aceptó. Elige tu horario», como si nada hubiera cambiado. Ahora, si el compita reagenda una entrevista con horas libres, la reserva queda «rechazada» y el portal muestra «X no puede a esa hora» (estado `horario_rechazado`, que ya existía); si lo pide el cliente, solo se libera como antes. Cuando el compita reagenda por el camino de horarios escritos (el que termina en «X te propone otros horarios»), el cliente además ve en la campana «X necesita cambiar la fecha de la llamada. Te enviará otros horarios.». Limitación conocida: entre ese aviso y que el compita escriba los horarios, la tarjeta del portal sigue diciendo «Busquemos a otro compita».
 
