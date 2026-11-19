@@ -1,134 +1,140 @@
 # CMC en el panel: lectura real (fase 2A) y acciones (fase 2B, diseño)
 
-Estado: **2A preparada, sin instalar.** El código del panel está listo y probado con datos sintéticos. Para ver datos reales hace falta instalar la API en Apps Script y poner dos variables en Netlify. Las dos cosas requieren autorización de Luis (ver «Cambios en producción»).
-
-> **Instalación detenida (2026-11-18): incompatibilidad de seguridad.** El proyecto del CMC tiene un `doGet` (`WebAppV2.gs`) que sirve la V2 con `HtmlService` sin revisar quién la abre, y 108 funciones públicas (entre ellas escrituras como `v2_descartar`, `v2_habilitarCompita` o `registrarMovimiento`). La V2 está a salvo porque su implementación se ejecuta «como el usuario que accede» y exige cuenta de Google. Pero la implementación que pide esta API («ejecutar como yo», acceso «cualquier usuario») incluiría ese mismo `doGet`: cualquiera con la URL abriría la V2 y podría llamar a las funciones públicas con los permisos del propietario. **No se instaló nada.** Ver la sección 8.
+Estado (2026-11-19): API de lectura instalada en un **proyecto de Apps Script independiente**, publicada y **apagada** (`CMC_API_ACTIVA = no`). Conexión configurada solo en los **Deploy Previews** de Netlify. Producción no tiene la conexión. El proyecto original del CMC no se tocó (archivos, implementaciones, disparadores y propiedades intactos).
 
 ## 1. Qué resuelve
 
-La pestaña «Operación real» del CMC (`/panel?sec=confianza`) mostraba solo las Compitas habilitadas desde Supabase. Con la fase 2A muestra toda la selección tal como está en el CMC original (Google Sheets + Apps Script): etapas, ficha, preentrevista, entrevistas, verificaciones, onboarding, disponibilidad, alertas, historial, requisitos de habilitación y próxima acción. Es solo lectura. La V2 sigue siendo el único lugar donde se decide.
+La pestaña «Operación real» del CMC (`/panel?sec=confianza`) muestra la selección tal como está en el CMC original (Google Sheets + Apps Script): etapas, ficha, requisitos de habilitación, preentrevista, entrevista, verificaciones, onboarding, alertas, historial y próxima acción. Es solo lectura y solo para administradores. La V2 sigue siendo el único lugar donde se decide.
 
-## 2. Arquitectura (opción elegida)
+## 2. Por qué un proyecto aparte (decisión 2026-11-18)
+
+El proyecto del CMC tiene un `doGet` que sirve la V2 con `HtmlService` sin revisar quién la abre, y 108 funciones públicas (varias de escritura: `v2_descartar`, `v2_habilitarCompita`, `registrarMovimiento`…). La V2 está a salvo porque su implementación se ejecuta «como el usuario que accede» y exige cuenta de Google. Una implementación anónima que se ejecuta como el propietario (lo que necesita esta API) habría incluido ese `doGet`. Por eso la API vive en otro proyecto que **solo contiene el código de la API**.
+
+## 3. Arquitectura y permisos efectivos
 
 ```
-Navegador (admin) ──> /panel (servidor Next, Netlify)
+Navegador (admin) ──> /panel (servidor Next, Netlify Deploy Preview)
                          │  requireAuth + actor.rol === 'admin'
-                         │  lib/confianza/lectura-real.ts
-                         │  lib/cmc-api.ts  (POST firmado HMAC-SHA256, caché 60 s lista / 30 s ficha)
+                         │  lib/cmc-api.ts  (POST firmado HMAC-SHA256; caché 60 s lista / 30 s ficha / 10 min versión)
                          ▼
-              Apps Script del CMC · ApiPanelWeb.gs (doPost, implementación NUEVA)
-                         │  reutiliza v2_obtenerFichaRaw_ / v2_obtenerTabRaw_ (lectores de la V2, sin escrituras)
-                         ▼
-              Hoja del CMC (03, 08, 09, 10, 11, 12, 13B, 16, 17)
+   Proyecto «CMC · API de lectura del panel (solo lectura)»  — propietario soycompaz
+     ApiPanel.gs        doPost (sin doGet), firma, hora, nonce, tope, interruptor, minimización
+     HojaSoloLectura.gs la hoja vista con la API de Sheets; objeto con forma de SpreadsheetApp SIN métodos de escritura
+     ReglasCMC.gs       copia literal de 30 funciones de lectura del CMC (no está en el repo: es código interno)
+     appsscript.json    oauthScopes = [spreadsheets.readonly]; servicio avanzado Sheets v4
+                         ▼  (solo lectura)
+   Hoja del CMC (03, 08, 09, 11, 12, 16, 17, 18)
 ```
 
-Alternativas descartadas:
+| Capa | Qué puede | Qué no puede |
+|---|---|---|
+| Permiso OAuth del proyecto | Ver hojas de cálculo del propietario (`spreadsheets.readonly`). Verificado en la pantalla de consentimiento. | Escribir en cualquier hoja (Google lo rechaza). Gmail, Drive, llamadas externas, disparadores: sin permiso. |
+| Código | Abrir **solo** la hoja del CMC (`openById` con otro ID falla: `solo_hoja_cmc`). | No existe ningún método de escritura en el objeto hoja. No hay `doGet`, `HtmlService`, `UrlFetchApp`, `MailApp` ni `ScriptApp`. |
+| Implementación web | «Ejecutar como: yo», acceso «Cualquier usuario» (para que Netlify llame sin cuenta de Google). | Sin firma válida no lee nada. Con `CMC_API_ACTIVA ≠ si` responde «inactiva» sin leer. |
+| Web | Solo administradores (servidor). Ninguna ruta `/api` ni pública usa la API. | Colaboradores y «ver como colaborador» ven la vista anterior. |
 
-| Opción | Por qué no |
-|---|---|
-| A. Copiar el CMC a tablas de Supabase con una sincronización | Duplica datos personales en una segunda base y crea una segunda verdad que se desfasa. Exige migraciones y una sincronización masiva (no autorizadas). |
-| B. Leer la hoja con la API de Sheets y una cuenta de servicio | Habría que compartir la hoja entera con una cuenta nueva (todos los teléfonos y correos), y reescribir en TypeScript la lógica de elegibilidad que ya calcula el CMC. Esto daría dos versiones de las reglas. |
-| **C. API de lectura dentro del mismo Apps Script (elegida)** | Una sola verdad. Reutiliza los lectores y las reglas reales de la V2 (no la lógica de la demo). Los contactos se recortan antes de salir de Google. No hay migración. El mismo canal sirve para la fase 2B. |
+`SpreadsheetApp.openById` exige el permiso completo de hojas (lectura **y** escritura). Por eso la lectura se hace con la API de Sheets (`Sheets.Spreadsheets.Values.get`), que acepta el permiso de solo lectura. `HojaSoloLectura.gs` reproduce `getValues()`: celdas vacías como `''`, fechas como `Date` en la zona horaria de la hoja, números y texto tal cual.
 
-## 3. Contrato
+## 4. Contrato
 
-Petición (cuerpo `text/plain` con JSON, ≤ 4000 caracteres):
-
+Petición (texto JSON, ≤ 4000 caracteres):
 ```json
-{ "v": 1, "op": "ping|lista|ficha", "id": "COM-xxxx o vacío", "ts": 1763400000, "nonce": "uuid", "firma": "hex" }
+{ "v": 1, "op": "ping|lista|ficha|version", "id": "COM-xxxx o vacío", "ts": 1763400000, "nonce": "uuid", "firma": "hex" }
 ```
+`firma = HMAC-SHA256(CMC_API_TOKEN, "v.op.id.ts.nonce")`. La hora vale ±300 s y el nonce es de un solo uso (10 min). El tope es de 120 peticiones por minuto.
 
-- `firma = HMAC-SHA256(CMC_API_TOKEN, "v.op.id.ts.nonce")`.
-- Ventana de tiempo de ±300 s.
-- El nonce es de un solo uso (CacheService, 10 min).
-- Tope de 120 peticiones por minuto.
+Respuesta: `{ ok, v, op, generado, ms, datos }`. Los errores salen como `{ ok: false, error: "<código>" }`, con uno de estos códigos: `inactiva`, `sin_configurar`, `peticion_invalida`, `fuera_de_tiempo`, `firma_invalida`, `repetida`, `limite`, `id_invalido`, `no_existe`, `operacion_no_permitida`, `error_interno`.
 
-Respuesta: `{ ok: true, v, op, generado, ms, datos }`. Si algo falla, la respuesta es `{ ok: false, error: "<código>" }`. Los códigos posibles son `inactiva`, `sin_configurar`, `peticion_invalida`, `fuera_de_tiempo`, `firma_invalida`, `repetida`, `limite`, `id_invalido`, `no_existe`, `operacion_no_permitida` y `error_interno`. Nunca se devuelve un detalle interno.
+Minimización antes de responder (en Apps Script y otra vez en la web):
+- La hoja 03 sale con una **lista blanca** de columnas: nunca WhatsApp, Email, enlaces, ID de Airtable, errores ni observaciones.
+- Se borran las claves de contacto (`teléfono|whats|email|correo|cédula|documento|dirección|enlace|link|url…`).
+- Se omiten las preguntas o campos de referencias, de «dónde vives / zona específica», de evidencias y de contacto.
+- Dentro de cualquier texto se tachan correos, teléfonos venezolanos o internacionales, cédulas y enlaces.
+- El registro privado del proyecto guarda solo la operación y el código, o un error tachado de 120 caracteres.
 
-Minimización: se borran en cualquier nivel las claves que coinciden con `teléfono|whats|email|correo|cédula|documento|dirección|enlace|link|url|ip|t|e|wa`. Esto pasa en Apps Script y otra vez en la web, que es la segunda barrera. Las dos expresiones deben ser idénticas, y la prueba 120 lo comprueba.
+Prueba en el proyecto real, con 15 fichas: antes de limpiar había correos en 7; después, 0. Teléfonos, enlaces y cédulas: 0.
 
-## 4. De dónde sale cada dato
+## 5. De dónde sale cada dato
 
-| Dato en el panel | Fuente en el CMC | Lector |
+| Dato | Fuente | Función |
 |---|---|---|
-| Lista: código, nombre, zona, fecha de registro | Hoja 03 · Compitas (ID Compita, Nombre, Ubicación declarada, Fecha registro) | `cmcApi_lista_` |
-| Etapa | 03 · Etapa de selección (vacía → «Sin etapa», nunca se inventa) | `cmcApi_lista_` + `normalizarEtapa` |
-| Estado operativo, acepta servicios | 03 · Estado operativo, Acepta nuevos servicios | `cmcApi_lista_` |
-| Preentrevista (estado) | 03 · Estado preentrevista | `cmcApi_lista_` |
-| Duplicados | 03 · Duplicado de (ID), Clasificación duplicado («Duplicado confirmado» no cuenta) | `cmcApi_lista_` + `esDuplicadoConfirmado` |
-| Perfiles de prueba | Códigos y nombres de prueba (`esPerfilDePrueba`, misma regla que la vista anterior) | `construirFilas` |
-| Alertas abiertas / que bloquean | 11 · Alertas Compitas (Estado ≠ cerrada/resuelta/anulada; Bloquea matching = Sí) | `cmcApi_alertasAbiertas_` |
-| En catálogo de la web | Supabase `compitas` (vista anterior, ya en producción) | `cargarResumenOperativo` |
-| Requisitos de habilitación | Lo que calcula el CMC (`panel_obtenerPanelElegibilidad`) | `v2_obtenerFichaRaw_` |
-| Ficha, estado operativo, atributos, onboarding, disponibilidad, cobertura, alertas | `panel_fichaCompleta_` (hojas 03, 10, 10B, 11, 12, 13B, 16) | `v2_obtenerFichaRaw_` |
-| Preentrevista (respuestas) | 09 · Preentrevistas Compitas | `v2_obtenerTabRaw_(id,'preentrevista')` |
-| Entrevistas | 08 · Entrevistas Compitas | `v2_obtenerTabRaw_(id,'entrevista')` |
-| Verificaciones | 12 · Verificaciones Compitas | `v2_obtenerTabRaw_(id,'verificaciones')` |
-| Historial | 17 · Eventos Compitas | `v2_obtenerTabRaw_(id,'historial')` |
-| Próxima acción | Orientativa, derivada de la etapa y las alertas (`lib/confianza/real.ts`). Se rotula «orientativa». | web |
+| Lista: código, nombre, zona, registro, etapa, estado operativo, preentrevista, duplicados | Hoja 03 (lista blanca) | `cmcApi_lista_` |
+| Alertas abiertas / que bloquean | Hoja 11 | `cmcApi_alertasAbiertas_` |
+| Requisitos de habilitación, «puede recibir servicios», razones | Hojas 03, 08, 11, 12, 16, 18 | `panel_obtenerPanelElegibilidad_core_` (copia literal) |
+| Alertas, verificaciones, onboarding | Hojas 11, 12, 16 | `panel_obtenerAlertas`, `panel_obtenerVerificaciones`, `panel_obtenerOnboarding` (copias) |
+| Preentrevista, entrevista, historial | Hojas 09, 08, 17 | `v2_obtenerTabRaw_` (copia) |
+| En catálogo de la web | Supabase `compitas` | `cargarResumenOperativo` |
+| Próxima acción | Orientativa, derivada en la web (`lib/confianza/real.ts`) | — |
 
-## 5. Permisos y privacidad
+El requisito «operador» (solo Luis o Juan pueden habilitar) depende de quién mira. En la vista de lectura no aplica y no se muestra.
 
-- Solo un **administrador** ve los datos reales. Se decide en el servidor (`app/panel/page.tsx`: `actor.rol === 'admin'`), y «Ver como colaborador» también los esconde. Un colaborador con «monitorear» sigue viendo la vista anterior.
-- Ninguna ruta `/api` ni pública lee el CMC (prueba 120). El token vive solo en el servidor; nunca en una variable `NEXT_PUBLIC_`.
-- Los errores se registran como códigos (`[cmc/lectura] lista: firma_invalida`), nunca con contenido.
-- **Analítica:** Clarity, Google Analytics y Meta Pixel solo se cargan en las páginas públicas (`lib/analitica.ts`, prueba 121); `/panel` no carga ninguna. Además la vista real y la ficha llevan `data-clarity-mask` como segunda barrera. La búsqueda del CMC no va en la dirección (se guarda en la pestaña).
-- Lo que sí sale del CMC: nombre, zona declarada, etapas, estados y textos de notas (observaciones, motivos y respuestas de la preentrevista). Las notas son texto libre y pueden contener datos que alguien escribió a mano. Es aceptable porque solo lo ve un administrador, pero conviene saberlo.
-- En el repositorio solo hay datos ficticios (`COM-9xxx`). La fuente sintética solo se activa en un deploy preview sin la API configurada.
+## 6. Paridad con la V2 (reglas copiadas, no reescritas)
 
-## 6. Cambios en producción (requieren autorización; ninguno está hecho)
+`ReglasCMC.gs` es la **copia literal** de 30 funciones del proyecto del CMC. Se extrajeron automáticamente siguiendo el grafo de llamadas desde `panel_obtenerPanelElegibilidad_core_` y `v2_obtenerTabRaw_`. Tiene una sola sustitución: `operadores_configurarHoja`. La original crea o completa la hoja 18 (escritura); la copia solo comprueba que la hoja exista.
 
-1. **Apps Script del CMC**:
-   - agregar el archivo `ApiPanelWeb.gs` con el contenido exacto de `docs/cmc/api-panel.gs`. No se modifica ningún archivo existente.
-   - Propiedades del script: `CMC_API_TOKEN` (64 caracteres aleatorios, nuevo y distinto de cualquier otro) y `CMC_API_ACTIVA = si`.
-   - Implementar → **Nueva implementación** → Aplicación web, ejecutar como el propietario, acceso «Cualquier usuario». La implementación de la V2 sigue fijada en su versión.
-   - Disparadores: ninguno.
-2. **Netlify (producción)**: `CMC_API_URL` (la URL `/exec` de la nueva implementación) y `CMC_API_TOKEN` (el mismo token). Después hay que volver a desplegar.
-3. **Supabase**: nada. No hay migración en 2A.
+Controles:
+1. **Huella por función.** La operación `version` de la API devuelve el SHA-256 de cada función copiada. `lib/cmc-api.ts` (`HUELLAS_REGLAS_CMC`) guarda las huellas comprobadas el 2026-11-19 contra el proyecto original: **15 de 15 iguales**. Si la API devuelve otra huella, la ficha avisa «confirma estos requisitos en la V2». La prueba 120 vigila este control.
+2. **Resultados comparados con la V2 en producción** (2026-11-19, en solo lectura; los códigos de la muestra están en el informe privado, no en este repositorio público):
+   - Conteos de la lista, iguales a los de la V2: Registrado 547, Preseleccionado 291, sin etapa 23, En verificación 4, Habilitado 3 y Descartado 1. Son 869 sin duplicados; los 139 duplicados confirmados van aparte.
+   - Una habilitada: puede recibir servicios, Sí. La V2 dice «Elegible: Sí».
+   - Una habilitada por excepción: No, con identidad, referencia y onboarding pendientes. La V2 dice «Elegible: No» y «Etapas omitidas: identidad, referencia, onboarding».
+   - Una en verificación: 3 pendientes, con los mismos textos que la V2 (identidad, referencia y onboarding). La V2 dice «Pendientes: 3».
+   - El perfil de prueba: Sí, igual que en la V2.
+   - Una sin etapa: No. La primera razón coincide con la V2: «Etapa de selección no es "Habilitado" (actual: (vacío))».
+   - Duplicados: la V2 no los lista (los excluye); la API los marca como «No cuentan».
+   - Bloqueados por alerta: hoy la hoja 11 no tiene filas, así que no hay casos reales. Está cubierto con datos sintéticos en la prueba 120.
+3. **Cuando el CMC cambie sus reglas:** volver a extraer la copia, comparar las huellas con el editor del CMC, actualizar `HUELLAS_REGLAS_CMC` y repetir la muestra. La V2 no publica su código, así que este paso no es automático. Mientras no se haga, la ficha marca los requisitos como «sin comprobar» si la copia cambia.
 
-Riesgos:
+## 7. Pruebas
 
-| Riesgo | Mitigación |
-|---|---|
-| Alguien llama a la URL `/exec` | Sin firma válida no lee nada. La URL no se publica. |
-| Fuga del token | Se rota cambiando la propiedad. El token solo da lectura y no permite escribir. |
-| Cuota de Apps Script o lentitud | Caché de 60 s para la lista y 30 s para la ficha, tope de 120 por minuto y límite de espera de 25 s. Si falla, el panel muestra la vista anterior. |
-| Cambio de columnas en la hoja 03 | La API falla con `error_interno` (columna obligatoria ausente) y el panel muestra la vista anterior. |
+- **Caja de arena (prueba 120).** Ejecuta los `HojaSoloLectura.gs` y `ApiPanel.gs` reales con un servicio Sheets falso. Comprueba:
+  - firma, hora, nonce, tope e interruptor;
+  - lista blanca y tachado;
+  - fechas como `Date`;
+  - que no hay métodos de escritura y que no se abren otras hojas;
+  - el manifiesto con un único permiso;
+  - las huellas.
+- **Editor del proyecto real.** Se usó un archivo temporal `Pruebas.gs`, borrado antes de publicar. Comprobó:
+  - la lectura de 1008 filas;
+  - los requisitos de 22 aspirantes de todas las categorías;
+  - la minimización de 15 fichas.
+- **Implementación publicada, con la API apagada:**
+  - cuerpo vacío, sin firma o con firma falsa → `inactiva`;
+  - abrir la URL con GET no muestra nada (no hay `doGet`).
+- **Pendiente, al activarla:**
+  - sin firma → `peticion_invalida`;
+  - firma falsa → `firma_invalida`;
+  - lectura real en el preview.
 
-Reversión (cualquiera de estas vale, de la más rápida a la más completa):
+## 8. Configuración
 
-1. `CMC_API_ACTIVA = no` en Apps Script. Efecto inmediato y sin desplegar: el panel muestra «No se pudo leer el CMC (inactiva)» y la vista anterior.
-2. Quitar `CMC_API_URL` y `CMC_API_TOKEN` de Netlify y volver a desplegar. El panel vuelve exactamente a la vista anterior.
-3. Archivar la implementación nueva y borrar `ApiPanelWeb.gs`.
-
-## 7. Fase 2B (acciones), diseño sin activar
-
-Objetivo: operar desde el panel (cambiar etapa, registrar entrevista, verificación u onboarding, cerrar alerta, habilitar) usando las mismas funciones del CMC que la V2.
-
-1. **Mismo canal, operaciones de escritura separadas** en `ApiPanelWeb.gs` (`etapa`, `entrevista`, `verificacion`, `onboarding`, `alerta_cerrar`, `habilitar`). Cada una llama a la función núcleo que ya usa la V2 (`*_raw_` / `panel_*`), nunca a una copia.
-2. **Token distinto** (`CMC_API_TOKEN_ESCRITURA`) y su propio interruptor (`CMC_API_ESCRITURA_ACTIVA`), para poder apagar las escrituras sin apagar la lectura.
-3. **Operador explícito y verificado.** La V2 identifica al operador con `Session.getActiveUser()`, que en una implementación «ejecutar como propietario» devolvería siempre al propietario. Por eso el panel envía el correo del operador autenticado dentro del mensaje firmado, y Apps Script lo comprueba contra la hoja 18 · Operadores Compaz (activo y con el permiso de esa acción). Si no está, rechaza.
-4. **Idempotencia**: cada acción lleva una `clave` única (uuid). Apps Script la guarda en CacheService y en el evento, y una clave repetida devuelve el resultado anterior sin volver a escribir.
-5. **Rastro**: cada acción escribe su evento en la hoja 17, con el operador, el origen «panel», la clave y el antes y el después. En la web queda además el registro en `acciones_equipo`.
-6. **Web**:
-   - un permiso nuevo `cmc_acciones` en el catálogo de permisos y en el manual;
-   - rutas `POST /api/admin/cmc/<accion>` con `requierePermiso('cmc_acciones')`, registradas en `tests/37-permisos.test.ts`;
-   - validación de la entrada en el servidor, y un límite con `explicarEspera`;
-   - la pantalla pide confirmación con el resumen del cambio.
-7. **Reglas reales**: el permiso de habilitar lo decide la elegibilidad del CMC (`puedeHabilitar`), nunca `lib/confianza/reglas.ts` (que es el espejo de la demo).
-8. **Pruebas**:
-   - primero, una copia de la hoja y una implementación de pruebas, con aspirantes sintéticos;
-   - nunca con aspirantes reales sin autorización;
-   - las pruebas automáticas ejecutan `ApiPanelWeb.gs` en la caja de arena, como hace la prueba 120.
-9. **Activación por pasos**: la lectura ya instalada → las escrituras en la copia → una acción (cerrar alerta) en producción con un solo operador → el resto.
-
-## 8. Corrección necesaria antes de instalar (2026-11-18)
-
-Una implementación anónima que se ejecuta como el propietario solo debe contener el código de la API. Dos caminos:
-
-| | A. Proyecto aparte, solo la API (recomendada) | B. Mismo proyecto, cerrar el `doGet` |
+| Dónde | Qué | Valor |
 |---|---|---|
-| Qué cambia en el CMC | Nada. El proyecto nuevo abre la hoja por su ID (propiedad del script) y solo lee. | Tres líneas en `doGet` de `WebAppV2.gs`: sin correo de usuario activo, responde texto plano (`ContentService`, sin página ni `google.script.run`). |
-| Lo que queda expuesto con la URL | Solo `doPost` firmado. | El proyecto entero; la protección depende del cierre de `doGet` y de que `google.script.run` exija una página servida. |
-| Reglas de habilitación | Hay que portar la lectura de requisitos (misma lógica que `panel_evaluarHabilitacion_`) con una prueba de paridad contra la V2. | Reutiliza los lectores de la V2 tal cual. |
-| Riesgo para la V2 | Ninguno. | Bajo, pero toca un archivo de la V2 (su implementación v30 no cambia hasta que se vuelva a publicar). |
+| Apps Script (proyecto API) → Propiedades del script | `CMC_API_ACTIVA` | `no` al publicar; `si` para probar el preview |
+| Apps Script (proyecto API) → Propiedades del script | `CMC_API_TOKEN` | Token nuevo de 64 caracteres, generado y guardado por Luis en su gestor de secretos. Nunca en el chat, el repo ni los registros. |
+| Netlify → Environment variables | `CMC_API_URL` | URL `/exec` de la implementación. **Solo «Deploy Previews».** |
+| Netlify → Environment variables | `CMC_API_TOKEN` | El mismo token, marcado como secreto. **Solo «Deploy Previews».** |
+
+Producción no tiene ninguna de las dos variables. Sin ellas, el panel de producción muestra la vista anterior.
+
+## 9. Reversión
+
+1. **Inmediata:** `CMC_API_ACTIVA = no` en el proyecto API. El panel muestra «No se pudo leer el CMC (inactiva)» y la vista anterior.
+2. **Netlify:** borrar `CMC_API_URL` y `CMC_API_TOKEN` y volver a desplegar el preview.
+3. **Apps Script:** en «Implementar → Gestionar implementaciones», archivar la implementación. Opcionalmente, borrar el proyecto «CMC · API de lectura del panel».
+4. **Permiso:** retirar el acceso desde la cuenta de Google de soycompaz (myaccount.google.com → Seguridad → Apps de terceros, «CMC · API de lectura…»).
+
+Nada de esto toca el proyecto del CMC ni la V2.
+
+## 10. Fase 2B (acciones): diseño, sin activar
+
+Las escrituras **no** irán en este proyecto, que es de solo lectura por permiso. Para 2B:
+- un proyecto aparte con permiso de hojas completo;
+- solo las funciones de escritura necesarias, copiadas igual que aquí y con huellas;
+- token e interruptor propios;
+- operador explícito, comprobado contra la hoja 18;
+- clave de idempotencia y registro del evento en la hoja 17;
+- permiso web `cmc_acciones` y rutas `/api/admin/cmc/*` con `requierePermiso`;
+- pruebas primero en una copia de la hoja.
+
+Requiere su propia autorización.
