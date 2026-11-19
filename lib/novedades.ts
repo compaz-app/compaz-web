@@ -111,3 +111,8 @@ export async function cerrarPreguntasDeSolicitud(solicitudId: string, admin: Adm
     }
   } catch (e) { console.error('[novedades] cerrar preguntas:', e) }
 }
+
+/** Avisos que antes solo existían como correo o como tarjeta del portal: ahora también suenan en la campana. NUNCA lanza (como el resto de las novedades). */
+export async function novedadInformativa(p: { usuarioId: string; tipo: string; titulo: string; entidad?: NovedadNueva['entidad']; entidadId?: string; clave: string; nivel?: NovedadNueva['nivel'] }, admin: Admin = createAdminSupabase()): Promise<void> {
+  await registrarNovedad({ usuarioId: p.usuarioId, tipo: p.tipo, nivel: p.nivel ?? 'informativo', titulo: p.titulo, ruta: '/portal', entidad: p.entidad, entidadId: p.entidadId, clave: p.clave }, admin)
+}

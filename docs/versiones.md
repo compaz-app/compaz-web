@@ -4,6 +4,9 @@ La versión vigente está en `lib/version.ts` y se ve en el panel (menú lateral
 
 Reglas: mayor = cambio grande o lanzamiento; menor = función nueva; parche = arreglo. La etapa `beta` sale cuando el sistema corre una o dos semanas con uso real sin sorpresas.
 
+## 1.3.36-beta.1 (2026-11-18)
+Auditoría de huecos, hallazgo 6: cuatro avisos que solo existían como correo o como tarjeta del portal ahora también suenan en la campana (y encienden el círculo rojo): «Tu llamada con X está confirmada: día y hora» (una por hora; si cambia, vuelve a sonar), «X no pudo coordinarse contigo / no pudo responder tu solicitud, elige a otro» (cierre automático de solicitudes), «Tu compita está lista: X» (asignación del equipo) y «Ya pasó un mes de tu plan, es hora de renovarlo». Todos informativos, una sola vez por hecho (`novedadInformativa` en `lib/novedades.ts`). El «perfil verificado» de la auditoría es un correo al compita, no al cliente: no aplica. Correos sin cambios.
+
 ## 1.3.35-beta.1 (2026-11-18)
 Con compita pero sin plan activo (por ejemplo, tras anular un pago) el portal seguía diciendo «Agenda tu próxima visita». Ahora muestra «No tienes un plan activo» con el botón «Elegir un plan» (estado nuevo `sin_plan`). El caso «plan agotado» (ya tenía plan y se le acabaron las visitas) no cambia. Pendiente de mirar en pantalla.
 

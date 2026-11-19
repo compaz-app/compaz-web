@@ -1,5 +1,6 @@
 // Acciones del equipo sobre cuentas, visitas, tareas y reseñas (A-02 de la auditoría). Antes cada ruta de /api/admin tenía sus consultas dentro; ahora
 // viven aquí y las rutas solo autentican, validan el cuerpo y responden. Cada función devuelve un resultado, nunca una respuesta HTTP.
+import { novedadInformativa } from '@/lib/novedades'
 import { anotarEventoChat } from '@/lib/chat-eventos'
 import { randomBytes } from 'node:crypto'
 import { createAdminSupabase } from '@/lib/supabase-server'
@@ -254,6 +255,7 @@ export async function asignarPorEnlace(token: string): Promise<ResultadoAsignaci
         ].join('\n'))
       } catch (e) { console.error('Telegram asignar-rapido compita:', e) }
     }
+    await novedadInformativa({ usuarioId: actionToken.cliente_id, tipo: 'compita_asignada', titulo: `Tu compita está lista: ${compita.nombre.split(' ')[0]}. Ya puedes escribirle.`, entidad: 'cliente', entidadId: actionToken.cliente_id, clave: `compita_asignada:${actionToken.cliente_id}:${actionToken.compita_id}` })
     try {
       await sendEmail({
         to: cliente.email, subject: `Tu Compita está lista: ${compita.nombre}`,

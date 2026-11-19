@@ -8,6 +8,7 @@ import { sendTelegramMessage, avisarAdmin, TECLADO_SIN_VISITA } from '@/lib/tele
 import { alertaAdmin } from '@/lib/alertas-admin'
 import { sendEmail, SITE_URL } from '@/lib/email'
 import { esc } from '@/lib/html'
+import { novedadInformativa } from '@/lib/novedades'
 import { cronAutorizado, latido, reclamarUnaVez } from '@/lib/cron'
 
 export async function POST(req: NextRequest) {
@@ -78,6 +79,10 @@ export async function POST(req: NextRequest) {
 
     const { data: compitaData } = await supabase.from('compitas').select('nombre').eq('telegram_chat_id', estado.chat_id).maybeSingle()
     const compitaNombre = compitaData?.nombre ?? 'La compita'
+    if (solicitudId) {
+      const { data: sc } = await supabase.from('solicitudes').select('cliente_id').eq('id', solicitudId).maybeSingle()
+      if (sc?.cliente_id) await novedadInformativa({ usuarioId: sc.cliente_id as string, tipo: 'solicitud_cerrada', titulo: `${compitaNombre.split(' ')[0]} no pudo coordinarse contigo. Elige a otro compita.`, entidad: 'solicitud', entidadId: solicitudId, clave: `solicitud_cerrada:${solicitudId}` })
+    }
 
     if (clienteEmail) {
       try {
@@ -127,6 +132,7 @@ export async function POST(req: NextRequest) {
       const { data: cerrada } = await supabase.from('solicitudes').update({ estado: 'rechazada' }).eq('id', sol.id).eq('estado', 'pendiente').select('id').maybeSingle()
       if (!cerrada) continue
       pendientesCerradas++
+      await novedadInformativa({ usuarioId: (sol as unknown as { cliente_id: string }).cliente_id, tipo: 'solicitud_cerrada', titulo: `${nombreCompita.split(' ')[0]} no pudo responder tu solicitud. Elige a otro compita.`, entidad: 'solicitud', entidadId: sol.id, clave: `solicitud_cerrada:${sol.id}` })
       if (sol.usuarios?.email) {
         try {
           await sendEmail({

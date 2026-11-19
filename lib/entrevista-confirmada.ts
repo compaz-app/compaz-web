@@ -6,14 +6,22 @@ import { sendEmail, SITE_URL as SITE_URL_PUBLICA } from '@/lib/email'
 import { sendTelegramMessage, avisarAdmin } from '@/lib/telegram'
 import { alertaAdmin } from '@/lib/alertas-admin'
 import { esc } from '@/lib/html'
+import { novedadInformativa } from '@/lib/novedades'
 import { formatSlotVE } from '@/lib/format'
 import { qRol } from '@/lib/links'
 import type { Solicitud } from '@/types'
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? ''
 
+/** El cliente ve la hora confirmada también en su campana (antes solo en el correo y en la tarjeta). Una por hora: si se cambia, vuelve a sonar. */
+export async function novedadEntrevistaConfirmada(s: { id: string; cliente_id: string; slot_confirmado?: string | null }, compitaNombre: string): Promise<void> {
+  if (!s.slot_confirmado) return
+  await novedadInformativa({ usuarioId: s.cliente_id, tipo: 'entrevista_confirmada', titulo: `Tu llamada con ${compitaNombre.split(' ')[0]} está confirmada: ${formatSlotVE(s.slot_confirmado)}.`, entidad: 'solicitud', entidadId: s.id, clave: `entrevista_confirmada:${s.id}:${s.slot_confirmado}` })
+}
+
 export async function anunciarEntrevistaConfirmada(i: { solicitud: Solicitud; compita: { nombre: string }; chatId: string }): Promise<void> {
   const { solicitud, compita, chatId } = i
+  await novedadEntrevistaConfirmada(solicitud, compita.nombre)
   const slotLabel = formatSlotVE(solicitud.slot_confirmado!)
   const adminSupa = createAdminSupabase()
   const { data: cliente } = await adminSupa

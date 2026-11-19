@@ -142,6 +142,7 @@ describe('Panel admin', () => {
     assert.equal(db.rows('action_tokens')[0].usado, false); assert.equal(cli.compita_id, null)
     const r = await rapidoPost(req(u, { method: 'POST' })); assert.equal(r.status, 303)
     assert.equal(cli.compita_id, c.id); assert.equal(emailsA('cli@mail.test').length, 1)
+    assert.equal(db.rows('novedades_cliente').filter((n) => n.tipo === 'compita_asignada').length, 1, 'también suena en la campana del portal')
     assert.equal((await rapidoPost(req(u, { method: 'POST' }))).status, 410)
   })
 

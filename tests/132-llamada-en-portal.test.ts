@@ -61,3 +61,17 @@ describe('llamada de la entrevista retomada', () => {
     assert.notEqual((await estadoDelCliente(cli.id)).codigo, 'entrevista_ahora')
   })
 })
+
+// ── La hora de la entrevista confirmada también suena en la campana ──────────────────────────────────────────────────────────────────────────────────────
+import { novedadEntrevistaConfirmada } from '@/lib/entrevista-confirmada'
+
+describe('entrevista confirmada en la campana', () => {
+  test('una novedad por hora: si la hora cambia, vuelve a sonar; con la misma, no se repite', async () => {
+    const cli = mkCliente(); const sol = { id: crypto.randomUUID(), cliente_id: cli.id, slot_confirmado: '2026-12-01T15:00:00.000Z' }
+    await novedadEntrevistaConfirmada(sol, 'Lucía Pérez'); await novedadEntrevistaConfirmada(sol, 'Lucía Pérez')
+    assert.equal(db.rows('novedades_cliente').filter((n) => n.tipo === 'entrevista_confirmada').length, 1)
+    await novedadEntrevistaConfirmada({ ...sol, slot_confirmado: '2026-12-02T15:00:00.000Z' }, 'Lucía Pérez')
+    assert.equal(db.rows('novedades_cliente').filter((n) => n.tipo === 'entrevista_confirmada').length, 2)
+    assert.match(db.rows('novedades_cliente')[0].titulo, /Lucía.*confirmada/)
+  })
+})

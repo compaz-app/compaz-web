@@ -171,6 +171,7 @@ describe('cierre-rechazo', () => {
     assert.equal(db.rows('solicitudes').find((s) => s.id === sol.id)!.estado, 'rechazada')
     assert.equal(emailsA('cli@mail.test').length, 1)
     assert.equal(tgPara(720).filter((m) => m.text.includes('cerrada automáticamente')).length, 1)
+    assert.equal(db.rows('novedades_cliente').filter((n) => n.tipo === 'solicitud_cerrada').length, 1, 'el cliente lo ve también en su campana')
   })
 
   test('solicitud PENDIENTE ignorada: recordatorio a las 24 h (una vez) y cierre a las 72 h con email', async () => {
@@ -183,6 +184,7 @@ describe('cierre-rechazo', () => {
     await cierre(cron('c')); await cierre(cron('c'))
     assert.equal(db.rows('solicitudes').find((s) => s.id === s1.id)!.estado, 'rechazada')
     assert.equal(emailsA('cli@mail.test').length, 1)
+    assert.equal(db.rows('novedades_cliente').filter((n) => n.tipo === 'solicitud_cerrada').length, 1)
   })
 })
 
@@ -243,6 +245,7 @@ describe('recordatorio-pago (renovación mensual, sin cobros automáticos)', () 
     assert.equal(m.length, 1)
     assert.ok(m[0].html.includes('Zelle') && m[0].html.includes('sin usar') && m[0].html.includes('condiciones'))
     assert.equal(avisosAdmin().filter((x) => x.text.includes('Renovaciones pendientes')).length, 1)
+    assert.equal(db.rows('novedades_cliente').filter((n) => n.tipo === 'renovar_plan').length, 1, 'también suena en la campana, una sola vez')
   })
   test('no avisa si es "A la carta", si todavía no pasó el mes, o si ya renovó', async () => {
     const a = mkCliente({ email: 'a@mail.test' }); pago(a, 'carta', 31)

@@ -1,5 +1,6 @@
 // /api/solicitud/responder?token=&slot=0|1|2|-1&quien=compita&s=<firma>
 // Botones URL de Telegram usados en el reagendado. GET muestra confirmación; POST ejecuta.
+import { novedadEntrevistaConfirmada } from '@/lib/entrevista-confirmada'
 import { NextRequest } from 'next/server'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { responderSolicitud } from '@/lib/solicitudes'
@@ -65,6 +66,7 @@ export async function POST(req: NextRequest) {
   }
 
   const slotLabel = formatSlotVE(solicitud.slot_confirmado!)
+  await novedadEntrevistaConfirmada(solicitud, solicitud.compita_nombre ?? 'Tu compita')
   let emailOk = !cliente?.email
   if (cliente?.email) {
     try {
