@@ -34,6 +34,7 @@ export default function VisitaWatcher({ usuarioId, visitaActivaId, compitaNombre
             ultimaLlamadaRef.current = nueva
             setLlamadaEntrante({ roomUrl, compita: compitaNombre ?? 'Tu compita' })
             sonarTimbre()
+            router.refresh() // el portal también muestra la tarjeta «te está llamando», por si se cierra el aviso o se abre más tarde
           } else {
             // Cualquier otro cambio: refrescar la página
             router.refresh()

@@ -4,6 +4,9 @@ La versión vigente está en `lib/version.ts` y se ve en el panel (menú lateral
 
 Reglas: mayor = cambio grande o lanzamiento; menor = función nueva; parche = arreglo. La etapa `beta` sale cuando el sistema corre una o dos semanas con uso real sin sorpresas.
 
+## 1.3.30-beta.1 (2026-11-18)
+Auditoría de huecos, hallazgo 2: cuando el compita pedía una videollamada durante la visita, el correo decía «entra a tu portal para conectarte», pero el portal solo sonaba si ya estaba abierto en ese instante. Quien entraba después, desde el correo, no veía nada. Ahora el portal, al cargar, muestra la tarjeta «X te está llamando» con el botón «Contestar la llamada» (estado `compita_llamando`) mientras la llamada sea reciente (15 minutos) y la sala siga abierta; si cuelgan, desaparece. El aviso en vivo además refresca el portal. Prueba 132.
+
 ## 1.3.29-beta.1 (2026-11-18)
 Auditoría de huecos, hallazgo 1: cuando el compita reagenda una visita (imprevisto), el cliente solo se enteraba por correo; el portal decía «Elige cuándo visita X» sin explicar nada. Ahora el portal muestra la tarjeta «X necesita cambiar la fecha» (estado `visita_reagendada_compita`, que se va al proponer una hora nueva o al pasar 72 h), suena la campana y el chat de la visita deja «Visita reagendada: X necesita cambiar la fecha del …». El correo sigue como respaldo.
 

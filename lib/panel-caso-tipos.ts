@@ -34,6 +34,7 @@ export const SITUACION: Record<CodigoEstado, { que: string; espera: Espera }> = 
   visita_programada: { que: 'Visita programada. Todavía no llega la hora.', espera: 'nadie' },
   compita_llego: { que: 'El compita llegó. Falta que la visita empiece.', espera: 'cliente' },
   nadie_abre: { que: 'El compita llegó y nadie abre la puerta. Hay que actuar.', espera: 'equipo' },
+  compita_llamando: { que: 'El compita pidió una videollamada durante la visita y el cliente aún no entra.', espera: 'cliente' },
   visita_en_curso: { que: 'Hay una visita en curso ahora.', espera: 'nadie' },
   visita_interrumpida: { que: 'La visita se interrumpió por seguridad. Hay que revisarla.', espera: 'equipo' },
   visita_cancelada_equipo: { que: 'El equipo canceló una visita hace poco.', espera: 'nadie' },

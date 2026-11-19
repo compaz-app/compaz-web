@@ -44,6 +44,7 @@ const CASOS: Record<CodigoEstado, FotoCliente> = {
   visita_programada: foto({ compitaAsignado: COMPITA, visitas: [vis()] }),
   compita_llego: foto({ visitas: [vis({ estado: 'confirmando_inicio', llegadaEn: min(-2) })] }),
   nadie_abre: foto({ visitas: [vis({ llegadaEn: min(-10), sinAccesoEn: min(-9) })] }),
+  compita_llamando: foto({ visitas: [vis({ estado: 'en_curso', llamadaEn: min(-3), salaLlamada: 'cmp-abc1234' })] }),
   visita_en_curso: foto({ visitas: [vis({ estado: 'en_curso' })] }),
   visita_interrumpida: foto({ cancelaciones: [{ visitaId: 'v1', por: 'compita', justificadaPor: 'sistema: salida por seguridad', creadaEn: min(-60) }] }),
   visita_cancelada_equipo: foto({ cancelaciones: [{ visitaId: 'v1', por: 'compita', justificadaPor: 'admin: equipo@compaz.com', creadaEn: min(-60) }] }),
