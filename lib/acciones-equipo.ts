@@ -1,5 +1,6 @@
 // Acciones del equipo sobre cuentas, visitas, tareas y reseñas (A-02 de la auditoría). Antes cada ruta de /api/admin tenía sus consultas dentro; ahora
 // viven aquí y las rutas solo autentican, validan el cuerpo y responden. Cada función devuelve un resultado, nunca una respuesta HTTP.
+import { limpiarImagen } from '@/lib/imagen'
 import { novedadInformativa } from '@/lib/novedades'
 import { anotarEventoChat } from '@/lib/chat-eventos'
 import { randomBytes } from 'node:crypto'
@@ -101,8 +102,10 @@ export async function generarInvitacionCompita(actorCorreo: string): Promise<Res
 export async function subirFotoCompita(buffer: Buffer, contentType: string, ext: string, nombre: string): Promise<Res<{ url: string }>> {
   const admin = createAdminSupabase()
   const slug = nombre.slice(0, 40).toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
-  const path = `compitas/${slug}-${Date.now()}.${ext}`
-  const { error } = await admin.storage.from('fotos').upload(path, buffer, { contentType, upsert: false })
+  // Foto pública: sin metadatos (ubicación GPS), girada, reducida y en WebP.
+  const limpia = await limpiarImagen(buffer)
+  const path = `compitas/${slug}-${Date.now()}.${limpia.ext}`
+  const { error } = await admin.storage.from('fotos').upload(path, limpia.bytes, { contentType: limpia.contentType, upsert: false })
   if (error) return mal(500, 'Error al subir la imagen')
   return bien({ url: admin.storage.from('fotos').getPublicUrl(path).data.publicUrl })
 }

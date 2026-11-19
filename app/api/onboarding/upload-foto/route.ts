@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminSupabase } from '@/lib/supabase-server'
-import { tipoImagenReal, EXT } from '@/lib/imagen'
+import { tipoImagenReal, limpiarImagen } from '@/lib/imagen'
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp']
 const MAX_SIZE_BYTES = 5 * 1024 * 1024 // 5 MB
@@ -39,13 +39,15 @@ export async function POST(req: NextRequest) {
   const buffer = Buffer.from(await foto.arrayBuffer())
   const tipo = tipoImagenReal(buffer)
   if (!tipo) return NextResponse.json({ error: 'El archivo no es una imagen válida' }, { status: 400 })
-  const ext = EXT[tipo]
+  // Sin metadatos (ubicación GPS), girada, reducida y en WebP: la foto de perfil es pública.
+  const limpia = await limpiarImagen(buffer)
+  const ext = limpia.ext
   const slug = nombre.slice(0, 40).toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
   const path = `compitas/${slug}-${Date.now()}.${ext}`
 
   const { error } = await admin.storage
     .from('fotos')
-    .upload(path, buffer, { contentType: tipo, upsert: false })
+    .upload(path, limpia.bytes, { contentType: limpia.contentType, upsert: false })
 
   if (error) {
     console.error('[onboarding/upload-foto]', error.message)

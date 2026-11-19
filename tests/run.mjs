@@ -31,7 +31,7 @@ function require_exists(p) { try { return statSync(p).isFile() } catch { return 
 await build({
   entryPoints: files.map((f) => path.join(root, 'tests', f)),
   outdir: out, bundle: true, platform: 'node', format: 'cjs', outExtension: { '.js': '.cjs' },
-  external: ['next', 'next/*', 'react', 'react-dom', 'resend', '@anthropic-ai/sdk', 'esbuild'],
+  external: ['next', 'next/*', 'react', 'react-dom', 'resend', '@anthropic-ai/sdk', 'esbuild', 'sharp'],
   plugins: [aliasPlugin], logLevel: 'error', sourcemap: 'inline',
   // Los componentes usan el JSX moderno de React (sin importar React en cada archivo), igual que Next.
   jsx: 'automatic',
