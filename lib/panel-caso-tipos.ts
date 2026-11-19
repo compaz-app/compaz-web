@@ -28,6 +28,7 @@ export const SITUACION: Record<CodigoEstado, { que: string; espera: Espera }> = 
   pago_revision: { que: 'Dice que ya pagó. El equipo debe confirmar el pago y aún falta su ficha.', espera: 'equipo' },
   ficha_lista_espera: { que: 'Dice que ya pagó y su ficha está completa. Solo falta que el equipo confirme el pago.', espera: 'equipo' },
   ficha: { que: 'Falta que complete la ficha de su familiar para poder agendar.', espera: 'cliente' },
+  visita_reagendada_compita: { que: 'El compita canceló la fecha de la visita por un imprevisto. El cliente debe elegir otra.', espera: 'cliente' },
   agendar_visita: { que: 'Todo listo. Falta que agende su visita.', espera: 'cliente' },
   cita_pendiente: { que: 'El cliente propuso una hora de visita. Falta que el compita la confirme.', espera: 'compita' },
   visita_programada: { que: 'Visita programada. Todavía no llega la hora.', espera: 'nadie' },

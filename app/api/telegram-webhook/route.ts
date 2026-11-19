@@ -1157,6 +1157,11 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
     const avisoTardio = avisoHoras !== null && avisoHoras < minimoCompita
     if (avisoTardio) await alertarCancelacionesCompita(compita.id, compita.nombre)
 
+    // El cliente lo ve en su portal (tarjeta, campana) y en el chat de la visita; el correo queda como respaldo.
+    await registrarNovedad({ usuarioId: objetivo.usuario_id, tipo: 'visita_reagendada_compita', nivel: 'accionable', titulo: `${compita.nombre.split(' ')[0]} necesita cambiar la fecha de la visita.`,
+      ruta: '/portal?sec=visitas', entidad: 'visita', entidadId: objetivo.id, clave: `visita_reagendada:${objetivo.id}:${Date.now()}` })
+    await anotarEventoChat(objetivo.id, `Visita reagendada: ${compita.nombre.split(' ')[0]} necesita cambiar la fecha${fechaAnterior ? ` del ${fechaAnterior}` : ''}`)
+
     const clienteNombre = esc(objetivo.usuario?.nombre ?? 'El cliente')
     const clienteEmail = objetivo.usuario?.email
     let emailEnviado = false

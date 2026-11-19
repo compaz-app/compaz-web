@@ -27,7 +27,7 @@ export const CODIGOS_ESTADO = [
   // 4 Ficha
   'ficha',
   // 5 Visitas
-  'agendar_visita', 'cita_pendiente', 'visita_programada', 'compita_llego', 'nadie_abre', 'visita_en_curso', 'visita_interrumpida', 'visita_cancelada_equipo',
+  'agendar_visita', 'visita_reagendada_compita', 'cita_pendiente', 'visita_programada', 'compita_llego', 'nadie_abre', 'visita_en_curso', 'visita_interrumpida', 'visita_cancelada_equipo',
   'visita_terminada', 'agendar_otra', 'plan_agotado', 'cuenta_pausada',
 ] as const
 export type CodigoEstado = (typeof CODIGOS_ESTADO)[number]
@@ -103,7 +103,7 @@ const PASO: Record<CodigoEstado, number> = {
   confirmar_llamada: 2, decidir: 2, motivo_no: 2,
   directa_aceptada: 3, pagar: 3, pago_revision: 3, ficha_lista_espera: 3,
   ficha: 4,
-  agendar_visita: 5, cita_pendiente: 5, visita_programada: 5, compita_llego: 5, nadie_abre: 5, visita_en_curso: 5, visita_interrumpida: 5, visita_cancelada_equipo: 5,
+  agendar_visita: 5, visita_reagendada_compita: 5, cita_pendiente: 5, visita_programada: 5, compita_llego: 5, nadie_abre: 5, visita_en_curso: 5, visita_interrumpida: 5, visita_cancelada_equipo: 5,
   visita_terminada: 5, agendar_otra: 5, plan_agotado: 5, cuenta_pausada: 5,
 }
 export const pasoDe = (c: CodigoEstado) => PASO[c]
@@ -144,6 +144,8 @@ export function decidirEstado(f: FotoCliente): EstadoCliente {
   if (pre) {
     // Sin ficha completa no se puede agendar: primero la ficha.
     if (!f.fichaCompleta) return e('ficha', { visitaId: pre.id, compitaNombre: pre.compitaNombre })
+    // El compita canceló la fecha (imprevisto): el portal lo dice, no solo el correo. Se va cuando hay una hora nueva propuesta o confirmada.
+    if (f.cancelaciones.some((c) => c.visitaId === pre.id && c.por === 'compita' && ahora - new Date(c.creadaEn).getTime() < AVISO_CANCELACION_H * HORA)) return e('visita_reagendada_compita', { visitaId: pre.id, compitaNombre: pre.compitaNombre })
     return e('agendar_visita', { visitaId: pre.id, compitaNombre: pre.compitaNombre })
   }
 

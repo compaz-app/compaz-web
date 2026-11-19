@@ -271,6 +271,15 @@ describe('Ciclo de la visita (cliente ↔ compita)', () => {
     assert.match(ultimoTg(910)!.text, /no pudimos enviar el correo/)
   })
 
+  test('reagendar desde Telegram: el cliente lo ve en su portal (tarjeta y campana) y en el chat de la visita, no solo por correo', async () => {
+    const { v, cli } = mundo()
+    await webhook(tgBtn(910, 'reagendar_visita'))
+    assert.ok(db.rows('novedades_cliente').some((n) => n.usuario_id === cli.id && n.tipo === 'visita_reagendada_compita'))
+    assert.ok(db.rows('mensajes').some((m) => m.visit_id === v.id && /^evento::Visita reagendada: .+ necesita cambiar la fecha/.test(m.contenido)))
+    const { estadoDelCliente } = await import('@/lib/estado-cliente')
+    assert.equal((await estadoDelCliente(cli.id)).codigo, 'visita_reagendada_compita')
+  })
+
   test('bloquear compita en pleno servicio: se desvincula de Telegram y de sus clientes; ya no puede operar', async () => {
     const { compita, cli, v } = mundo()
     session.user = { id: 'a', email: 'admin@compaz.test' }

@@ -69,6 +69,7 @@ export const CATALOGO_PORTAL: Record<CodigoEstado, (c: ContextoPortal) => Tarjet
 
   ficha: () => ({ titulo: 'Pago confirmado. Cuéntanos de tu familiar', texto: 'Es lo único que falta para agendar tu primera visita. Solo lo ve tu compita, y la dirección exacta solo se le entrega 3 horas antes.', tono: 'accion', principal: { texto: 'Completar la ficha', destino: { ruta: '/dashboard?sec=familiar' }, info: 'Abre la ficha de tu familiar. Es obligatoria para agendar y solo la ve tu compita.' } }),
 
+  visita_reagendada_compita: (c) => ({ titulo: `${primero(c)} necesita cambiar la fecha`, texto: 'Tuvo un imprevisto y no puede en la fecha acordada. No pierdes la visita ni pagas nada: elige con ella una nueva fecha.', tono: 'accion', principal: { texto: 'Elegir la nueva fecha', destino: { ruta: '/dashboard?sec=visitas' }, info: 'Te lleva a escoger el día y la hora de la visita. Tu compita la ve apenas la guardes.' } }),
   agendar_visita: (c) => ({ titulo: `Elige cuándo visita ${nombre(c)}`, texto: 'Coordina la fecha y la hora con tu compita por el chat de Compaz, o elige directamente un horario.', tono: 'accion', principal: { texto: 'Elegir la fecha', destino: { ruta: '/dashboard?sec=visitas' }, info: 'Te lleva a escoger el día y la hora de la visita. Tu compita la ve apenas la guardes.' } }),
   cita_pendiente: (c) => ({ titulo: `Esperando que ${primero(c)} confirme tu cita`, texto: `Pediste ${cuando(c)}. Si no puede, te avisamos y eliges otra hora sin costo.`, tono: 'espera', secundario: { texto: 'Cambiar la fecha', destino: { ruta: '/dashboard?sec=visitas' }, info: 'Te deja elegir otra fecha y hora. La propuesta anterior se cancela y se le pide a tu compita que confirme la nueva.' } }),
   visita_programada: (c) => ({ titulo: `Próxima visita: ${cuando(c)}`, texto: `${nombre(c)} visitará a tu familiar. Puedes cambiarla gratis hasta 24 horas antes. Te avisamos cuando salga y cuando llegue.`, tono: 'espera', principal: { texto: 'Ver mis visitas', destino: { ruta: '/dashboard?sec=visitas' }, info: 'Abre la lista de tus visitas, próximas y anteriores.' } }),
@@ -107,6 +108,7 @@ const LUEGO: Partial<Record<CodigoEstado, string>> = {
   pago_revision: 'Después: agendas tu primera visita.',
   ficha: 'Después: eliges el día y la hora de la visita.',
   agendar_visita: 'Después: tu compita confirma la hora.',
+  visita_reagendada_compita: 'Después: tu compita confirma la hora.',
   cita_pendiente: 'Después: la visita en la fecha acordada.',
   visita_programada: 'Después: tu compita llega y empieza la visita.',
   compita_llego: 'Después: la visita.',

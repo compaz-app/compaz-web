@@ -38,6 +38,7 @@ const CASOS: Record<CodigoEstado, FotoCliente> = {
   pago_revision: foto({ pagoPendiente: { id: 'p1', insistido: true }, fichaCompleta: false }),
   ficha_lista_espera: foto({ pagoPendiente: { id: 'p1', insistido: true } }),
   ficha: foto({ compitaAsignado: COMPITA, fichaCompleta: false, visitas: [vis({ estado: 'pre_visita', fechaProgramada: null })] }),
+  visita_reagendada_compita: foto({ visitas: [vis({ estado: 'pre_visita', fechaProgramada: null, horaInicio: null })], cancelaciones: [{ visitaId: 'v1', por: 'compita', justificadaPor: null, creadaEn: min(-30) }] }),
   agendar_visita: foto({ compitaAsignado: COMPITA, visitas: [vis({ estado: 'pre_visita', fechaProgramada: null })] }),
   cita_pendiente: foto({ compitaAsignado: COMPITA, visitas: [vis({ estado: 'pre_visita', fechaProgramada: null, citaPropuesta: { fecha: '2026-11-12', inicio: '10:00' } })] }),
   visita_programada: foto({ compitaAsignado: COMPITA, visitas: [vis()] }),
