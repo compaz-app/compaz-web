@@ -10,7 +10,7 @@ import { horasNuevas, avisarHorasNuevas } from '@/lib/horas-nuevas'
 
 beforeEach(limpiar)
 const hace = (m: number) => new Date(Date.now() - m * 60_000).toISOString()
-const franja = (dia: string, inicio: string, fin: string) => ({ dia, inicio, fin })
+const franja = (dia: string, inicio: string, fin: string) => ({ dia, inicio, fin }) as any
 const TODOS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo']
 
 describe('cambiar mis horas desde Telegram', () => {
