@@ -143,7 +143,7 @@ describe('contacto con motivo', () => {
 
 describe('el formulario de registro pide el teléfono', () => {
   const invitar = (t: string) => db.seed('onboarding_tokens', { id: 'o-' + t, token: t, usado: false, expires_at: new Date(Date.now() + 3600_000).toISOString() })
-  const cuerpo = (t: string, o: any = {}) => ({ token: t, nombre: 'Rosa Díaz', email: 'rosa@mail.test', zona: 'Zulia', descripcion: 'Cuidadora', servicios: ['Compañía'], ...o })
+  const cuerpo = (t: string, o: any = {}) => ({ token: t, nombre: 'Rosa Díaz', email: 'rosa@mail.test', zona: 'Zulia', descripcion: 'Cuidadora', servicios: ['Compañía'], horarios_disponibles: [{ dia: 'lunes', inicio: '09:00', fin: '12:00' }], ...o })
   test('sin teléfono no se registra y la invitación no se gasta', async () => {
     invitar('t1'); session.user = null as any
     assert.equal((await registrar(req('/api/onboarding/registrar', { json: cuerpo('t1') }))).status, 400)

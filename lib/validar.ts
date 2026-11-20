@@ -1,4 +1,5 @@
 // Validación de entradas de perfil de compita (self-service, onboarding y admin).
+import { tieneHorasMinimas, HORAS_MINIMAS_SEMANA } from '@/lib/compita-perfil'
 import { esc } from '@/lib/html'
 import { INTERESES_COMPITA, type IdServicioProximo } from '@/lib/servicios-proximos'
 
@@ -38,7 +39,7 @@ const texto = (v: unknown, max: number): string | null =>
   typeof v === 'string' ? v.trim().slice(0, max) : null
 
 /** Devuelve el perfil saneado o un mensaje de error. Solo incluye los campos presentes. */
-export function validarPerfil(e: PerfilEntrada | Record<string, unknown>, opts: { permitirNombre?: boolean } = {}): { ok: true; datos: PerfilLimpio } | { ok: false; error: string } {
+export function validarPerfil(e: PerfilEntrada | Record<string, unknown>, opts: { permitirNombre?: boolean; exigirHorarios?: boolean } = {}): { ok: true; datos: PerfilLimpio } | { ok: false; error: string } {
   const out: PerfilLimpio = {}
   e = e as PerfilEntrada
 
@@ -85,6 +86,10 @@ export function validarPerfil(e: PerfilEntrada | Record<string, unknown>, opts: 
       hs.push({ dia: h.dia, inicio: h.inicio, fin: h.fin })
     }
     out.horarios_disponibles = hs
+  }
+  // Sin horas libres no hay nada que ofrecer al cliente: se exigen al registrarse y se mantienen al editar (si el formulario las manda).
+  if (opts.exigirHorarios && !tieneHorasMinimas(out.horarios_disponibles)) {
+    return { ok: false, error: `Carga al menos ${HORAS_MINIMAS_SEMANA} horas libres por semana: son las horas que verán los clientes para elegir su entrevista contigo.` }
   }
   if (e.intereses_futuros !== undefined) {
     if (!Array.isArray(e.intereses_futuros) || e.intereses_futuros.some((x) => typeof x !== 'string' || !INTERESES_COMPITA.includes(x as IdServicioProximo))) return { ok: false, error: 'Intereses inválidos' }

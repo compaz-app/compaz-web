@@ -39,7 +39,7 @@ export async function PUT(req: NextRequest) {
 
   // Validar ANTES de consumir el token: un error de formato no debe quemar el enlace.
   // El nombre solo lo cambia el admin; verificado/estado/rating nunca se aceptan aquí.
-  const v = validarPerfil(body, { permitirNombre: false })
+  const v = validarPerfil(body, { permitirNombre: false, exigirHorarios: body.horarios_disponibles !== undefined })
   if (!v.ok) return err(v.error)
 
   const compitaId = await consumirTokenPerfil(token)

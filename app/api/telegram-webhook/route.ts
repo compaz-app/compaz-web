@@ -30,7 +30,7 @@ import { debeCorreoDeMensaje } from '@/lib/portal-mensajes'
 import { sendVisitaInicio, generarResumenIA, sendCodigoTelegram, sendCompletarPerfilCompita } from '@/lib/resend'
 import { perfilCompleto, PERFIL_MINIMO } from '@/lib/compita-perfil'
 import { responderSolicitud, getSolicitudPorToken, getSolicitudPorId, aceptarSolicitudDirecta } from '@/lib/solicitudes'
-import { confirmarReserva, rechazarReserva } from '@/lib/agenda'
+import { confirmarReserva, rechazarReserva, horasLibres } from '@/lib/agenda'
 import { registrarCancelacion, alertarCancelacionesCompita, horasDeAviso } from '@/lib/cancelaciones'
 import { getAjustes } from '@/lib/ajustes'
 import { responderCambioLugar } from '@/lib/lugar'
@@ -364,8 +364,8 @@ async function iniciarVerificacion(
 
   // Sin perfil público lleno no hay Telegram: las familias eligen por ese perfil. No se da el código; se manda por CORREO (nunca por aquí: cualquiera puede escribir
   // un nombre en el bot) el enlace para llenarlo. Va después del plazo de un minuto de arriba, así que tampoco se puede usar para llenar de correos a nadie.
-  const { data: perfil } = await supabase.from('compitas').select('descripcion, servicios').eq('id', c.id).maybeSingle()
-  if (!perfilCompleto(perfil as { descripcion: string | null; servicios: string[] | null } | null)) {
+  const { data: perfil } = await supabase.from('compitas').select('descripcion, servicios, horarios_disponibles').eq('id', c.id).maybeSingle()
+  if (!perfilCompleto(perfil as { descripcion: string | null; servicios: string[] | null; horarios_disponibles: { dia: string; inicio: string; fin: string }[] | null } | null)) {
     let enviado = false
     if (c.email) {
       try { await sendCompletarPerfilCompita(c.email, c.nombre, `${SITE_URL}/compita/perfil?token=${await generarTokenPerfil(c.id)}`); enviado = true } catch (e) { console.error('Error enviando el enlace del perfil:', e) }
@@ -1235,6 +1235,12 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
         plantilla: 'entrevista_aceptada', canal: 'correo', destinatario: { tipo: 'cliente', id: sol.cliente_id },
         variables: { solicitudId: sol.id }, entidad: 'solicitud', entidadId: sol.id, paso: 6,
       })
+      // Si no le queda ninguna hora libre (todas reservadas o sin franjas), el cliente no tendría nada que elegir: se le dice ya, con el botón para arreglarlo.
+      const libres = await horasLibres(compita.id).catch(() => null)
+      if (libres !== null && libres.length === 0) {
+        await sendTelegramMessage(chatId, `✅ <b>Aceptaste hablar con este cliente</b>\n\nPero ahora mismo <b>no tienes horas libres</b> en los próximos 14 días, y el cliente no tendría ninguna para elegir. Agrega horas y se las mostramos apenas guardes.`, makeInlineKeyboard([[{ text: '🕐 Cambiar mis horas', callback_data: 'mis_horas' }]]))
+        return NextResponse.json({ ok: true })
+      }
       await sendTelegramMessage(chatId, `✅ <b>Aceptaste hablar con este cliente</b>\n\nAhora elige una de tus horas libres y te pedirá que la confirmes. Te avisamos apenas elija.`, TECLADO_SIN_VISITA)
       return NextResponse.json({ ok: true })
     }

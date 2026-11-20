@@ -22,7 +22,7 @@ export async function corregirRegistroCompita(editToken: string, body: Record<st
   if (!rev.ok) return { ok: false, status: 400, error: rev.error }
   const telefono = typeof body.telefono === 'string' ? normalizarTelefono(body.telefono) : null
   if (!telefono) return { ok: false, status: 400, error: 'Teléfono inválido. Escríbelo con código de país, por ejemplo +58 412 123 4567' }
-  const v = validarPerfil(body, { permitirNombre: true })
+  const v = validarPerfil(body, { permitirNombre: true, exigirHorarios: true })
   if (!v.ok) return { ok: false, status: 400, error: v.error }
   const { nombre, zona, descripcion, servicios, foto_url, youtube_url, horarios_disponibles, intereses_futuros } = v.datos
   const habil = typeof body.habilidades === 'string' ? body.habilidades.trim().slice(0, 500) : ''

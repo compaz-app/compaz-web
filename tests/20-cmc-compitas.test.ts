@@ -473,7 +473,7 @@ describe('Backend: sin permiso del CMC no hay solicitudes ni asignaciones nuevas
   test('la invitación por enlace no duplica un perfil creado desde el CMC', async () => {
     await aplicar(foto([reg('COM-0025')]))
     db.seed('onboarding_tokens', { token: 'tok-1', expires_at: ahoraMas(60) })
-    const r = await registrarOnboarding(req('/api/onboarding/registrar', { json: { token: 'tok-1', email: 'C0025@mail.test', telefono: '+58 412 123 4567', nombre: 'Compita 0025', zona: 'Carabobo — Valencia', descripcion: 'Hola, soy compita', servicios: ['Compañía'] } }))
+    const r = await registrarOnboarding(req('/api/onboarding/registrar', { json: { token: 'tok-1', email: 'C0025@mail.test', telefono: '+58 412 123 4567', nombre: 'Compita 0025', zona: 'Carabobo — Valencia', descripcion: 'Hola, soy compita', servicios: ['Compañía'], horarios_disponibles: [{ dia: 'lunes', inicio: '09:00', fin: '12:00' }] } }))
     assert.equal(r.status, 409)
     assert.equal(db.rows('compitas').length, 1)
     assert.equal(db.rows('onboarding_tokens')[0].usado, false) // el token no se gasta

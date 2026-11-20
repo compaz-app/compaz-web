@@ -4,16 +4,28 @@ import { db, limpiar, tgText, ultimoTg, emailsA, mkCompita } from './harness'
 import { beforeEach, test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import { POST as webhook } from '@/app/api/telegram-webhook/route'
-import { perfilCompleto } from '@/lib/compita-perfil'
+import { horasLibresSemana, perfilCompleto, PERFIL_MINIMO } from '@/lib/compita-perfil'
 
 beforeEach(limpiar)
 const codigoDe = (to: string) => emailsA(to).at(-1)!.html.match(/>(\d{6})</)![1]
 const vincular = async (chat: number, nombre: string) => { await webhook(tgText(chat, '/start')); await webhook(tgText(chat, nombre)) }
 
 describe('perfil mínimo', () => {
-  test('hace falta descripción y al menos un servicio; la foto y el video no', () => {
-    assert.equal(perfilCompleto({ descripcion: 'Cuido con cariño', servicios: ['Compañía'] }), true)
-    for (const x of [null, undefined, {}, { descripcion: '', servicios: ['a'] }, { descripcion: '   ', servicios: ['a'] }, { descripcion: 'hola', servicios: [] }, { descripcion: 'hola', servicios: ['  '] }, { descripcion: 'hola', servicios: null }]) assert.equal(perfilCompleto(x as any), false)
+  const HORAS = [{ dia: 'lunes', inicio: '09:00', fin: '12:00' }]
+  test('hace falta descripción, al menos un servicio y al menos 2 horas libres por semana; la foto y el video no', () => {
+    assert.equal(perfilCompleto({ descripcion: 'Cuido con cariño', servicios: ['Compañía'], horarios_disponibles: HORAS }), true)
+    for (const x of [null, undefined, {}, { descripcion: '', servicios: ['a'], horarios_disponibles: HORAS }, { descripcion: '   ', servicios: ['a'], horarios_disponibles: HORAS }, { descripcion: 'hola', servicios: [], horarios_disponibles: HORAS }, { descripcion: 'hola', servicios: ['  '], horarios_disponibles: HORAS }, { descripcion: 'hola', servicios: null, horarios_disponibles: HORAS }]) assert.equal(perfilCompleto(x as any), false)
+  })
+  test('las horas libres: mínimo 2 por semana, las franjas que se solapan no se cuentan dos veces y lo mal formado no suma', () => {
+    const base = { descripcion: 'hola', servicios: ['a'] }
+    assert.equal(horasLibresSemana([{ dia: 'lunes', inicio: '09:00', fin: '10:00' }, { dia: 'martes', inicio: '09:00', fin: '10:00' }]), 2)
+    assert.equal(perfilCompleto({ ...base, horarios_disponibles: [{ dia: 'lunes', inicio: '09:00', fin: '10:00' }, { dia: 'martes', inicio: '09:00', fin: '10:00' }] }), true, 'dos horas repartidas en dos días valen')
+    assert.equal(perfilCompleto({ ...base, horarios_disponibles: [{ dia: 'lunes', inicio: '09:00', fin: '10:40' }] }), false, 'una hora y 40 minutos no alcanza')
+    assert.equal(perfilCompleto({ ...base, horarios_disponibles: [{ dia: 'lunes', inicio: '09:00', fin: '10:00' }, { dia: 'lunes', inicio: '09:30', fin: '10:30' }] }), false, 'solapadas: 1 h 30, no 2')
+    assert.equal(horasLibresSemana([{ dia: 'lunes', inicio: '12:00', fin: '09:00' }, { dia: 'lunes', inicio: 'x', fin: 'y' }, null as any]), 0)
+    assert.equal(horasLibresSemana(null), 0); assert.equal(horasLibresSemana(undefined), 0)
+    assert.equal(perfilCompleto({ ...base }), false, 'sin horas no hay perfil')
+    assert.match(PERFIL_MINIMO, /2 horas libres por semana/)
   })
 })
 

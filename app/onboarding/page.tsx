@@ -585,7 +585,7 @@ function OnboardingForm() {
           {/* Disponibilidad horaria */}
           <div>
             <label style={s.label}>¿Cuándo puedes recibir llamadas de presentación? *</label>
-            <p style={s.hint}>Los clientes eligen una hora de tu disponibilidad para una llamada de 20 minutos. Hora de Venezuela.</p>
+            <p style={s.hint}>Los clientes eligen una hora de tu disponibilidad para una llamada de 20 minutos. Hora de Venezuela. <strong>Necesitas al menos 2 horas por semana.</strong></p>
 
             {horarios.length > 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>

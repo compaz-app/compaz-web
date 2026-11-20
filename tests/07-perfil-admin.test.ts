@@ -70,7 +70,7 @@ describe('Capa de datos', () => {
 
 describe('Onboarding de compita (invitación del admin)', () => {
   const invitacion = () => db.seed('onboarding_tokens', { token: 'tok-inv', expires_at: ahoraMas(60 * 24) })
-  const cuerpo = (o: any = {}) => ({ token: 'tok-inv', nombre: 'Rosa <b>Díaz', email: 'rosa@mail.test', telefono: '0412 123 4567', zona: 'Zulia', descripcion: 'Cuidadora con 10 años', servicios: ['Compañía'], ...o })
+  const cuerpo = (o: any = {}) => ({ token: 'tok-inv', nombre: 'Rosa <b>Díaz', email: 'rosa@mail.test', telefono: '0412 123 4567', zona: 'Zulia', descripcion: 'Cuidadora con 10 años', servicios: ['Compañía'], horarios_disponibles: [{ dia: 'lunes', inicio: '09:00', fin: '12:00' }], ...o })
 
   test('registro OK: queda activa SIN verificar; el token es de un solo uso; el nombre con HTML se escapa en el correo', async () => {
     invitacion()
@@ -166,7 +166,7 @@ describe('Panel admin', () => {
 
   test('registrar compita (admin): valida y no permite URLs externas de foto/video', async () => {
     admin()
-    const ok = { nombre: 'Nora', zona: 'Lara', descripcion: 'x', servicios: ['a'], email: 'nora@mail.test' }
+    const ok = { nombre: 'Nora', zona: 'Lara', descripcion: 'x', servicios: ['a'], horarios_disponibles: [{ dia: 'lunes', inicio: '09:00', fin: '12:00' }], email: 'nora@mail.test' }
     assert.equal((await registrarCompita(req('/api/admin/registrar-compita', { json: { ...ok, foto_url: 'https://evil/p.png' } }))).status, 400)
     assert.equal((await registrarCompita(req('/api/admin/registrar-compita', { json: { ...ok, email: 'malo' } }))).status, 400)
     assert.equal((await registrarCompita(req('/api/admin/registrar-compita', { json: ok }))).status, 200)

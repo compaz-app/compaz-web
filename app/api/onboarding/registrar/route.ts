@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
   const telefono = typeof body.telefono === 'string' && body.telefono.trim() ? normalizarTelefono(body.telefono) : null
   if (typeof body.telefono === 'string' && body.telefono.trim() && !telefono) return err('Teléfono inválido. Escríbelo con código de país, por ejemplo +58 412 123 4567')
   if (!esAdmin && !telefono) return err('Falta el teléfono de WhatsApp')
-  const v = validarPerfil(body, { permitirNombre: true })
+  const v = validarPerfil(body, { permitirNombre: true, exigirHorarios: true })
   if (!v.ok) {
     await alertaAdmin('actividad', `⚠️ <b>Validación fallida en onboarding</b>\n\n<b>Nombre:</b> ${body.nombre ?? '—'}\n<b>Email:</b> ${email ?? '—'}\n<b>Error:</b> ${v.error}`)
     return err(v.error)

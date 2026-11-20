@@ -136,7 +136,7 @@ export function limpiar() {
 export const ahoraMas = (min: number) => new Date(Date.now() + min * 60_000).toISOString()
 
 export function mkCompita(o: Record<string, any> = {}) {
-  return db.seed('compitas', { nombre: 'María Pérez', zona: 'Caracas', email: `maria${Math.random().toString(36).slice(2, 6)}@mail.test`, estado: 'activo', verificado: true, descripcion: 'Cuidadora con experiencia', servicios: ['Compañía'], telegram_chat_id: String(Math.floor(Math.random() * 1e9)), ...o })
+  return db.seed('compitas', { nombre: 'María Pérez', zona: 'Caracas', email: `maria${Math.random().toString(36).slice(2, 6)}@mail.test`, estado: 'activo', verificado: true, descripcion: 'Cuidadora con experiencia', servicios: ['Compañía'], horarios_disponibles: [{ dia: 'lunes', inicio: '09:00', fin: '12:00' }], telegram_chat_id: String(Math.floor(Math.random() * 1e9)), ...o })
 }
 export function mkCliente(o: Record<string, any> = {}) {
   const id = randomUUID()

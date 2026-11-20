@@ -30,7 +30,7 @@ export async function listarCompitas(ahora: Date = new Date()): Promise<FilaComp
   const db = createAdminSupabase()
   const desde = new Date(ahora.getTime() - 30 * DIA).toISOString()
   const [compitas, clientes, visitas, solicitudes, cancelaciones] = await Promise.all([
-    db.from('compitas').select('id, nombre, apellido, zona, estado, verificado, rating_promedio, es_demo, descripcion, servicios, telegram_chat_id').order('nombre', { ascending: true }).limit(LIMITE),
+    db.from('compitas').select('id, nombre, apellido, zona, estado, verificado, rating_promedio, es_demo, descripcion, servicios, horarios_disponibles, telegram_chat_id').order('nombre', { ascending: true }).limit(LIMITE),
     db.from('usuarios').select('compita_id').not('compita_id', 'is', null).limit(LIMITE),
     db.from('visitas').select('compita_id, created_at, inicio, fin').gte('created_at', desde).limit(LIMITE),
     db.from('solicitudes').select('compita_id, respondido_at, created_at').gte('created_at', desde).limit(LIMITE),
@@ -56,7 +56,7 @@ export async function listarCompitas(ahora: Date = new Date()): Promise<FilaComp
     const sol = mSol.get(id) ?? [], vis = mVisitas.get(id) ?? [], canc = mCanc.get(id) ?? []
     const ultimos = [...sol.map((s) => s.respondido_at), ...vis.map((v) => v.fin ?? v.inicio)].filter((x): x is string => !!x).sort()
     // Un compita NUEVO (sin verificar) cuenta en el sistema solo con el perfil lleno Y Telegram activo; antes es «Pendiente». Los ya verificados no cambian.
-    const sinPerfil = !perfilCompleto({ descripcion: c.descripcion, servicios: c.servicios }), sinTelegram = !c.telegram_chat_id
+    const sinPerfil = !perfilCompleto({ descripcion: c.descripcion, servicios: c.servicios, horarios_disponibles: c.horarios_disponibles }), sinTelegram = !c.telegram_chat_id
     const falta: FilaCompita['falta'] = sinPerfil && sinTelegram ? 'perfil y Telegram' : sinPerfil ? 'perfil' : sinTelegram ? 'Telegram' : undefined
     const pendiente = !c.verificado && c.estado !== 'bloqueado' && !!falta
     const estado: EstadoCompita = pendiente ? 'Pendiente' : pausaCanc.has(id) || pausaContacto.has(id) || (c.estado === 'inactivo' && c.verificado) ? 'En pausa' : !c.verificado ? 'Nuevo' : activos > 0 ? 'Con cupo' : 'Disponible'

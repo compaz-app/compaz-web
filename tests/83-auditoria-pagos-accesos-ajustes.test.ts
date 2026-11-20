@@ -376,7 +376,7 @@ import { POST as corregirCompita } from '@/app/api/onboarding/corregir/route'
 import { POST as generarInvitacion } from '@/app/api/admin/generar-invite/route'
 
 describe('onboarding: corregir los datos (el correo mal escrito) antes de conectar Telegram', () => {
-  const datos = (o: any = {}) => ({ nombre: 'Lucía Fernández', email: 'lucia@mail.test', telefono: '0412 123 4567', zona: 'Zulia', descripcion: 'Cuidadora', servicios: ['Compañía'], ...o })
+  const datos = (o: any = {}) => ({ nombre: 'Lucía Fernández', email: 'lucia@mail.test', telefono: '0412 123 4567', zona: 'Zulia', descripcion: 'Cuidadora', servicios: ['Compañía'], horarios_disponibles: [{ dia: 'lunes', inicio: '09:00', fin: '12:00' }], ...o })
   async function registrada() {
     session.user = { id: 'adm', email: 'admin@compaz.test' } as any
     const inv = await (await (generarInvitacion as any)()).json(); session.user = null as any
