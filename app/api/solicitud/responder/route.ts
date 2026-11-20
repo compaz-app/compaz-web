@@ -8,6 +8,7 @@ import { sendTelegramMessage, avisarAdmin } from '@/lib/telegram'
 import { alertaAdmin } from '@/lib/alertas-admin'
 import { sendEmail, SITE_URL } from '@/lib/email'
 import { esc } from '@/lib/html'
+import { notificar } from '@/lib/avisos'
 import { formatSlotVE } from '@/lib/format'
 import { qRol, rolValido } from '@/lib/links'
 import { pagina as paginaSola, paginaPara, puertaConfirmacion } from '@/lib/confirm'
@@ -28,7 +29,7 @@ export async function GET(req: NextRequest) {
   return puertaConfirmacion(
     req,
     p.slot === -1 ? '¿No puedes en ninguno?' : 'Confirmar horario',
-    p.slot === -1 ? 'Rechazarás la propuesta y podrás sugerir otros horarios.' : 'Confirmarás este horario para la llamada.',
+    p.slot === -1 ? 'Le diremos al cliente que elija a otro compita.' : 'Confirmarás este horario para la llamada.',
     p.slot === -1 ? 'No puedo en ninguno' : 'Confirmar horario',
   )
 }
@@ -49,20 +50,13 @@ export async function POST(req: NextRequest) {
   ])
 
   if (solicitud.estado === 'rechazada') {
-    await alertaAdmin('actividad', `❌ <b>${esc(solicitud.compita_nombre)}</b> rechazó la solicitud de entrevista.\nEsperando que sugiera horarios alternativos.`)
-    if (compita?.telegram_chat_id) {
-      await admin.from('telegram_estados').upsert(
-        { chat_id: compita.telegram_chat_id, registro_pendiente: false, pendiente_accion: `sugerir_horarios:${solicitud.id}:${cliente?.email ?? ''}:${cliente?.nombre ?? 'el cliente'}`, pendiente_expira: new Date(Date.now() + 24 * 3600_000).toISOString() },
-        { onConflict: 'chat_id' },
-      )
-      try {
-        await sendTelegramMessage(
-          compita.telegram_chat_id,
-          `Entendido. ¿Puedes sugerir otros horarios que sí te funcionen?\n\n✍️ <b>Responde a este mensaje</b> y se los haremos llegar a ${esc(cliente?.nombre ?? 'el cliente')} por email.\n\n📅 <i>Incluye el día y la hora exacta. Por ejemplo: lunes 6 de octubre a las 3:00pm.</i>`,
-        )
-      } catch (e) { console.error('Telegram pedir horarios:', e) }
-    }
-    return pagina('Respuesta registrada', 'Gracias. Te llegará un mensaje por Telegram para que puedas sugerir otros horarios.')
+    await alertaAdmin('actividad', `❌ <b>${esc(solicitud.compita_nombre)}</b> rechazó la solicitud de entrevista.`)
+    // El cliente se entera al instante; el compita no escribe horas: sus horas viven en su perfil.
+    await notificar({
+      plantilla: 'solicitud_rechazada_cliente', canal: 'correo', destinatario: { tipo: 'cliente', id: solicitud.cliente_id },
+      variables: { solicitudId: solicitud.id }, entidad: 'solicitud', entidadId: solicitud.id, paso: 6, claveUnica: `solicitud_rechazada:${solicitud.id}`,
+    })
+    return pagina('Respuesta registrada', 'Gracias por avisar. Le decimos al cliente que elija a otro compita. Si tus horas cambian, escribe /horas en Telegram.')
   }
 
   const slotLabel = formatSlotVE(solicitud.slot_confirmado!)

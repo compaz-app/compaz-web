@@ -253,17 +253,15 @@ describe('Enlaces de correo/Telegram: GET no cambia estado (escÃ¡neres), POST sÃ
     assert.match(emailsA('cli@mail.test')[0].html, new RegExp(`/reagendar/${t}`))
   })
 
-  test('reagendar-compita: gate + POST inicia el reagendado una sola vez', async () => {
+  test('reagendar-compita: una solicitud con horas propuestas a mano ya no se reagenda por texto (el enlace deja de valer)', async () => {
     const { t } = mundo()
     const u = url('reagendar-compita', t, 'compita')
     assert.ok(await esForm(await reagGet(req(u))))
     assert.equal(solRow().estado, 'aceptada')
-    assert.equal((await reagPost(req(`/api/solicitud/reagendar-compita?token=${t}&quien=compita`, { method: 'POST' }))).status, 400)
-    await reagPost(req(u, { method: 'POST' }))
-    assert.equal(solRow().estado, 'rechazada'); assert.equal(solRow().slot_confirmado, null)
+    assert.equal((await reagPost(req(`/api/solicitud/reagendar-compita?token=${t}&quien=compita`, { method: 'POST' }))).status, 400, 'sin firma no vale')
     assert.equal((await reagPost(req(u, { method: 'POST' }))).status, 410)
-    assert.ok(db.rows('telegram_estados').some((e) => e.pendiente_accion?.startsWith('sugerir_r:')))
-    assert.equal(db.rows('novedades_cliente').filter((n) => n.tipo === 'entrevista_reagendada_compita').length, 1, 'el cliente lo ve en su campana, una sola vez')
+    assert.equal(solRow().estado, 'aceptada', 'no se cierra ni se le pide escribir horarios')
+    assert.ok(!db.rows('telegram_estados').some((e) => String(e.pendiente_accion ?? '').startsWith('sugerir_')))
   })
 
   test('proponer-reagendado: valida slots y notifica con enlaces firmados', async () => {

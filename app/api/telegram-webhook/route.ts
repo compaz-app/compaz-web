@@ -498,7 +498,8 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
   }
 
   // ── /perfil — editar perfil ───────────────────────────────────────────────
-  if (text === '/perfil') {
+  if (text === '/perfil' || text === '/horas' || text === 'mis_horas') {
+    const soloHoras = text !== '/perfil'
     if (!compita) {
       await sendTelegramMessage(chatId, `Tu cuenta no está vinculada. Toca el botón para comenzar. 👇`, INLINE_START)
       return NextResponse.json({ ok: true })
@@ -506,7 +507,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
     const tecladoPerfil = await tecladoSegunEstado()
     try {
       const token = await generarTokenPerfil(compita.id)
-      const url = `${SITE_URL}/compita/perfil?token=${token}`
+      const url = `${SITE_URL}/compita/perfil?token=${token}${soloHoras ? '&foco=horarios' : ''}`
       const venceEn = new Date(Date.now() + 24 * 60 * 60_000)
       const venceLabel = venceEn.toLocaleString('es-VE', {
         timeZone: 'America/Caracas',
@@ -515,7 +516,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
       })
       await sendTelegramMessage(
         chatId,
-        `✏️ <b>Edita tu perfil</b>\n\n<a href="${url}">${url}</a>\n\n⏳ Vence el <b>${venceLabel}</b> y funciona una sola vez. Si lo dejas a medias, escribe /perfil para otro.`,
+        `${soloHoras ? '🕐 <b>Cambia tus horas libres</b>\n\nAgrega o quita las franjas en que puedes hacer entrevistas. Apenas guardes, los clientes que te esperan se enteran.' : '✏️ <b>Edita tu perfil</b>'}\n\n<a href="${url}">${url}</a>\n\n⏳ Vence el <b>${venceLabel}</b> y funciona una sola vez. Si lo dejas a medias, escribe ${soloHoras ? '/horas' : '/perfil'} para otro.`,
         tecladoPerfil,
       )
     } catch (e) {
@@ -1328,7 +1329,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
         variables: { solicitudId: reserva.solicitud_id ?? '' }, entidad: 'solicitud', entidadId: reserva.solicitud_id ?? reserva.id, paso: 7,
         claveUnica: `reserva_rechazada:${reserva.id}`, // una por reserva: puede rechazar varias horas de la misma solicitud
       })
-      await sendTelegramMessage(chatId, `Listo. Esa hora quedó libre y le avisamos al cliente para que elija otra.`, TECLADO_SIN_VISITA)
+      await sendTelegramMessage(chatId, `Listo. Esa hora quedó libre y le avisamos al cliente para que elija otra.\n\nSi necesitas ofrecer horas distintas, cámbialas aquí y el cliente se entera.`, makeInlineKeyboard([[{ text: '🕐 Cambiar mis horas', callback_data: 'mis_horas' }]]))
       return NextResponse.json({ ok: true })
     }
     // Confirmada: la solicitud queda con su hora y todo lo demás (correo, aviso, recordatorios) sigue igual que antes.
@@ -1381,20 +1382,15 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
 
     await alertaAdmin('actividad', `❌ <b>${esc(compita.nombre)}</b> rechazó una solicitud de entrevista.`)
 
-    const adminSupa = createAdminSupabase()
-    const { data: clienteRechazado } = await adminSupa
-      .from('usuarios').select('nombre, email').eq('id', solicitud.cliente_id).single()
-    const clienteEmail = clienteRechazado?.email ?? ''
-    const clienteNombre = clienteRechazado?.nombre ?? 'el cliente'
-    const expira = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
-    await setEstado(supabase, chatId, {
-      pendiente_accion: `sugerir_horarios:${solicitud.id}:${clienteEmail}:${clienteNombre}`,
-      pendiente_expira: expira,
+    // El cliente se entera al instante (campana y correo) y elige a otro compita. El compita ya NO escribe horas en texto libre: sus horas viven en su perfil.
+    await notificar({
+      plantilla: 'solicitud_rechazada_cliente', canal: 'correo', destinatario: { tipo: 'cliente', id: solicitud.cliente_id },
+      variables: { solicitudId: solicitud.id }, entidad: 'solicitud', entidadId: solicitud.id, paso: 6, claveUnica: `solicitud_rechazada:${solicitud.id}`,
     })
-
     await sendTelegramMessage(
       chatId,
-      `Entendido. ¿Puedes sugerir otros horarios que sí te funcionen?\n\n✍️ <b>Responde a este mensaje</b> con los horarios y se los haremos llegar a ${esc(clienteNombre)} por email.\n\n📅 <i>Incluye el día y la hora exacta de cada opción. Por ejemplo: lunes 6 de octubre a las 3:00pm.</i>`,
+      `Entendido, gracias por avisar. Le decimos al cliente que elija a otro compita.\n\nSi lo que pasa es que esas horas no te sirven, cambia tus horas libres y te volverán a elegir.`,
+      makeInlineKeyboard([[{ text: '🕐 Cambiar mis horas', callback_data: 'mis_horas' }]]),
     )
     // Motivo opcional, de un toque (dato para mejorar las solicitudes que le llegan)
     await sendTelegramMessage(

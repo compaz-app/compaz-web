@@ -163,15 +163,14 @@ describe('RECORRIDO 1: de la invitación de la compita hasta la valoración, tod
 })
 
 describe('RECORRIDO 2: rechazos, horarios alternativos, llamada caída y decisión del cliente', () => {
-  test('rechaza → sugiere → el cliente re-solicita → llamada corta → reconecta → decide NO → busca otra compita', async () => {
+  test('rechaza → el cliente se entera → re-solicita → llamada corta → reconecta → decide NO → busca otra compita', async () => {
     const lucia = mkCompita({ telegram_chat_id: '2100', nombre: 'Lucía' }); const ana = mkCompita({ telegram_chat_id: '2101', nombre: 'Ana' })
     const carlos = mkCliente({ email: 'carlos@mail.test', nombre: 'Carlos' }); como(carlos)
     const pedir = (c: any) => solicitar(req('/api/solicitudes', { json: { compita_id: c.id, mensaje: 'hola', slots_propuestos: [ahoraMas(180)] } }))
     await pedir(lucia)
     await webhook(tgBtn(2100, `rechazar:${sol().token_respuesta}`))
     assert.equal(sol().estado, 'rechazada')
-    await webhook(tgText(2100, 'Puedo el jueves a las 3pm'))
-    assert.equal(emailsA('carlos@mail.test').filter((e) => e.subject.includes('otros horarios')).length, 1)
+    assert.equal(emailsA('carlos@mail.test').filter((e) => /no puede atender tu solicitud/.test(e.subject)).length, 1, 'el cliente se entera al instante; la compita no escribe horarios')
     // el cliente vuelve a solicitar a la MISMA compita (ya no hay pendiente)
     assert.equal((await pedir(lucia)).status, 200)
     assert.equal(db.rows('solicitudes').length, 2)
@@ -198,30 +197,6 @@ describe('RECORRIDO 2: rechazos, horarios alternativos, llamada caída y decisi�
     await seguimientoCron(cron('s')); assert.equal(emailsA('carlos@mail.test').filter((e) => e.subject.includes('¿Cómo te fue')).length, 0, 'no se le insiste a quien dijo que no')
     assert.equal((await pedir(ana)).status, 200)
     assert.ok(tgPara(2101).some((m) => m.text.includes('Nueva solicitud')))
-  })
-
-  test('la compita reagenda la entrevista: ella sugiere → el cliente propone → ella confirma por enlace → llega a la sala', async () => {
-    const lucia = mkCompita({ telegram_chat_id: '2110' }); const carlos = mkCliente({ email: 'carlos@mail.test' }); como(carlos)
-    await solicitar(req('/api/solicitudes', { json: { compita_id: lucia.id, mensaje: 'hola', slots_propuestos: [ahoraMas(180)] } }))
-    await webhook(tgBtn(2110, `slot:0:${sol().token_respuesta}`))
-    const t = sol().token_respuesta
-    const botonReagendar = tgPara(2110).at(-1)!
-    void botonReagendar
-    const { qRol } = await import('@/lib/links')
-    const { POST: reagCompita } = await import('@/app/api/solicitud/reagendar-compita/route')
-    await reagCompita(req(`/api/solicitud/reagendar-compita?token=${t}&${qRol(t, 'compita')}`, { method: 'POST' }))
-    assert.equal(sol().estado, 'rechazada')
-    await webhook(tgText(2110, 'El viernes a las 4pm', { reply_to_message: { message_id: 2 } }))
-    assert.ok(emailsA('carlos@mail.test').some((e) => e.subject.includes('otros horarios')))
-    // el cliente usa la página /reagendar/[token] → proponer-reagendado
-    assert.equal((await proponer(req('/api/solicitud/proponer-reagendado', { json: { token: t, slots: [ahoraMas(200), ahoraMas(400)] } }))).status, 200)
-    assert.equal(sol().estado, 'pendiente')
-    const url = tgPara(2110).at(-1)!.markup.inline_keyboard[0][0].url.replace(/^https:\/\/micompaz\.test/, '')
-    await respPost(req(url, { method: 'POST' }))
-    assert.equal(sol().estado, 'aceptada'); assert.equal(sol().slot_confirmado, sol().slots_propuestos[0])
-    sol().slot_confirmado = ahoraMas(30); net.emails = []
-    await recordatorios(cron('r'))
-    assert.equal(emailsA('carlos@mail.test').length, 1)
   })
 
   test('solicitud ignorada: recordatorio, cierre automático y el cliente queda libre para pedir a otra', async () => {

@@ -124,27 +124,35 @@ describe('La compita responde por Telegram', () => {
     assert.match(ultimoTg(612)!.text, /ya pasó/)
   })
 
-  test('rechaza → rechazada y pide horarios alternativos; el texto llega al cliente escapado', async () => {
+  test('rechaza → rechazada, el cliente se entera al instante y el compita NO escribe horas: solo puede cambiar sus horas', async () => {
     const { sol } = setup()
     await webhook(tgBtn(610, `rechazar:${sol.token_respuesta}`))
     assert.equal(db.rows('solicitudes')[0].estado, 'rechazada')
-    await webhook(tgText(610, 'El lunes 3pm <script>alert(1)</script>'))
     const mail = emailsA('cli@mail.test').at(-1)!
-    assert.ok(mail.html.includes('lunes 3pm'))
-    assert.ok(!mail.html.includes('<script>alert(1)</script>'), 'el texto de la compita está escapado')
+    assert.match(mail.subject, /no puede atender tu solicitud/); assert.match(mail.html, /\/compitas/)
+    assert.ok(db.rows('novedades_cliente').some((n) => n.tipo === 'solicitud_rechazada_cliente'), 'también en la campana')
+    const msg = tgPara(610).find((m) => /cambia tus horas libres/.test(m.text))!
+    assert.ok(msg)
+    assert.ok(msg.markup.inline_keyboard.flat().some((b: any) => b.callback_data === 'mis_horas'))
+    assert.ok(!db.rows('telegram_estados').some((e) => String(e.pendiente_accion ?? '').startsWith('sugerir_')), 'ya no se le pide escribir horarios')
+    // Lo que escriba después es un mensaje normal: nunca se toma como horarios para el cliente
+    const antes = emailsA('cli@mail.test').length
+    await webhook(tgText(610, 'El lunes 3pm <script>alert(1)</script>'))
+    assert.equal(emailsA('cli@mail.test').length, antes)
   })
 
   test('CRUCE: mensaje de visita con OTRO cliente no se filtra por email al cliente rechazado', async () => {
     const { compita, sol } = setup()
     await webhook(tgBtn(610, `rechazar:${sol.token_respuesta}`))
+    const avisosAntes = emailsA('cli@mail.test').length // el aviso de que no puede atender ya salió
     // La compita tiene una visita en curso con otro cliente y le escribe algo
     const otro = mkCliente({ email: 'otro@mail.test' })
     mkVisita(otro, compita, { estado: 'en_curso', inicio: new Date().toISOString() })
     await webhook(tgText(610, 'Ya llegué, la señora está bien'))
-    assert.equal(emailsA('cli@mail.test').length, 0, 'el cliente rechazado NO recibe mensajes de otra visita')
+    assert.equal(emailsA('cli@mail.test').length, avisosAntes, 'el cliente rechazado NO recibe mensajes de otra visita')
     assert.ok(db.rows('mensajes').some((m) => m.contenido === 'Ya llegué, la señora está bien' && m.origen === 'compita'))
-    // En cambio, si RESPONDE al mensaje del bot, sí se toma como horarios alternativos
+    // Y aunque responda al mensaje del bot, ya no se toma como horarios: las horas viven en su perfil
     await webhook(tgText(610, 'Martes 4pm', { reply_to_message: { message_id: 3 } }))
-    assert.equal(emailsA('cli@mail.test').length, 1)
+    assert.equal(emailsA('cli@mail.test').length, avisosAntes)
   })
 })

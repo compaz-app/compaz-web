@@ -35,7 +35,7 @@ export type NombrePlantilla = 'solicitud_nueva' | 'directa_aceptada' | 'pago_con
   | 'entrevista_aceptada' | 'reserva_pedida' | 'reserva_rechazada' | 'reserva_vencida' | 'lugar_respuesta' | 'direccion_visita' | 'direccion_faltante_cliente' | 'compita_en_camino'
   | 'compita_llego' | 'nadie_abre_cliente' | 'visita_sin_acceso_cliente' | 'nadie_abre_cerrar'
   | 'salida_seguridad_cliente' | 'todo_bien' | 'recordatorio_cliente' | 'cancelacion_equipo_cliente' | 'pausa_cuenta_cliente' | 'pausa_cuenta_decision' | 'cita_propuesta_cliente' | 'cita_rechazada_cliente' | 'cita_sin_respuesta_cliente'
-  | 'visita_resumen' | 'visita_reporte' | 'pago_anulado'
+  | 'visita_resumen' | 'visita_reporte' | 'pago_anulado' | 'horas_actualizadas' | 'solicitud_rechazada_cliente'
 
 const etiquetaSlot = (iso: string) =>
   new Date(iso).toLocaleString('es-VE', {
@@ -368,6 +368,50 @@ const entrevistaAceptada: Plantilla = {
       <h2 style="color:#2D1464;font-size:22px">${corto} aceptó hablar contigo</h2>
       <p style="color:#4A3B6B;font-size:16px;line-height:1.6">Hola, ${primero}. Elige una de sus horas libres para la videollamada de 20 minutos. La hora que elijas queda reservada hasta que ${corto} la confirme.</p>
       ${boton(`${SITE_URL}/solicitar/hora?solicitud=${encodeURIComponent(String(s.id))}`, 'Elegir la hora →')}`) } }
+  },
+}
+
+// El compita actualizó sus horas libres y este cliente estaba esperando poder elegir una (porque no había, o porque la hora que eligió no le servía).
+const horasActualizadas: Plantilla = {
+  canales: ['correo'],
+  async render(v) {
+    const solicitudId = String(v.solicitudId ?? '')
+    if (!solicitudId) return null
+    const admin = createAdminSupabase()
+    const { data: s } = await admin.from('solicitudes').select('id, cliente_id, compita_id, estado, slot_confirmado').eq('id', solicitudId).maybeSingle()
+    if (!s || s.estado !== 'aceptada' || s.slot_confirmado) return null // ya eligió hora o se cerró
+    const [{ data: cli }, { data: cmp }] = await Promise.all([
+      admin.from('usuarios').select('nombre').eq('id', s.cliente_id).maybeSingle(),
+      admin.from('compitas').select('nombre').eq('id', s.compita_id).maybeSingle(),
+    ])
+    const primero = esc(String(cli?.nombre ?? '').split(' ')[0])
+    const corto = esc(nombreCorto(String(cmp?.nombre ?? '')) || 'Tu compita')
+    return { correo: { asunto: `${nombreCorto(String(cmp?.nombre ?? '')) || 'Tu compita'} actualizó sus horas. Elige la tuya`, html: marco(`
+      <h2 style="color:#2D1464;font-size:22px">${corto} tiene horas nuevas</h2>
+      <p style="color:#4A3B6B;font-size:16px;line-height:1.6">Hola, ${primero}. ${corto} actualizó sus horas libres. Elige la que mejor te quede para la videollamada de 20 minutos.</p>
+      ${boton(`${SITE_URL}/solicitar/hora?solicitud=${encodeURIComponent(String(s.id))}`, 'Elegir la hora →')}`) } }
+  },
+}
+
+// El compita no puede atender la solicitud: el cliente se entera al instante (antes solo se enteraba cuando el compita escribía horas, o a las 24 horas).
+const solicitudRechazadaCliente: Plantilla = {
+  canales: ['correo'],
+  async render(v) {
+    const solicitudId = String(v.solicitudId ?? '')
+    if (!solicitudId) return null
+    const admin = createAdminSupabase()
+    const { data: s } = await admin.from('solicitudes').select('id, cliente_id, compita_id, estado').eq('id', solicitudId).maybeSingle()
+    if (!s || s.estado !== 'rechazada') return null
+    const [{ data: cli }, { data: cmp }] = await Promise.all([
+      admin.from('usuarios').select('nombre').eq('id', s.cliente_id).maybeSingle(),
+      admin.from('compitas').select('nombre').eq('id', s.compita_id).maybeSingle(),
+    ])
+    const primero = esc(String(cli?.nombre ?? '').split(' ')[0])
+    const corto = esc(nombreCorto(String(cmp?.nombre ?? '')) || 'El compita')
+    return { correo: { asunto: `${nombreCorto(String(cmp?.nombre ?? '')) || 'El compita'} no puede atender tu solicitud`, html: marco(`
+      <h2 style="color:#2D1464;font-size:22px">Esta vez no se pudo</h2>
+      <p style="color:#4A3B6B;font-size:16px;line-height:1.6">Hola, ${primero}. ${corto} no puede atender tu solicitud por ahora. No pagaste nada ni perdiste nada: elige a otro compita y vuelve a pedir la entrevista.</p>
+      ${boton(`${SITE_URL}/compitas`, 'Ver otros compitas →')}`) } }
   },
 }
 
@@ -782,6 +826,8 @@ export const PLANTILLAS: Record<NombrePlantilla, Plantilla> = {
   directa_aceptada: directaAceptada,
   pago_confirmado: pagoConfirmado,
   pago_anulado: pagoAnulado,
+  horas_actualizadas: horasActualizadas,
+  solicitud_rechazada_cliente: solicitudRechazadaCliente,
   llamada_terminada_cliente: llamadaTerminadaCliente,
   llamada_terminada_compita: llamadaTerminadaCompita,
   entrevista_aceptada: entrevistaAceptada,

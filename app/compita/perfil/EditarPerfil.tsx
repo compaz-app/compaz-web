@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { reducirFoto } from '@/lib/reducir-foto'
 import { ZONAS_MUNICIPIOS as ZONAS } from '@/lib/venezuela'
 import { OpcionesProximamenteCompita, SeccionCuidadorMascotas } from '@/components/ui/Proximamente'
@@ -62,6 +62,8 @@ const aMin = (hhmm: string) => Number(hhmm.slice(0, 2)) * 60 + Number(hhmm.slice
 
 interface Props {
   token: string
+  /** 'horarios': el compita llegó desde «Cambiar mis horas»; la pantalla baja a esa sección. */
+  foco?: string
   inicial: {
     nombre: string
     zona: string
@@ -80,8 +82,10 @@ function zonaStringToChips(zona: string): string[] {
   return zona.split(',').map(z => z.trim()).filter(Boolean)
 }
 
-export default function EditarPerfil({ token, inicial }: Props) {
+export default function EditarPerfil({ token, inicial, foco }: Props) {
   const fotoRef = useRef<HTMLInputElement>(null)
+  const horariosRef = useRef<HTMLDivElement>(null)
+  useEffect(() => { if (foco === 'horarios') horariosRef.current?.scrollIntoView({ block: 'start' }) }, [foco])
 
   const [zonas, setZonas] = useState<string[]>(zonaStringToChips(inicial.zona))
   const [estadoSel, setEstadoSel] = useState('')
@@ -352,7 +356,7 @@ export default function EditarPerfil({ token, inicial }: Props) {
       </div>
 
       {/* Horarios */}
-      <div>
+      <div ref={horariosRef} id="horarios" style={{ scrollMarginTop: '12px' }}>
         <label style={s.label}>¿Cuándo puedes recibir llamadas de presentación? *</label>
         <p style={s.hint}>Los clientes elegirán una hora dentro de tu disponibilidad para coordinar una llamada de 20 minutos. Bloques de 20 min, hasta las 8:00 PM.</p>
         <p style={{ ...s.hint, color: '#9B8AB8', marginTop: '-6px' }}>

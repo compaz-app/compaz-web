@@ -34,51 +34,9 @@ export async function POST(req: NextRequest) {
   const actual = await getSolicitudPorToken(p.token)
   if (actual && await esEntrevistaConHoras(actual.id)) {
     const r = await reagendarEntrevista(actual.id, 'compita')
-    return r.ok ? pagina('Reagendado', 'Listo. Le avisamos al cliente para que elija otra de tus horas libres. Te avisamos cuando la elija.') : pagina('Enlace inválido', 'Este enlace ya no es válido o la solicitud está cerrada.', 410)
+    return r.ok ? pagina('Reagendado', 'Listo. Le avisamos al cliente para que elija otra de tus horas libres. Si necesitas ofrecer otras, escribe /horas en Telegram. Te avisamos cuando elija.') : pagina('Enlace inválido', 'Este enlace ya no es válido o la solicitud está cerrada.', 410)
   }
 
-  const solicitud = await iniciarReagendadoPorCompita(p.token)
-  if (!solicitud) return pagina('Enlace inválido', 'Este enlace ya no es válido o la solicitud está cerrada.', 410)
-
-  const admin = createAdminSupabase()
-  // El cliente lo ve también en su portal (campana), no solo en el correo: el compita le enviará horarios por escrito.
-  await registrarNovedad({ usuarioId: solicitud.cliente_id, tipo: 'entrevista_reagendada_compita', nivel: 'accionable', titulo: `${(solicitud.compita_nombre ?? 'Tu compita').split(' ')[0]} necesita cambiar la fecha de la llamada. Te enviará otros horarios.`, ruta: '/portal', entidad: 'solicitud', entidadId: solicitud.id, clave: `entrevista_reagendada_compita:${solicitud.id}:${Date.now()}` })
-  const [{ data: cliente }, { data: compita }] = await Promise.all([
-    admin.from('usuarios').select('nombre, email').eq('id', solicitud.cliente_id).single(),
-    admin.from('compitas').select('telegram_chat_id').eq('id', solicitud.compita_id).single(),
-  ])
-
-  if (compita?.telegram_chat_id) {
-    await admin.from('telegram_estados').upsert(
-      { chat_id: compita.telegram_chat_id, registro_pendiente: false, pendiente_accion: `sugerir_r:${solicitud.id}:${cliente?.email ?? ''}:${cliente?.nombre ?? 'el cliente'}`, pendiente_expira: new Date(Date.now() + 24 * 3600_000).toISOString() },
-      { onConflict: 'chat_id' },
-    )
-    try {
-      await sendTelegramMessage(
-        compita.telegram_chat_id,
-        `🔄 <b>Reagendado iniciado</b>\n\n¿Cuándo puedes tener la llamada con ${esc(cliente?.nombre ?? 'el cliente')}?\n\n✍️ <b>Responde a este mensaje con los horarios que te funcionen</b> y se los haremos llegar por email.\n\n📅 <i>Incluye el día y la hora exacta. Por ejemplo: lunes 13 de octubre a las 3:00pm.</i>`,
-      )
-    } catch (e) { console.error('Telegram reagendar compita:', e) }
-  }
-
-  if (cliente?.email) {
-    try {
-      await sendEmail({
-        to: cliente.email,
-        subject: `${solicitud.compita_nombre} necesita cambiar la fecha de la llamada`,
-        html: `
-          <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px">
-            <h2 style="color:#2D1464;font-size:22px">${esc(solicitud.compita_nombre ?? '')} no puede en ese horario</h2>
-            <p style="color:#4A3B6B;font-size:16px;line-height:1.6"><strong>${esc(solicitud.compita_nombre ?? '')}</strong> no pudo en el horario que propusiste, pero quiere reagendar contigo.</p>
-            <p style="color:#4A3B6B;font-size:15px;line-height:1.6">En breve recibirás otro correo con los horarios que propone ${esc(solicitud.compita_nombre ?? '')} para que elijas el que mejor te quede.</p>
-            <p style="color:#4A3B6B;font-size:15px;line-height:1.6">También puedes verlo desde tu portal:</p>
-            <a href="${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://micompaz.com'}/dashboard" style="display:inline-block;background:#FF6B2B;color:white;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:600;margin-top:8px">Ver mi portal →</a>
-</div>`,
-      })
-    } catch (e) { console.error('Email cliente reagendar:', e) }
-  }
-
-  await alertaAdmin('actividad', `🔄 <b>Reagendado por compita</b>\n\n<b>Compita:</b> ${esc(solicitud.compita_nombre)}\n<b>Cliente:</b> ${esc(cliente?.nombre ?? '')}\n\nLa compita inició un reagendado desde Telegram.`)
-
-  return pagina('Reagendado iniciado', 'Recibimos tu solicitud. Escríbenos en Telegram los nuevos horarios que te funcionen y se los haremos llegar al cliente.')
+  // Ya no hay camino de «escribe tus horarios»: todo pasa por las horas libres del perfil (el cliente elige y el compita las cambia en /horas).
+  return pagina('Enlace inválido', 'Este enlace ya no es válido o la solicitud está cerrada.', 410)
 }

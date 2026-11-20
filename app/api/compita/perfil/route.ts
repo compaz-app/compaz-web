@@ -4,6 +4,8 @@ import { NextRequest } from 'next/server'
 import { ok, err, unauthorized, notFound, serverError } from '@/lib/api'
 import { validarTokenPerfil, consumirTokenPerfil, restaurarTokenPerfil } from '@/lib/compita-tokens'
 import { validarPerfil } from '@/lib/validar'
+import { horariosDe, avisarHorasNuevas } from '@/lib/horas-nuevas'
+import type { HorarioDisponible } from '@/types'
 import { getCompitaAdminById, actualizarCompita } from '@/lib/compitas'
 import { sendTelegramMessage } from '@/lib/telegram'
 import { createAdminSupabase } from '@/lib/supabase-server'
@@ -43,6 +45,7 @@ export async function PUT(req: NextRequest) {
   const compitaId = await consumirTokenPerfil(token)
   if (!compitaId) return err('Token inválido, expirado o ya usado', 401)
 
+  const horariosAntes = v.datos.horarios_disponibles ? await horariosDe(compitaId) : null
   try {
     await actualizarCompita(compitaId, v.datos)
   } catch (e) {
@@ -50,6 +53,9 @@ export async function PUT(req: NextRequest) {
     console.error('[compita/perfil] error guardando:', e)
     return serverError(e)
   }
+
+  // Si cambió sus horas, los clientes que esperaban para elegir hora se enteran (campana y correo).
+  if (horariosAntes && v.datos.horarios_disponibles) await avisarHorasNuevas(compitaId, horariosAntes, v.datos.horarios_disponibles as HorarioDisponible[])
 
   // Confirmar por Telegram si la compita está vinculada
   const admin = createAdminSupabase()
