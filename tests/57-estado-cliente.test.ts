@@ -29,7 +29,6 @@ const CASOS: Record<CodigoEstado, FotoCliente> = {
   horario_rechazado: foto({ solicitudes: [sol({ estado: 'aceptada', reserva: 'rechazada' })] }),
   entrevista_programada: foto({ solicitudes: [sol({ estado: 'aceptada', slotConfirmado: min(24 * 60) })] }),
   entrevista_ahora: foto({ solicitudes: [sol({ estado: 'aceptada', slotConfirmado: min(30) })] }),
-  horarios_sugeridos: foto({ solicitudes: [sol({ estado: 'rechazada', mensajeCompita: 'Lunes a las 3 pm', creadaEn: min(-60) })] }),
   confirmar_llamada: foto({ solicitudes: [sol({ estado: 'aceptada', slotConfirmado: min(-40), llamadaPorConfirmar: true })] }),
   decidir: foto({ solicitudes: [sol({ estado: 'aceptada', slotConfirmado: min(-40) })] }),
   motivo_no: foto({ solicitudes: [sol({ estado: 'rechazada', clienteDijoNo: true })] }),

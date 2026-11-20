@@ -11,7 +11,6 @@ import { GET as segGet, POST as segPost } from '@/app/api/solicitud/seguimiento/
 import { GET as ratGet, POST as ratPost } from '@/app/api/visita/rating/route'
 import { GET as respGet, POST as respPost } from '@/app/api/solicitud/responder/route'
 import { GET as reagGet, POST as reagPost } from '@/app/api/solicitud/reagendar-compita/route'
-import { POST as proponer } from '@/app/api/solicitud/proponer-reagendado/route'
 import { POST as seguimientoCron } from '@/app/api/cron/seguimiento/route'
 import { POST as feedbackPost } from '@/app/api/visita/feedback/route'
 import { tokenFeedback } from '@/lib/links'
@@ -262,18 +261,5 @@ describe('Enlaces de correo/Telegram: GET no cambia estado (escÃ¡neres), POST sÃ
     assert.equal((await reagPost(req(u, { method: 'POST' }))).status, 410)
     assert.equal(solRow().estado, 'aceptada', 'no se cierra ni se le pide escribir horarios')
     assert.ok(!db.rows('telegram_estados').some((e) => String(e.pendiente_accion ?? '').startsWith('sugerir_')))
-  })
-
-  test('proponer-reagendado: valida slots y notifica con enlaces firmados', async () => {
-    const { t } = mundo({ estado: 'rechazada', slot_confirmado: null })
-    const mal = await proponer(req('/api/solicitud/proponer-reagendado', { json: { token: t, slots: ['no-fecha'] } }))
-    assert.equal(mal.status, 400)
-    const ok = await proponer(req('/api/solicitud/proponer-reagendado', { json: { token: t, slots: [ahoraMas(120), ahoraMas(120), ahoraMas(300)] } }))
-    assert.equal(ok.status, 200)
-    assert.equal(solRow().estado, 'pendiente'); assert.equal(solRow().slots_propuestos.length, 2, 'slots duplicados se descartan')
-    const urls = tgPara(800)[0].markup.inline_keyboard.flat().map((b: any) => b.url)
-    assert.ok(urls.every((u: string) => /quien=compita&s=[0-9a-f]{24}/.test(u)))
-    solRow().estado = 'contratada'
-    assert.equal((await proponer(req('/api/solicitud/proponer-reagendado', { json: { token: t, slots: [ahoraMas(200)] } }))).status, 400)
   })
 })

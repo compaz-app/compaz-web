@@ -36,7 +36,7 @@ Pendientes de seguridad antes de abrir al público (informes completos en `~/sec
 2. HECHO 2026-11-18 (1.3.42): Clarity, GA y Meta Pixel ya NO cargan en las pantallas privadas ni con token: solo en `/`, `/privacidad` y `/se-compita` (`lib/analitica-rutas.ts`, `components/ScriptsAnaliticos.tsx`; lista de lo permitido). HECHO 2026-11-18 (1.3.43): aviso de cookies con permiso previo (`components/AvisoCookies.tsx`, decisión en el navegador, caduca al año) y sección «Cookies y medición» en `/privacidad` con botón para cambiar la decisión. FALTA la revisión legal de ese texto (la página lo dice: «provisional»); recordárselo al usuario antes de abrir al público.
 3. Claves de Turnstile en Netlify.
 4. Telegram: comando de admin para liberar `codfail:<compita>`, y límite de intentos en el paso de desambiguación por correo.
-5. Extender el filtro de partes bloqueadas a `responderSolicitud` e `iniciarReagendadoPorCompita`, y cancelar solicitudes abiertas al bloquear.
+5. Extender el filtro de partes bloqueadas a `responderSolicitud` y cancelar solicitudes abiertas al bloquear (`iniciarReagendadoPorCompita` ya no existe desde 1.3.45).
 6. Limpiar datos de prueba: filas de `pagos_plan` con referencia "pago simulado", solicitudes de prueba y grabaciones de Clarity.
 7. Tercera pasada de la auditoría sobre lo que run-2 dejó sin cubrir (rutas admin cliente-preview, flags, invitar-cliente, toggle-estado, toggle-verificado; setup-webhook, setup-daily-webhook, auth/callback, login; perfil familiar y fechas de visita; cron y funciones Netlify restantes; componentes del dashboard).
 

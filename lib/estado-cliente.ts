@@ -20,7 +20,7 @@ export const CODIGOS_ESTADO = [
   // 0 Elegir
   'bienvenida', 'solicitud_enviada', 'solicitud_recibida', 'directa_enviada', 'mandado_enviado', 'todas_rechazadas',
   // 1 Entrevista
-  'elegir_horario', 'horario_pedido', 'horario_rechazado', 'horarios_sugeridos', 'entrevista_programada', 'entrevista_ahora',
+  'elegir_horario', 'horario_pedido', 'horario_rechazado', 'entrevista_programada', 'entrevista_ahora',
   // 2 Decidir
   'confirmar_llamada', 'decidir', 'motivo_no',
   // 3 Pagar
@@ -41,8 +41,6 @@ export interface SolicitudFoto {
   retomadaEn?: string | null
   /** Ya se le preguntó «¿pudiste hablar?» y el cliente aún no contesta (en ningún canal). */
   llamadaPorConfirmar: boolean
-  /** Lo que escribió el compita al rechazar las horas pedidas («sugiere otros horarios»), ya censurado de contactos. */
-  mensajeCompita?: string | null
   /** El token de la sala de la entrevista (para el enlace de entrada del cliente). */
   token?: string | null
   /** true si el cliente dijo que NO contrata tras la entrevista. */
@@ -97,15 +95,11 @@ export interface EstadoCliente {
   cuando?: string
   /** Token de la sala de la entrevista (solo en 'entrevista_ahora'). */
   sala?: string
-  /** Texto de los horarios que sugiere el compita (solo en 'horarios_sugeridos'). */
-  mensaje?: string
-  /** Compita al que se le vuelve a pedir (solo en 'horarios_sugeridos'). */
-  compitaId?: string
 }
 
 const PASO: Record<CodigoEstado, number> = {
   bienvenida: 0, solicitud_enviada: 0, solicitud_recibida: 0, directa_enviada: 0, mandado_enviado: 0, todas_rechazadas: 0,
-  elegir_horario: 1, horario_pedido: 1, horario_rechazado: 1, horarios_sugeridos: 1, entrevista_programada: 1, entrevista_ahora: 1,
+  elegir_horario: 1, horario_pedido: 1, horario_rechazado: 1, entrevista_programada: 1, entrevista_ahora: 1,
   confirmar_llamada: 2, decidir: 2, motivo_no: 2,
   directa_aceptada: 3, pagar: 3, pago_revision: 3, ficha_lista_espera: 3,
   ficha: 4,
@@ -207,11 +201,6 @@ export function decidirEstado(f: FotoCliente): EstadoCliente {
   const directaAceptada = f.solicitudes.find((s) => s.estado === 'aceptada' && s.tipo === 'directa')
   if (directaAceptada && !f.cupo) return e('directa_aceptada', { solicitudId: directaAceptada.id, compitaNombre: directaAceptada.compitaNombre })
 
-  // 7b. El compita rechazó las horas pedidas y sugirió otras por escrito: el cliente lo ve aquí (antes solo le llegaba por correo). Se va cuando vuelve a pedirle a ese compita.
-  const sugerida = masReciente(f.solicitudes.filter((s) => s.estado === 'rechazada' && !!s.mensajeCompita && ahora - new Date(s.creadaEn).getTime() < 7 * 24 * HORA
-    && !f.solicitudes.some((o) => o.compitaId === s.compitaId && o.id !== s.id && o.creadaEn > s.creadaEn)))
-  if (sugerida) return e('horarios_sugeridos', { solicitudId: sugerida.id, compitaNombre: sugerida.compitaNombre, compitaId: sugerida.compitaId, mensaje: sugerida.mensajeCompita!.slice(0, 300) })
-
   // 8. Solicitudes que esperan al compita.
   const pendiente = masReciente(f.solicitudes.filter((s) => s.estado === 'pendiente'))
   if (pendiente) {
@@ -266,7 +255,7 @@ async function cargarTanda(ids: string[], ahora: Date): Promise<Map<string, Foto
   const hace30 = new Date(ahora.getTime() - 30 * 24 * HORA).toISOString()
   const [usR, solR, visR, cancR, pagoR, pausasR, cupos] = await Promise.all([
     admin.from('usuarios').select('*, compita:compitas(id, nombre)').in('id', ids),
-    admin.from('solicitudes').select('id, cliente_id, estado, tipo, compita_id, slot_confirmado, slots_propuestos, seguimiento_enviado, token_respuesta, confirmacion_cliente, confirmacion_llamada_enviada, mensaje_compita_reagendar, created_at, compitas(nombre)').in('cliente_id', ids).gte('created_at', hace30).order('created_at', { ascending: false }),
+    admin.from('solicitudes').select('id, cliente_id, estado, tipo, compita_id, slot_confirmado, slots_propuestos, seguimiento_enviado, token_respuesta, confirmacion_cliente, confirmacion_llamada_enviada, created_at, compitas(nombre)').in('cliente_id', ids).gte('created_at', hace30).order('created_at', { ascending: false }),
     admin.from('visitas').select('id, usuario_id, estado, fecha_programada, hora_inicio_programada, llegada_en, sin_acceso_en, fin, created_at, cita_propuesta_fecha, cita_propuesta_inicio, reporte_visto_en, llamada_solicitada_at, room_url, compita:compitas(nombre)').in('usuario_id', ids).in('estado', ['pre_visita', 'programada', 'confirmando_inicio', 'en_curso', 'terminada']).order('created_at', { ascending: false }).limit(ids.length === 1 ? 20 : TOPE_FILAS_BASE),
     admin.from('cancelaciones').select('usuario_id, visita_id, cancelado_por, justificada_por, creado_en').in('usuario_id', ids).gte('creado_en', new Date(ahora.getTime() - AVISO_CANCELACION_H * HORA).toISOString()),
     admin.from('solicitudes_pago').select('id, usuario_id').in('usuario_id', ids).eq('estado', 'pendiente'),
@@ -278,7 +267,7 @@ async function cargarTanda(ids: string[], ahora: Date): Promise<Map<string, Foto
     for (const id of ids) for (const [k, v] of await cargarTanda([id], ahora)) salida.set(k, v)
     return salida
   }
-  const solRows = (solR.data ?? []) as unknown as (Fila & { id: string; cliente_id: string; estado: string; tipo: string | null; compita_id: string; slot_confirmado: string | null; slots_propuestos: string[] | null; seguimiento_enviado: boolean | null; token_respuesta: string | null; confirmacion_cliente: boolean | null; confirmacion_llamada_enviada: boolean | null; mensaje_compita_reagendar: string | null; created_at: string; compitas: { nombre: string } | null })[]
+  const solRows = (solR.data ?? []) as unknown as (Fila & { id: string; cliente_id: string; estado: string; tipo: string | null; compita_id: string; slot_confirmado: string | null; slots_propuestos: string[] | null; seguimiento_enviado: boolean | null; token_respuesta: string | null; confirmacion_cliente: boolean | null; confirmacion_llamada_enviada: boolean | null; created_at: string; compitas: { nombre: string } | null })[]
   const solIds = solRows.map((x) => x.id)
   const pagoPorUsuario = new Map<string, string>(); for (const p of (pagoR.data ?? []) as { id: string; usuario_id: string }[]) if (!pagoPorUsuario.has(p.usuario_id)) pagoPorUsuario.set(p.usuario_id, p.id)
   const pagoIds = [...pagoPorUsuario.values()]
@@ -316,7 +305,7 @@ async function cargarTanda(ids: string[], ahora: Date): Promise<Map<string, Foto
         const sr = x as unknown as (typeof solRows)[number]
         return {
           id: sr.id, estado: sr.estado, tipo: sr.tipo, compitaId: sr.compita_id, compitaNombre: sr.compitas?.nombre ?? '', slotConfirmado: sr.slot_confirmado,
-          slotsPropuestos: (sr.slots_propuestos ?? []).length, seguimientoEnviado: !!sr.seguimiento_enviado, tokenRespuesta: !!sr.token_respuesta, llamadaPorConfirmar: !!sr.confirmacion_llamada_enviada && sr.confirmacion_cliente === null, mensajeCompita: sr.mensaje_compita_reagendar, retomadaEn: retomadaDe.get(sr.id) ?? null, token: sr.token_respuesta,
+          slotsPropuestos: (sr.slots_propuestos ?? []).length, seguimientoEnviado: !!sr.seguimiento_enviado, tokenRespuesta: !!sr.token_respuesta, llamadaPorConfirmar: !!sr.confirmacion_llamada_enviada && sr.confirmacion_cliente === null, retomadaEn: retomadaDe.get(sr.id) ?? null, token: sr.token_respuesta,
           clienteDijoNo: sr.confirmacion_cliente === false, motivoRegistrado: conMotivo.has(sr.id), avisoEntregado: entregados.has(sr.id),
           reserva: (reservaDe.get(sr.id) as SolicitudFoto['reserva']) ?? null, reservaInicio: reservaInicioDe.get(sr.id) ?? null, creadaEn: sr.created_at,
         }

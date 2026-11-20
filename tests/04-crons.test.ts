@@ -146,34 +146,6 @@ describe('seguimiento (¿ocurrió la llamada? / ¿contratas?)', () => {
 })
 
 describe('cierre-rechazo', () => {
-  const conSugerir = (prefijo: 'sugerir_horarios' | 'sugerir_r', horasQueFaltan: number) => {
-    const compita = mkCompita({ telegram_chat_id: '720', nombre: 'Lucía' }); const cli = mkCliente({ email: 'cli@mail.test', nombre: 'Carlos' })
-    const sol = mkSolicitud(cli, compita, { estado: 'rechazada' })
-    db.seed('telegram_estados', { chat_id: '720', pendiente_accion: `${prefijo}:${sol.id}:cli@mail.test:Carlos`, pendiente_expira: new Date(Date.now() + horasQueFaltan * 3600_000).toISOString() })
-    return { sol }
-  }
-
-  test('recordatorio de 2 h se manda UNA vez (antes se repetía cada 30 min)', async () => {
-    conSugerir('sugerir_horarios', 20)
-    for (let i = 0; i < 6; i++) await cierre(cron('c'))
-    assert.equal(tgPara(720).filter((m) => m.text.includes('Recordatorio')).length, 1)
-  })
-
-  test('el estado "sugerir_r" (ya recordado) no vuelve a recordar', async () => {
-    conSugerir('sugerir_r', 10)
-    await cierre(cron('c')); await cierre(cron('c'))
-    assert.equal(tgPara(720).length, 0)
-  })
-
-  test('a las 24 h cierra: solicitud rechazada, email al cliente, aviso a la compita; idempotente', async () => {
-    const { sol } = conSugerir('sugerir_horarios', -1)
-    await cierre(cron('c')); await cierre(cron('c'))
-    assert.equal(db.rows('solicitudes').find((s) => s.id === sol.id)!.estado, 'rechazada')
-    assert.equal(emailsA('cli@mail.test').length, 1)
-    assert.equal(tgPara(720).filter((m) => m.text.includes('cerrada automáticamente')).length, 1)
-    assert.equal(db.rows('novedades_cliente').filter((n) => n.tipo === 'solicitud_cerrada').length, 1, 'el cliente lo ve también en su campana')
-  })
-
   test('solicitud PENDIENTE ignorada: recordatorio a las 24 h (una vez) y cierre a las 72 h con email', async () => {
     const compita = mkCompita({ telegram_chat_id: '721' }); const cli = mkCliente({ email: 'cli@mail.test' })
     const s1 = mkSolicitud(cli, compita, { created_at: hace(26 * 60) })

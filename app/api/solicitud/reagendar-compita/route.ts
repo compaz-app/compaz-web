@@ -1,7 +1,7 @@
 // /api/solicitud/reagendar-compita?token=&quien=compita&s=<firma>
 // La compita inicia un reagendado desde Telegram. GET confirma; POST ejecuta.
 import { NextRequest } from 'next/server'
-import { iniciarReagendadoPorCompita, getSolicitudPorToken } from '@/lib/solicitudes'
+import { getSolicitudPorToken } from '@/lib/solicitudes'
 import { esEntrevistaConHoras, reagendarEntrevista } from '@/lib/reagendar'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { sendTelegramMessage, avisarAdmin } from '@/lib/telegram'

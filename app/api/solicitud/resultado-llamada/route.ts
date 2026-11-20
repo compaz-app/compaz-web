@@ -2,7 +2,7 @@
 // Acciones que cambian estado (no_contratar, bien, reagendar de la compita) exigen firma de rol y POST.
 // contratar y reagendar del cliente solo redirigen (la autorización real ocurre en /pago y /compitas).
 import { NextRequest, NextResponse } from 'next/server'
-import { getSolicitudPorToken, iniciarReagendadoPorCompita } from '@/lib/solicitudes'
+import { getSolicitudPorToken } from '@/lib/solicitudes'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { sendTelegramMessage, avisarAdmin } from '@/lib/telegram'
 import { alertaAdmin } from '@/lib/alertas-admin'
@@ -114,44 +114,8 @@ async function ejecutar(req: NextRequest, p: NonNullable<ReturnType<typeof leer>
       }
       return NextResponse.redirect(`${origin}/reagendar/${encodeURIComponent(token)}`, 303)
     }
-    if (quien === 'compita') {
-      const reagendado = await iniciarReagendadoPorCompita(token)
-      if (!reagendado) return pagina('Error', 'No pudimos procesar el reagendado (la solicitud ya cambió de estado).', 409)
-
-      if (compita?.telegram_chat_id) {
-        const accion = `sugerir_r:${solicitud.id}:${cliente?.email ?? ''}:${cliente?.nombre ?? 'el cliente'}`
-        await admin.from('telegram_estados').upsert(
-          { chat_id: compita.telegram_chat_id, registro_pendiente: false, pendiente_accion: accion, pendiente_expira: new Date(Date.now() + 24 * 3600_000).toISOString() },
-          { onConflict: 'chat_id' },
-        )
-        try {
-          await sendTelegramMessage(
-            compita.telegram_chat_id,
-            `🔄 <b>Reagendado iniciado</b>\n\n¿Cuándo puedes repetir la llamada con ${esc(cliente?.nombre ?? 'el cliente')}?\n\n✍️ <b>Responde a este mensaje con los horarios que te funcionen</b> y se los haremos llegar por email.\n\n📅 <i>Incluye el día y la hora exacta. Por ejemplo: lunes 13 de octubre a las 3:00pm.</i>`,
-          )
-        } catch (e) { console.error('Telegram reagendar compita:', e) }
-      }
-
-      if (cliente?.email) {
-        try {
-          await sendEmail({
-            to: cliente.email,
-            subject: `${solicitud.compita_nombre} necesita reagendar la llamada`,
-            html: `
-              <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px">
-                <h2 style="color:#2D1464;font-size:22px">Reagendando la llamada</h2>
-                <p style="color:#4A3B6B;font-size:16px;line-height:1.6">
-                  <strong>${esc(solicitud.compita_nombre)}</strong> tuvo un problema técnico y necesita reagendar.
-                  En breve recibirás un correo con nuevos horarios disponibles.
-                </p>
-</div>`,
-          })
-        } catch (e) { console.error('Email reagendar al cliente desde compita:', e) }
-      }
-      return paginaPara('compita', 'Reagendado iniciado', 'Escríbenos en Telegram los nuevos horarios y se los haremos llegar al cliente.')
-    }
-    await anotarDecision(solicitud, 'reagendar')
-    return NextResponse.redirect(`${origin}/compitas?compita=${encodeURIComponent(solicitud.compita_id)}&reagendar=${encodeURIComponent(solicitud.id)}`, 303)
+    // Ya no hay camino de «escribe nuevos horarios»: el compita solo puede reagendar una solicitud en el modo de horas libres (arriba). Lo demás ya no vale.
+    return pagina('Enlace inválido', 'Este enlace ya no es válido. Entra a tu portal para ver el estado de tu entrevista.', 410)
   }
 
   // ── Cliente contrata → paywall ────────────────────────────────────────────
