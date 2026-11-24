@@ -101,16 +101,47 @@ Controles:
 - **Implementación publicada, con la API apagada:**
   - cuerpo vacío, sin firma o con firma falsa → `inactiva`;
   - abrir la URL con GET no muestra nada (no hay `doGet`).
-- **Pendiente, al activarla:**
-  - sin firma → `peticion_invalida`;
-  - firma falsa → `firma_invalida`;
-  - lectura real en el preview.
+- **Prueba de integración real (2026-11-24, API activa, implementación «Version 2»):**
+  - Configuración: `CMC_API_URL` y `CMC_API_TOKEN` existen solo en Deploy Previews (Producción no tiene ninguna); `CMC_API_TOKEN` está en las propiedades del proyecto API. El token no se mostró ni se registró.
+  - Permisos: el manifiesto pide solo `spreadsheets.readonly`; ningún archivo del proyecto llama métodos de escritura, correo, Telegram ni `UrlFetchApp`.
+  - Rechazos (repetidos tras publicar la versión 2):
+    - vacío, sin JSON, sin firma o con versión distinta → `peticion_invalida`;
+    - firma falsa o corta, y operación de escritura inventada → `firma_invalida`;
+    - hora vencida o futura (±1000 s) → `fuera_de_tiempo`;
+    - GET → «Script function not found: doGet».
+  - Lectura real en el preview: solo códigos reales (ningún COM-9xxx sintético).
+  - Cifras contrastadas con la hoja 03:
+    - 1008 filas, de las que 2 son la segunda aparición de un código repetido y no se muestran;
+    - 137 duplicados confirmados y 3 perfiles de prueba (la lista de `CODIGOS_PRUEBA`) no cuentan;
+    - quedan 866 aspirantes por etapa:
+
+      | Etapa | Aspirantes |
+      |---|---|
+      | Registrado | 547 |
+      | Preseleccionado | 289 |
+      | Entrevistado | 0 |
+      | En verificación | 4 |
+      | Habilitado | 4 (la hoja marca 5; el quinto es la prueba integral) |
+      | Descartado | 1 |
+      | Sin etapa | 21 |
+  - Fichas de 10 aspirantes revisadas:
+    - etapas: registrado, preseleccionado, en verificación, habilitado, descartado, sin etapa, prueba y los dos códigos repetidos;
+    - todas cargaron sin error;
+    - huellas de reglas iguales a la V2;
+    - los habilitados cumplen los 4 requisitos y uno en verificación muestra los 3 pendientes.
+  - Datos personales: en las 10 respuestas completas (todas las pestañas) no hay teléfonos, cédulas, enlaces de Drive o WhatsApp ni correos del CMC. El único correo es el de la sesión del administrador en la barra del panel.
+  - Sin escrituras: la hoja conserva su última modificación (2026-11-22). En el proyecto del CMC solo corren sus disparadores programados de siempre.
+  - Demostración: sigue funcionando con sus datos DEMO-1xx, sin mezcla con los reales.
+- **Problemas encontrados y corregidos en esa prueba:**
+  1. Abrir varias fichas seguidas agotaba la cuota de lectura de Sheets (`error_interno`): cada hoja se leía con dos llamadas. Ahora cada petición hace 2 llamadas `batchGet` en total y, si Google limita, responde `limite_google` con un mensaje claro.
+  2. El filtro de etiquetas privadas borraba el requisito «Referencia verificada» (la palabra «referencia» coincidía en el campo `etiqueta`). Ahora el filtro solo mira `campo` y `pregunta`.
+- **Calidad de datos del CMC (se corrige allí, no en el panel):** dos códigos aparecen dos veces en la hoja 03. Se muestra la primera aparición y la segunda se cuenta como «código vacío, mal escrito o repetido».
 
 ## 8. Configuración
 
 | Dónde | Qué | Valor |
 |---|---|---|
-| Apps Script (proyecto API) → Propiedades del script | `CMC_API_ACTIVA` | `no` al publicar; `si` para probar el preview |
+| Apps Script (proyecto API) → Propiedades del script | `CMC_API_ACTIVA` | `no` al publicar; `si` desde el 2026-11-24 para probar el preview |
 | Apps Script (proyecto API) → Propiedades del script | `CMC_API_TOKEN` | Token nuevo de 64 caracteres, generado y guardado por Luis en su gestor de secretos. Nunca en el chat, el repo ni los registros. |
 | Netlify → Environment variables | `CMC_API_URL` | URL `/exec` de la implementación. **Solo «Deploy Previews».** |
 | Netlify → Environment variables | `CMC_API_TOKEN` | El mismo token, marcado como secreto. **Solo «Deploy Previews».** |
