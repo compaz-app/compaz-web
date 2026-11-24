@@ -155,7 +155,7 @@ describe('API de lectura en Apps Script (proyecto independiente: docs/cmc/api-le
     const man = JSON.parse(readFileSync('docs/cmc/api-lectura/appsscript.json', 'utf8'))
     assert.deepEqual(man.oauthScopes, ['https://www.googleapis.com/auth/spreadsheets.readonly'], 'único permiso: ver hojas de cálculo')
     assert.deepEqual(man.dependencies.enabledAdvancedServices.map((x: any) => x.serviceId), ['sheets'])
-    assert.equal(man.webapp, undefined, 'el acceso de la implementación se elige al publicarla, no en el manifiesto')
+    assert.deepEqual(man.webapp, { executeAs: 'USER_DEPLOYING', access: 'ANYONE_ANONYMOUS' }, 'lo escribe Google al publicar: ejecuta como el propietario y acepta llamadas sin cuenta (protegidas por la firma)')
   })
   test('version devuelve la huella de cada función copiada del CMC', () => {
     const r = cajaGas().post(peticion('version'))
