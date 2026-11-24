@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import Aviso from '@/components/ui/base/Aviso'
 import { EtiquetaAtencion, EtiquetaEtapa, Marca, TarjetaCf } from '@/components/panel/confianza/piezas'
-import type { FilaReal } from '@/lib/confianza/real'
+import { explicarErrorCmc, type FilaReal } from '@/lib/confianza/real'
 import type { FichaReal as FichaCargada } from '@/lib/confianza/lectura-real'
 
 // Ficha de un aspirante con los datos REALES del CMC (fase 2A, solo lectura). Componente de servidor.
@@ -113,7 +113,7 @@ export default function FichaReal({ id, fila, carga, tab, hrefTab, hrefVolver, u
       </header>
 
       {carga.estado === 'no_existe' && <Aviso tamano="compacto" tono="advertencia">Ese código no existe en el CMC.</Aviso>}
-      {carga.estado === 'error' && <Aviso tamano="compacto" tono="peligro">No se pudo leer la ficha del CMC ({carga.codigo}). Vuelve a intentarlo en un momento; la lista sigue disponible.</Aviso>}
+      {carga.estado === 'error' && <Aviso tamano="compacto" tono="peligro">{explicarErrorCmc(carga.codigo)} La lista sigue disponible.</Aviso>}
       {carga.estado === 'no_configurado' && <Aviso tamano="compacto" tono="info">La conexión con el CMC no está configurada.</Aviso>}
 
       {carga.estado === 'ok' && (

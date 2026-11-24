@@ -29,6 +29,10 @@ var CMC_API_TOPE_MIN_ = 120;
 var CMC_API_CLAVES_PRIVADAS_ = /tel[eé]fono|whats|email|e-mail|correo|c[eé]dula|documento|direcci[oó]n|enlace|link|url|ip$|^t$|^e$|^wa$/i;
 /** Preguntas o campos que se omiten aunque su clave sea genérica («campo», «pregunta»). */
 var CMC_API_ETIQUETAS_PRIVADAS_ = /referencia|zona (o sector )?espec[ií]fic[oa]|sector espec[ií]fico|d[oó]nde vives|en qu[eé] zona.*vives|whatsapp|tel[eé]fono|correo|e-?mail|c[eé]dula|documento|direcci[oó]n|evidencia|enlace|link/i;
+/** Pestañas que se leen de una vez para cada operación (2 llamadas a la API de Sheets por petición). */
+var CMC_API_HOJAS_LISTA_ = ['03 · Compitas', '11 · Alertas Compitas'];
+var CMC_API_HOJAS_FICHA_ = ['03 · Compitas', '08 · Entrevistas Compitas', '09 · Preentrevistas Compitas', '11 · Alertas Compitas',
+  '12 · Verificaciones Compitas', '16 · Onboarding Compitas', '17 · Eventos Compitas', '18 · Operadores Compaz'];
 /** Columnas de la hoja 03 que pueden salir (lista blanca). */
 var CMC_API_COLUMNAS_03_ = ['ID Compita', 'Fecha registro', 'Nombre', 'Ubicación declarada', 'Profesión / Perfil', 'Estado preentrevista',
   'Fecha respuesta preentrevista', 'Estado selección', 'Entrevistador', 'Último contacto', 'Estado operativo', 'Acepta nuevos servicios',
@@ -86,6 +90,13 @@ function cmcApi_atender_(e) {
 
   var t0 = Date.now();
   var datos;
+  try {
+    if (p.op === 'lista') cmcSl_precargar_(CMC_API_HOJAS_LISTA_);
+    else if (p.op === 'ficha') cmcSl_precargar_(CMC_API_HOJAS_FICHA_);
+  } catch (x) {
+    if (/quota|rate ?limit|429|too many/i.test(String(x))) return { ok: false, error: 'limite_google' };
+    throw x;
+  }
   if (p.op === 'ping') datos = { listo: true };
   else if (p.op === 'lista') datos = cmcApi_lista_();
   else if (p.op === 'version') datos = cmcApi_version_();
@@ -198,7 +209,8 @@ function cmcApi_limpiar_(x, nivel) {
   if (Array.isArray(x)) {
     return x.slice(0, 2000).filter(function (y) {
       if (!y || typeof y !== 'object') return true;
-      var etiqueta = String(y.campo || y.pregunta || y.label || y.etiqueta || '');
+      // Solo preguntas y campos de formularios (campo / pregunta). La «etiqueta» de un requisito («Referencia verificada») no se filtra.
+      var etiqueta = String(y.campo || y.pregunta || '');
       return !CMC_API_ETIQUETAS_PRIVADAS_.test(etiqueta);
     }).map(function (y) { return cmcApi_limpiar_(y, nivel + 1); });
   }

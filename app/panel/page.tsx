@@ -65,6 +65,7 @@ import { cargarResumenOperativo } from '@/lib/confianza/operativo'
 import ConfianzaReal from '@/components/panel/confianza/ConfianzaReal'
 import FichaReal, { TABS_REAL, type TabReal } from '@/components/panel/confianza/FichaReal'
 import { cargarFichaReal, cargarListaReal, fuenteDisponible } from '@/lib/confianza/lectura-real'
+import { explicarErrorCmc } from '@/lib/confianza/real'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Panel', robots: { index: false, follow: false } }
@@ -176,7 +177,7 @@ async function ContenidoPanel({ sp, actual, actor, comoActor, comoColaborador }:
         if (lista.estado !== 'ok') {
           vista = (
             <div className="space-y-4">
-              <Aviso tamano="compacto" tono={lista.estado === 'error' ? 'peligro' : 'info'}>{lista.estado === 'error' ? `No se pudo leer el CMC (${lista.codigo}). Mientras tanto se muestran las habilitadas desde la base.` : 'La conexión con el CMC no está configurada.'}</Aviso>
+              <Aviso tamano="compacto" tono={lista.estado === 'error' ? 'peligro' : 'info'}>{lista.estado === 'error' ? `${explicarErrorCmc(lista.codigo)} Mientras tanto se muestran las habilitadas desde la base.` : 'La conexión con el CMC no está configurada.'}</Aviso>
               <ConfianzaOperativo r={r} fichaHref={(id) => enlace({ persona: `compita:${id}` })} urlV2={urlV2} />
             </div>
           )

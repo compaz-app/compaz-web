@@ -57,3 +57,4 @@ export async function cargarFichaReal(id: string): Promise<FichaReal> {
     return { estado: 'error', codigo }
   }
 }
+

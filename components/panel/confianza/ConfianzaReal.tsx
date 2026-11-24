@@ -83,7 +83,7 @@ export default function ConfianzaReal({ filas, resumen, generado, fuente, descar
       <p className="flex flex-wrap items-center gap-2 text-sm text-cf-texto-suave">
         <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${fuente === 'cmc' ? 'bg-verde-claro text-verde-oscuro' : 'bg-amarillo-claro text-ambar-oscuro'}`}>{fuente === 'cmc' ? 'Datos reales del CMC · solo lectura' : 'Fuente sintética de prueba · solo en este preview'}</span>
         <span>{fuente === 'cmc' ? `Leído del CMC el ${fecha(generado)}. Se actualiza cada minuto.` : `Datos inventados, generados el ${fecha(generado)}. No son del CMC.`}</span>
-        {descartadas > 0 && <span className="font-semibold text-ambar-oscuro">{descartadas} filas del CMC sin código válido no se muestran.</span>}
+        {descartadas > 0 && <span className="font-semibold text-ambar-oscuro">{descartadas === 1 ? '1 fila' : `${descartadas} filas`} del CMC con el código vacío, mal escrito o repetido no se {descartadas === 1 ? 'muestra' : 'muestran'} (se corrige en el CMC).</span>}
       </p>
 
       <section aria-label="Resumen">

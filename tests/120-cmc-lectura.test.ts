@@ -20,7 +20,7 @@ const URL_API = 'https://script.google.com/macros/s/AKfycbSINTETICO_de_prueba-12
 // Carga HojaSoloLectura.gs + ApiPanel.gs (los mismos archivos del proyecto independiente) con un servicio «Sheets» falso.
 // ReglasCMC.gs (copia literal del CMC) no está en el repositorio: sus funciones se sustituyen aquí por dobles sintéticos.
 const SERIE = (d: Date) => d.getTime() / 86400000 + 25569 // serie de Sheets en UTC (zona de la hoja: UTC en la prueba)
-function cajaGas(opts: { activa?: string; token?: string; hojas03?: any[][]; hojas11?: any[][] } = {}) {
+function cajaGas(opts: { activa?: string; token?: string; hojas03?: any[][]; hojas11?: any[][]; cuotaAgotada?: boolean } = {}) {
   const props: Record<string, string> = { CMC_API_ACTIVA: opts.activa ?? 'si', CMC_API_TOKEN: opts.token ?? TOKEN }
   const cache = new Map<string, string>()
   const lecturas: string[] = []
@@ -34,17 +34,21 @@ function cajaGas(opts: { activa?: string; token?: string; hojas03?: any[][]; hoj
   const h11 = opts.hojas11 ?? [['ID Alerta', 'ID Compita', 'Estado', 'Bloquea matching'], ['A1', 'COM-9001', 'Abierta', 'Sí'], ['A2', 'COM-9001', 'Cerrada', 'Sí']]
   const hojas: Record<string, any[][]> = { '03 · Compitas': h03, '11 · Alertas Compitas': h11 }
   const recortar = (v: any[][]) => v.map((f) => { const g = f.slice(); while (g.length && (g[g.length - 1] === '' || g[g.length - 1] == null)) g.pop(); return g })
+  const llamadasSheets: string[] = []
+  const una = (id: string, rango: string, o: any) => {
+    if (id !== 'HOJA-SINTETICA') throw new Error('otra hoja')
+    if (opts.cuotaAgotada) throw new Error('Quota exceeded for quota metric Read requests per minute per user')
+    const n = rango.replace(/^'|'$/g, '').replace(/''/g, "'"); lecturas.push(n)
+    if (!hojas[n]) throw new Error('Unable to parse range: ' + rango)
+    const v = recortar(hojas[n])
+    return { values: v.map((f) => f.map((x) => (x instanceof Date ? (o.valueRenderOption === 'FORMATTED_VALUE' ? x.toISOString().slice(0, 10).split('-').reverse().join('/') : SERIE(x)) : x))) }
+  }
   const Sheets = {
     Spreadsheets: {
       get: () => ({ properties: { timeZone: 'Etc/UTC' } }),
       Values: {
-        get: (id: string, rango: string, o: any) => {
-          if (id !== 'HOJA-SINTETICA') throw new Error('otra hoja')
-          const n = rango.replace(/^'|'$/g, '').replace(/''/g, "'"); lecturas.push(n)
-          if (!hojas[n]) throw new Error('Unable to parse range: ' + rango)
-          const v = recortar(hojas[n])
-          return { values: v.map((f) => f.map((x) => (x instanceof Date ? (o.valueRenderOption === 'FORMATTED_VALUE' ? x.toISOString().slice(0, 10).split('-').reverse().join('/') : SERIE(x)) : x))) }
-        },
+        get: (id: string, rango: string, o: any) => { llamadasSheets.push('get'); return una(id, rango, o) },
+        batchGet: (id: string, o: any) => { llamadasSheets.push('batchGet'); return { valueRanges: o.ranges.map((r: string) => (hojas[r.replace(/^'|'$/g, '')] ? una(id, r, o) : { values: [] })) } },
       },
     },
   }
@@ -65,7 +69,7 @@ function cajaGas(opts: { activa?: string; token?: string; hojas03?: any[][]; hoj
     panel_obtenerPanelElegibilidad_core_: (id: string) => {
       const filas = ctx.SpreadsheetApp.getActive().getSheetByName('03 · Compitas').getDataRange().getValues()
       const f = filas.find((r: any[]) => r[0] === id)
-      return { ok: true, id, etapaSeleccion: f[10], elegible: false, requisitos: [{ clave: 'identidad', etiqueta: 'Identidad', estado: 'Pendiente', detalle: { enlaceEvidencia: 'https://x', correoVerificador: 'v@correo.com' } }, { clave: 'operador', etiqueta: 'Operador', estado: 'Bloqueado' }] }
+      return { ok: true, id, etapaSeleccion: f[10], elegible: false, requisitos: [{ clave: 'identidad', etiqueta: 'Identidad', estado: 'Pendiente', detalle: { enlaceEvidencia: 'https://x', correoVerificador: 'v@correo.com' } }, { clave: 'referencia', etiqueta: 'Referencia verificada', estado: 'Pendiente', detalle: 'Ninguna Referencia Verificada + Vigente' }, { clave: 'operador', etiqueta: 'Operador', estado: 'Bloqueado' }] }
     },
     panel_obtenerAlertas: () => [{ idAlerta: 'A1', motivo: 'Llamar al 0412-555-0101 o escribir a ana@correo.com', estado: 'Abierta' }],
     panel_obtenerOnboarding: () => ({ historial: [], masReciente: null }),
@@ -79,7 +83,7 @@ function cajaGas(opts: { activa?: string; token?: string; hojas03?: any[][]; hoj
   vm.runInContext(readFileSync('docs/cmc/api-lectura/HojaSoloLectura.gs', 'utf8'), ctx)
   vm.runInContext(readFileSync('docs/cmc/api-lectura/ApiPanel.gs', 'utf8'), ctx)
   const post = (cuerpo: string) => { ctx.CMC_SL_MEMO_ = {}; return JSON.parse(ctx.doPost({ postData: { contents: cuerpo } }).contenido) }
-  return { post, props, cache, lecturas, ctx }
+  return { post, props, cache, lecturas, ctx, llamadasSheets }
 }
 const peticion = (op: string, id = '', extra: any = {}) => {
   const p = { v: 1, op, id, ts: Math.floor(Date.now() / 1000), nonce: `n-${Math.random().toString(36).slice(2)}-abcdefgh`, ...extra }
@@ -124,6 +128,7 @@ describe('API de lectura en Apps Script (proyecto independiente: docs/cmc/api-le
     assert.deepEqual(r.datos.pestanas.entrevista.campos.map((c: any) => c.campo), ['Decision'], 'sin referencias ni dónde vive')
     assert.deepEqual(Object.keys(r.datos.pestanas).sort(), ['entrevista', 'historial', 'preentrevista', 'verificaciones'])
     assert.equal(r.datos.ficha.elegibilidad.etapaSeleccion, 'Registrado', 'las funciones copiadas leen la hoja por la vía de solo lectura')
+    assert.deepEqual(r.datos.ficha.elegibilidad.requisitos.map((q: any) => q.clave), ['identidad', 'referencia', 'operador'], 'el requisito «Referencia verificada» no se confunde con los datos de referencias personales')
     assert.equal(cajaGas().post(peticion('ficha', 'COM-9999')).error, 'no_existe')
   })
   test('la hoja de solo lectura no tiene ningún método de escritura y no abre otras hojas', () => {
@@ -137,6 +142,13 @@ describe('API de lectura en Apps Script (proyecto independiente: docs/cmc/api-le
     assert.equal(hoja.getRange(2, 1, 1, 3).getValues()[0][0], 'COM-9001')
     assert.equal(hoja.getRange(5, 13).getValue(), '', 'celdas vacías como en getValues()')
     assert.equal(hoja.createTextFinder('COM-9003').matchEntireCell(true).findNext().getRow(), 4)
+  })
+  test('lee cada operación con 2 llamadas a la API de Sheets y, si Google limita, responde un código reintentable', () => {
+    const g = cajaGas(); g.post(peticion('lista'))
+    assert.deepEqual([...g.llamadasSheets], ['batchGet', 'batchGet'])
+    const f = cajaGas(); f.post(peticion('ficha', 'COM-9001'))
+    assert.deepEqual([...f.llamadasSheets], ['batchGet', 'batchGet'])
+    assert.equal(cajaGas({ cuotaAgotada: true }).post(peticion('lista')).error, 'limite_google')
   })
   test('el tope por minuto corta a partir de 120 peticiones', () => {
     const g = cajaGas(); let ultima: any

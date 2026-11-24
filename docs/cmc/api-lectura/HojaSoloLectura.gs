@@ -30,21 +30,11 @@ function cmcSl_fecha_(serie) {
 
 var CMC_SL_PARECE_FECHA_ = /^\s*(\d{1,4}[\/.-]\d{1,2}[\/.-]\d{1,4}|\d{1,2}:\d{2})/;
 
-/** Valores de una pestaña como los daría getDataRange().getValues(); null si la pestaña no existe. */
-function cmcSl_valores_(nombre) {
-  if (Object.prototype.hasOwnProperty.call(CMC_SL_MEMO_, nombre)) return CMC_SL_MEMO_[nombre];
-  var rango = "'" + String(nombre).replace(/'/g, "''") + "'";
-  var crudo, texto;
-  try {
-    crudo = Sheets.Spreadsheets.Values.get(V2_SS_ID, rango, { valueRenderOption: 'UNFORMATTED_VALUE', dateTimeRenderOption: 'SERIAL_NUMBER' }).values || [];
-    texto = Sheets.Spreadsheets.Values.get(V2_SS_ID, rango, { valueRenderOption: 'FORMATTED_VALUE' }).values || [];
-  } catch (e) {
-    if (/Unable to parse range|no se puede analizar/i.test(String(e))) { CMC_SL_MEMO_[nombre] = null; return null; }
-    throw e;
-  }
+/** Convierte lo que devuelve la API de Sheets (sin formato + con formato) en lo que daría getDataRange().getValues(). */
+function cmcSl_convertir_(crudo, texto) {
   var ancho = 0;
   crudo.forEach(function (f) { if (f.length > ancho) ancho = f.length; });
-  var v = crudo.map(function (fila, i) {
+  return crudo.map(function (fila, i) {
     var out = [];
     for (var j = 0; j < ancho; j++) {
       var x = j < fila.length ? fila[j] : '';
@@ -57,6 +47,35 @@ function cmcSl_valores_(nombre) {
     }
     return out;
   });
+}
+function cmcSl_rangoA1_(nombre) { return "'" + String(nombre).replace(/'/g, "''") + "'"; }
+
+/**
+ * Lee de una vez (2 llamadas a la API de Sheets en total) las pestañas que va a necesitar la operación.
+ * La API de Sheets tiene un tope de lecturas por minuto; leer pestaña por pestaña lo agotaba al abrir varias fichas seguidas.
+ */
+function cmcSl_precargar_(nombres) {
+  var faltan = nombres.filter(function (n) { return !Object.prototype.hasOwnProperty.call(CMC_SL_MEMO_, n); });
+  if (!faltan.length) return;
+  var rangos = faltan.map(cmcSl_rangoA1_);
+  var a = Sheets.Spreadsheets.Values.batchGet(V2_SS_ID, { ranges: rangos, valueRenderOption: 'UNFORMATTED_VALUE', dateTimeRenderOption: 'SERIAL_NUMBER' }).valueRanges || [];
+  var b = Sheets.Spreadsheets.Values.batchGet(V2_SS_ID, { ranges: rangos, valueRenderOption: 'FORMATTED_VALUE' }).valueRanges || [];
+  faltan.forEach(function (n, i) { CMC_SL_MEMO_[n] = cmcSl_convertir_((a[i] && a[i].values) || [], (b[i] && b[i].values) || []); });
+}
+
+/** Valores de una pestaña como los daría getDataRange().getValues(); null si la pestaña no existe. */
+function cmcSl_valores_(nombre) {
+  if (Object.prototype.hasOwnProperty.call(CMC_SL_MEMO_, nombre)) return CMC_SL_MEMO_[nombre];
+  var rango = cmcSl_rangoA1_(nombre);
+  var crudo, texto;
+  try {
+    crudo = Sheets.Spreadsheets.Values.get(V2_SS_ID, rango, { valueRenderOption: 'UNFORMATTED_VALUE', dateTimeRenderOption: 'SERIAL_NUMBER' }).values || [];
+    texto = Sheets.Spreadsheets.Values.get(V2_SS_ID, rango, { valueRenderOption: 'FORMATTED_VALUE' }).values || [];
+  } catch (e) {
+    if (/Unable to parse range|no se puede analizar/i.test(String(e))) { CMC_SL_MEMO_[nombre] = null; return null; }
+    throw e;
+  }
+  var v = cmcSl_convertir_(crudo, texto);
   CMC_SL_MEMO_[nombre] = v;
   return v;
 }

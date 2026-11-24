@@ -88,3 +88,11 @@ export function resumenReal(filas: FilaReal[]) {
     porEtapa: Object.fromEntries(ETAPAS_REALES.map((e) => [e, por(e)])) as Record<EtapaReal, number>,
   }
 }
+
+/** Texto corto para un código de error del CMC (qué pasó y qué hacer). */
+export function explicarErrorCmc(codigo: string): string {
+  if (codigo === 'limite_google') return 'Google limitó las lecturas de la hoja por un momento. Vuelve a intentarlo en un minuto.'
+  if (codigo === 'inactiva') return 'La lectura del CMC está apagada (interruptor CMC_API_ACTIVA).'
+  if (codigo === 'sin_conexion' || codigo.startsWith('http_')) return 'No hubo respuesta del CMC. Vuelve a intentarlo en un momento.'
+  return `No se pudo leer el CMC (${codigo}). Vuelve a intentarlo en un momento.`
+}
