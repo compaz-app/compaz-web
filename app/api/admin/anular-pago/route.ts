@@ -8,7 +8,7 @@ import { registrarEvento } from '@/lib/eventos'
 import { ok, err } from '@/lib/api'
 
 export async function POST(req: NextRequest) {
-  const g = await requierePermiso('pagos'); if (!g.ok) return g.res
+  const g = await requierePermiso('pagos', { peligrosa: true }); if (!g.ok) return g.res
   const b = await req.json().catch(() => null) as { pago_id?: string; motivo?: string; avisar_cliente?: boolean } | null
   if (!b?.pago_id) return err('Falta pago_id')
   const r = await anularPago(b.pago_id, b.motivo ?? '', { correo: g.actor.correo, rol: g.actor.rol })

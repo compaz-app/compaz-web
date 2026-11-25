@@ -6,7 +6,7 @@ import { ok, err, notFound, serverError } from '@/lib/api'
 // DELETE /api/admin/eliminar-cliente { usuario_id, borrar_datos? } — solo el administrador raíz. Cierra la cuenta y conserva el historial con el nombre y
 // la marca "(cuenta eliminada)". Solo con borrar_datos (la persona pidió que se borren sus datos) se anonimiza.
 export async function DELETE(req: NextRequest) {
-  const g = await requierePermiso('raiz'); if (!g.ok) return g.res
+  const g = await requierePermiso('raiz', { peligrosa: true }); if (!g.ok) return g.res
   const { usuario_id, borrar_datos } = (await req.json().catch(() => ({}))) as { usuario_id?: unknown; borrar_datos?: unknown }
   if (typeof usuario_id !== 'string' || !usuario_id) return err('usuario_id requerido')
   const r = await eliminarClientePorEquipo(usuario_id, g.actor.correo, { borrarDatos: borrar_datos === true })

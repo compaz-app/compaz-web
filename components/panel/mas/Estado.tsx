@@ -1,4 +1,5 @@
 import { CLASE_LISTA, TituloSeccion } from '@/components/panel/ui'
+import Boton from '@/components/ui/base/Boton'
 import InfoBoton from '@/components/ui/InfoBoton'
 import { PuntoUrgencia } from '@/components/panel/Personas'
 import AutoRefresh from '@/components/ui/AutoRefresh'
@@ -68,6 +69,10 @@ export default function Estado({ e, ahora, puedeReintentar, esAdmin = false }: {
             </ul>
           </div>
         )}
+      </div>
+      <div>
+        <div className="flex items-center gap-1"><TituloSeccion>Seguridad de tu cuenta</TituloSeccion><InfoBoton que="Qué es el segundo factor" texto="Además del código del correo, pide un código de 6 números de tu teléfono. Así, aunque alguien consiga tu correo, no puede entrar al panel. Regístralo una vez; cuando todo el equipo lo tenga, se vuelve obligatorio." /></div>
+        <div className="mt-2"><Boton href="/seguridad/segundo-factor" tamano="compacto" variante="secundario" info="Abre la pantalla donde registras o confirmas tu autenticador (una aplicación del teléfono que muestra un código de 6 números). No cambia nada más.">Registrar o confirmar mi autenticador</Boton></div>
       </div>
       <p className="text-xs text-texto-sutil">Telegram, correo y videollamadas no se prueban desde aquí. Si fallan, lo verás arriba como avisos fallidos.</p>
       {esAdmin && (

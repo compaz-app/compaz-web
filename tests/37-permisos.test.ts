@@ -57,7 +57,7 @@ describe('inventario de rutas del panel (prueba estática)', () => {
   test('cada ruta llama a requierePermiso con EXACTAMENTE el permiso del inventario y no usa la comprobación vieja', () => {
     for (const r of todas.filter((x) => x in ESPERADO)) {
       const src = readFileSync(join(dir, r, 'route.ts'), 'utf8')
-      const usados = [...src.matchAll(/requierePermiso\('([a-z_]+)'\)/g)].map((m) => m[1])
+      const usados = [...src.matchAll(/requierePermiso\('([a-z_]+)'(?:, \{ peligrosa: true \})?\)/g)].map((m) => m[1])
       assert.ok(usados.length > 0, `${r}: no llama a requierePermiso`)
       assert.ok(usados.every((u) => u === ESPERADO[r]), `${r}: pide ${usados.join('/')} y debería pedir ${ESPERADO[r]}`)
       assert.ok(!/getAdminUser|isAdminEmail/.test(src), `${r}: sigue usando la comprobación vieja`)

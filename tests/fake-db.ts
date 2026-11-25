@@ -66,6 +66,8 @@ export const OTPS = new Map<string, { id: string; email: string; usado: boolean;
 
 export class FakeDB {
   tables: Record<string, Row[]> = {}
+  /** El token de la sesión simulada (para las pruebas del segundo factor, que leen `aal` y `amr` de él). */
+  tokenSesion: string | null = null
   /** Inyección de fallos: { 'visitas:update': 1 } hace fallar las próximas N operaciones. */
   fail: Record<string, number> = {}
   /** Funciones de Postgres simuladas para rpc(): cada test registra las que necesita. */
@@ -76,6 +78,7 @@ export class FakeDB {
   objetos = new Map<string, { bytes: number; contentType?: string }>()
   constructor() { this.reset() }
   reset() {
+    this.tokenSesion = null
     this.tables = {}
     for (const t of Object.keys(DEFAULTS)) this.tables[t] = []
     this.fail = {}
@@ -370,7 +373,7 @@ export function makeClient(db: FakeDB, user: () => { id: string; email: string }
     },
     auth: {
       getUser: async () => ({ data: { user: user() }, error: null }),
-      getSession: async () => ({ data: { session: user() ? { user: user() } : null } }),
+      getSession: async () => ({ data: { session: user() ? { user: user(), access_token: db.tokenSesion } : null } }),
       signOut: async () => ({ error: null }),
       admin: {
         inviteUserByEmail: async (email: string, opts: any) => {

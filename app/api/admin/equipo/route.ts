@@ -21,7 +21,7 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const g = await requierePermiso('raiz')
+  const g = await requierePermiso('raiz', { peligrosa: true })
   if (!g.ok) return g.res
   const b = (await req.json().catch(() => null)) as Record<string, unknown> | null
   if (!b || typeof b.correo !== 'string' || typeof b.nombre !== 'string') return err('Faltan el correo y el nombre')
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  const g = await requierePermiso('raiz')
+  const g = await requierePermiso('raiz', { peligrosa: true })
   if (!g.ok) return g.res
   const b = (await req.json().catch(() => null)) as Record<string, unknown> | null
   if (!b || typeof b.correo !== 'string') return err('Falta el correo')
@@ -45,7 +45,7 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const g = await requierePermiso('raiz')
+  const g = await requierePermiso('raiz', { peligrosa: true })
   if (!g.ok) return g.res
   const b = (await req.json().catch(() => null)) as Record<string, unknown> | null
   if (!b || typeof b.correo !== 'string') return err('Falta el correo')

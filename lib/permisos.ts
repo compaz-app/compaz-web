@@ -11,6 +11,7 @@ import type { NextResponse } from 'next/server'
 import { isAdminEmail, usuarioVerificado } from '@/lib/auth'
 import { obtenerColaborador } from '@/lib/equipo'
 import { err, unauthorized, forbidden } from '@/lib/api'
+import { evaluarMfa, nivelSegundoFactor, exigirSegundoFactorEnPagina } from '@/lib/mfa'
 import { TODOS, normalizarPermisos, type PermisosActor, type PermisoRequerido } from '@/lib/permisos-catalogo'
 
 export * from '@/lib/permisos-catalogo'
@@ -41,7 +42,8 @@ export type Guardia = { ok: true; actor: Actor } | { ok: false; res: NextRespons
  *   const g = await requierePermiso('pagos'); if (!g.ok) return g.res
  *   const actor = g.actor
  */
-export async function requierePermiso(permiso: PermisoRequerido): Promise<Guardia> {
+/** `peligrosa`: acción que no se puede deshacer (anular un pago, borrar una cuenta, cambiar el equipo). Con el segundo factor obligatorio pide una confirmación de hace poco. */
+export async function requierePermiso(permiso: PermisoRequerido, opciones: { peligrosa?: boolean } = {}): Promise<Guardia> {
   try {
     const { data: { user } } = await usuarioVerificado()
     if (!user?.email) return { ok: false, res: unauthorized() }
@@ -50,6 +52,9 @@ export async function requierePermiso(permiso: PermisoRequerido): Promise<Guardi
     const actor = resolverActor(user.id, correo, fila)
     if (!actor) return { ok: false, res: unauthorized() }
     if (!puede(actor, permiso)) return { ok: false, res: forbidden() }
+    // Segundo factor (autenticador): con ADMIN_MFA=obligatorio, sin él no se usa ninguna ruta del panel; las peligrosas piden además una confirmación reciente.
+    const mfa = evaluarMfa(await nivelSegundoFactor(), { reciente: opciones.peligrosa === true })
+    if (!mfa.ok) return { ok: false, res: err(mfa.mensaje, 403) }
     return { ok: true, actor }
   } catch (e) {
     // Si no se puede comprobar, se niega (nunca se deja pasar por error).
@@ -58,8 +63,8 @@ export async function requierePermiso(permiso: PermisoRequerido): Promise<Guardi
   }
 }
 
-/** Para páginas del servidor: quién es esta persona, o null si no puede entrar al panel. */
-export async function actorDePagina(): Promise<Actor | null> {
+/** Quién es esta persona para el panel, SIN exigir el segundo factor (la usa la propia página de seguridad, que es donde se registra y se confirma). */
+export async function actorDeSesion(): Promise<Actor | null> {
   try {
     const { data: { user } } = await usuarioVerificado()
     if (!user?.email) return null
@@ -70,4 +75,12 @@ export async function actorDePagina(): Promise<Actor | null> {
     console.error('[permisos] no se pudo resolver el actor de la página:', e)
     return null
   }
+}
+
+/** Para páginas del servidor: quién es esta persona, o null si no puede entrar al panel. Con ADMIN_MFA=obligatorio, sin autenticador confirmado manda a la página de seguridad. */
+export async function actorDePagina(): Promise<Actor | null> {
+  const actor = await actorDeSesion()
+  // Fuera de cualquier try: redirect() lanza una excepción que no debe tragarse.
+  if (actor) await exigirSegundoFactorEnPagina('/panel')
+  return actor
 }
