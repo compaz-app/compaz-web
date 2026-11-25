@@ -49,6 +49,22 @@ export const colors = {
   naranjaOscuro: '#C84B0E',    // texto naranja con buen contraste
   naranjaClaro: '#FFF3E8',     // fondo de apoyo naranja
 
+  // CMC · Centro de Mando Compitaz (SOLO el módulo /panel?sec=confianza; referencia visual aprobada el 2026-11-17: SaaS sobrio,
+  // fondo blanco, superficies gris muy claro y morado oscuro poco saturado como acento).
+  // Prefijo «cf» (clases bg-cf-*, text-cf-*, border-cf-*): una prueba impide usarlos fuera de components/panel/confianza.
+  cfFondo: '#FFFFFF',            // fondo del módulo (blanco dominante)
+  cfLateral: '#F6F6F8',          // superficies gris muy claro (banda de indicadores, flujo, desplegable)
+  cfSuperficie: '#F9F9FB',       // superficie alternativa (hover de filas, bloques secundarios)
+  cfCabecera: '#F2F2F5',         // fondo de encabezados de tabla y de la explicación de etapa
+  cfBorde: '#E5E5EB',            // bordes y separadores discretos
+  cfMorado: '#473463',           // acento principal: botón activo, etapa seleccionada (11:1 sobre blanco)
+  cfMoradoHover: '#3A2A52',      // hover del acento principal
+  cfMoradoSecundario: '#5B4779', // morado de selección: contornos de nodos, línea recorrida (8:1 sobre blanco)
+  cfLavanda: '#EAE6F0',          // lavanda muy suave: selección, etiqueta de demostración
+  cfLavandaSuave: '#F4F1F8',     // fondos de apoyo (vista de Telegram, catálogo)
+  cfTexto: '#20202C',            // texto principal
+  cfTextoSuave: '#646475',       // texto secundario (5.6:1 sobre blanco, 5.2:1 sobre cfLateral)
+
   // Neutros
   blanco: '#FFFFFF',
   negro: '#000000',
