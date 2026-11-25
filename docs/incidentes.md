@@ -6,6 +6,35 @@ Cómo se escribe cada entrada: impacto, línea de tiempo, causa raíz, detecció
 
 ---
 
+## INC-003 · 24/25-nov-2026 · Producción dejó de actualizarse: la compilación de main falla
+
+**Impacto.** El despliegue de producción de `main@0da369e` (1.4.1-beta.1) falló el 24-nov a las 22:17 (hora de Netlify). Producción sigue publicada en `main@cf6e0f8` (1.4.0). Ninguno de los 39 cambios posteriores de main está en vivo, entre ellos el aviso de cookies (1.3.43), la medición de velocidad (1.3.40) y el cierre de tokens anónimos. No hubo caída: el sitio publicado siguió funcionando. Cualquier rama que integre main hereda el fallo (así se detectó en el PR #26).
+
+**Línea de tiempo.**
+1. 24-nov, 22:17: falla el despliegue de producción de `main@0da369e`.
+2. 25-nov, 14:29: falla el preview del PR #26 tras integrar main.
+3. 25-nov: se identifica la causa y se corrige en la rama del PR #26.
+
+**Causa raíz.** `components/panel/mas/VelocidadReal.tsx` es un componente del navegador (`'use client'`) que importaba constantes de `lib/velocidad-real.ts`. Ese módulo importa `lib/supabase-server.ts`, que usa `next/headers`, solo de servidor. Turbopack no permite ese módulo en el navegador y la compilación se detiene. `tsc` y las pruebas no lo detectan porque no compilan para el navegador.
+
+**Detección.** Por el preview fallido del PR #26. Nadie recibió aviso del fallo de producción.
+
+**Arreglo (en la rama del PR #26, 1.5.0-beta.1).**
+- Las constantes puras de las métricas pasan a `lib/velocidad-metricas.ts`, sin servidor; `lib/velocidad-real.ts` las vuelve a exportar.
+- El componente importa de ahí, y los tipos con `import type`.
+- `next build` local ya no da ese error.
+
+**Qué no se pudo comprobar.** La compilación local completa: el entorno de pruebas no descarga las fuentes de Google. La confirma el preview de Netlify.
+
+**Pendiente.**
+1. Si el PR #26 tarda en aprobarse, llevar este arreglo a main por separado para desbloquear producción.
+2. Activar en Netlify un aviso de despliegue fallido (*Deploy notifications → Deploy failed*), por correo o Telegram.
+3. HECHO: la prueba 144 falla si un archivo con `'use client'` importa, directa o indirectamente, `lib/supabase-server.ts`. Se comprobó que detecta el error original.
+
+**Qué se aprendió.** `tsc` y las pruebas en verde no garantizan que compile. Antes de fusionar a main hay que mirar el estado del preview.
+
+---
+
 ## INC-002 · 17-nov-2026 · Una lluvia de consultas desde el panel dejó sin acceso a dos conexiones
 
 **Impacto.** Dos navegadores con el panel abierto (el de Juan, Mac, y el de Luis, Windows) hicieron cerca de 35.000 consultas en una hora a `/api/admin/pendientes-bandeja` y unas 2.600 a `/api/admin/pendientes-pagos` (unas 5 por segundo cada uno). Lo normal en todo el sitio son unas 60 peticiones por hora. Después de eso, el sitio dejó de abrirse desde esas dos conexiones (la conexión se corta al empezar). Para el resto, el sitio siguió funcionando: los procesos programados respondían 200 y el despliegue estaba "ready". Los clientes no se vieron afectados hasta donde se pudo comprobar.

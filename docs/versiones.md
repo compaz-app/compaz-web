@@ -42,6 +42,7 @@ CMC fase 2A: lectura real del CMC en el panel (preparada; se activa al instalar 
     - cada etapa.
 12. **Corregido: «Requieren atención» omitía 64 registrados con la preentrevista completada.** El panel buscaba «respond» en el estado, pero el CMC escribe «Formulario completado», que es el mismo criterio que usa su cola de entrevistas. Ahora cuentan como «revisar y decidir si se preselecciona». La cifra pasa de 318 a 382, sin esperas normales ni perfiles excluidos. Los datos sintéticos usan ahora los valores reales del CMC. Prueba 120.
 13. Integración con main (1.4.1-beta.1): la rama queda al día y sin conflictos.
+14. **Producción vuelve a compilar** (INC-003 en `docs/incidentes.md`). Desde `main@0da369e` la compilación fallaba porque `VelocidadReal.tsx`, del navegador, arrastraba `lib/supabase-server.ts`. Las constantes de las métricas pasan a `lib/velocidad-metricas.ts`. La prueba 144 impide que se repita.
 
 ## 1.4.1-beta.1 (2026-11-26)
 Integración: la rama de trabajo (versiones 1.3.9 a 1.3.48, todo lo de los últimos días) se junta con `main` (1.4.0, el panel «Sistema de Confianza» de Luis). Los números de versión de las dos líneas se cruzaron (1.3.x contra 1.4.0): esta es la primera que las contiene a las dos, por eso salta a 1.4.1 y no repite. Sin cambios de código propios: solo se resolvieron los choques de archivos compartidos (versión, historial, configuración de Next, entrada del manual y la página del panel).
