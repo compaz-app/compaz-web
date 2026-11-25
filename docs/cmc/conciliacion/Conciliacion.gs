@@ -79,7 +79,7 @@ function conciliarHoja03() {
     var b = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, lista.slice().sort().join(','), Utilities.Charset.UTF_8);
     return b.map(function (x) { return ((x + 256) % 256).toString(16); }).map(function (h) { return h.length < 2 ? '0' + h : h; }).join('').slice(0, 16);
   };
-  var res = { filasConDatos: filasConDatos, cifras: {}, huellas: {}, listas: {} };
+  var res = { filasConDatos: filasConDatos, filas08: e8.length, codigos08: Object.keys(entrevistados).length, cifras: {}, huellas: {}, listas: {} };
   Object.keys(L).forEach(function (k) { res.cifras[k] = L[k].length; if (k !== 'descartadas') res.huellas[k] = huella(L[k]); });
   ['descartadas', 'pruebas', 'etapa:Sin etapa', 'etapa:En verificación', 'etapa:Habilitado', 'etapa:Descartado', 'bloqueados', 'preseleccionadosConEntrevista', 'excluidosSeleccion'].forEach(function (k) { res.listas[k] = L[k]; });
   console.log('CONCILIACION ' + JSON.stringify(res));
