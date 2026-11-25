@@ -21,6 +21,7 @@ import { registrarAcceso } from '@/lib/alertas-admin'
 import { ventanaVigente, marcarVentana } from '@/lib/cron'
 import { pestanaDeSec, esParteCuenta } from '@/lib/portal-secciones'
 import { contarNovedadesSinAbrir, marcarNovedadesAbiertas, listarAvisosPortal, type AvisoPortal } from '@/lib/novedades'
+import AjusteMovil from '@/components/portal/AjusteMovil'
 import CampanaAvisos from '@/components/portal/CampanaAvisos'
 import { marcarReporteVisto } from '@/lib/reporte-visto'
 import { contarMensajesSinLeer, marcarChatLeido } from '@/lib/portal-mensajes'
@@ -62,18 +63,18 @@ export default async function PortalPage({ searchParams }: { searchParams: Promi
   }
   const datos = pestana === 'inicio' ? null : await cargarDatosPortal(uid)
   return (
-    <main className="mx-auto max-w-xl space-y-5 px-4 pb-24 pt-4 lg:max-w-2xl lg:pb-12">
+    <main className="mx-auto max-w-xl space-y-5 px-4 pb-[calc(5rem+env(safe-area-inset-bottom))] pt-4 lg:max-w-2xl lg:pb-12">
       {esAdmin && <Aviso tono="advertencia">Vista previa del portal nuevo de {portal.nombre || 'este cliente'}. Los botones de acción no se ejecutan en la vista previa.</Aviso>}
       <header className="flex items-center justify-between">
         <span className="text-lg font-extrabold text-morado-medio">Compaz</span>
         <span className="flex items-center gap-1 text-base text-morado-claro">Hola, {portal.nombre.split(' ')[0] || 'bienvenido'}{!esAdmin && <CampanaAvisos avisos={avisos} nuevos={avisosNuevos} />}</span>
       </header>
       <NavPortal actual={pestana} preview={esAdmin ? preview : null} insignias={{ visitas: mensajesNuevos }} />
-      {pestana !== 'inicio' && <TarjetaEstado tarjeta={tarjetaParaPestana(portal.tarjeta, pestana)} compita={null} visitaId={portal.estado.visitaId} estado={portal.estado.codigo} vistaPrevia={esAdmin} />}
+      {pestana !== 'inicio' && <TarjetaEstado tarjeta={tarjetaParaPestana(portal.tarjeta, pestana)} compita={null} visitaId={portal.estado.visitaId} solicitudId={portal.estado.solicitudId} estado={portal.estado.codigo} vistaPrevia={esAdmin} />}
       {pestana === 'inicio' && (
         <>
           <Pasos pasos={portal.pasos} actual={portal.estado.paso} />
-          <TarjetaEstado tarjeta={tarjetaParaPestana(portal.tarjeta, 'inicio')} compita={portal.compita} visitaId={portal.estado.visitaId} estado={portal.estado.codigo} vistaPrevia={esAdmin} />
+          <TarjetaEstado tarjeta={tarjetaParaPestana(portal.tarjeta, 'inicio')} compita={portal.compita} visitaId={portal.estado.visitaId} solicitudId={portal.estado.solicitudId} estado={portal.estado.codigo} vistaPrevia={esAdmin} />
           <details className="group rounded-2xl border border-borde bg-blanco px-4 py-1">
             <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between text-base font-extrabold text-morado-claro [&::-webkit-details-marker]:hidden">Pronto en Compaz<span aria-hidden className="text-morado-sutil group-open:rotate-90">▸</span></summary>
             <div className="pb-3"><TarjetasProximamente grande={false} ids={['voluntariado', 'mascotas']} /></div>
@@ -84,6 +85,7 @@ export default async function PortalPage({ searchParams }: { searchParams: Promi
       {datos && pestana === 'cuenta' && <SeccionCuenta d={datos} vistaPrevia={esAdmin} pedida={esParteCuenta(sec) ? sec : null} />}
       {!esAdmin && <VisitaWatcher usuarioId={uid} visitaActivaId={portal.estado.visitaId ?? null} compitaNombre={portal.compita ?? undefined} />}
       {!esAdmin && <UnaSolaPestana />}
+      <AjusteMovil />
       {!esAdmin && <NovedadesEnVivo usuarioId={uid} />}
       {!esAdmin && <AutoRefresh intervaloSeg={15} rapido={refrescoRapido(portal.estado)} reposoSeg={90} />}
     </main>

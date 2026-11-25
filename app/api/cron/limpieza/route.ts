@@ -47,6 +47,8 @@ export async function POST(req: NextRequest) {
     const { error } = await q
     if (error) { console.error(`[limpieza] ${nombre}:`, error.message); fallos.push(nombre) }
   }
+  // Mediciones de velocidad de más de 30 días. Aparte y sin contar como fallo: si la tabla aún no existe (migración sin aplicar) la limpieza no debe dar la alarma.
+  await admin.from('web_vitals').delete().lt('creado_en', new Date(Date.now() - 30 * 86_400_000).toISOString()).then(() => undefined, () => undefined)
   // Fotos privadas cuyo plazo venció: se borran de verdad (archivo y marca) y queda un evento.
   const fotos = await borrarFotosVencidas()
   if (fotos.fallos > 0) fallos.push('fotos privadas')

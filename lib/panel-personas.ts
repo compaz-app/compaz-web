@@ -7,6 +7,7 @@ import { estadoCmc } from '@/lib/cmc-estado'
 import type { Compita } from '@/types'
 import { puede } from '@/lib/permisos'
 import { esCuentaEliminada } from '@/lib/cuenta-eliminar'
+import { perfilCompleto } from '@/lib/compita-perfil'
 import { recortarTexto } from '@/lib/panel-datos'
 import { registrarAcceso } from '@/lib/alertas-admin'
 import { compitasEnPausa, resumenCancelacionesCompita } from '@/lib/cancelaciones'
@@ -29,7 +30,7 @@ export async function listarCompitas(ahora: Date = new Date()): Promise<FilaComp
   const db = createAdminSupabase()
   const desde = new Date(ahora.getTime() - 30 * DIA).toISOString()
   const [compitas, clientes, visitas, solicitudes, cancelaciones] = await Promise.all([
-    db.from('compitas').select('id, nombre, apellido, zona, estado, verificado, rating_promedio, es_demo').order('nombre', { ascending: true }).limit(LIMITE),
+    db.from('compitas').select('id, nombre, apellido, zona, estado, verificado, rating_promedio, es_demo, descripcion, servicios, horarios_disponibles, telegram_chat_id').order('nombre', { ascending: true }).limit(LIMITE),
     db.from('usuarios').select('compita_id').not('compita_id', 'is', null).limit(LIMITE),
     db.from('visitas').select('compita_id, created_at, inicio, fin').gte('created_at', desde).limit(LIMITE),
     db.from('solicitudes').select('compita_id, respondido_at, created_at').gte('created_at', desde).limit(LIMITE),
@@ -54,9 +55,13 @@ export async function listarCompitas(ahora: Date = new Date()): Promise<FilaComp
     const activos = mClientes.get(id)?.length ?? 0
     const sol = mSol.get(id) ?? [], vis = mVisitas.get(id) ?? [], canc = mCanc.get(id) ?? []
     const ultimos = [...sol.map((s) => s.respondido_at), ...vis.map((v) => v.fin ?? v.inicio)].filter((x): x is string => !!x).sort()
-    const estado: EstadoCompita = c.estado === 'inactivo' || pausaCanc.has(id) || pausaContacto.has(id) ? 'En pausa' : !c.verificado ? 'Nuevo' : activos > 0 ? 'Con cupo' : 'Disponible'
+    // Un compita NUEVO (sin verificar) cuenta en el sistema solo con el perfil lleno Y Telegram activo; antes es «Pendiente». Los ya verificados no cambian.
+    const sinPerfil = !perfilCompleto({ descripcion: c.descripcion, servicios: c.servicios, horarios_disponibles: c.horarios_disponibles }), sinTelegram = !c.telegram_chat_id
+    const falta: FilaCompita['falta'] = sinPerfil && sinTelegram ? 'perfil y Telegram' : sinPerfil ? 'perfil' : sinTelegram ? 'Telegram' : undefined
+    const pendiente = !c.verificado && c.estado !== 'bloqueado' && !!falta
+    const estado: EstadoCompita = pendiente ? 'Pendiente' : pausaCanc.has(id) || pausaContacto.has(id) || (c.estado === 'inactivo' && c.verificado) ? 'En pausa' : !c.verificado ? 'Nuevo' : activos > 0 ? 'Con cupo' : 'Disponible'
     return {
-      id, nombre: [c.nombre, c.apellido].filter(Boolean).join(' '), zona: String(c.zona ?? ''), estado, activos,
+      id, nombre: [c.nombre, c.apellido].filter(Boolean).join(' '), zona: String(c.zona ?? ''), estado, ...(pendiente ? { falta } : {}), activos,
       visitas: vis.length, rating: Number(c.rating_promedio ?? 0),
       respuesta: sol.length ? Math.round((sol.filter((s) => s.respondido_at).length / sol.length) * 100) : null,
       inactivoH: horasDesde(ultimos.at(-1), t), canc: canc.length, tardias: canc.filter((x) => x.tardia && !x.justificada).length,
@@ -67,12 +72,13 @@ export async function listarCompitas(ahora: Date = new Date()): Promise<FilaComp
 export async function listarClientes(): Promise<FilaCliente[]> {
   const db = createAdminSupabase()
   const [u, c] = await Promise.all([
-    db.from('usuarios').select('id, nombre, zona, plan, plan_contratado, compita_id, created_at, eliminada_en').order('created_at', { ascending: false }).limit(LIMITE),
+    db.from('usuarios').select('id, nombre, zona, plan, plan_contratado, compita_id, created_at, eliminada_en, activado').order('created_at', { ascending: false }).limit(LIMITE),
     db.from('compitas').select('id, nombre, apellido').limit(LIMITE),
   ])
   if (u.error || c.error) throw new Error(`No se pudo leer los clientes: ${u.error?.message ?? c.error?.message}`)
   const nombres = new Map((c.data ?? []).map((x) => [String(x.id), [x.nombre, x.apellido].filter(Boolean).join(' ')]))
-  return (u.data ?? []).filter((x) => !x.eliminada_en).map((x): FilaCliente => ({
+  // Un invitado que todavía no abrió el correo (activado = false) no cuenta como cliente: se ve en Más, Invitar.
+  return (u.data ?? []).filter((x) => !x.eliminada_en && x.activado !== false).map((x): FilaCliente => ({
     id: String(x.id), nombre: String(x.nombre ?? ''), zona: String(x.zona ?? ''), compita: x.compita_id ? nombres.get(String(x.compita_id)) ?? null : null,
     plan: x.plan_contratado ?? null, alta: String(x.created_at), bloqueado: x.plan === 'bloqueado',
   }))

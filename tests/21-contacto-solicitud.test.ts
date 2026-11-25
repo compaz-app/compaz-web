@@ -76,24 +76,3 @@ describe('reportarContactoEnTexto', () => {
   })
 })
 
-describe('Horarios sugeridos por el compita (Telegram): contactos en el texto', () => {
-  test('el teléfono del compita se censura antes de llegar al cliente y se alerta al equipo', async () => {
-    const compita = mkCompita({ telegram_chat_id: '720', nombre: 'Lucía Pérez' })
-    const cli = mkCliente({ email: 'cli@mail.test', nombre: 'Carlos' })
-    const sol = mkSolicitud(cli, compita, { estado: 'rechazada' })
-    db.seed('telegram_estados', { chat_id: '720', pendiente_accion: `sugerir_horarios:${sol.id}:cli@mail.test:Carlos`, pendiente_expira: new Date(Date.now() + 20 * 3600_000).toISOString() })
-
-    await webhook(tgText(720, 'Puedo el viernes por la tarde. Escríbeme al 0414 1234567'))
-
-    const guardada = db.rows('solicitudes').find((x) => x.id === sol.id)!
-    assert.ok(!/1234567/.test(guardada.mensaje_compita_reagendar), 'el texto guardado no tiene el teléfono')
-    assert.match(guardada.mensaje_compita_reagendar, /Puedo el viernes/, 'el resto se conserva')
-    const correos = emailsA('cli@mail.test')
-    assert.equal(correos.length, 1, 'el cliente recibe su correo')
-    assert.ok(!/1234567/.test(correos[0].html), 'el correo al cliente no lleva el teléfono')
-    const flag = db.rows('admin_flags')[0]
-    assert.equal(flag.entidad_tipo, 'compita')
-    assert.ok(avisosAdmin().some((m) => /Contacto externo/.test(m.text)), 'el admin recibe la alerta')
-  })
-})
-

@@ -11,7 +11,7 @@ beforeEach(limpiar)
 const AHORA = new Date('2026-11-10T15:00:00.000Z') // 11:00 am en Caracas
 const min = (n: number) => new Date(AHORA.getTime() + n * 60_000).toISOString()
 const foto = (o: Partial<FotoCliente> = {}): FotoCliente => ({ ahora: AHORA, pausada: false, fichaCompleta: true, zonaHoraria: null, nombre: 'Carolina Rojas', compitaAsignado: null, solicitudes: [], pagoPendiente: null, cupo: null, visitas: [], cancelaciones: [], ...o })
-const sol = (o: Partial<SolicitudFoto> = {}): SolicitudFoto => ({ id: 's1', estado: 'pendiente', tipo: 'entrevista', compitaId: 'c1', compitaNombre: 'María Pérez Gómez', slotConfirmado: null, slotsPropuestos: 0, seguimientoEnviado: false, tokenRespuesta: true, clienteDijoNo: false, motivoRegistrado: false, avisoEntregado: false, reserva: null, creadaEn: min(-120), ...o })
+const sol = (o: Partial<SolicitudFoto> = {}): SolicitudFoto => ({ id: 's1', estado: 'pendiente', tipo: 'entrevista', compitaId: 'c1', compitaNombre: 'María Pérez Gómez', slotConfirmado: null, slotsPropuestos: 0, seguimientoEnviado: false, tokenRespuesta: true, llamadaPorConfirmar: false, clienteDijoNo: false, motivoRegistrado: false, avisoEntregado: false, reserva: null, creadaEn: min(-120), ...o })
 const vis = (o: Partial<VisitaFoto> = {}): VisitaFoto => ({ id: 'v1', estado: 'programada', compitaNombre: 'María Pérez Gómez', fechaProgramada: '2026-11-12', horaInicio: '10:00', llegadaEn: null, sinAccesoEn: null, fin: null, creadaEn: min(-5000), ...o })
 const COMPITA = { id: 'c1', nombre: 'María Pérez Gómez' }
 const codigo = (f: FotoCliente) => decidirEstado(f).codigo
@@ -29,6 +29,7 @@ const CASOS: Record<CodigoEstado, FotoCliente> = {
   horario_rechazado: foto({ solicitudes: [sol({ estado: 'aceptada', reserva: 'rechazada' })] }),
   entrevista_programada: foto({ solicitudes: [sol({ estado: 'aceptada', slotConfirmado: min(24 * 60) })] }),
   entrevista_ahora: foto({ solicitudes: [sol({ estado: 'aceptada', slotConfirmado: min(30) })] }),
+  confirmar_llamada: foto({ solicitudes: [sol({ estado: 'aceptada', slotConfirmado: min(-40), llamadaPorConfirmar: true })] }),
   decidir: foto({ solicitudes: [sol({ estado: 'aceptada', slotConfirmado: min(-40) })] }),
   motivo_no: foto({ solicitudes: [sol({ estado: 'rechazada', clienteDijoNo: true })] }),
   directa_aceptada: foto({ solicitudes: [sol({ estado: 'aceptada', tipo: 'directa' })] }),
@@ -36,16 +37,19 @@ const CASOS: Record<CodigoEstado, FotoCliente> = {
   pago_revision: foto({ pagoPendiente: { id: 'p1', insistido: true }, fichaCompleta: false }),
   ficha_lista_espera: foto({ pagoPendiente: { id: 'p1', insistido: true } }),
   ficha: foto({ compitaAsignado: COMPITA, fichaCompleta: false, visitas: [vis({ estado: 'pre_visita', fechaProgramada: null })] }),
+  visita_reagendada_compita: foto({ visitas: [vis({ estado: 'pre_visita', fechaProgramada: null, horaInicio: null })], cancelaciones: [{ visitaId: 'v1', por: 'compita', justificadaPor: null, creadaEn: min(-30) }] }),
   agendar_visita: foto({ compitaAsignado: COMPITA, visitas: [vis({ estado: 'pre_visita', fechaProgramada: null })] }),
   cita_pendiente: foto({ compitaAsignado: COMPITA, visitas: [vis({ estado: 'pre_visita', fechaProgramada: null, citaPropuesta: { fecha: '2026-11-12', inicio: '10:00' } })] }),
   visita_programada: foto({ compitaAsignado: COMPITA, visitas: [vis()] }),
   compita_llego: foto({ visitas: [vis({ estado: 'confirmando_inicio', llegadaEn: min(-2) })] }),
   nadie_abre: foto({ visitas: [vis({ llegadaEn: min(-10), sinAccesoEn: min(-9) })] }),
+  compita_llamando: foto({ visitas: [vis({ estado: 'en_curso', llamadaEn: min(-3), salaLlamada: 'cmp-abc1234' })] }),
   visita_en_curso: foto({ visitas: [vis({ estado: 'en_curso' })] }),
   visita_interrumpida: foto({ cancelaciones: [{ visitaId: 'v1', por: 'compita', justificadaPor: 'sistema: salida por seguridad', creadaEn: min(-60) }] }),
   visita_cancelada_equipo: foto({ cancelaciones: [{ visitaId: 'v1', por: 'compita', justificadaPor: 'admin: equipo@compaz.com', creadaEn: min(-60) }] }),
   visita_terminada: foto({ compitaAsignado: COMPITA, visitas: [vis({ estado: 'terminada', fin: min(-90) })] }),
   agendar_otra: foto({ compitaAsignado: COMPITA, cupo: { restantes: 2 } }),
+  sin_plan: foto({ compitaAsignado: COMPITA, cupo: null }),
   plan_agotado: foto({ compitaAsignado: COMPITA, cupo: { restantes: 0 } }),
   cuenta_pausada: foto({ pausada: true }),
 }
@@ -124,7 +128,7 @@ describe('cada estado tiene su tarjeta completa', () => {
     for (const c of CODIGOS_ESTADO) { const t = tarjetaDelEstado(ctx(c)); const tiene = !!(t.principal || t.secundario); assert.equal(tiene, !SIN_BOTON_A_PROPOSITO.includes(c), `${c}: ${tiene ? 'tiene' : 'no tiene'} botón`) }
   })
   test('los destinos son rutas internas o acciones conocidas (nunca un enlace externo ni vacío)', () => {
-    for (const c of CODIGOS_ESTADO) { const t = tarjetaDelEstado(ctx(c)); for (const b of [t.principal, t.secundario].filter(Boolean)) { const d = b!.destino; if ('ruta' in d) assert.match(d.ruta, /^\/[a-z]/, c); else assert.ok(['avisar_pago', 'confirmar_inicio', 'avisar_abrieron', 'avisar_equipo'].includes(d.accion), c) } }
+    for (const c of CODIGOS_ESTADO) { const t = tarjetaDelEstado(ctx(c)); for (const b of [t.principal, t.secundario].filter(Boolean)) { const d = b!.destino; if ('ruta' in d) assert.match(d.ruta, /^\/[a-z]/, c); else assert.ok(['avisar_pago', 'confirmar_inicio', 'avisar_abrieron', 'avisar_equipo', 'confirmar_llamada'].includes(d.accion), c) } }
   })
   test('PRIVACIDAD: antes de pagar solo "María P."; con el pago, el nombre', () => {
     const antes = tarjetaDelEstado(ctx('solicitud_recibida')); assert.match(antes.titulo, /María P\./); assert.doesNotMatch(antes.titulo + antes.texto, /Pérez|Gómez/)

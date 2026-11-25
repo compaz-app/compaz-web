@@ -86,7 +86,7 @@ describe('el compita recibe la dirección 3 horas antes', () => {
     assert.ok(m, 'recibió la dirección')
     assert.match(m.text, /Av\. Francisco de Miranda/); assert.match(m.text, /conserjería/); assert.match(m.text, /Rosa, la vecina/); assert.match(m.text, /Rosa Linares/)
     assert.ok(!m.text.includes('555') && !m.text.includes('+58'), 'el teléfono del contacto NUNCA llega al compita')
-    assert.match(m.text, /nunca por el chat/); assert.match(m.text, /Compaz nunca te pedirá/, 'lleva la advertencia antifraude')
+    assert.match(m.text, /nunca por el chat/); assert.match(m.text, /Compaz nunca te pide/, 'lleva la advertencia antifraude')
     assert.match(m.text, /Quién más estará/)
     assert.deepEqual((m.markup?.inline_keyboard ?? []).flat().map((b: any) => b.callback_data), [`camino:${db.rows('visitas')[0].id}`, 'duda'])
     assert.ok(db.rows('eventos').some((e) => e.tipo === 'direccion_entregada'))
@@ -146,10 +146,11 @@ describe('si el cliente no registró la dirección', () => {
 })
 
 describe('"Voy en camino"', () => {
-  test('avisa al cliente por correo una sola vez y deja el evento', async () => {
+  test('avisa al cliente en su portal (sin correo) una sola vez y deja el evento', async () => {
     const { cliente, visita } = mundo(2); await guardar(cliente, buena())
     await webhook(tgBtn(CHAT, `camino:${visita.id}`)); await webhook(tgBtn(CHAT, `camino:${visita.id}`))
-    assert.equal(emailsA('caro@mail.test').filter((e) => /va en camino/.test(e.subject)).length, 1)
+    assert.equal(emailsA('caro@mail.test').filter((e) => /va en camino/.test(e.subject)).length, 0, 'ya no hay correo: lo muestra el portal')
+    assert.equal(db.rows('novedades_cliente').filter((n) => n.tipo === 'compita_en_camino').length, 1)
     assert.ok(db.rows('eventos').some((e) => e.tipo === 'compita_en_camino'))
     assert.match(tgPara(CHAT).at(-1)!.text, /vas en camino/)
   })

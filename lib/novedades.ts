@@ -96,3 +96,23 @@ export async function listarAvisosPortal(usuarioId: string, limite = 10, admin: 
       .map((n) => ({ id: n.id, titulo: n.titulo, ruta: n.ruta?.startsWith('/') ? n.ruta : '/portal', creada_en: n.creada_en, nueva: !n.actuada_en }))
   } catch { return [] }
 }
+
+/**
+ * La pregunta de una solicitud («¿pudiste hablar?», «¿qué decidiste?») ya se contestó, en el canal que sea (correo, portal o Telegram): sus novedades quedan vistas, así
+ * el portal deja de mostrarla y ningún correo diferido la repite. NUNCA lanza.
+ */
+export async function cerrarPreguntasDeSolicitud(solicitudId: string, admin: Admin = createAdminSupabase()): Promise<void> {
+  try {
+    const { data } = await admin.from('novedades_cliente').update({ vista_en: new Date().toISOString() }).eq('entidad', 'solicitud').eq('entidad_id', solicitudId)
+      .in('tipo', ['seguimiento_llamada', 'seguimiento_decision', 'llamada_terminada_cliente']).is('vista_en', null).select('clave_unica')
+    for (const n of (data ?? []) as { clave_unica: string }[]) {
+      // el correo diferido que esperaba esa novedad ya no hace falta
+      await admin.from('avisos').update({ estado: 'cancelado', error: 'ya contestó' }).eq('clave_unica', n.clave_unica.replace(/^novedad:/, '')).eq('estado', 'pendiente')
+    }
+  } catch (e) { console.error('[novedades] cerrar preguntas:', e) }
+}
+
+/** Avisos que antes solo existían como correo o como tarjeta del portal: ahora también suenan en la campana. NUNCA lanza (como el resto de las novedades). */
+export async function novedadInformativa(p: { usuarioId: string; tipo: string; titulo: string; entidad?: NovedadNueva['entidad']; entidadId?: string; clave: string; nivel?: NovedadNueva['nivel'] }, admin: Admin = createAdminSupabase()): Promise<void> {
+  await registrarNovedad({ usuarioId: p.usuarioId, tipo: p.tipo, nivel: p.nivel ?? 'informativo', titulo: p.titulo, ruta: '/portal', entidad: p.entidad, entidadId: p.entidadId, clave: p.clave }, admin)
+}

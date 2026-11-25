@@ -5,7 +5,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { ratingValido, tokenFeedback } from '@/lib/links'
 import { SITE_URL } from '@/lib/email'
-import { pagina, puertaConfirmacion } from '@/lib/confirm'
+import { pagina as paginaSola, paginaPara, puertaConfirmacion } from '@/lib/confirm'
+// Esta ruta la ve siempre el cliente: sus páginas de éxito vuelven a donde él trabaja (ver botonDe).
+const pagina = (titulo: string, texto: string, status = 200, boton?: { texto: string; href: string }) => (boton ? paginaSola(titulo, texto, status, boton) : paginaPara('cliente', titulo, texto, status))
 
 function leer(req: NextRequest) {
   const sp = req.nextUrl.searchParams
@@ -19,6 +21,9 @@ function leer(req: NextRequest) {
 export async function GET(req: NextRequest) {
   const p = leer(req)
   if (!p) return pagina('Enlace inválido', 'Este enlace no es válido o ya expiró.', 400)
+  // Ya calificó: no se le vuelve a ofrecer calificar (antes la página de confirmación aparecía igual y recién al enviar decía «ya calificaste»).
+  const { data: v } = await createAdminSupabase().from('visitas').select('rating_cliente').eq('id', p.visita_id).maybeSingle()
+  if (v?.rating_cliente) return pagina('Ya calificaste', 'Ya registramos tu calificación para esta visita. ¡Gracias!')
   return puertaConfirmacion(req, `${'⭐'.repeat(p.valor)} Confirmar calificación`, `Vas a calificar la visita con ${p.valor} de 5 estrellas.`, 'Enviar calificación')
 }
 

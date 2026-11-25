@@ -1,0 +1,77 @@
+/* eslint-disable */
+// Cuando el compita llama durante la visita, el portal lo muestra al cargar («te está llamando» + botón), no solo con el timbre en vivo: el cliente que entra desde el correo la ve.
+import { db, limpiar, mkCompita, mkCliente, mkVisita, mkSolicitud, req } from './harness'
+import { beforeEach, test, describe } from 'node:test'
+import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { estadoDelCliente } from '@/lib/estado-cliente'
+import { tarjetaDelEstado } from '@/lib/portal-estados'
+
+beforeEach(limpiar)
+const hace = (min: number) => new Date(Date.now() - min * 60_000).toISOString()
+
+describe('llamada del compita durante la visita', () => {
+  const armar = (o: Record<string, any>) => { const cli = mkCliente({ email: 'caro@mail.test' }); const cmp = mkCompita(); mkVisita(cli, cmp, { estado: 'en_curso', ...o }); return cli }
+
+  test('con la llamada reciente y la sala abierta, el portal ofrece contestarla', async () => {
+    const cli = armar({ llamada_solicitada_at: hace(2), room_url: 'https://compaz.daily.co/cmp-abc12345' })
+    const e = await estadoDelCliente(cli.id)
+    assert.equal(e.codigo, 'compita_llamando')
+    const t = tarjetaDelEstado({ estado: e, pagado: true } as any)
+    assert.equal((t.principal!.destino as any).ruta, '/llamada/cmp-abc12345')
+  })
+  test('pasados 15 minutos, o si ya colgaron (sin sala), vuelve a la visita en curso', async () => {
+    assert.equal((await estadoDelCliente(armar({ llamada_solicitada_at: hace(20), room_url: 'https://compaz.daily.co/cmp-abc12345' }).id)).codigo, 'visita_en_curso')
+    limpiar()
+    assert.equal((await estadoDelCliente(armar({ llamada_solicitada_at: hace(2), room_url: null }).id)).codigo, 'visita_en_curso')
+  })
+  test('el aviso en vivo también refresca el portal', () => {
+    assert.match(readFileSync('components/ui/VisitaWatcher.tsx', 'utf8'), /sonarTimbre\(\)\s*\n\s*router\.refresh\(\)/)
+  })
+})
+
+// ── El compita retoma la llamada de la entrevista: el portal vuelve a ofrecer entrar ─────────────────────────────────────────────────────────────────────────
+import { POST as reconectar } from '@/app/api/solicitud/reconectar-llamada/route'
+import { qRol } from '@/lib/links'
+
+describe('llamada de la entrevista retomada', () => {
+  const armar = () => {
+    const cmp = mkCompita({ telegram_chat_id: '800', nombre: 'Lucía Pérez' }); const cli = mkCliente({ email: 'cli@mail.test' })
+    const sol = mkSolicitud(cli, cmp, { estado: 'aceptada', slot_confirmado: hace(30), token_respuesta: 'tok-r', room_url: 'https://compaz.daily.co/ent-x-1', seguimiento_enviado: true })
+    return { cli, sol }
+  }
+  const retomar = (quien: 'compita' | 'cliente') => reconectar(req(`/api/solicitud/reconectar-llamada?token=tok-r&${qRol('tok-r', quien)}`, { method: 'POST' }))
+
+  test('el compita retoma: el cliente tiene su aviso (campana) y el portal vuelve a «Entrar a la entrevista»', async () => {
+    const { cli } = armar()
+    assert.equal((await retomar('compita')).status, 200)
+    assert.ok(db.rows('novedades_cliente').some((n) => n.usuario_id === cli.id && n.tipo === 'llamada_retomada'))
+    assert.equal((await estadoDelCliente(cli.id)).codigo, 'entrevista_ahora')
+    assert.equal((await estadoDelCliente(cli.id)).sala, 'tok-r')
+  })
+  test('cuando el cliente es quien retoma, no se le avisa a sí mismo', async () => {
+    const { cli } = armar()
+    assert.equal((await retomar('cliente')).status, 200)
+    assert.ok(!db.rows('novedades_cliente').some((n) => n.tipo === 'llamada_retomada' && n.usuario_id === cli.id))
+  })
+  test('pasada la sala (más de 40 minutos), el portal sigue con lo que toca', async () => {
+    const { cli } = armar()
+    await retomar('compita')
+    db.rows('telegram_estados').find((r) => r.chat_id.startsWith('recon:'))!.updated_at = hace(45)
+    assert.notEqual((await estadoDelCliente(cli.id)).codigo, 'entrevista_ahora')
+  })
+})
+
+// ── La hora de la entrevista confirmada también suena en la campana ──────────────────────────────────────────────────────────────────────────────────────
+import { novedadEntrevistaConfirmada } from '@/lib/entrevista-confirmada'
+
+describe('entrevista confirmada en la campana', () => {
+  test('una novedad por hora: si la hora cambia, vuelve a sonar; con la misma, no se repite', async () => {
+    const cli = mkCliente(); const sol = { id: crypto.randomUUID(), cliente_id: cli.id, slot_confirmado: '2026-12-01T15:00:00.000Z' }
+    await novedadEntrevistaConfirmada(sol, 'Lucía Pérez'); await novedadEntrevistaConfirmada(sol, 'Lucía Pérez')
+    assert.equal(db.rows('novedades_cliente').filter((n) => n.tipo === 'entrevista_confirmada').length, 1)
+    await novedadEntrevistaConfirmada({ ...sol, slot_confirmado: '2026-12-02T15:00:00.000Z' }, 'Lucía Pérez')
+    assert.equal(db.rows('novedades_cliente').filter((n) => n.tipo === 'entrevista_confirmada').length, 2)
+    assert.match(db.rows('novedades_cliente')[0].titulo, /Lucía.*confirmada/)
+  })
+})

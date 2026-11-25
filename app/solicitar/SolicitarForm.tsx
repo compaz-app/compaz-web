@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { colors, fonts, spacing, radius } from '@/lib/design'
 import { detectarContacto } from '@/lib/detectar-contacto'
 import { QUE_OPCIONES, TIPOS_PERSONA, DURACIONES_MANDADO_MIN, MAX_NOTA } from '@/lib/validar-solicitud'
+import { reducirFoto } from '@/lib/reducir-foto'
 
 type Modo = 'entrevista' | 'directa' | 'mandado'
 const MODOS: { id: Modo; titulo: string; detalle: (c: string, precio: number) => string }[] = [
@@ -63,14 +64,7 @@ export default function SolicitarForm({ compitaId, compitaNombre, precioMandado,
     if (!archivo) return
     setSubiendoFoto(true); setErrorFoto('')
     try {
-      const img = await createImageBitmap(archivo)
-      const escala = Math.min(1, 1000 / Math.max(img.width, img.height))
-      const lienzo = document.createElement('canvas')
-      lienzo.width = Math.round(img.width * escala); lienzo.height = Math.round(img.height * escala)
-      lienzo.getContext('2d')!.drawImage(img, 0, 0, lienzo.width, lienzo.height)
-      const blob: Blob | null = await new Promise((r) => lienzo.toBlob(r, 'image/jpeg', 0.82))
-      if (!blob) throw new Error('sin imagen')
-      const datos = new FormData(); datos.append('foto', blob, 'foto.jpg')
+      const datos = new FormData(); datos.append('foto', await reducirFoto(archivo, { maxLado: 1000 }))
       const r = await fetch('/api/usuario/foto', { method: 'POST', body: datos })
       const d = await r.json().catch(() => ({}))
       if (!r.ok || !d.ok) { setErrorFoto(d.error ?? 'No pudimos guardar tu foto. Intenta de nuevo.'); return }

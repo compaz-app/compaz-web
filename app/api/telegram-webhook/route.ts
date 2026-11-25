@@ -21,13 +21,16 @@ import {
   makeInlineKeyboard,
 } from '@/lib/telegram'
 import { generarTokenPerfil } from '@/lib/compita-tokens'
+import { registrarRespuestaLlamada } from '@/lib/confirmacion-llamada'
 import { getOrCreateDailyRoom } from '@/lib/daily'
 import { enlaceDeLlamada } from '@/lib/llamada-acceso'
 import { minutosLlamadaVisita } from '@/lib/llamada'
+import { anotarEventoChat } from '@/lib/chat-eventos'
+import { debeCorreoDeMensaje } from '@/lib/portal-mensajes'
 import { sendVisitaInicio, generarResumenIA, sendCodigoTelegram, sendCompletarPerfilCompita } from '@/lib/resend'
 import { perfilCompleto, PERFIL_MINIMO } from '@/lib/compita-perfil'
 import { responderSolicitud, getSolicitudPorToken, getSolicitudPorId, aceptarSolicitudDirecta } from '@/lib/solicitudes'
-import { confirmarReserva, rechazarReserva } from '@/lib/agenda'
+import { confirmarReserva, rechazarReserva, horasLibres } from '@/lib/agenda'
 import { registrarCancelacion, alertarCancelacionesCompita, horasDeAviso } from '@/lib/cancelaciones'
 import { getAjustes } from '@/lib/ajustes'
 import { responderCambioLugar } from '@/lib/lugar'
@@ -41,6 +44,8 @@ import { confirmarCita, rechazarCita } from '@/lib/citas'
 import { clientesReportables, reportarCliente, esMotivoReporte, MOTIVOS_REPORTE, MOTIVOS_DE_RIESGO, CUANDO, type MotivoReporte, type Cuando } from '@/lib/bloqueos-compita'
 import { llegadaConFotoObligatoria, registrarLlegada, declararNadieAbre, cerrarSinAcceso, tecladoLlegada } from '@/lib/llegada'
 import { notificar } from '@/lib/avisos'
+import { registrarNovedad } from '@/lib/novedades'
+import { AVISO_FRAUDE, AVISO_FUERA } from '@/lib/avisos-seguridad'
 import { confirmarPagoYAvisar } from '@/lib/confirmar-pago'
 import { anunciarEntrevistaConfirmada } from '@/lib/entrevista-confirmada'
 import { registrarMotivo, MOTIVOS } from '@/lib/motivos'
@@ -53,19 +58,15 @@ import { randomInt } from 'crypto'
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? ''
 
-const GUIA_COMPITA = `📋 <b>Guía rápida Compaz</b>
+const GUIA_COMPITA = `📋 <b>Cómo funciona</b>
 
-<b>▶️ Al llegar</b> — Toca <b>Iniciar visita</b>. La familia sabe que llegaste.
-<b>📸 Durante la visita</b> — Manda fotos o mensajes. La familia los ve en tiempo real.
-<b>🔴 Al irte</b> — Toca <b>Terminar visita</b>. La familia recibe el resumen automáticamente.
-<b>🚨 Emergencia</b> — Toca ese botón y te contactamos de inmediato. Para peligro inmediato llama al 911.
-<b>/perfil</b> — Edita tu foto, descripción y horarios.
+▶️ <b>Al llegar:</b> toca Iniciar visita.
+📸 <b>Durante:</b> manda fotos o mensajes; la familia los ve.
+🔴 <b>Al irte:</b> toca Terminar visita.
+🚨 <b>Emergencia:</b> toca el botón. Peligro inmediato: llama al 911.
+✏️ /perfil para editar tu perfil. Dudas: hola@micompaz.com
 
-¿Dudas? Escríbenos a <b>hola@micompaz.com</b>
-
-━━━━━━━━━━━━━━━━━━━
-
-🔒 <b>Aviso de seguridad:</b> Compaz nunca te pedirá contraseñas, datos bancarios, números de cédula ni información privada por este chat ni por ningún otro medio. Si alguien te los solicita diciendo ser de Compaz, no respondas y avísanos de inmediato a hola@micompaz.com.`
+🔒 ${AVISO_FRAUDE} ${AVISO_FUERA}`
 
 const PREGUNTAS_REPORTE = [
   { emoji: '😊', label: 'Ánimo', texto: '¿Cómo estaba el <b>ánimo</b> de la persona durante la visita?' },
@@ -363,8 +364,8 @@ async function iniciarVerificacion(
 
   // Sin perfil público lleno no hay Telegram: las familias eligen por ese perfil. No se da el código; se manda por CORREO (nunca por aquí: cualquiera puede escribir
   // un nombre en el bot) el enlace para llenarlo. Va después del plazo de un minuto de arriba, así que tampoco se puede usar para llenar de correos a nadie.
-  const { data: perfil } = await supabase.from('compitas').select('descripcion, servicios').eq('id', c.id).maybeSingle()
-  if (!perfilCompleto(perfil as { descripcion: string | null; servicios: string[] | null } | null)) {
+  const { data: perfil } = await supabase.from('compitas').select('descripcion, servicios, horarios_disponibles').eq('id', c.id).maybeSingle()
+  if (!perfilCompleto(perfil as { descripcion: string | null; servicios: string[] | null; horarios_disponibles: { dia: string; inicio: string; fin: string }[] | null } | null)) {
     let enviado = false
     if (c.email) {
       try { await sendCompletarPerfilCompita(c.email, c.nombre, `${SITE_URL}/compita/perfil?token=${await generarTokenPerfil(c.id)}`); enviado = true } catch (e) { console.error('Error enviando el enlace del perfil:', e) }
@@ -372,8 +373,8 @@ async function iniciarVerificacion(
     await sendTelegramMessage(
       chatId,
       enviado
-        ? `Encontré tu cuenta 👀\n\nAntes de activar Telegram debes llenar tu <b>perfil público</b> (${PERFIL_MINIMO}). Es lo que ven las familias para elegirte.\n\nTe enviamos el enlace al correo <b>${esc(enmascarar(c.email!))}</b>. Vale 24 horas. Cuando lo guardes, vuelve aquí, toca /start y escribe tu nombre otra vez.`
-        : `Encontré tu cuenta 👀\n\nAntes de activar Telegram debes llenar tu <b>perfil público</b> (${PERFIL_MINIMO}), pero no pudimos enviarte el enlace. Escríbenos a hola@micompaz.com y te lo mandamos.`,
+        ? `Antes de activar Telegram, completa tu <b>perfil público</b> (${PERFIL_MINIMO}).\nTe enviamos el enlace a <b>${esc(enmascarar(c.email!))}</b> (vale 24 horas). Al guardarlo, vuelve aquí, toca /start y escribe tu nombre.`
+        : `Antes de activar Telegram, completa tu <b>perfil público</b> (${PERFIL_MINIMO}). No pudimos enviarte el enlace: escríbenos a hola@micompaz.com.`,
       QUITAR_TECLADO,
     )
     return
@@ -392,7 +393,7 @@ async function iniciarVerificacion(
       await sendTelegramMessage(chatId, `No pudimos enviar el correo con tu código. Escríbenos a hola@micompaz.com y te activamos la cuenta. ✍️ O intenta de nuevo escribiendo tu nombre:`, QUITAR_TECLADO)
       return
     }
-    await sendTelegramMessage(chatId, `Encontré tu cuenta 👀\n\nTe enviamos un <b>código de 6 dígitos</b> al correo <b>${esc(enmascarar(c.email))}</b>.\n\n✍️ Escríbelo aquí cuando lo recibas.\n\n🚨 <b>Alerta de fraude:</b> el código llega únicamente por correo. Compaz nunca te llamará por teléfono. No compartas este código con nadie.`, QUITAR_TECLADO)
+    await sendTelegramMessage(chatId, `Te enviamos un <b>código de 6 dígitos</b> a <b>${esc(enmascarar(c.email))}</b>.\n✍️ Escríbelo aquí.\n\n🔒 ${AVISO_FRAUDE}`, QUITAR_TECLADO)
   } else {
     const entregado = await avisarAdmin(`🔐 <b>Verificación de Compita</b>\n\n<b>${esc(c.nombre)}</b> quiere activar su cuenta.\n\nCódigo: <code>${codigo}</code>\n\nExpira en 15 minutos.`)
     if (!entregado) {
@@ -400,7 +401,7 @@ async function iniciarVerificacion(
       await sendTelegramMessage(chatId, `No pudimos generar tu código. Escríbenos a hola@micompaz.com. ✍️ O intenta de nuevo escribiendo tu nombre:`, QUITAR_TECLADO)
       return
     }
-    await sendTelegramMessage(chatId, `Encontré tu cuenta 👀\n\nPor seguridad, te enviamos un <b>código de 6 dígitos</b> a través del admin de Compaz.\n\n✍️ Escríbelo aquí cuando lo recibas:`, QUITAR_TECLADO)
+    await sendTelegramMessage(chatId, `Te enviamos un <b>código de 6 dígitos</b> por medio del equipo de Compaz.\n✍️ Escríbelo aquí.\n\n🔒 ${AVISO_FRAUDE}`, QUITAR_TECLADO)
   }
 }
 
@@ -497,7 +498,8 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
   }
 
   // ── /perfil — editar perfil ───────────────────────────────────────────────
-  if (text === '/perfil') {
+  if (text === '/perfil' || text === '/horas' || text === 'mis_horas') {
+    const soloHoras = text !== '/perfil'
     if (!compita) {
       await sendTelegramMessage(chatId, `Tu cuenta no está vinculada. Toca el botón para comenzar. 👇`, INLINE_START)
       return NextResponse.json({ ok: true })
@@ -505,7 +507,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
     const tecladoPerfil = await tecladoSegunEstado()
     try {
       const token = await generarTokenPerfil(compita.id)
-      const url = `${SITE_URL}/compita/perfil?token=${token}`
+      const url = `${SITE_URL}/compita/perfil?token=${token}${soloHoras ? '&foco=horarios' : ''}`
       const venceEn = new Date(Date.now() + 24 * 60 * 60_000)
       const venceLabel = venceEn.toLocaleString('es-VE', {
         timeZone: 'America/Caracas',
@@ -514,7 +516,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
       })
       await sendTelegramMessage(
         chatId,
-        `✏️ <b>Edita tu perfil</b>\n\nAquí tienes tu enlace personal:\n\n<a href="${url}">${url}</a>\n\n⏳ Este enlace vence el <b>${venceLabel}</b> y solo funciona una vez. Si lo abres y lo dejas a medias, vuelve a escribir /perfil para obtener uno nuevo.\n\nSi tienes algún problema, escríbenos a hola@micompaz.com.`,
+        `${soloHoras ? '🕐 <b>Cambia tus horas libres</b>\n\nAgrega o quita las franjas en que puedes hacer entrevistas. Apenas guardes, los clientes que te esperan se enteran.' : '✏️ <b>Edita tu perfil</b>'}\n\n<a href="${url}">${url}</a>\n\n⏳ Vence el <b>${venceLabel}</b> y funciona una sola vez. Si lo dejas a medias, escribe ${soloHoras ? '/horas' : '/perfil'} para otro.`,
         tecladoPerfil,
       )
     } catch (e) {
@@ -564,7 +566,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
       await setEstado(supabase, chatId, { registro_pendiente: true, pendiente_accion: null, pendiente_expira: null })
       await sendTelegramMessage(
         chatId,
-        `¡Bienvenido a Compaz! 👋\n\nPara verificar tu cuenta escríbeme tu <b>nombre completo</b> tal como lo pusiste al registrarte.\n\n<i>Ejemplo: María González</i>\n\n🔔 <b>Activa las notificaciones de Telegram</b> para no perderte solicitudes ni avisos de visita.\n\n🔒 Compaz nunca te pedirá contraseñas, datos bancarios ni información privada. Si alguien lo hace, avísanos a hola@micompaz.com.`,
+        `👋 <b>¡Hola!</b> Escribe tu <b>nombre completo</b>, tal como te registraste.\n<i>Ej.: María González</i>`,
         QUITAR_TECLADO,
       )
     }
@@ -665,15 +667,10 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
       return NextResponse.json({ ok: true })
     }
     const nombre = esc(encontrada?.nombre ?? 'Compita')
+    // UN solo mensaje (antes eran tres: confirmación, guía completa y «eso es todo»). La guía sigue disponible con el botón «📋 Menú».
     await sendTelegramMessage(
       chatId,
-      `✅ <b>¡Listo, ${nombre}!</b> Tu cuenta ya está activa en Compaz. ¡Ya eres parte del equipo! 🎉\n\n🔔 <b>Importante:</b> activa las notificaciones de Telegram ahora para no perderte solicitudes de clientes ni avisos de visita. Ve a Configuración → Notificaciones en Telegram y asegúrate de que estén activadas.\n\nAquí te explico cómo funciona todo:`,
-      QUITAR_TECLADO,
-    )
-    await sendTelegramMessage(chatId, GUIA_COMPITA, TECLADO_SIN_VISITA)
-    await sendTelegramMessage(
-      chatId,
-      `🙌 <b>Eso es todo. Tu registro ya terminó.</b>\n\nNo tienes que hacer nada más de tu lado. Ahora solo falta que una familia te contrate — en cuanto eso pase, te va a aparecer aquí mismo, en este chat.\n\nMientras tanto, si quieres, completa tu perfil con /perfil para que las familias te conozcan mejor.`,
+      `✅ <b>¡Listo, ${nombre}!</b> Tu cuenta está activa.\n\n🔔 Activa las notificaciones de Telegram para no perderte solicitudes.\n\nCuando una familia te contrate, te avisamos aquí. Toca <b>📋 Menú</b> para ver cómo funciona.\n\n🔒 ${AVISO_FRAUDE}`,
       TECLADO_SIN_VISITA,
     )
     const adminChatId = process.env.TELEGRAM_ADMIN_CHAT_ID
@@ -942,6 +939,16 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
     await sendTelegramMessage(chatId, `¿Qué pasó?`, makeInlineKeyboard((Object.keys(MOTIVOS_REPORTE) as MotivoReporte[]).map((m) => [{ text: MOTIVOS_REPORTE[m], callback_data: `xpm:${uid}:${m}` }])))
     return NextResponse.json({ ok: true })
   }
+  // ── «¿Cómo estuvo la llamada?»: el compita responde con un toque y todo queda en Telegram (callback `ll:<si|no>:<solicitud>`). Solo la compita de ESA solicitud.
+  if (isCallback && text.startsWith('ll:')) {
+    const [, respuesta, solicitudId] = text.split(':')
+    if (!compita || (respuesta !== 'si' && respuesta !== 'no') || !/^[0-9a-f-]{36}$/i.test(solicitudId ?? '')) return NextResponse.json({ ok: true })
+    const { data: sol } = await supabase.from('solicitudes').select('token_respuesta, compita_id').eq('id', solicitudId).maybeSingle()
+    if (!sol || sol.compita_id !== compita.id) return NextResponse.json({ ok: true })
+    const r = await registrarRespuestaLlamada(String(sol.token_respuesta), 'compita', respuesta)
+    await sendTelegramMessage(chatId, r.tipo === 'pagina' ? r.texto : 'Gracias, ya registramos tu respuesta.', await tecladoSegunEstado())
+    return NextResponse.json({ ok: true })
+  }
   // ── Confirmar o rechazar la hora que el cliente eligió para la visita ─────────────────────────────────────────
   if (isCallback && text.startsWith('cita:')) {
     const [, accion, visitaId, version] = text.split(':')
@@ -1151,6 +1158,11 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
     const avisoTardio = avisoHoras !== null && avisoHoras < minimoCompita
     if (avisoTardio) await alertarCancelacionesCompita(compita.id, compita.nombre)
 
+    // El cliente lo ve en su portal (tarjeta, campana) y en el chat de la visita; el correo queda como respaldo.
+    await registrarNovedad({ usuarioId: objetivo.usuario_id, tipo: 'visita_reagendada_compita', nivel: 'accionable', titulo: `${compita.nombre.split(' ')[0]} necesita cambiar la fecha de la visita.`,
+      ruta: '/portal?sec=visitas', entidad: 'visita', entidadId: objetivo.id, clave: `visita_reagendada:${objetivo.id}:${Date.now()}` })
+    await anotarEventoChat(objetivo.id, `Visita reagendada: ${compita.nombre.split(' ')[0]} necesita cambiar la fecha${fechaAnterior ? ` del ${fechaAnterior}` : ''}`)
+
     const clienteNombre = esc(objetivo.usuario?.nombre ?? 'El cliente')
     const clienteEmail = objetivo.usuario?.email
     let emailEnviado = false
@@ -1171,8 +1183,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
               <a href="${SITE_URL_PUBLICA}/dashboard" style="display:inline-block;background:#FF6B2B;color:white;padding:12px 24px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:14px;margin-top:8px">
                 Ir al chat →
               </a>
-              <p style="color:#9990A8;font-size:13px;margin-top:32px">Compaz — <em>Cerca aunque estés lejos</em></p>
-            </div>
+</div>
           `,
         })
         emailEnviado = true
@@ -1188,8 +1199,8 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
           ? `Le avisamos a <b>${clienteNombre}</b> que necesitas cambiar la fecha${fechaAnterior ? ` del ${esc(fechaAnterior)}` : ''}.`
           : `Registramos el cambio de fecha${fechaAnterior ? ` del ${esc(fechaAnterior)}` : ''}, pero no pudimos enviar el correo a <b>${clienteNombre}</b>. Escríbele desde este chat para avisarle.`,
         ``,
-        `Escríbele desde este mismo chat para acordar un nuevo día. Ellos lo verán en su portal.`,
-        ...(avisoTardio ? [``, `⚠️ Avisaste con menos de ${minimoCompita} horas de anticipación. Queda registrado: varias veces seguidas puede pausar tus solicitudes nuevas.`] : []),
+        `Escríbele desde este chat para acordar un nuevo día.`,
+        ...(avisoTardio ? [``, `⚠️ Avisaste con menos de ${minimoCompita} horas de anticipación. Queda registrado; si se repite, pueden pausarte solicitudes nuevas.`] : []),
       ].join('\n'),
       TECLADO_SIN_VISITA,
     )
@@ -1224,6 +1235,12 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
         plantilla: 'entrevista_aceptada', canal: 'correo', destinatario: { tipo: 'cliente', id: sol.cliente_id },
         variables: { solicitudId: sol.id }, entidad: 'solicitud', entidadId: sol.id, paso: 6,
       })
+      // Si no le queda ninguna hora libre (todas reservadas o sin franjas), el cliente no tendría nada que elegir: se le dice ya, con el botón para arreglarlo.
+      const libres = await horasLibres(compita.id).catch(() => null)
+      if (libres !== null && libres.length === 0) {
+        await sendTelegramMessage(chatId, `✅ <b>Aceptaste hablar con este cliente</b>\n\nPero ahora mismo <b>no tienes horas libres</b> en los próximos 14 días, y el cliente no tendría ninguna para elegir. Agrega horas y se las mostramos apenas guardes.`, makeInlineKeyboard([[{ text: '🕐 Cambiar mis horas', callback_data: 'mis_horas' }]]))
+        return NextResponse.json({ ok: true })
+      }
       await sendTelegramMessage(chatId, `✅ <b>Aceptaste hablar con este cliente</b>\n\nAhora elige una de tus horas libres y te pedirá que la confirmes. Te avisamos apenas elija.`, TECLADO_SIN_VISITA)
       return NextResponse.json({ ok: true })
     }
@@ -1248,9 +1265,9 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
     }
     await sendTelegramMessage(chatId, [
       `🚪 <b>Anotado: nadie abre</b>`, ``,
-      `Espera cerca. Ya le avisamos al cliente y, a los 5 y 15 minutos, el equipo de Compaz intenta comunicarse con el contacto en el sitio y con el cliente.`,
-      `Tu tiempo se paga: si pasan ${r.espera} minutos sin que nadie abra, podrás cerrar la visita desde aquí (se cuenta como usada y cobras el viaje).`,
-      `Si el cliente aparece antes, toca ▶️ Iniciar visita.`,
+      `Espera cerca: ya le avisamos al cliente y, a los 5 y 15 minutos, el equipo intenta comunicarse con el contacto en el sitio.`,
+      `Tu tiempo se paga: si en ${r.espera} minutos nadie abre, podrás cerrar la visita aquí (cuenta como usada y cobras el viaje).`,
+      `Si abren antes, toca ▶️ Iniciar visita.`,
     ].join('\n'), TECLADO_INICIO)
     return NextResponse.json({ ok: true })
   }
@@ -1318,7 +1335,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
         variables: { solicitudId: reserva.solicitud_id ?? '' }, entidad: 'solicitud', entidadId: reserva.solicitud_id ?? reserva.id, paso: 7,
         claveUnica: `reserva_rechazada:${reserva.id}`, // una por reserva: puede rechazar varias horas de la misma solicitud
       })
-      await sendTelegramMessage(chatId, `Listo. Esa hora quedó libre y le avisamos al cliente para que elija otra.`, TECLADO_SIN_VISITA)
+      await sendTelegramMessage(chatId, `Listo. Esa hora quedó libre y le avisamos al cliente para que elija otra.\n\nSi necesitas ofrecer horas distintas, cámbialas aquí y el cliente se entera.`, makeInlineKeyboard([[{ text: '🕐 Cambiar mis horas', callback_data: 'mis_horas' }]]))
       return NextResponse.json({ ok: true })
     }
     // Confirmada: la solicitud queda con su hora y todo lo demás (correo, aviso, recordatorios) sigue igual que antes.
@@ -1371,20 +1388,15 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
 
     await alertaAdmin('actividad', `❌ <b>${esc(compita.nombre)}</b> rechazó una solicitud de entrevista.`)
 
-    const adminSupa = createAdminSupabase()
-    const { data: clienteRechazado } = await adminSupa
-      .from('usuarios').select('nombre, email').eq('id', solicitud.cliente_id).single()
-    const clienteEmail = clienteRechazado?.email ?? ''
-    const clienteNombre = clienteRechazado?.nombre ?? 'el cliente'
-    const expira = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
-    await setEstado(supabase, chatId, {
-      pendiente_accion: `sugerir_horarios:${solicitud.id}:${clienteEmail}:${clienteNombre}`,
-      pendiente_expira: expira,
+    // El cliente se entera al instante (campana y correo) y elige a otro compita. El compita ya NO escribe horas en texto libre: sus horas viven en su perfil.
+    await notificar({
+      plantilla: 'solicitud_rechazada_cliente', canal: 'correo', destinatario: { tipo: 'cliente', id: solicitud.cliente_id },
+      variables: { solicitudId: solicitud.id }, entidad: 'solicitud', entidadId: solicitud.id, paso: 6, claveUnica: `solicitud_rechazada:${solicitud.id}`,
     })
-
     await sendTelegramMessage(
       chatId,
-      `Entendido. ¿Puedes sugerir otros horarios que sí te funcionen?\n\n✍️ <b>Responde a este mensaje</b> con los horarios y se los haremos llegar a ${esc(clienteNombre)} por email.\n\n📅 <i>Incluye el día y la hora exacta de cada opción. Por ejemplo: lunes 6 de octubre a las 3:00pm.</i>`,
+      `Entendido, gracias por avisar. Le decimos al cliente que elija a otro compita.\n\nSi lo que pasa es que esas horas no te sirven, cambia tus horas libres y te volverán a elegir.`,
+      makeInlineKeyboard([[{ text: '🕐 Cambiar mis horas', callback_data: 'mis_horas' }]]),
     )
     // Motivo opcional, de un toque (dato para mejorar las solicitudes que le llegan)
     await sendTelegramMessage(
@@ -1459,8 +1471,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
               <p style="color:#4A3B6B;font-size:15px;line-height:1.6"><strong>${esc(compita.nombre)}</strong> está lista para empezar la visita. Entra al dashboard y confirma el inicio.</p>
               <a href="${SITE_URL_PUBLICA}/dashboard" style="display:inline-block;background:#FF6B2B;color:white;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:15px;margin-top:8px">Confirmar inicio →</a>
               <p style="color:#9990A8;font-size:13px;margin-top:24px">Si no confirmas en 5 minutos, la visita arranca sola.</p>
-              <p style="color:#9990A8;font-size:13px">Compaz — <em>Cerca aunque estés lejos</em></p>
-            </div>`,
+</div>`,
         }).catch(e => console.error('[telegram-webhook] email confirmando_inicio cliente:', e))
       }
 
@@ -1481,6 +1492,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
         .eq('estado', 'en_curso')
         .select('*, usuario:usuarios(*)')
         .maybeSingle() as { data: (Visita & { usuario: Usuario | null }) | null; error: unknown }
+      if (visita) await anotarEventoChat(conf.visitaId, 'Visita terminada')
 
       if (errFin || !visita) {
         await sendTelegramMessage(chatId, `No hay ninguna visita en curso que puedas terminar ahora mismo.\n\nSi crees que es un error, escríbenos a hola@micompaz.com.`, TECLADO_SIN_VISITA)
@@ -1504,12 +1516,9 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
       }
 
       if (visita.usuario) {
-        // El resumen básico sale por el sistema de avisos: el portal del cliente lo muestra en vivo y el correo es el respaldo (se cancela si el cliente ya lo vio).
-        const r = await notificar({ plantilla: 'visita_resumen', canal: 'correo', destinatario: { tipo: 'cliente', id: visita.usuario_id }, variables: { visitaId: visita.id }, entidad: 'visita', entidadId: visita.id, paso: 14 })
-        if (!r.ok && r.estado === 'fallido') {
-          console.error('Error correo básico al terminar:', r.error)
-          await alertaAdmin('actividad', `⚠️ No se pudo enviar el resumen de visita a <b>${esc(visita.usuario.nombre)}</b> (${esc(visita.usuario.email)}). Reenvíalo manualmente.`)
-        }
+        // Al terminar NO sale ningún correo: el cliente recibe UN solo correo con el resumen completo (resumen con IA, lo que anotó el compita y la calificación) cuando el
+        // compita termina el cuestionario, o el resumen básico si no lo completa en unos minutos (ver lib/resumen-visita.ts). Aquí solo se avisa en el portal.
+        await registrarNovedad({ usuarioId: visita.usuario_id, tipo: 'visita_terminada', nivel: 'informativo', titulo: 'La visita terminó. Estamos preparando el reporte.', ruta: '/portal?sec=visitas', entidad: 'visita', entidadId: visita.id, clave: `novedad:visita_terminada:${visita.id}` })
       }
 
       await setEstado(supabase, chatId, {
@@ -1519,7 +1528,7 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
 
       await sendTelegramMessage(
         chatId,
-        `🔴 <b>Visita terminada.</b>\n\n¡Gracias por tu trabajo de hoy, ${esc(compita.nombre)}! 🤝\n\nYa le dejamos el resumen básico a la familia en su portal. Ahora tómate un minuto para registrar cómo estuvo el familiar — ellos lo verán como una actualización. 📋`,
+        `🔴 <b>Visita terminada.</b>\n\n¡Gracias por tu trabajo de hoy, ${esc(compita.nombre)}! 🤝\n\nAhora tómate un minuto para registrar cómo estuvo el familiar: con eso la familia recibe su reporte completo. 📋`,
         TECLADO_SIN_VISITA,
       )
       await sendTelegramMessage(
@@ -1529,94 +1538,6 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
       )
     }
 
-    return NextResponse.json({ ok: true })
-  }
-
-  // ── Sugerencia de horarios alternativos tras rechazo ────────────────────────
-  const estadoActual = await getEstado(supabase, chatId)
-  const accionSugerir = estadoActual?.pendiente_accion
-  const esSugerir = accionSugerir?.startsWith('sugerir_horarios:') || accionSugerir?.startsWith('sugerir_r:')
-  let capturaSugerencia = false
-  if (esSugerir && !isCallback && text && !text.startsWith('/')) {
-    // Si la compita tiene visitas activas, solo se captura si responde al mensaje del bot;
-    // así un mensaje normal de visita no se filtra por email a otro cliente.
-    const { count: activas } = await supabase
-      .from('visitas').select('id', { count: 'exact', head: true })
-      .eq('compita_id', compita.id).in('estado', ['en_curso', 'pre_visita', 'programada'])
-    capturaSugerencia = !!message.reply_to_message || (activas ?? 0) === 0
-  }
-  if (capturaSugerencia) {
-    const prefijo = accionSugerir!.startsWith('sugerir_r:') ? 'sugerir_r:' : 'sugerir_horarios:'
-    const partes = accionSugerir!.slice(prefijo.length).split(':')
-    // formato: <solicitud_id>:<email>:<nombre> (nombre puede tener espacios pero fue el último segmento)
-    const [solicitudId, clienteEmail, ...nombrePartes] = partes
-    const clienteNombre = nombrePartes.join(':')
-    const expirado = estadoActual?.pendiente_expira ? new Date(estadoActual.pendiente_expira) < new Date() : true
-
-    await clearPendiente(supabase, chatId)
-
-    if (expirado) {
-      await sendTelegramMessage(chatId, `El tiempo para sugerir horarios expiró. Contacta al equipo de Compaz si necesitas ayuda.`, TECLADO_SIN_VISITA)
-      return NextResponse.json({ ok: true })
-    }
-
-    // El cliente nunca debe recibir teléfonos ni correos del compita: se censuran igual que en el chat.
-    const sugerido = detectarContacto(text.slice(0, 2000))
-    if (sugerido.detectado) {
-      await reportarContactoEnTexto({
-        origen: 'compita', donde: 'los horarios sugeridos al cliente', quien: compita.nombre,
-        entidadTipo: 'compita', entidadId: compita.id, textoOriginal: text.slice(0, 2000),
-      })
-    }
-
-    // Guardar el mensaje del compita en la solicitud para mostrarlo en el dashboard
-    await supabase
-      .from('solicitudes')
-      .update({ mensaje_compita_reagendar: sugerido.textoCensurado })
-      .eq('id', solicitudId)
-
-    // Enviar email al cliente con los horarios sugeridos
-    let emailHorarioEnviado = false
-    if (clienteEmail) {
-      try {
-        await sendEmail({
-          to: clienteEmail,
-          subject: `${compita.nombre} te propone otros horarios`,
-          html: `
-            <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px">
-              <h2 style="color:#2D1464;font-size:22px">Nuevos horarios disponibles</h2>
-              <p style="color:#4A3B6B;font-size:16px;line-height:1.6">
-                <strong>${esc(compita.nombre)}</strong> no pudo en los horarios que propusiste, pero sugiere lo siguiente:
-              </p>
-              <blockquote style="background:#F5F0FF;border-left:4px solid #7C4DFF;border-radius:8px;padding:16px 20px;color:#1A0A3C;font-size:16px;line-height:1.6;margin:16px 0">
-                ${esc(sugerido.textoCensurado.slice(0, 1500)).replace(/\n/g, '<br>')}
-              </blockquote>
-              <p style="color:#4A3B6B;font-size:15px;line-height:1.6">
-                Si alguno te funciona, haz clic aquí para enviar una nueva solicitud directamente con ${esc(compita.nombre)}:
-              </p>
-              <a href="${SITE_URL}/compitas?compita=${encodeURIComponent(compita.id)}&reagendar=${encodeURIComponent(solicitudId)}" style="display:inline-block;background:#FF6B2B;color:white;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:16px;margin-top:4px">
-                Agendar con ${esc(compita.nombre)} →
-              </a>
-              <p style="color:#6B5C90;font-size:13px;margin-top:24px">Compaz — <em>Cerca aunque estés lejos</em></p>
-            </div>
-          `,
-        })
-        emailHorarioEnviado = true
-      } catch (e) { console.error('Email horarios alternativos:', e) }
-    }
-
-    if (emailHorarioEnviado) {
-      await sendTelegramMessage(
-        chatId,
-        `✅ Listo. Le enviamos tus horarios a ${esc(clienteNombre || 'el cliente')} por email.\n\nSi acepta, te llegará una nueva solicitud por aquí.`,
-      )
-    } else {
-      await sendTelegramMessage(
-        chatId,
-        `⚠️ No pudimos enviarle tus horarios al cliente (sin correo registrado o el envío falló). Por favor escríbenos a hola@micompaz.com y lo resolvemos manualmente.`,
-        TECLADO_SIN_VISITA,
-      )
-    }
     return NextResponse.json({ ok: true })
   }
 
@@ -1833,19 +1754,14 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
       await sendTelegramMessage(chatId, `Tu mensaje era muy largo: se envió solo la primera parte (1000 caracteres).`)
     }
 
-    // Email al cliente cuando la compita escribe — throttling: 1 email cada 10 min por visita
+    // Email al cliente cuando el compita escribe: UN correo por visita, y otro solo si pasan más de 30 minutos sin que el cliente lo lea (el portal ya muestra el
+    // chat en vivo con su círculo rojo; ver docs/versiones.md 1.3.25).
     if (visitaActiva.estado === 'programada' || visitaActiva.estado === 'en_curso') {
       try {
-        const hace10min = new Date(Date.now() - 10 * 60_000).toISOString()
-        const { count: emailsRecientes } = await supabase
-          .from('mensajes')
-          .select('id', { count: 'exact', head: true })
-          .eq('visit_id', visitaActiva.id)
-          .eq('origen', 'admin')
-          .eq('contenido', 'email_notif_mensaje')
-          .gt('created_at', hace10min)
-
-        if ((emailsRecientes ?? 0) === 0) {
+        const { data: ultimo } = await supabase.from('mensajes').select('created_at').eq('visit_id', visitaActiva.id).eq('origen', 'admin').eq('contenido', 'email_notif_mensaje')
+          .order('created_at', { ascending: false }).limit(1).maybeSingle() as { data: { created_at: string } | null }
+        const { data: dueno } = await supabase.from('visitas').select('usuario_id').eq('id', visitaActiva.id).maybeSingle() as { data: { usuario_id: string } | null }
+        if (dueno?.usuario_id && (await debeCorreoDeMensaje(dueno.usuario_id, ultimo?.created_at ?? null))) {
           const { data: clienteMensaje } = await supabase
             .from('visitas')
             .select('usuario:usuarios(nombre, email)')
@@ -1867,17 +1783,16 @@ async function procesarUpdate(update: TelegramUpdate): Promise<NextResponse> {
                       <div style="background:#F5F0FF;border-left:4px solid #7C4DFF;border-radius:8px;padding:16px 20px;margin:16px 0;color:#1A0A3C;font-size:15px;line-height:1.6">
                         ${esc(contenido).replace(/\n/g, '<br>')}
                       </div>
-                      <a href="${SITE_URL_PUBLICA}/dashboard" style="display:inline-block;background:#FF6B2B;color:white;padding:12px 24px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:14px;margin-top:8px">
-                        Ver en el dashboard →
+                      <a href="${SITE_URL_PUBLICA}/portal?sec=visitas" style="display:inline-block;background:#FF6B2B;color:white;padding:12px 24px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:14px">
+                        Verlo en mi portal →
                       </a>
-                      <p style="color:#9990A8;font-size:13px;margin-top:32px">Compaz — <em>Cerca aunque estés lejos</em></p>
-                    </div>
+</div>
                   `,
                 })
               } catch (e) {
                 // Si el email falló, soltar el marcador para que el próximo mensaje reintente.
                 console.error('Email compita→cliente en mensaje:', e)
-                await supabase.from('mensajes').delete().eq('visit_id', visitaActiva.id).eq('origen', 'admin').eq('contenido', 'email_notif_mensaje').gt('created_at', hace10min)
+                await supabase.from('mensajes').delete().eq('visit_id', visitaActiva.id).eq('origen', 'admin').eq('contenido', 'email_notif_mensaje').gt('created_at', new Date(Date.now() - 60_000).toISOString())
               }
             }
           }

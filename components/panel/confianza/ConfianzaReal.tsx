@@ -91,7 +91,7 @@ export default function ConfianzaReal({ filas, resumen, generado, fuente, descar
           <Cifra icono="personas" valor={resumen.aspirantes} texto="Aspirantes" detalle="En el CMC, sin duplicados ni pruebas" info="Fichas de la hoja 03 del CMC. No cuenta los duplicados confirmados por el CMC ni los perfiles de prueba." />
           <Cifra icono="reloj" valor={resumen.enEvaluacion} texto="En evaluación" detalle="Preselección a verificación" info="Etapa de selección Preseleccionado, Entrevistado o En verificación, según el CMC." />
           <Cifra icono="check" tono="exito" valor={resumen.habilitados} texto="Habilitados" detalle={`${resumen.enCatalogo} en el catálogo`} info="Etapa Habilitado en el CMC. El dato «en el catálogo» viene de la web (activos, verificados y con Telegram)." />
-          <Cifra icono="alerta" tono={resumen.requierenAtencion > 0 ? 'atencion' : 'neutro'} valor={resumen.requierenAtencion} texto="Requieren atención" detalle="Con una acción del equipo" info="Preentrevista respondida sin decidir, preseleccionados, entrevistados, en verificación, sin etapa, alertas que bloquean y habilitadas sin activar." />
+          <Cifra icono="alerta" tono={resumen.requierenAtencion > 0 ? 'atencion' : 'neutro'} valor={resumen.requierenAtencion} texto="Requieren atención" detalle="Con una acción del equipo" info="Preentrevista completada sin decidir, preseleccionados, entrevistados, en verificación, sin etapa, alertas que bloquean y habilitadas sin activar." />
         </div>
         <p className="mt-2 px-1 text-sm text-cf-texto-suave">
           No cuentan: {plural(resumen.duplicados, 'duplicado confirmado', 'duplicados confirmados')} y {plural(resumen.pruebas, 'perfil de prueba', 'perfiles de prueba')}.

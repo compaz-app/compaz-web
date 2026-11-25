@@ -9,12 +9,12 @@ import DialogoPanel from '@/components/panel/DialogoPanel'
 /** Anular un pago: libera las visitas que no se cobraron. Pide un motivo (queda guardado con el pago). */
 export default function AnularPago({ id, cliente, monto }: { id: string; cliente: string; monto: number }) {
   const router = useRouter()
-  const [abierto, setAbierto] = useState(false); const [motivo, setMotivo] = useState('')
+  const [abierto, setAbierto] = useState(false); const [motivo, setMotivo] = useState(''); const [avisar, setAvisar] = useState(true)
   const [cargando, setCargando] = useState(false); const [fallo, setFallo] = useState<string | null>(null)
   async function anular() {
     setCargando(true); setFallo(null)
     try {
-      const r = await fetch('/api/admin/anular-pago', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pago_id: id, motivo }) })
+      const r = await fetch('/api/admin/anular-pago', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pago_id: id, motivo, avisar_cliente: avisar }) })
       const j = await r.json().catch(() => null) as { ok?: boolean; error?: string } | null
       if (!r.ok || j?.ok === false) throw new Error(j?.error ?? `Error ${r.status}`)
       setAbierto(false); router.refresh()
@@ -27,6 +27,7 @@ export default function AnularPago({ id, cliente, monto }: { id: string; cliente
         <DialogoPanel titulo="¿Anular este pago?" onCerrar={() => setAbierto(false)}>
           <p className="mt-1 text-sm text-texto-medio">Pago de <b>${monto}</b> de <b>{cliente}</b>. Las visitas que no se hayan usado se liberan y el cupo del cliente se recalcula. No se puede deshacer desde aquí.</p>
           <label className="mt-3 block text-sm font-bold">Motivo<textarea value={motivo} maxLength={300} onChange={(e) => setMotivo(e.target.value)} placeholder="Por ejemplo: el cliente pagó dos veces" className="mt-1 min-h-20 w-full rounded-xl border border-borde p-3 text-sm font-normal" /></label>
+          <label className="mt-3 flex items-start gap-2 text-sm font-bold"><input type="checkbox" checked={avisar} onChange={(e) => setAvisar(e.target.checked)} className="mt-0.5 h-4 w-4" /><span>Avisar al cliente por correo y en su portal<span className="block text-xs font-normal text-texto-medio">Desmárcalo si fue un error de captura (por ejemplo, un registro duplicado) para no confundirlo.</span></span></label>
           {fallo && <div className="mt-3"><Aviso tamano="compacto" tono="peligro">{fallo}</Aviso></div>}
           <div className="mt-4 flex items-center justify-end gap-2">
             <Boton tamano="compacto" variante="fantasma" navegacion onClick={() => setAbierto(false)}>Cancelar</Boton>

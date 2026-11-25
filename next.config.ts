@@ -37,11 +37,17 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // Permite una segunda instancia local (demo) con su propia carpeta de compilación (scripts/demo/arrancar.sh). Sin la variable no cambia nada.
+  ...(process.env.NEXT_DIST_DIR ? { distDir: process.env.NEXT_DIST_DIR } : {}),
   // Contexto de Netlify en la compilación (production, deploy-preview, branch-deploy). No es secreto. Lo usa lib/site.ts para que el login
   // de un deploy preview vuelva al preview en lugar de a micompaz.com. En producción vale «production» y no cambia nada.
   env: { COMPAZ_CONTEXTO_DESPLIEGUE: process.env.CONTEXT ?? "" },
   images: {
-    formats: ["image/webp"],
+    // AVIF primero (pesa menos) y WebP de respaldo. Las fotos de los compitas viven en el almacenamiento público de Supabase: se optimizan (tamaño exacto y formato
+    // moderno) en vez de bajar la original. La dirección sale de la misma variable que usa la CSP, no se escribe a mano.
+    formats: ["image/avif", "image/webp"],
+    remotePatterns: SUPABASE_ORIGEN ? [{ protocol: "https", hostname: new URL(SUPABASE_ORIGEN).hostname, pathname: "/storage/v1/object/public/**" }] : [],
+    minimumCacheTTL: 60 * 60 * 24 * 30,
   },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];

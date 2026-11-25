@@ -1,16 +1,18 @@
 import { CLASE_LISTA, TituloSeccion } from '@/components/panel/ui'
+import Boton from '@/components/ui/base/Boton'
 import InfoBoton from '@/components/ui/InfoBoton'
 import { PuntoUrgencia } from '@/components/panel/Personas'
 import AutoRefresh from '@/components/ui/AutoRefresh'
 import BotonReintentar from '@/components/panel/mas/BotonReintentar'
 import MedirVelocidad from '@/components/panel/mas/MedirVelocidad'
+import VelocidadReal from '@/components/panel/mas/VelocidadReal'
 import { cuandoLinea } from '@/lib/panel-personas-tipos'
 import type { EstadoSistema } from '@/lib/panel-estado'
 
 const TEXTO = { ok: { u: 'verde', t: 'Corriendo' }, caido: { u: 'rojo', t: 'Dejó de correr' }, sin_registro: { u: 'neutro', t: 'Sin registro todavía' } } as const
 const NOMBRE_PROCESO: Record<string, string> = {
   recordatorios: 'Recordatorios a clientes', seguimiento: 'Seguimiento tras la entrevista', 'escalera-avisos': 'Revisión de avisos sin respuesta', 'recordatorio-cuestionario': 'Recordatorio del cuestionario',
-  'cierre-rechazo': 'Cierre de solicitudes rechazadas', 'recordatorio-visita': 'Recordatorio de visitas',
+  'cierre-rechazo': 'Cierre de solicitudes rechazadas', 'recordatorio-visita': 'Recordatorio de visitas', 'resumen-diario': 'Resumen diario al cliente',
 }
 const hace = (iso: string, ahora: number) => { const m = Math.max(0, Math.round((ahora - new Date(iso).getTime()) / 60_000)); return m < 1 ? 'hace menos de 1 min' : m < 60 ? `hace ${m} min` : m < 1440 ? `hace ${Math.round(m / 60)} h` : `hace ${Math.round(m / 1440)} d` }
 
@@ -68,11 +70,16 @@ export default function Estado({ e, ahora, puedeReintentar, esAdmin = false }: {
           </div>
         )}
       </div>
+      <div>
+        <div className="flex items-center gap-1"><TituloSeccion>Seguridad de tu cuenta</TituloSeccion><InfoBoton que="Qué es el segundo factor" texto="Además del código del correo, pide un código de 6 números de tu teléfono. Así, aunque alguien consiga tu correo, no puede entrar al panel. Regístralo una vez; cuando todo el equipo lo tenga, se vuelve obligatorio." /></div>
+        <div className="mt-2"><Boton href="/seguridad/segundo-factor" tamano="compacto" variante="secundario" info="Abre la pantalla donde registras o confirmas tu autenticador (una aplicación del teléfono que muestra un código de 6 números). No cambia nada más.">Registrar o confirmar mi autenticador</Boton></div>
+      </div>
       <p className="text-xs text-texto-sutil">Telegram, correo y videollamadas no se prueban desde aquí. Si fallan, lo verás arriba como avisos fallidos.</p>
       {esAdmin && (
         <div>
           <div className="flex items-center gap-1"><TituloSeccion>Velocidad</TituloSeccion><InfoBoton que="Qué es Velocidad" texto="Mide cuánto tarda el servidor en consultar la base de datos. Si el panel se siente lento, aquí se ve si es por la distancia entre ambos. Solo la ve el administrador." /></div>
           <div className="mt-2"><MedirVelocidad /></div>
+          <div className="mt-3"><VelocidadReal /></div>
         </div>
       )}
     </section>

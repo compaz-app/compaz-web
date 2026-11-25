@@ -4,11 +4,11 @@ import { getCompitaAdminById } from '@/lib/compitas'
 import EditarPerfil from './EditarPerfil'
 
 interface Props {
-  searchParams: Promise<{ token?: string }>
+  searchParams: Promise<{ token?: string; foco?: string }>
 }
 
 export default async function CompitaPerfilPage({ searchParams }: Props) {
-  const { token } = await searchParams
+  const { token, foco } = await searchParams
 
   if (!token) {
     return (
@@ -54,6 +54,7 @@ export default async function CompitaPerfilPage({ searchParams }: Props) {
         </div>
         <EditarPerfil
           token={token}
+          foco={foco}
           inicial={{
             nombre: compita.nombre ?? '',
             zona: compita.zona ?? '',

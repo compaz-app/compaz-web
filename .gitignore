@@ -49,3 +49,6 @@ respaldos/
 recuerdo-sistema-viejo/
 .env.migracion
 scripts/migracion/.env.migracion
+
+# Segunda instancia local de demo
+.next-demo/

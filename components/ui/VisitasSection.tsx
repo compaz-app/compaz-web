@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { createBrowserSupabase } from '@/lib/supabase'
+import FotoRedonda from '@/components/ui/FotoRedonda'
 
 type VisitaResumen = {
   id: string
@@ -172,7 +173,7 @@ function VisitaCard({ visita, tab }: { visita: VisitaResumen; tab: Tab }) {
   return (
     <div style={{ background: 'white', border: `2px solid ${badge.border}`, borderRadius: '16px', padding: '20px 24px', display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
       {visita.compita?.foto_url
-        ? <img src={visita.compita.foto_url} alt={nombre} style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+        ? <FotoRedonda src={visita.compita.foto_url} alt={nombre} size={48} />
         : <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#2D1464', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <span style={{ color: 'white', fontWeight: 800, fontSize: '18px' }}>{nombre.charAt(0)}</span>
           </div>

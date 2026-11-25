@@ -35,7 +35,7 @@ export type NombrePlantilla = 'solicitud_nueva' | 'directa_aceptada' | 'pago_con
   | 'entrevista_aceptada' | 'reserva_pedida' | 'reserva_rechazada' | 'reserva_vencida' | 'lugar_respuesta' | 'direccion_visita' | 'direccion_faltante_cliente' | 'compita_en_camino'
   | 'compita_llego' | 'nadie_abre_cliente' | 'visita_sin_acceso_cliente' | 'nadie_abre_cerrar'
   | 'salida_seguridad_cliente' | 'todo_bien' | 'recordatorio_cliente' | 'cancelacion_equipo_cliente' | 'pausa_cuenta_cliente' | 'pausa_cuenta_decision' | 'cita_propuesta_cliente' | 'cita_rechazada_cliente' | 'cita_sin_respuesta_cliente'
-  | 'visita_resumen' | 'visita_reporte'
+  | 'visita_resumen' | 'visita_reporte' | 'pago_anulado' | 'horas_actualizadas' | 'solicitud_rechazada_cliente'
 
 const etiquetaSlot = (iso: string) =>
   new Date(iso).toLocaleString('es-VE', {
@@ -92,8 +92,8 @@ function avisoSinHorario(s: Record<string, unknown>, clienteNombre: string): Con
     ...lineasDatosLugar(s.datos_lugar),
     ``,
     esEntrevista
-      ? `Si aceptas, el cliente elige una de tus horas libres y te pide que la confirmes. Si no puedes, no pasa nada.`
-      : `Si aceptas, el cliente paga primero y te avisamos cuando el pago esté confirmado. Si no puedes, no pasa nada: el cliente elige a otro compita sin haber pagado.`,
+      ? `Si aceptas, el cliente elige una de tus horas libres y tú la confirmas.`
+      : `Si aceptas, el cliente paga primero y te avisamos al confirmarse. Si no puedes, elige a otro sin costo.`,
   ]
   const token = String(s.token_respuesta)
   const bot = process.env.TELEGRAM_BOT_USERNAME ? `https://t.me/${process.env.TELEGRAM_BOT_USERNAME}` : SITE_URL
@@ -150,7 +150,7 @@ const solicitudNueva: Plantilla = {
       `<b>Horarios propuestos (llamada de 20 min):</b>`,
       conEtiqueta.map(({ i, label }) => `${['1️⃣', '2️⃣', '3️⃣'][i]} ${label}`).join('\n'),
       ``,
-      `👇 <b>Toca el botón del horario que te funcione para confirmar.</b>`,
+      `👇 Toca el horario que te funcione.`,
     ].join('\n')
 
     const teclado = makeInlineKeyboard([
@@ -241,6 +241,31 @@ const pagoConfirmado: Plantilla = {
   },
 }
 
+// El equipo anuló el registro de un pago: el cliente se entera (antes su plan desaparecía sin ninguna explicación). El motivo es interno y no se muestra.
+const pagoAnulado: Plantilla = {
+  canales: ['correo'],
+  async render(v) {
+    const pagoId = String(v.pagoId ?? '')
+    if (!pagoId) return null
+    const admin = createAdminSupabase()
+    const { data: p } = await admin.from('pagos_plan').select('*').eq('id', pagoId).maybeSingle()
+    if (!p || p.estado !== 'anulado') return null
+    const { data: cli } = await admin.from('usuarios').select('nombre').eq('id', p.usuario_id).maybeSingle()
+    const primero = esc(String(cli?.nombre ?? '').split(' ')[0])
+    const que = p.tipo === 'plan' ? `plan ${PLANES[p.plan as PlanId]?.nombre ?? ''}`.trim() : `visita extra de ${p.horas} horas`
+    return {
+      correo: {
+        asunto: 'Anulamos el registro de tu pago en Compaz',
+        html: `<div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px">
+          <h2 style="color:#2D1464;font-size:22px">Anulamos el registro de tu pago</h2>
+          <p style="color:#4A3B6B;font-size:16px;line-height:1.6">Hola, ${primero}. Anulamos el registro del pago de <strong>$${esc(String(p.monto_usd))}</strong> (${esc(que)}). Las visitas sin usar de ese pago ya no están disponibles.</p>
+          <p style="color:#4A3B6B;font-size:15px;line-height:1.6">Si no lo esperabas, escríbenos a hola@micompaz.com y lo revisamos contigo.</p>
+        </div>`,
+      },
+    }
+  },
+}
+
 // Datos que comparten los avisos posteriores a la entrevista (pasos 9 y 10 del ciclo).
 async function datosLlamada(solicitudId: string) {
   const admin = createAdminSupabase()
@@ -291,8 +316,7 @@ const llamadaTerminadaCliente: Plantilla = {
                 <a href="${d.reagendarUrl}" style="display:block;background:#6B5C90;color:white;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:700;font-size:15px;text-align:center;margin-bottom:12px">${corta ? 'La llamada se cortó — quiero reagendar': 'Quiero reagendar para hablar más'}</a>
                 <a href="${d.noUrl}" style="display:block;background:#E8E0D4;color:#1A0A3C;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:700;font-size:15px;text-align:center">${corta ? 'No pude hablar — ver otros compitas': 'No es lo que busco — ver otros perfiles'}</a>
               </div>
-              <p style="color:#6B5C90;font-size:13px;margin-top:32px">Compaz — <em>Cerca aunque estés lejos</em></p>
-            </div>`,
+</div>`,
       },
     }
   },
@@ -344,6 +368,50 @@ const entrevistaAceptada: Plantilla = {
       <h2 style="color:#2D1464;font-size:22px">${corto} aceptó hablar contigo</h2>
       <p style="color:#4A3B6B;font-size:16px;line-height:1.6">Hola, ${primero}. Elige una de sus horas libres para la videollamada de 20 minutos. La hora que elijas queda reservada hasta que ${corto} la confirme.</p>
       ${boton(`${SITE_URL}/solicitar/hora?solicitud=${encodeURIComponent(String(s.id))}`, 'Elegir la hora →')}`) } }
+  },
+}
+
+// El compita actualizó sus horas libres y este cliente estaba esperando poder elegir una (porque no había, o porque la hora que eligió no le servía).
+const horasActualizadas: Plantilla = {
+  canales: ['correo'],
+  async render(v) {
+    const solicitudId = String(v.solicitudId ?? '')
+    if (!solicitudId) return null
+    const admin = createAdminSupabase()
+    const { data: s } = await admin.from('solicitudes').select('id, cliente_id, compita_id, estado, slot_confirmado').eq('id', solicitudId).maybeSingle()
+    if (!s || s.estado !== 'aceptada' || s.slot_confirmado) return null // ya eligió hora o se cerró
+    const [{ data: cli }, { data: cmp }] = await Promise.all([
+      admin.from('usuarios').select('nombre').eq('id', s.cliente_id).maybeSingle(),
+      admin.from('compitas').select('nombre').eq('id', s.compita_id).maybeSingle(),
+    ])
+    const primero = esc(String(cli?.nombre ?? '').split(' ')[0])
+    const corto = esc(nombreCorto(String(cmp?.nombre ?? '')) || 'Tu compita')
+    return { correo: { asunto: `${nombreCorto(String(cmp?.nombre ?? '')) || 'Tu compita'} actualizó sus horas. Elige la tuya`, html: marco(`
+      <h2 style="color:#2D1464;font-size:22px">${corto} tiene horas nuevas</h2>
+      <p style="color:#4A3B6B;font-size:16px;line-height:1.6">Hola, ${primero}. ${corto} actualizó sus horas libres. Elige la que mejor te quede para la videollamada de 20 minutos.</p>
+      ${boton(`${SITE_URL}/solicitar/hora?solicitud=${encodeURIComponent(String(s.id))}`, 'Elegir la hora →')}`) } }
+  },
+}
+
+// El compita no puede atender la solicitud: el cliente se entera al instante (antes solo se enteraba cuando el compita escribía horas, o a las 24 horas).
+const solicitudRechazadaCliente: Plantilla = {
+  canales: ['correo'],
+  async render(v) {
+    const solicitudId = String(v.solicitudId ?? '')
+    if (!solicitudId) return null
+    const admin = createAdminSupabase()
+    const { data: s } = await admin.from('solicitudes').select('id, cliente_id, compita_id, estado').eq('id', solicitudId).maybeSingle()
+    if (!s || s.estado !== 'rechazada') return null
+    const [{ data: cli }, { data: cmp }] = await Promise.all([
+      admin.from('usuarios').select('nombre').eq('id', s.cliente_id).maybeSingle(),
+      admin.from('compitas').select('nombre').eq('id', s.compita_id).maybeSingle(),
+    ])
+    const primero = esc(String(cli?.nombre ?? '').split(' ')[0])
+    const corto = esc(nombreCorto(String(cmp?.nombre ?? '')) || 'El compita')
+    return { correo: { asunto: `${nombreCorto(String(cmp?.nombre ?? '')) || 'El compita'} no puede atender tu solicitud`, html: marco(`
+      <h2 style="color:#2D1464;font-size:22px">Esta vez no se pudo</h2>
+      <p style="color:#4A3B6B;font-size:16px;line-height:1.6">Hola, ${primero}. ${corto} no puede atender tu solicitud por ahora. No pagaste nada ni perdiste nada: elige a otro compita y vuelve a pedir la entrevista.</p>
+      ${boton(`${SITE_URL}/compitas`, 'Ver otros compitas →')}`) } }
   },
 }
 
@@ -748,7 +816,7 @@ const visitaReporte: Plantilla = {
     ])
     if (!usuario || !compita) return null
     const esRecurrente = ((previas ?? []) as { compita_id?: string }[]).some((x) => x.compita_id === vis.compita_id)
-    const c = armarResumenConReporte(usuario as never, compita as never, vis as never, (mensajes ?? []) as never, rep as never, String(rep.resumen_ia ?? ''), true, esRecurrente)
+    const c = armarResumenConReporte(usuario as never, compita as never, vis as never, (mensajes ?? []) as never, rep as never, String(rep.resumen_ia ?? ''), false, esRecurrente)
     return { correo: { asunto: c.asunto, html: c.html } }
   },
 }
@@ -757,6 +825,9 @@ export const PLANTILLAS: Record<NombrePlantilla, Plantilla> = {
   solicitud_nueva: solicitudNueva,
   directa_aceptada: directaAceptada,
   pago_confirmado: pagoConfirmado,
+  pago_anulado: pagoAnulado,
+  horas_actualizadas: horasActualizadas,
+  solicitud_rechazada_cliente: solicitudRechazadaCliente,
   llamada_terminada_cliente: llamadaTerminadaCliente,
   llamada_terminada_compita: llamadaTerminadaCompita,
   entrevista_aceptada: entrevistaAceptada,

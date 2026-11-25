@@ -1,6 +1,7 @@
 // POST /api/cron/recordatorio-pago — diario 11:00 VE.
 // A los 30 días de un pago de plan mensual (Compañía / Compañía Plus), avisa al cliente que toca renovar
 // y resume el pago pendiente al admin. Una sola vez por pago. Sin cobros automáticos: paga el cliente.
+import { novedadInformativa } from '@/lib/novedades'
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { sendEmail, SITE_URL } from '@/lib/email'
@@ -39,6 +40,7 @@ export async function POST(req: NextRequest) {
     if (!p.usuarios?.email) continue
     if (!(await reclamarUnaVez(`pago_rec:${p.id}`))) continue
 
+    await novedadInformativa({ usuarioId: p.usuario_id, tipo: 'renovar_plan', titulo: 'Ya pasó un mes de tu plan. Es hora de renovarlo.', entidad: 'pago', entidadId: p.id, clave: `renovar_plan:${p.id}` })
     const cupo = await cupoDelPlan(p.usuario_id)
     const plan = PLANES[p.plan]
     try {

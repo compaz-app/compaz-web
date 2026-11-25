@@ -5,12 +5,14 @@ import Boton from '@/components/ui/base/Boton'
 import InfoBoton from '@/components/ui/InfoBoton'
 import { TituloSeccion } from '@/components/panel/ui'
 import FormCompita from '@/components/panel/FormCompita'
+import { cuandoLinea } from '@/lib/panel-personas-tipos'
+import type { InvitadoPendiente } from '@/lib/panel-invitaciones'
 
 const INFO = 'Para sumar personas sin que se registren solas. A un cliente se le crea la cuenta y recibe un correo con su enlace de acceso. Para un compita se genera un enlace de registro que dura 7 días y que tú le mandas. Si el cliente ya está registrado no se le reinvita: que pida un enlace nuevo en la página de entrada.'
 const CAMPO = 'min-h-9 w-full rounded-lg border border-borde bg-blanco px-2 text-sm'
 
 // Invitar: un cliente por correo, o un enlace de registro para un compita. Las rutas piden el permiso "invitar" en el servidor.
-export default function Invitar() {
+export default function Invitar({ pendientes = [] }: { pendientes?: InvitadoPendiente[] }) {
   const [nombre, setNombre] = useState('')
   const [correo, setCorreo] = useState('')
   const [cargando, setCargando] = useState(false)
@@ -28,6 +30,18 @@ export default function Invitar() {
       if (!r.ok || j?.ok === false) { setMsg({ ok: false, texto: j?.error ?? `Error ${r.status}` }); return }
       setMsg({ ok: true, texto: `Invitación enviada a ${correo.trim()}.` }); setNombre(''); setCorreo('')
     } catch { setMsg({ ok: false, texto: 'Sin conexión. No se envió nada: inténtalo otra vez.' }) } finally { setCargando(false) }
+  }
+
+  // Reenviar a un invitado que no se activó: la misma ruta de invitar, que ahora le manda un enlace nuevo en vez de rechazarlo.
+  const [reenviando, setReenviando] = useState<string | null>(null)
+  const [msgReenvio, setMsgReenvio] = useState<{ ok: boolean; texto: string } | null>(null)
+  async function reenviar(p: InvitadoPendiente) {
+    setReenviando(p.id); setMsgReenvio(null)
+    try {
+      const r = await fetch('/api/admin/invitar-cliente', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nombre: p.nombre, email: p.correo }) })
+      const j = await r.json().catch(() => null) as { ok?: boolean; error?: string } | null
+      setMsgReenvio(!r.ok || j?.ok === false ? { ok: false, texto: j?.error ?? `Error ${r.status}` } : { ok: true, texto: `Invitación reenviada a ${p.correo}.` })
+    } catch { setMsgReenvio({ ok: false, texto: 'Sin conexión. No se envió nada: inténtalo otra vez.' }) } finally { setReenviando(null) }
   }
 
   async function generarEnlace() {
@@ -53,9 +67,23 @@ export default function Invitar() {
           <label className="text-xs text-texto-medio">Correo
             <input type="email" value={correo} onChange={(e) => setCorreo(e.target.value)} disabled={cargando} className={`${CAMPO} mt-1`} />
           </label>
-          <Boton tamano="compacto" cargando={cargando} disabled={!nombre.trim() || !correo.trim()} onClick={invitarCliente} info="Crea su cuenta y le envía por correo el enlace para entrar. Si ya está registrado, no se le reinvita.">Enviar invitación</Boton>
+          <Boton tamano="compacto" cargando={cargando} disabled={!nombre.trim() || !correo.trim()} onClick={invitarCliente} info="Le envía por correo el enlace para activar su cuenta. Hasta que lo abra figura como invitado, no como cliente. Si ya está registrado, no se le reinvita.">Enviar invitación</Boton>
         </div>
         {msg && <p role={msg.ok ? 'status' : 'alert'} className={`text-sm font-bold ${msg.ok ? 'text-verde-oscuro' : 'text-rojo-oscuro'}`}>{msg.texto}</p>}
+        {pendientes.length > 0 && (
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-1"><h3 className="text-sm font-extrabold">Invitados sin activar ({pendientes.length})</h3><InfoBoton que="Qué son los invitados" texto="Ya recibieron su correo pero todavía no lo abren ni activan su cuenta. No cuentan como clientes hasta entonces. Si lo perdieron, reenvíales la invitación: el enlace anterior deja de servir." /></div>
+            <ul className="divide-y divide-borde rounded-xl border border-borde bg-blanco">
+              {pendientes.map((p) => (
+                <li key={p.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2">
+                  <span className="min-w-40 flex-1 text-sm"><b>{p.nombre || 'Sin nombre'}</b> <span className="text-texto-sutil">· invitado {cuandoLinea(p.invitado)}</span></span>
+                  <Boton tamano="compacto" variante="secundario" cargando={reenviando === p.id} onClick={() => reenviar(p)} info="Le manda otra vez el correo con un enlace nuevo. El enlace anterior deja de servir.">Reenviar</Boton>
+                </li>
+              ))}
+            </ul>
+            {msgReenvio && <p role={msgReenvio.ok ? 'status' : 'alert'} className={`text-sm font-bold ${msgReenvio.ok ? 'text-verde-oscuro' : 'text-rojo-oscuro'}`}>{msgReenvio.texto}</p>}
+          </div>
+        )}
       </div>
 
       <div className="space-y-2">

@@ -108,7 +108,7 @@ export async function responderDuda(tipo: TipoDuda, compita: Compita, ahora: Dat
   if (tipo === 'dir') {
     if (v.direccion && v.estado === 'programada') {
       const c = await PLANTILLAS.direccion_visita.render({ visitaId: v.id }).catch(() => null)
-      if (c?.telegram) return { texto: `📍 Aquí está otra vez la dirección de tu visita:\n\n${c.telegram.texto}\n\nSi estás en el lugar y no lo encuentras, escríbele al cliente desde el chat de la visita: es la forma más rápida. ¿Se resolvió?`, teclado: preguntaResuelta('dir') }
+      if (c?.telegram) return { texto: `${c.telegram.texto}\n\nSi no lo encuentras, escríbele al cliente desde el chat de la visita. ¿Se resolvió?`, teclado: preguntaResuelta('dir') }
     }
     if (!v.direccion) {
       const r = await recordarAlCliente({ tipo: 'dir', id: v.id, compita, ahora })

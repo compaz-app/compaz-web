@@ -2,6 +2,7 @@
 // 1. 30 min antes de la hora programada le envía al compita el botón ▶️ Iniciar visita.
 // 2. Auto-confirma visitas en estado 'confirmando_inicio' que llevan más de 5 min sin
 //    confirmación del cliente (para no bloquear al compita si el cliente no responde).
+import { anotarEventoChat } from '@/lib/chat-eventos'
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { sendTelegramMessage, avisarAdmin, TECLADO_INICIO, TECLADO_DURANTE_VISITA } from '@/lib/telegram'
@@ -76,6 +77,7 @@ export async function POST(req: NextRequest) {
       .maybeSingle() as { data: (Visita & { compita: { id: string; nombre: string; telegram_chat_id: string | null }; usuario: Usuario }) | null }
 
     if (!iniciada) continue
+    await anotarEventoChat(v.id, 'Visita iniciada')
 
     const compita = iniciada.compita
     const usuario = iniciada.usuario

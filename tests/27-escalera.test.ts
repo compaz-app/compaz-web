@@ -11,8 +11,8 @@ beforeEach(limpiar)
 
 const hace = (min: number) => ahoraMas(-min)
 
-function escenario(o: { email?: string | null; estadoSolicitud?: string } = {}) {
-  const compita = mkCompita({ telegram_chat_id: '960', nombre: 'Lucía Pérez', email: o.email === undefined ? 'lucia@mail.test' : o.email })
+function escenario(o: { email?: string | null; estadoSolicitud?: string; telegram?: string | null } = {}) {
+  const compita = mkCompita({ telegram_chat_id: o.telegram === undefined ? '960' : o.telegram, nombre: 'Lucía Pérez', email: o.email === undefined ? 'lucia@mail.test' : o.email })
   const cli = mkCliente({ nombre: 'Carolina Pérez', email: 'caro@mail.test' })
   const sol = mkSolicitud(cli, compita, { estado: o.estadoSolicitud ?? 'pendiente' })
   return { compita, cli, sol }
@@ -72,22 +72,21 @@ describe('avisos atascados y fallidos', () => {
 })
 
 describe('avisos sin acción: respaldo y luego tarea para el equipo', () => {
-  test('primer nivel: pasa el plazo sin respuesta y se manda el correo de respaldo, una sola vez', async () => {
+  test('primer nivel: pasa el plazo sin respuesta y se le recuerda por Telegram (no por correo), una sola vez', async () => {
     const { compita, sol } = escenario()
     const original = avisoSolicitud(compita, sol)
     const r = await procesarEscalera()
     assert.equal(r.respaldos, 1)
-    const correo = emailsA('lucia@mail.test')
-    assert.equal(correo.length, 1)
-    assert.match(correo[0].subject, /^Recordatorio: Nueva solicitud de entrevista/)
-    const hijo = avisos().find((a) => a.respaldo_de === original.id && a.canal === 'correo')!
+    assert.equal(emailsA('lucia@mail.test').length, 0, 'el compita siempre tiene Telegram: sin correo')
+    assert.equal(tgPara(960).length, 1)
+    const hijo = avisos().find((a) => a.respaldo_de === original.id && a.canal === 'telegram')!
     assert.equal(hijo.estado, 'enviado')
-    assert.ok(hijo.plazo_accion_hasta, 'el respaldo también espera una acción')
+    assert.ok(hijo.plazo_accion_hasta, 'el recordatorio también espera una acción')
     assert.equal(original.plazo_accion_hasta, null, 'el original deja de vigilarse')
 
     const r2 = await procesarEscalera()
     assert.equal(r2.respaldos, 0, 'no se repite')
-    assert.equal(emailsA('lucia@mail.test').length, 1)
+    assert.equal(tgPara(960).length, 1)
   })
 
   test('segundo nivel: si el respaldo tampoco tiene acción se abre una tarea, una sola vez', async () => {
@@ -108,12 +107,13 @@ describe('avisos sin acción: respaldo y luego tarea para el equipo', () => {
     assert.equal(db.rows('admin_flags').length, 1, 'no se duplica la tarea')
   })
 
-  test('si el compita no tiene correo, pasa directo a la tarea', async () => {
-    const { compita, sol } = escenario({ email: null })
+  test('si el compita no tiene Telegram, pasa directo a la tarea', async () => {
+    const { compita, sol } = escenario({ telegram: null })
     avisoSolicitud(compita, sol)
     const r = await procesarEscalera()
     assert.equal(r.respaldos, 0)
     assert.equal(r.tareas, 1)
+    assert.equal(tgPara(960).length, 0)
     assert.equal(emailsA('lucia@mail.test').length, 0)
   })
 
@@ -141,10 +141,10 @@ describe('avisos sin acción: respaldo y luego tarea para el equipo', () => {
     assert.equal(db.rows('admin_flags').length, 0)
   })
 
-  test('si el correo de respaldo falla, el compita igual pasa a la tarea del equipo', async () => {
+  test('si el recordatorio por Telegram falla, el compita igual pasa a la tarea del equipo', async () => {
     const { compita, sol } = escenario()
     avisoSolicitud(compita, sol)
-    net.resendFail = true
+    net.tgFailFor.add('960')
     const r = await procesarEscalera()
     assert.equal(r.respaldos, 0)
     assert.equal(r.tareas, 1)
@@ -159,12 +159,13 @@ describe('la pregunta de contratar sin respuesta', () => {
       estado: 'enviado', intentos: 1, ultimo_intento_en: hace(200), programado_para: hace(200), plazo_accion_hasta: hace(1), ...o,
     })
 
-  test('a las 2 h sin decidir, el cliente recibe un recordatorio', async () => {
+  test('sin decidir tras el correo de las 24 h: no se le manda un segundo correo, pasa a una tarea del equipo', async () => {
     const { cli, sol } = escenario({ estadoSolicitud: 'aceptada' })
     avisoDecision(cli, sol)
     const r = await procesarEscalera()
-    assert.equal(r.respaldos, 1)
-    assert.match(emailsA('caro@mail.test')[0].subject, /^Recordatorio: ¿Qué decidiste sobre Lucía Pérez\?/)
+    assert.equal(r.respaldos, 0)
+    assert.equal(r.tareas, 1)
+    assert.equal(emailsA('caro@mail.test').length, 0)
   })
 
   test('si ya decidió (la solicitud se cerró), no se le vuelve a preguntar', async () => {

@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "demo": "bash scripts/demo/arrancar.sh",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -26,6 +27,7 @@
     "react-dom": "19.2.8",
     "react-leaflet": "^5.0.0",
     "resend": "^6.30.0",
+    "sharp": "^0.35.5",
     "topojson-client": "^3.1.0"
   },
   "devDependencies": {

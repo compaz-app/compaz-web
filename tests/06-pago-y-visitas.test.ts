@@ -4,6 +4,7 @@ import { beforeEach, test, describe, afterEach } from 'node:test'
 import assert from 'node:assert/strict'
 import { POST as pagoConfirmar } from '@/app/api/pago/confirmar/route'
 import { GET as pagoInfo } from '@/app/api/pago/info/route'
+import { enviarResumenesSinReporte } from '@/lib/resumen-visita'
 import { POST as webhook } from '@/app/api/telegram-webhook/route'
 import { PUT as fechaPut } from '@/app/api/visita/fecha/route'
 import { POST as reagendarCliente } from '@/app/api/visita/reagendar/route'
@@ -99,16 +100,16 @@ describe('Ciclo de la visita (cliente ↔ compita)', () => {
     assert.equal(v.estado, 'en_curso')
     assert.match(tgPara(910).at(-1)!.text, /confirmó tu llegada/)
     assert.match(tgPara(910).at(-1)!.text, /&lt;8am/, 'el "<" del familiar llega escapado')
-    assert.equal(emailsA('cli@mail.test').filter((e) => e.subject.includes('llegó con tu familiar')).length, 1)
+    assert.equal(emailsA('cli@mail.test').filter((e) => e.subject.includes('llegó con tu familiar')).length, 0, 'el cliente acaba de confirmar él mismo: no hace falta otro correo')
     assert.ok(avisosAdmin().some((m) => m.text.includes('Visita iniciada')))
   })
 
-  test('doble toque en "Sí, iniciar": una sola visita en curso y un solo correo', async () => {
+  test('doble toque en "Sí, iniciar": una sola visita en curso (y ningún correo de más)', async () => {
     const { v } = mundo()
     await webhook(tgText(910, '▶️ Iniciar visita'))
     await Promise.all([webhook(tgText(910, '✅ Sí, iniciar')), webhook(tgText(910, '✅ Sí, iniciar'))]); await confirmarLlegada()
     assert.equal(db.rows('visitas').filter((x) => x.estado === 'en_curso').length, 1)
-    assert.equal(emailsA('cli@mail.test').filter((e) => e.subject.includes('llegó con tu familiar')).length, 1)
+    assert.equal(emailsA('cli@mail.test').filter((e) => e.subject.includes('llegó con tu familiar')).length, 0)
     void v
   })
 
@@ -135,7 +136,28 @@ describe('Ciclo de la visita (cliente ↔ compita)', () => {
     const v2 = mkVisita(otro, compita, { estado: 'programada', fecha_programada: hoyVEstr(), hora_inicio_programada: '15:00', hora_fin_programada: '17:00' })
     await iniciar()
     assert.equal(v2.estado, 'en_curso'); assert.equal(v.estado, 'programada')
-    assert.equal(emailsA('otro@mail.test').length, 2, 'aviso de llegada + inicio confirmado'); assert.equal(emailsA('cli@mail.test').length, 0)
+    assert.equal(emailsA('otro@mail.test').length, 1, 'solo el aviso de llegada (confirmar el inicio lo hizo él mismo)'); assert.equal(emailsA('cli@mail.test').length, 0)
+  })
+
+  test('te escribió: un correo por visita, y otro solo si pasan más de 30 minutos sin que el cliente lo lea', async () => {
+    const { v } = mundo()
+    const correos = () => emailsA('cli@mail.test').filter((e) => e.subject.includes('te escribió'))
+    const envejecer = (min: number) => { for (const m of db.rows('mensajes')) if (m.contenido === 'email_notif_mensaje') m.created_at = new Date(Date.now() - min * 60_000).toISOString() }
+    await webhook(tgText(910, 'Hola, ¿cómo estás?'))
+    assert.equal(correos().length, 1)
+    // 11 minutos después: no hay otro (antes salía uno cada 10)
+    envejecer(11); await webhook(tgText(910, 'Te escribo por la hora'))
+    assert.equal(correos().length, 1)
+    // 31 minutos después y el cliente no lo leyó: sale otro
+    envejecer(31); await webhook(tgText(910, 'Sigo por aquí'))
+    assert.equal(correos().length, 2)
+    // 31 minutos después pero el cliente abrió su chat: no hay otro
+    envejecer(31); db.rows('usuarios').find((u) => u.email === 'cli@mail.test')!.chat_leido_en = new Date().toISOString()
+    await webhook(tgText(910, 'Ya casi'))
+    assert.equal(correos().length, 2)
+    const correo = correos()[0]
+    assert.match(correo.html, /\/portal\?sec=visitas/); assert.doesNotMatch(correo.html, /dashboard/)
+    void v
   })
 
   test('mensajes: se guardan, se limita el email a 1 cada 10 min, y si Resend falla el siguiente reintenta', async () => {
@@ -176,8 +198,10 @@ describe('Ciclo de la visita (cliente ↔ compita)', () => {
     const todo = JSON.stringify([db.rows('mensajes'), net.emails, net.tg])
     assert.ok(!todo.includes('TESTBOTTOKEN'), 'el token del bot no debe aparecer en datos persistidos ni notificaciones')
 
-    // terminar → correo resumen con foto firmada
+    // terminar → NO sale correo; si el compita no completa el cuestionario, a los 35 min sale el resumen básico (un solo correo) con la foto firmada
     await webhook(tgText(910, '🔴 Terminar visita')); await webhook(tgText(910, '✅ Sí, terminar'))
+    assert.equal(emailsA('cli@mail.test').filter((e) => e.subject.startsWith('Resumen')).length, 0, 'al terminar no sale correo')
+    await enviarResumenesSinReporte(new Date(Date.now() + 40 * 60_000))
     const resumen = emailsA('cli@mail.test').find((e) => e.subject.startsWith('Resumen'))!
     assert.match(resumen.html, /\/api\/foto\/[0-9a-f-]+\?e=\d+&amp;s=[0-9a-f]+/)
     assert.ok(!JSON.stringify(net.emails).includes('TESTBOTTOKEN'))
@@ -189,7 +213,8 @@ describe('Ciclo de la visita (cliente ↔ compita)', () => {
     await webhook(tgText(910, '🔴 Terminar visita'))
     await Promise.all([webhook(tgText(910, '✅ Sí, terminar')), webhook(tgText(910, '✅ Sí, terminar'))])
     assert.equal(v.estado, 'terminada')
-    assert.equal(emailsA('cli@mail.test').filter((e) => e.subject.startsWith('Resumen')).length, 1)
+    assert.equal(emailsA('cli@mail.test').filter((e) => e.subject.startsWith('Resumen') || e.subject.startsWith('Actualización')).length, 0, 'al terminar no sale ningún correo')
+    assert.ok(db.rows('novedades_cliente').some((n: any) => n.tipo === 'visita_terminada'), 'sí queda el aviso en el portal')
     assert.equal(compita.visitas_realizadas, 1)
     assert.match(tgPara(910).at(-1)!.text, /1 de 4/)
     for (const r of ['rr:5', 'rr:4', 'rr:N', 'rr:3']) await webhook(tgBtn(910, r))
@@ -197,7 +222,9 @@ describe('Ciclo de la visita (cliente ↔ compita)', () => {
     assert.equal(db.rows('reportes_visita').length, 1)
     const rep = db.rows('reportes_visita')[0]
     assert.deepEqual([rep.animo, rep.fisico, rep.participacion, rep.entorno], [5, 4, null, 3])
-    assert.equal(emailsA('cli@mail.test').filter((e) => e.subject.startsWith('Actualización')).length, 1)
+    // UN solo correo en total: el resumen completo, al terminar el cuestionario
+    assert.equal(emailsA('cli@mail.test').filter((e) => /^(Resumen|Actualización)/.test(e.subject)).length, 1)
+    assert.ok(emailsA('cli@mail.test').some((e) => e.subject.startsWith('Resumen de la visita de hoy')))
   })
 
   test('CRUCE: iniciar OTRA visita con el cuestionario pendiente NO borra el cuestionario', async () => {
@@ -242,6 +269,15 @@ describe('Ciclo de la visita (cliente ↔ compita)', () => {
     v.estado = 'programada'; v.fecha_programada = hoyVEstr(); net.resendFail = true
     await webhook(tgBtn(910, 'reagendar_visita'))
     assert.match(ultimoTg(910)!.text, /no pudimos enviar el correo/)
+  })
+
+  test('reagendar desde Telegram: el cliente lo ve en su portal (tarjeta y campana) y en el chat de la visita, no solo por correo', async () => {
+    const { v, cli } = mundo()
+    await webhook(tgBtn(910, 'reagendar_visita'))
+    assert.ok(db.rows('novedades_cliente').some((n) => n.usuario_id === cli.id && n.tipo === 'visita_reagendada_compita'))
+    assert.ok(db.rows('mensajes').some((m) => m.visit_id === v.id && /^evento::Visita reagendada: .+ necesita cambiar la fecha/.test(m.contenido)))
+    const { estadoDelCliente } = await import('@/lib/estado-cliente')
+    assert.equal((await estadoDelCliente(cli.id)).codigo, 'visita_reagendada_compita')
   })
 
   test('bloquear compita en pleno servicio: se desvincula de Telegram y de sus clientes; ya no puede operar', async () => {

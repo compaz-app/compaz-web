@@ -213,7 +213,7 @@ describe('el compita acepta una contratación directa', () => {
     assert.match(correo[0].subject, /María P\. aceptó tu solicitud/)
     assert.ok(!correo[0].subject.includes('Pérez'), 'antes de pagar solo ve la inicial del apellido')
     assert.ok(correo[0].html.includes(`/pago?solicitud=${sol.id}`))
-    assert.match(correo[0].html, /nunca te pedirá/i, 'lleva la advertencia antifraude')
+    assert.match(correo[0].html, /nunca te pide/i, 'lleva la advertencia antifraude')
     assert.match(tgPara(9400).at(-1)!.text, /Aceptaste/)
     assert.ok(avisosAdmin().some((m) => m.text.includes('aceptó una contratación directa')))
     const e = db.rows('eventos').find((x) => x.tipo === 'solicitud_aceptada')!

@@ -17,14 +17,15 @@ async function registrarCompita(email: string | null = 'rosa@mail.test') {
   admin()
   const token = (await (await (generarInvite as any)()).json()).data.token
   session.user = null
-  await registrar(req('/api/onboarding/registrar', { json: { token, nombre: 'Rosa Díaz', email, telefono: '0412 123 4567', zona: 'Zulia', descripcion: 'Cuidadora', servicios: ['Compañía'] } }))
+  await registrar(req('/api/onboarding/registrar', { json: { token, nombre: 'Rosa Díaz', email, telefono: '0412 123 4567', zona: 'Zulia', descripcion: 'Cuidadora', servicios: ['Compañía'], horarios_disponibles: [{ dia: 'lunes', inicio: '09:00', fin: '12:00' }] } }))
   return db.rows('compitas').at(-1)!
 }
 
-test('el correo de bienvenida no repite comandos ni promete una revisión que no se hace', async () => {
+test('el correo de bienvenida es corto: 3 pasos, sin tabla de comandos ni promesas de revisión', async () => {
   await registrarCompita()
   const html = emailsA('rosa@mail.test')[0].html
-  assert.equal((html.match(/>\/menu</g) ?? []).length, 1)
+  assert.doesNotMatch(html, />\/menu</, 'los comandos ya no van en el correo (la guía está en el botón «Menú» del bot)')
+  assert.equal((html.match(/<li>/g) ?? []).length, 3)
   assert.doesNotMatch(html, /revisa y verifica tu perfil/, 'se quitó a propósito (29-oct): no promete una revisión')
 })
 

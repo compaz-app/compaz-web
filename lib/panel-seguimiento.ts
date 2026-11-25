@@ -24,9 +24,9 @@ export function listarSeguimiento(ahora: Date = new Date()): Promise<FilaSeguimi
 }
 
 async function calcularSeguimiento(ahora: Date): Promise<FilaSeguimiento[]> {
-  const { data, error } = await createAdminSupabase().from('usuarios').select('id, created_at, plan, eliminada_en').order('created_at', { ascending: false }).limit(MAX_CLIENTES_SEGUIMIENTO * 2)
+  const { data, error } = await createAdminSupabase().from('usuarios').select('id, created_at, plan, eliminada_en, activado').order('created_at', { ascending: false }).limit(MAX_CLIENTES_SEGUIMIENTO * 2)
   if (error) throw new Error(`No se pudo leer Seguimiento: ${error.message}`)
-  const clientes = (data ?? []).filter((u) => !u.eliminada_en && u.plan !== 'bloqueado').slice(0, MAX_CLIENTES_SEGUIMIENTO)
+  const clientes = (data ?? []).filter((u) => !u.eliminada_en && u.activado !== false && u.plan !== 'bloqueado').slice(0, MAX_CLIENTES_SEGUIMIENTO)
   const filas: FilaSeguimiento[] = []
   const umbrales = umbralesDeAjustes(await getAjustes())
   // Una cantidad fija de consultas por cada 15 clientes (cargarFotos), no unas 12 por cliente.

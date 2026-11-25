@@ -75,7 +75,7 @@ El requisito «operador» (solo Luis o Juan pueden habilitar) depende de quién 
 Controles:
 1. **Huella por función.** La operación `version` de la API devuelve el SHA-256 de cada función copiada. `lib/cmc-api.ts` (`HUELLAS_REGLAS_CMC`) guarda las huellas comprobadas el 2026-11-19 contra el proyecto original: **15 de 15 iguales**. Si la API devuelve otra huella, la ficha avisa «confirma estos requisitos en la V2». La prueba 120 vigila este control.
 2. **Resultados comparados con la V2 en producción** (2026-11-19, en solo lectura; los códigos de la muestra están en el informe privado, no en este repositorio público):
-   - Conteos de la lista, iguales a los de la V2: Registrado 547, Preseleccionado 291, sin etapa 23, En verificación 4, Habilitado 3 y Descartado 1. Son 869 sin duplicados; los 139 duplicados confirmados van aparte.
+   - Conteos de la lista en esa fecha (las cifras actuales están en §7.1), iguales a los de la V2: Registrado 547, Preseleccionado 291, sin etapa 23, En verificación 4, Habilitado 3 y Descartado 1. Son 869 sin duplicados; los 139 duplicados confirmados van aparte.
    - Una habilitada: puede recibir servicios, Sí. La V2 dice «Elegible: Sí».
    - Una habilitada por excepción: No, con identidad, referencia y onboarding pendientes. La V2 dice «Elegible: No» y «Etapas omitidas: identidad, referencia, onboarding».
    - Una en verificación: 3 pendientes, con los mismos textos que la V2 (identidad, referencia y onboarding). La V2 dice «Pendientes: 3».
@@ -136,6 +136,73 @@ Controles:
   1. Abrir varias fichas seguidas agotaba la cuota de lectura de Sheets (`error_interno`): cada hoja se leía con dos llamadas. Ahora cada petición hace 2 llamadas `batchGet` en total y, si Google limita, responde `limite_google` con un mensaje claro.
   2. El filtro de etiquetas privadas borraba el requisito «Referencia verificada» (la palabra «referencia» coincidía en el campo `etiqueta`). Ahora el filtro solo mira `campo` y `pregunta`.
 - **Calidad de datos del CMC (se corrige allí, no en el panel):** dos códigos aparecen dos veces en la hoja 03. Se muestra la primera aparición y la segunda se cuenta como «código vacío, mal escrito o repetido».
+
+### 7.1 Conciliación automática hoja 03 ↔ panel (2026-11-25)
+
+**Método.** Hay dos cálculos independientes, solo de lectura:
+
+- **Lado CMC.** `docs/cmc/conciliacion/Conciliacion.gs` es un archivo temporal en el proyecto API. Se ejecutó desde el editor y se borró después. La implementación publicada no cambió y los 4 archivos del proyecto conservan sus huellas. Lee las hojas 03, 08 y 11 con la API de Sheets y no usa nada de `ApiPanel.gs`, `HojaSoloLectura.gs` ni del panel.
+- **Lado panel.** Las filas que el preview manda al navegador.
+
+Cada lado calcula, por categoría, la cifra y la huella SHA-256 de la lista ordenada de códigos. Si las huellas son iguales, el panel tiene exactamente los mismos códigos en cada categoría, no solo la misma cifra.
+
+| Categoría | Hoja 03 | Panel | Huella igual |
+|---|---|---|---|
+| Filas con datos | 1008 | (2 no se muestran) | — |
+| Códigos únicos | 1006 | 1006 | sí |
+| Códigos repetidos (2.ª aparición) | 2 | 2 | — |
+| Duplicados confirmados | 137 | 137 | sí |
+| Perfiles de prueba | 3 | 3 | sí |
+| Aspirantes únicos | 866 | 866 | sí |
+| Registrado | 547 | 547 | sí |
+| Preseleccionado | 289 | 289 | sí |
+| Entrevistado | 0 | 0 | sí |
+| En verificación | 4 | 4 | sí |
+| Habilitado | 4 | 4 | sí |
+| Descartado | 1 | 1 | sí |
+| Sin etapa | 21 | 21 | sí |
+| Alertas que bloquean | 0 | 0 | sí |
+| Requieren atención | 382 | 382 | sí |
+
+Los indicadores, el stepper y los filtros de la pantalla muestran las mismas cifras: 866, 293 en evaluación, 4 habilitados, 382, «No cuentan 140» y «Sin etapa 21».
+
+**«Requieren atención»: diferencia encontrada y corregida.** El panel mostraba 318.
+
+- **Lo que sí contaba bien:** los 318 eran todos acciones del equipo, sin esperas ni excluidos:
+  - 289 preseleccionados por entrevistar;
+  - 4 en verificación;
+  - 4 habilitadas sin activar en la web;
+  - 21 sin etapa.
+- **El fallo:** omitía 64 registrados con la preentrevista completada. El panel buscaba «respond», pero el CMC escribe «Formulario completado», el mismo criterio de su cola de entrevistas. En la V2, preseleccionar es una decisión manual del equipo (`v2_preseleccionar`).
+- **Ahora son 382:**
+
+| Etapa | Estado de la preentrevista | Casos | Clasificación |
+|---|---|---|---|
+| Preseleccionado | Formulario completado | 288 | acción: entrevistar |
+| Preseleccionado | Enviado (preselección manual) | 1 | acción: entrevistar |
+| Registrado | Formulario completado | 64 | acción: revisar y decidir |
+| En verificación | — | 4 | acción: completar requisitos |
+| Habilitado | Inactiva y sin verificar en la web | 4 | acción: activarla |
+| Sin etapa | — | 21 | acción: asignar etapa en el CMC |
+| Registrado | Enviado | 477 | espera: respuesta del aspirante |
+| Registrado | Vacío | 6 | espera: envío automático cada 15 min |
+| Descartado | — | 1 | cerrado |
+
+Duplicados y pruebas quedan fuera por construcción: su estado es «excluido».
+
+**Comprobaciones adicionales:**
+
+- Ningún preseleccionado tiene entrevista en la hoja 08 (9 códigos entrevistados en 11 filas).
+- Ningún aspirante tiene «Estado selección = Excluido».
+- No hay alertas que bloqueen.
+
+**Hallazgos del CMC (no se modificó ningún registro):**
+
+1. Dos códigos repetidos en la hoja 03: el segundo está en las filas 269 y 309.
+2. Los 21 «sin etapa» son registros recientes cuya etapa no se inicializó. Corresponde al equipo normalizarlos en el CMC.
+3. 6 registrados no tienen la preentrevista enviada, aunque el envío automático corre cada 15 minutos. Hay que revisar si les falta un contacto válido.
+4. «Estado selección» dice «Esperando respuesta» en todas las fichas con formulario, incluso en las habilitadas y la descartada. No sirve como señal, y el panel no la usa.
+5. El perfil de prueba integral está **activo y verificado en el catálogo público**: una familia real podría contratarlo. El panel ya lo avisa. Conviene desactivarlo en la web antes del lanzamiento.
 
 ## 8. Configuración
 

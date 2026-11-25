@@ -5,6 +5,8 @@ import { useSearchParams } from 'next/navigation'
 import { ZONAS_MUNICIPIOS as ZONAS } from '@/lib/venezuela'
 import { colors } from '@/lib/design'
 import { OpcionesProximamenteCompita, SeccionCuidadorMascotas } from '@/components/ui/Proximamente'
+import { AVISO_FRAUDE } from '@/lib/avisos-seguridad'
+import { reducirFoto } from '@/lib/reducir-foto'
 
 // ── Servicios ─────────────────────────────────────────────────────────────────
 
@@ -283,7 +285,7 @@ function OnboardingForm() {
 
       if (fotoFile) {
         const fd = new FormData()
-        fd.append('foto', fotoFile)
+        fd.append('foto', await reducirFoto(fotoFile)) // se reduce en el teléfono antes de subirla
         fd.append('nombre', form.nombre)
         fd.append('token', token)
         const uploadRes = await fetch('/api/onboarding/upload-foto', { method: 'POST', body: fd })
@@ -320,8 +322,8 @@ function OnboardingForm() {
     return (
       <div style={s.center}>
         <div style={s.card}>
-          <h2 style={s.h2}>Enlace inválido o expirado</h2>
-          <p style={{ color: '#6B5C90', marginTop: '8px' }}>Este enlace no es válido o ya fue utilizado. Pídele al equipo Compaz un nuevo enlace.</p>
+          <h2 style={s.h2}>Enlace inválido o vencido</h2>
+          <p style={{ color: '#6B5C90', marginTop: '8px' }}>Este enlace no sirve o ya se usó. Pide uno nuevo al equipo de Compaz.</p>
         </div>
       </div>
     )
@@ -343,52 +345,21 @@ function OnboardingForm() {
               <button type="button" onClick={() => { setCorrigiendo(true); setStep('form') }} style={{ background: 'none', border: 'none', padding: 0, color: colors.naranjaOscuro, fontWeight: 700, textDecoration: 'underline', cursor: 'pointer', fontSize: '14px' }}>Corregir mis datos</button>
             </p>
           )}
-          <div style={{ background: '#FFF3E8', border: '2px solid #FF6B2B', borderRadius: '14px', padding: '16px 20px', marginBottom: '24px' }}>
-            <p style={{ color: '#C84B0E', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif', fontSize: '15px', margin: '0 0 6px' }}>
-              Tu perfil no aparece para los clientes todavía
-            </p>
-            <p style={{ color: '#7A3A0A', fontSize: '14px', lineHeight: '1.6', margin: 0 }}>
-              Para que los clientes puedan encontrarte y contactarte, debes conectar Telegram. Sin eso, tu perfil permanece invisible en el sistema.
-            </p>
-          </div>
-
-          <div style={{ ...s.infoBox, marginBottom: '16px' }}>
-            <p style={{ fontWeight: 700, color: '#1A0A3C', marginBottom: '16px', fontFamily: 'Bricolage Grotesque, sans-serif', fontSize: '15px' }}>Paso 1 — Descarga Telegram (si aún no lo tienes)</p>
-            <p style={{ color: '#4A3B6B', fontSize: '13px', lineHeight: '1.7', marginBottom: '12px' }}>
-              Telegram es una aplicación gratuita de mensajería, como WhatsApp. Si ya la tienes instalada, pasa al paso 2.
-            </p>
-            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-              <a href="https://apps.apple.com/app/telegram-messenger/id686449807" target="_blank" rel="noopener noreferrer"
-                style={{ flex: 1, minWidth: '140px', background: '#1A0A3C', color: 'white', borderRadius: '10px', padding: '10px 14px', textDecoration: 'none', fontSize: '13px', fontWeight: 600, textAlign: 'center' as const }}>
-                Descargar en iPhone (App Store)
-              </a>
-              <a href="https://play.google.com/store/apps/details?id=org.telegram.messenger" target="_blank" rel="noopener noreferrer"
-                style={{ flex: 1, minWidth: '140px', background: '#1A0A3C', color: 'white', borderRadius: '10px', padding: '10px 14px', textDecoration: 'none', fontSize: '13px', fontWeight: 600, textAlign: 'center' as const }}>
-                Descargar en Android (Play Store)
-              </a>
-            </div>
-          </div>
-
-          <div style={{ ...s.infoBox, marginBottom: '24px' }}>
-            <p style={{ fontWeight: 700, color: '#1A0A3C', marginBottom: '16px', fontFamily: 'Bricolage Grotesque, sans-serif', fontSize: '15px' }}>Paso 2 — Abre el bot de Compaz</p>
-            <ol style={{ paddingLeft: '20px', color: '#4A3B6B', lineHeight: '1.6', margin: 0 }}>
-              <li style={{ marginBottom: '14px' }}>
-                <strong>Toca el botón naranja de abajo.</strong> Te abrirá directamente el chat del bot dentro de Telegram.
-              </li>
-              <li style={{ marginBottom: '14px' }}>
-                Cuando abra el chat, toca el botón verde que dice <strong>«Iniciar»</strong> (o escribe <code style={s.code}>/start</code> y envíalo).
-              </li>
-              <li style={{ marginBottom: '14px' }}>
-                El bot te preguntará tu nombre. Escríbelo <strong>exactamente igual</strong> a como lo pusiste en el formulario y envíalo.
-              </li>
-              <li>
-                Recibirás un mensaje de confirmación y ya estarás conectado.
-              </li>
+          <p style={{ color: '#7A3A0A', fontWeight: 700, fontSize: '15px', background: '#FFF3E8', border: '2px solid #FF6B2B', borderRadius: '14px', padding: '14px 18px', margin: '0 0 16px' }}>
+            Tu perfil aparece para los clientes cuando actives Telegram.
+          </p>
+          <div style={{ ...s.infoBox, marginBottom: '20px' }}>
+            <ol style={{ paddingLeft: '20px', color: '#4A3B6B', lineHeight: '1.7', margin: 0 }}>
+              <li>Toca el botón naranja para abrir el bot.</li>
+              <li>Toca <strong>«Iniciar»</strong> y escribe tu nombre completo.</li>
+              <li>Escribe el código de 6 dígitos que te llega a tu correo.</li>
             </ol>
-            <div style={{ marginTop: '16px', padding: '14px 16px', background: '#FFF3CD', borderLeft: '4px solid #FF6B2B', borderRadius: '8px' }}>
-              <p style={{ fontSize: '13px', fontWeight: 700, color: '#1A0A3C', margin: '0 0 4px 0' }}>Alerta de fraude</p>
-              <p style={{ fontSize: '13px', color: '#1A0A3C', margin: 0 }}>El código llega únicamente por correo. Compaz nunca te llamará por teléfono. No compartas este código con nadie.</p>
-            </div>
+            <p style={{ fontSize: '13px', color: '#6B5C90', margin: '12px 0 0' }}>
+              ¿No tienes Telegram? Descárgalo para{' '}
+              <a href="https://apps.apple.com/app/telegram-messenger/id686449807" target="_blank" rel="noopener noreferrer" style={{ color: '#2D1464', fontWeight: 700 }}>iPhone</a> o{' '}
+              <a href="https://play.google.com/store/apps/details?id=org.telegram.messenger" target="_blank" rel="noopener noreferrer" style={{ color: '#2D1464', fontWeight: 700 }}>Android</a>.
+            </p>
+            <p style={{ fontSize: '13px', color: '#1A0A3C', fontWeight: 700, margin: '10px 0 0' }}>{AVISO_FRAUDE}</p>
           </div>
 
           <a href="https://t.me/CompazVisitasBot?start=onboarding" target="_blank" rel="noopener noreferrer" style={s.btnPrimary}>
@@ -406,7 +377,7 @@ function OnboardingForm() {
       <div style={{ maxWidth: '640px', margin: '0 auto', padding: '40px 20px 100px' }}>
         <h1 style={s.h1}>Bienvenido a Compaz</h1>
         <p style={{ color: '#6B5C90', marginBottom: tieneBorrador ? '12px' : '32px', lineHeight: '1.6' }}>
-          Completa tu perfil para empezar a recibir solicitudes. Solo toma unos minutos.
+          Completa tu perfil para recibir solicitudes.
         </p>
         {tieneBorrador && (
           <div style={{ background: '#EDE8FF', border: '2px solid rgba(45,20,100,0.2)', borderRadius: '12px', padding: '10px 16px', marginBottom: '32px', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: '#2D1464', fontWeight: 600 }}>
@@ -426,20 +397,20 @@ function OnboardingForm() {
           <div>
             <label style={s.label}>Correo electrónico *</label>
             <input required type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} style={s.input} placeholder="tu@correo.com" />
-            <p style={s.hint}>Lo usaremos para enviarte el código de verificación al activar tu cuenta en Telegram.</p>
+            <p style={s.hint}>Aquí te llega el código para activar Telegram.</p>
           </div>
 
           {/* Teléfono */}
           <div>
             <label style={s.label}>Teléfono de WhatsApp *</label>
             <input required type="tel" inputMode="tel" autoComplete="tel" maxLength={30} value={form.telefono} onChange={(e) => setForm({ ...form, telefono: e.target.value })} style={s.input} placeholder="0412 123 4567" />
-            <p style={s.hint}>Solo lo ve el equipo de Compaz, para escribirte si hace falta. Nunca se le muestra a las familias.</p>
+            <p style={s.hint}>Solo lo ve el equipo, nunca las familias.</p>
           </div>
 
           {/* Zonas — múltiples */}
           <div>
             <label style={s.label}>Zonas que puedes cubrir *</label>
-            <p style={s.hint}>Agrega todos los municipios donde puedes ir. Los clientes verán si cubres su zona antes de contactarte.</p>
+            <p style={s.hint}>Agrega todos los municipios donde puedes ir.</p>
 
             {/* Chips de zonas agregadas */}
             {zonas.length > 0 && (
@@ -509,7 +480,7 @@ function OnboardingForm() {
           {/* Servicios */}
           <div>
             <label style={s.label}>Servicios que ofreces * <span style={{ fontWeight: 400, color: '#6B5C90' }}>(selecciona todos los que apliquen)</span></label>
-            <p style={s.hint}>Cuantos más servicios marques de forma honesta, más visitas podrás recibir.</p>
+            <p style={s.hint}>Marca todos los que apliquen, con honestidad.</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '12px' }}>
               {SERVICIOS_GRUPOS.map(({ grupo, items }) => (
                 <div key={grupo}>
@@ -545,7 +516,7 @@ function OnboardingForm() {
           {/* Habilidades especiales */}
           <div>
             <label style={s.label}>¿Tienes alguna habilidad o formación especial? <span style={{ fontWeight: 400, color: '#6B5C90' }}>(opcional)</span></label>
-            <p style={s.hint}>Por ejemplo: fisioterapeuta, maestra, músico, cocinera, hablas otro idioma, conoces artes marciales… Lo que te hace única.</p>
+            <p style={s.hint}>Lo que te hace única.</p>
             <textarea
               value={form.habilidades}
               onChange={(e) => setForm({ ...form, habilidades: e.target.value })}
@@ -560,7 +531,7 @@ function OnboardingForm() {
           {/* Foto */}
           <div>
             <label style={s.label}>Foto de perfil</label>
-            <p style={s.hint}>Una foto clara de tu rostro genera más confianza en las familias. Usa buena iluminación y fondo simple.</p>
+            <p style={s.hint}>Rostro claro, buena luz y fondo simple.</p>
 
             {/* Ejemplo visual foto */}
             <div style={{ display: 'flex', gap: '12px', marginBottom: '12px', marginTop: '8px' }}>
@@ -569,7 +540,7 @@ function OnboardingForm() {
                 <img src="/images/ejemplo-foto-perfil.webp" alt="Ejemplo foto buena" style={{ width: '100%', maxHeight: '160px', objectFit: 'contain', display: 'block', background: '#f5f5f5' }} />
                 <div style={{ padding: '8px 10px' }}>
                   <p style={{ fontSize: '11px', color: '#2E7D32', fontWeight: 700, margin: '0 0 2px' }}>Así sí</p>
-                  <p style={{ fontSize: '11px', color: '#4A3B6B', margin: 0, lineHeight: '1.4' }}>Rostro centrado, fondo claro, buena luz</p>
+                  <p style={{ fontSize: '11px', color: '#4A3B6B', margin: 0, lineHeight: '1.4' }}>Rostro centrado y buena luz</p>
                 </div>
               </div>
               <div style={{ flex: 1, background: 'white', border: '2px solid #FFCDD2', borderRadius: '12px', overflow: 'hidden' as const }}>
@@ -577,7 +548,7 @@ function OnboardingForm() {
                 <img src="/images/ejemplo-foto-perfil.webp" alt="Ejemplo foto mala" style={{ width: '100%', maxHeight: '160px', objectFit: 'contain', display: 'block', background: '#111', filter: 'brightness(0.25) contrast(0.8)' }} />
                 <div style={{ padding: '8px 10px' }}>
                   <p style={{ fontSize: '11px', color: '#C62828', fontWeight: 700, margin: '0 0 2px' }}>Así no</p>
-                  <p style={{ fontSize: '11px', color: '#4A3B6B', margin: 0, lineHeight: '1.4' }}>Oscura, cara sin ver, fondo desordenado</p>
+                  <p style={{ fontSize: '11px', color: '#4A3B6B', margin: 0, lineHeight: '1.4' }}>Oscura o sin ver la cara</p>
                 </div>
               </div>
             </div>
@@ -614,7 +585,7 @@ function OnboardingForm() {
           {/* Disponibilidad horaria */}
           <div>
             <label style={s.label}>¿Cuándo puedes recibir llamadas de presentación? *</label>
-            <p style={s.hint}>Los clientes elegirán una hora dentro de tu disponibilidad para coordinar una llamada de 20 minutos. Horario Venezuela (hora local). Bloques de 20 min, hasta las 8:00 PM.</p>
+            <p style={s.hint}>Los clientes eligen una hora de tu disponibilidad para una llamada de 20 minutos. Hora de Venezuela. <strong>Necesitas al menos 2 horas por semana.</strong></p>
 
             {horarios.length > 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
@@ -677,9 +648,9 @@ function OnboardingForm() {
 
           {/* YouTube */}
           <div style={{ background: '#F5F0FF', border: '2px solid rgba(45,20,100,0.12)', borderRadius: '16px', padding: '20px' }}>
-            <label style={{ ...s.label, marginBottom: '4px' }}>Video de presentación en YouTube <span style={{ fontWeight: 400, color: '#6B5C90' }}>(opcional pero muy recomendado)</span></label>
+            <label style={{ ...s.label, marginBottom: '4px' }}>Video de presentación en YouTube <span style={{ fontWeight: 400, color: '#6B5C90' }}>(opcional, muy recomendado)</span></label>
             <p style={{ color: '#4A3B6B', fontSize: '13px', lineHeight: '1.6', marginBottom: '12px' }}>
-              Este video es lo primero que ve el cliente antes de elegirte. Preséntate, cuenta quién eres y muestra tu personalidad. Entre <strong>1 y 1:30 minutos</strong> — no más de eso. Un buen video puede <strong>triplicar</strong> las probabilidades de que una familia te elija.
+              Es lo primero que ve el cliente. Preséntate en <strong>1 a 1:30 minutos</strong>, con el teléfono vertical y buena luz.
             </p>
             {/* Ejemplo visual video */}
             <div style={{ display: 'flex', gap: '12px', marginBottom: '14px' }}>

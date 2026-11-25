@@ -2,7 +2,7 @@
 // Acciones que cambian estado (no_contratar, bien, reagendar de la compita) exigen firma de rol y POST.
 // contratar y reagendar del cliente solo redirigen (la autorización real ocurre en /pago y /compitas).
 import { NextRequest, NextResponse } from 'next/server'
-import { getSolicitudPorToken, iniciarReagendadoPorCompita } from '@/lib/solicitudes'
+import { getSolicitudPorToken } from '@/lib/solicitudes'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { sendTelegramMessage, avisarAdmin } from '@/lib/telegram'
 import { alertaAdmin } from '@/lib/alertas-admin'
@@ -11,8 +11,9 @@ import { esc } from '@/lib/html'
 import { rolValido, qRol } from '@/lib/links'
 import { registrarAccion } from '@/lib/avisos'
 import { registrarEvento } from '@/lib/eventos'
+import { cerrarPreguntasDeSolicitud } from '@/lib/novedades'
 import { esEntrevistaConHoras, reagendarEntrevista } from '@/lib/reagendar'
-import { pagina, puertaConfirmacion } from '@/lib/confirm'
+import { pagina, paginaPara, puertaConfirmacion } from '@/lib/confirm'
 
 type Resultado = 'contratar' | 'reagendar' | 'no_contratar' | 'bien'
 
@@ -70,13 +71,16 @@ async function ejecutar(req: NextRequest, p: NonNullable<ReturnType<typeof leer>
 
   if (resultado !== 'bien' && resultado !== 'reagendar') {
     if (solicitud.estado === 'contratada') {
-      return pagina('Ya registrado', `Ya registramos que querías contratar a ${solicitud.compita_nombre ?? 'tu compita'}. El equipo de Compaz está coordinando los detalles.`)
+      return paginaPara('cliente', 'Ya registrado', `Ya registramos que querías contratar a ${solicitud.compita_nombre ?? 'tu compita'}. El equipo de Compaz está coordinando los detalles.`)
     }
     if (solicitud.estado === 'rechazada' && resultado === 'no_contratar') return NextResponse.redirect(`${origin}/compitas`, 303)
     if (solicitud.estado === 'rechazada' && resultado === 'contratar') {
-      return pagina('Enlace vencido', 'Esta sesión ya cerró. Si tienes alguna duda escríbenos a hola@micompaz.com.')
+      return paginaPara('cliente', 'Enlace vencido', 'Esta sesión ya cerró. Si tienes alguna duda escríbenos a hola@micompaz.com.')
     }
   }
+
+  // Contestó (aquí, en el portal, en el correo o en Telegram): la pregunta se cierra en todos lados y no se repite.
+  if (quien === 'cliente' || resultado === 'reagendar') await cerrarPreguntasDeSolicitud(solicitud.id)
 
   const admin = createAdminSupabase()
   const [{ data: cliente }, { data: compita }] = await Promise.all([
@@ -97,7 +101,7 @@ async function ejecutar(req: NextRequest, p: NonNullable<ReturnType<typeof leer>
         await sendTelegramMessage(compita.telegram_chat_id, `✅ <b>Llamada registrada</b>\n\nGracias por tu tiempo. Ahora esperamos que la familia nos confirme su decisión. Te avisamos en cuanto sepamos. ¡Gracias por ser parte de Compaz!`)
       } catch (e) { console.error('Telegram bien compita:', e) }
     }
-    return pagina('¡Gracias!', 'Registramos que la llamada fue bien. Estaremos en contacto según lo que decida la familia.')
+    return paginaPara('compita', '¡Gracias!', 'Registramos que la llamada fue bien. Estaremos en contacto según lo que decida la familia.')
   }
 
   // ── Reagendar ─────────────────────────────────────────────────────────────
@@ -106,49 +110,12 @@ async function ejecutar(req: NextRequest, p: NonNullable<ReturnType<typeof leer>
     if (await esEntrevistaConHoras(solicitud.id)) {
       if (quien === 'compita') {
         const r = await reagendarEntrevista(solicitud.id, 'compita')
-        return r.ok ? pagina('Reagendado', 'Listo. Le avisamos al cliente para que elija otra de tus horas libres.') : pagina('Error', 'No pudimos procesar el reagendado (la solicitud ya cambió de estado).', 409)
+        return r.ok ? paginaPara('compita', 'Reagendado', 'Listo. Le avisamos al cliente para que elija otra de tus horas libres.') : pagina('Error', 'No pudimos procesar el reagendado (la solicitud ya cambió de estado).', 409)
       }
       return NextResponse.redirect(`${origin}/reagendar/${encodeURIComponent(token)}`, 303)
     }
-    if (quien === 'compita') {
-      const reagendado = await iniciarReagendadoPorCompita(token)
-      if (!reagendado) return pagina('Error', 'No pudimos procesar el reagendado (la solicitud ya cambió de estado).', 409)
-
-      if (compita?.telegram_chat_id) {
-        const accion = `sugerir_r:${solicitud.id}:${cliente?.email ?? ''}:${cliente?.nombre ?? 'el cliente'}`
-        await admin.from('telegram_estados').upsert(
-          { chat_id: compita.telegram_chat_id, registro_pendiente: false, pendiente_accion: accion, pendiente_expira: new Date(Date.now() + 24 * 3600_000).toISOString() },
-          { onConflict: 'chat_id' },
-        )
-        try {
-          await sendTelegramMessage(
-            compita.telegram_chat_id,
-            `🔄 <b>Reagendado iniciado</b>\n\n¿Cuándo puedes repetir la llamada con ${esc(cliente?.nombre ?? 'el cliente')}?\n\n✍️ <b>Responde a este mensaje con los horarios que te funcionen</b> y se los haremos llegar por email.\n\n📅 <i>Incluye el día y la hora exacta. Por ejemplo: lunes 13 de octubre a las 3:00pm.</i>`,
-          )
-        } catch (e) { console.error('Telegram reagendar compita:', e) }
-      }
-
-      if (cliente?.email) {
-        try {
-          await sendEmail({
-            to: cliente.email,
-            subject: `${solicitud.compita_nombre} necesita reagendar la llamada`,
-            html: `
-              <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px">
-                <h2 style="color:#2D1464;font-size:22px">Reagendando la llamada</h2>
-                <p style="color:#4A3B6B;font-size:16px;line-height:1.6">
-                  <strong>${esc(solicitud.compita_nombre)}</strong> tuvo un problema técnico y necesita reagendar.
-                  En breve recibirás un correo con nuevos horarios disponibles.
-                </p>
-                <p style="color:#6B5C90;font-size:13px;margin-top:24px">Compaz — <em>Cerca aunque estés lejos</em></p>
-              </div>`,
-          })
-        } catch (e) { console.error('Email reagendar al cliente desde compita:', e) }
-      }
-      return pagina('Reagendado iniciado', 'Escríbenos en Telegram los nuevos horarios y se los haremos llegar al cliente.')
-    }
-    await anotarDecision(solicitud, 'reagendar')
-    return NextResponse.redirect(`${origin}/compitas?compita=${encodeURIComponent(solicitud.compita_id)}&reagendar=${encodeURIComponent(solicitud.id)}`, 303)
+    // Ya no hay camino de «escribe nuevos horarios»: el compita solo puede reagendar una solicitud en el modo de horas libres (arriba). Lo demás ya no vale.
+    return pagina('Enlace inválido', 'Este enlace ya no es válido. Entra a tu portal para ver el estado de tu entrevista.', 410)
   }
 
   // ── Cliente contrata → paywall ────────────────────────────────────────────
@@ -176,7 +143,8 @@ async function ejecutar(req: NextRequest, p: NonNullable<ReturnType<typeof leer>
     try {
       await sendTelegramMessage(
         compita.telegram_chat_id,
-        `👋 <b>Gracias por tu dedicación</b>\n\nLa familia decidió no seguir adelante en esta ocasión. No es un reflejo de tu valor. A veces simplemente no encajan las necesidades o la química. Pasa, y no hay que desanimarse.\n\nMientras tanto, hay cosas que pueden ayudarte a destacar más:\n\n1. Agrega un video de presentación o mejora el que ya tienes. Las familias confían mucho más cuando te ven hablar.\n2. Actualiza o mejora la foto que tienes en tu perfil.\n3. Describe con más detalle tu experiencia específica (adultos mayores, niños, enfermedades crónicas, etc.).\n\nEl equipo de Compaz está trabajando para conectarte con nuevas familias. ¡Tú puedes!`,
+        `👋 <b>Gracias por tu dedicación</b>\n\nLa familia decidió no seguir en esta ocasión. No dice nada de tu valor: a veces simplemente no encajan.\n\n💡 Un video de presentación, una buena foto y una descripción con más detalle atraen más familias.`,
+
       )
     } catch (e) { console.error('Telegram no_contratar compita:', e) }
   }

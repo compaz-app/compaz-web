@@ -9,6 +9,7 @@ import { reintentarAviso } from '@/lib/avisos'
 import { sendEmail, SITE_URL } from '@/lib/email'
 import { PLANTILLAS, type NombrePlantilla, type VariablesAviso } from '@/lib/plantillas-aviso'
 import { esc } from '@/lib/html'
+import { alertaAdmin } from '@/lib/alertas-admin'
 
 type Admin = ReturnType<typeof createAdminSupabase>
 
@@ -66,7 +67,7 @@ export async function procesarCorreosDiferidos(admin: Admin = createAdminSupabas
     for (const a of vivos) porCliente.set(a.destinatario_id, [...(porCliente.get(a.destinatario_id) ?? []), a])
     for (const [clienteId, lista] of porCliente) {
       if (!lista.some((a) => new Date(a.programado_para).getTime() <= ahora.getTime())) continue
-      if (lista.length === 1) { const x = await reintentarAviso(lista[0].id, admin); if (x.estado === 'enviado') r.enviados++; continue }
+      if (lista.length === 1) { const x = await reintentarAviso(lista[0].id, admin); if (x.estado === 'enviado') r.enviados++; else if (x.estado === 'fallido') await alertaAdmin('tarea', `⚠️ No se pudo enviar un correo a un cliente (${esc(lista[0].plantilla)}). Reenvíalo desde la Bandeja.`).catch(() => false); continue }
 
       const asuntos: string[] = []; const usados: AvisoDiferido[] = []
       for (const a of lista) {

@@ -1,7 +1,7 @@
 // ══════════════════════════════════════════════════════════════════════════════
 // Compaz — Lógica de negocio para compitas
 // ══════════════════════════════════════════════════════════════════════════════
-import { perfilCompleto, PERFIL_MINIMO } from '@/lib/compita-perfil'
+import { perfilCompleto, tieneHorasMinimas, PERFIL_MINIMO } from '@/lib/compita-perfil'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import type { Compita } from '@/types'
 import { escLike } from '@/lib/html'
@@ -27,7 +27,8 @@ export async function getCompitasActivas(): Promise<Compita[]> {
     .order('visitas_realizadas', { ascending: false })
 
   if (error) throw new Error(error.message)
-  return (data ?? []) as Compita[]
+  // Sin al menos 2 horas libres por semana no hay nada que ofrecer al cliente: no aparece (los de demostración quedan exentos).
+  return ((data ?? []) as Compita[]).filter((c) => c.es_demo || tieneHorasMinimas(c.horarios_disponibles))
 }
 
 /**
@@ -87,9 +88,9 @@ export class PerfilIncompleto extends Error {
 
 /** Lanza PerfilIncompleto si al compita le falta lo mínimo del perfil público. Las familias eligen por ese perfil. */
 export async function exigirPerfil(id: string): Promise<void> {
-  const { data, error } = await createAdminSupabase().from('compitas').select('descripcion, servicios').eq('id', id).maybeSingle()
+  const { data, error } = await createAdminSupabase().from('compitas').select('descripcion, servicios, horarios_disponibles').eq('id', id).maybeSingle()
   if (error) throw new Error(error.message)
-  if (!perfilCompleto(data as { descripcion: string | null; servicios: string[] | null } | null)) throw new PerfilIncompleto()
+  if (!perfilCompleto(data as { descripcion: string | null; servicios: string[] | null; horarios_disponibles: { dia: string; inicio: string; fin: string }[] | null } | null)) throw new PerfilIncompleto()
 }
 
 /**

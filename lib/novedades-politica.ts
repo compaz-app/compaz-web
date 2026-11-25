@@ -25,7 +25,7 @@ export const NIVEL_POR_PLANTILLA: Partial<Record<NombrePlantilla, NivelNovedad>>
   directa_aceptada: 'accionable', entrevista_aceptada: 'accionable', llamada_terminada_cliente: 'accionable', reserva_rechazada: 'accionable',
   reserva_vencida: 'accionable', direccion_faltante_cliente: 'accionable', cita_rechazada_cliente: 'accionable', cita_sin_respuesta_cliente: 'accionable',
   recordatorio_cliente: 'accionable',
-  compita_en_camino: 'informativo', lugar_respuesta: 'informativo', cita_propuesta_cliente: 'informativo', pago_confirmado: 'informativo',
+  compita_en_camino: 'informativo', lugar_respuesta: 'informativo', cita_propuesta_cliente: 'informativo', pago_confirmado: 'informativo', pago_anulado: 'accionable', horas_actualizadas: 'accionable', solicitud_rechazada_cliente: 'accionable',
   visita_resumen: 'informativo', visita_reporte: 'informativo',
 }
 
@@ -34,6 +34,9 @@ export const TITULO_NOVEDAD: Partial<Record<NombrePlantilla, string>> = {
   directa_aceptada: 'Tu compita aceptó. Falta el pago.',
   entrevista_aceptada: 'Tu compita aceptó hablar contigo. Elige la hora.',
   pago_confirmado: 'Confirmamos tu pago.',
+  pago_anulado: 'Anulamos el registro de uno de tus pagos.',
+  horas_actualizadas: 'Tu compita actualizó sus horas. Elige la tuya.',
+  solicitud_rechazada_cliente: 'Tu compita no puede atender tu solicitud. Elige a otro.',
   llamada_terminada_cliente: 'Terminó tu entrevista. Cuéntanos si contratas.',
   reserva_rechazada: 'Tu compita no puede a esa hora. Elige otra.',
   reserva_vencida: 'La hora que pediste venció. Elige otra.',
@@ -55,6 +58,15 @@ export const TITULO_NOVEDAD: Partial<Record<NombrePlantilla, string>> = {
   visita_reporte: 'El reporte de bienestar de la visita está listo.',
 }
 export const TITULO_NOVEDAD_GENERICO = 'Tienes una novedad en tu portal.'
+
+/** Avisos que NO mandan correo: el portal los muestra y, si el cliente no entró, los recoge el resumen diario (lib/resumen-diario.ts). Decidido 2026-11-18. */
+export const SOLO_PORTAL: ReadonlySet<string> = new Set(['compita_en_camino', 'compita_llego'])
+/** Avisos cuyo correo espera un tiempo fijo (minutos) aunque el correo diferido esté apagado: primero el portal, y el correo solo sale si no lo vio. No aplica a la llamada muy corta (`corta: true`): ahí hubo un problema y el correo sale ya. */
+export const ESPERA_FIJA_MIN: Readonly<Record<string, number>> = { llamada_terminada_cliente: 24 * 60 }
+/** Tipos de novedad que recoge el resumen diario (los que no mandaron correo propio). */
+export const TIPOS_RESUMEN_DIARIO: readonly string[] = ['compita_en_camino', 'compita_llego', 'seguimiento_llamada', 'seguimiento_decision']
+/** Frases de las novedades que no nacen de una plantilla de correo. */
+export const TITULO_SEGUIMIENTO = { seguimiento_llamada: 'Tu llamada ya debería haber ocurrido. Cuéntanos cómo estuvo.', seguimiento_decision: 'Cuéntanos si quieres contratar a tu compita.' } as const
 
 export const nivelDe = (plantilla: string): NivelNovedad => NIVEL_POR_PLANTILLA[plantilla as NombrePlantilla] ?? 'accionable'
 export const tituloDe = (plantilla: string): string => TITULO_NOVEDAD[plantilla as NombrePlantilla] ?? TITULO_NOVEDAD_GENERICO

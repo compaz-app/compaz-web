@@ -1,5 +1,5 @@
 /* eslint-disable */
-import { db, net, limpiar, req, cron, tgPara, emailsA, ahoraMas, firmaDaily, mkCompita, mkCliente, mkSolicitud, avisosAdmin } from './harness'
+import { db, net, limpiar, req, cron, tgPara, emailsA, ahoraMas, firmaDaily, despacharDiferidos, mkCompita, mkCliente, mkSolicitud, avisosAdmin } from './harness'
 import { beforeEach, test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import { qRol, firmaRol, tokenRating } from '@/lib/links'
@@ -11,7 +11,6 @@ import { GET as segGet, POST as segPost } from '@/app/api/solicitud/seguimiento/
 import { GET as ratGet, POST as ratPost } from '@/app/api/visita/rating/route'
 import { GET as respGet, POST as respPost } from '@/app/api/solicitud/responder/route'
 import { GET as reagGet, POST as reagPost } from '@/app/api/solicitud/reagendar-compita/route'
-import { POST as proponer } from '@/app/api/solicitud/proponer-reagendado/route'
 import { POST as seguimientoCron } from '@/app/api/cron/seguimiento/route'
 import { POST as feedbackPost } from '@/app/api/visita/feedback/route'
 import { tokenFeedback } from '@/lib/links'
@@ -55,6 +54,9 @@ describe('Webhook de Daily (fin de llamada)', () => {
   test('llamada normal: un solo correo de decisión; reintentos de Daily no duplican; el cron no repite', async () => {
     const { t } = mundo()
     await dailyWebhook(eventoDaily(900)); await dailyWebhook(eventoDaily(900)); await dailyWebhook(eventoDaily(900))
+    assert.equal(emailsA('cli@mail.test').length, 0, 'primero el portal: el correo espera 24 h')
+    assert.equal(db.rows('novedades_cliente').filter((n) => n.tipo === 'llamada_terminada_cliente').length, 1)
+    await despacharDiferidos()
     const mails = emailsA('cli@mail.test')
     assert.equal(mails.length, 1)
     assert.match(mails[0].html, new RegExp(`resultado=no_contratar&amp;quien=cliente&amp;s=|resultado=no_contratar&quien=cliente&s=`))
@@ -84,8 +86,8 @@ describe('Webhook de Daily (fin de llamada)', () => {
 
   test('Resend caído en el webhook: el admin es avisado de que debe reenviar', async () => {
     mundo(); net.resendFail = true
-    await dailyWebhook(eventoDaily(900))
-    assert.ok(avisosAdmin().some((m) => m.text.includes('No se pudo enviar el correo post-llamada')))
+    await dailyWebhook(eventoDaily(900)); await despacharDiferidos()
+    assert.ok(avisosAdmin().some((m) => m.text.includes('No se pudo enviar un correo a un cliente')))
   })
 
   test('evento de otra sala (no "ent-") o de otro tipo se ignora', async () => {
@@ -110,6 +112,7 @@ describe('Reconectar llamada', () => {
     const nuevaUrl = solRow().room_url as string
     const body = JSON.stringify({ event_type: 'meeting.ended', payload: { room_name: 'ent-nueva', room_url: nuevaUrl, duration: 700 } })
     await dailyWebhook(req('/api/webhooks/daily', { body, headers: { 'content-type': 'application/json', ...firmaDaily(body) } }))
+    await despacharDiferidos()
     assert.equal(emailsA('cli@mail.test').length, 1)
   })
 
@@ -249,28 +252,14 @@ describe('Enlaces de correo/Telegram: GET no cambia estado (escáneres), POST s�
     assert.match(emailsA('cli@mail.test')[0].html, new RegExp(`/reagendar/${t}`))
   })
 
-  test('reagendar-compita: gate + POST inicia el reagendado una sola vez', async () => {
+  test('reagendar-compita: una solicitud con horas propuestas a mano ya no se reagenda por texto (el enlace deja de valer)', async () => {
     const { t } = mundo()
     const u = url('reagendar-compita', t, 'compita')
     assert.ok(await esForm(await reagGet(req(u))))
     assert.equal(solRow().estado, 'aceptada')
-    assert.equal((await reagPost(req(`/api/solicitud/reagendar-compita?token=${t}&quien=compita`, { method: 'POST' }))).status, 400)
-    await reagPost(req(u, { method: 'POST' }))
-    assert.equal(solRow().estado, 'rechazada'); assert.equal(solRow().slot_confirmado, null)
+    assert.equal((await reagPost(req(`/api/solicitud/reagendar-compita?token=${t}&quien=compita`, { method: 'POST' }))).status, 400, 'sin firma no vale')
     assert.equal((await reagPost(req(u, { method: 'POST' }))).status, 410)
-    assert.ok(db.rows('telegram_estados').some((e) => e.pendiente_accion?.startsWith('sugerir_r:')))
-  })
-
-  test('proponer-reagendado: valida slots y notifica con enlaces firmados', async () => {
-    const { t } = mundo({ estado: 'rechazada', slot_confirmado: null })
-    const mal = await proponer(req('/api/solicitud/proponer-reagendado', { json: { token: t, slots: ['no-fecha'] } }))
-    assert.equal(mal.status, 400)
-    const ok = await proponer(req('/api/solicitud/proponer-reagendado', { json: { token: t, slots: [ahoraMas(120), ahoraMas(120), ahoraMas(300)] } }))
-    assert.equal(ok.status, 200)
-    assert.equal(solRow().estado, 'pendiente'); assert.equal(solRow().slots_propuestos.length, 2, 'slots duplicados se descartan')
-    const urls = tgPara(800)[0].markup.inline_keyboard.flat().map((b: any) => b.url)
-    assert.ok(urls.every((u: string) => /quien=compita&s=[0-9a-f]{24}/.test(u)))
-    solRow().estado = 'contratada'
-    assert.equal((await proponer(req('/api/solicitud/proponer-reagendado', { json: { token: t, slots: [ahoraMas(200)] } }))).status, 400)
+    assert.equal(solRow().estado, 'aceptada', 'no se cierra ni se le pide escribir horarios')
+    assert.ok(!db.rows('telegram_estados').some((e) => String(e.pendiente_accion ?? '').startsWith('sugerir_')))
   })
 })

@@ -11,6 +11,7 @@ import SeguimientoBienestar from '@/components/ui/SeguimientoBienestar'
 import HistorialVisitas from '@/components/ui/HistorialVisitas'
 import { faltaDireccion } from '@/lib/direccion-tipos'
 import Tarjeta from '@/components/ui/base/Tarjeta'
+import MarcoChat from '@/components/portal/MarcoChat'
 import RecorridoVisita from '@/components/portal/RecorridoVisita'
 import { bloquesDeVisitas, recorridoDeVisita, type BloqueVisitas } from '@/lib/portal-secciones'
 import type { DatosPortal } from '@/lib/portal-datos'
@@ -31,8 +32,7 @@ export default function SeccionVisitas({ d, vistaPrevia }: { d: DatosPortal; vis
     switch (b) {
       case 'video': return <VideoCall visitaId={d.visitaActiva!.id} compitaNombre={nombre} roomUrlInicial={d.visitaActiva?.room_url ?? null} />
       // El chat con marco propio: borde morado, fondo tenue y altura fija con desplazamiento adentro, para que se distinga de las demás tarjetas de la pestaña.
-      case 'chat': return <section aria-label={`Chat con ${nombre}`} className="flex h-[min(34rem,75dvh)] flex-col overflow-hidden rounded-2xl border-2 border-morado-medio bg-fondo-claro shadow-sm"><Chat visita={visita!} mensajesIniciales={d.mensajes} compitaNombre={nombre} /></section>
-      case 'fecha': return <div id="fecha-programada"><FechaProgramada visitaId={visita!.id} fechaActual={visita!.fecha_programada ?? null} horaInicioActual={visita!.hora_inicio_programada ?? null} horaFinActual={visita!.hora_fin_programada ?? null} compitaNombre={nombre} /></div>
+      case 'chat': return <MarcoChat nombre={nombre}><Chat visita={visita!} mensajesIniciales={d.mensajes} compitaNombre={nombre} /></MarcoChat>
       case 'acciones_coordinacion': return <PreVisitaActions compitaNombre={nombre} tieneFecha={!!visita!.fecha_programada} />
       case 'reagendar': return <ReagendarButton visitaId={visita!.id} compitaNombre={nombre} />
       case 'llegada': return <LlegadaVisita />

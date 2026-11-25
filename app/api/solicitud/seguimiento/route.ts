@@ -7,7 +7,9 @@ import { sendTelegramMessage, makeInlineKeyboard } from '@/lib/telegram'
 import { generarTokenPerfil } from '@/lib/compita-tokens'
 import { SITE_URL } from '@/lib/email'
 import { rolValido, qRol } from '@/lib/links'
-import { pagina, puertaConfirmacion } from '@/lib/confirm'
+import { pagina as paginaSola, paginaPara, puertaConfirmacion } from '@/lib/confirm'
+// Esta ruta la ve siempre el cliente: sus páginas de éxito vuelven a donde él trabaja (ver botonDe).
+const pagina = (titulo: string, texto: string, status = 200, boton?: { texto: string; href: string }) => (boton ? paginaSola(titulo, texto, status, boton) : paginaPara('cliente', titulo, texto, status))
 
 function leer(req: NextRequest) {
   const sp = req.nextUrl.searchParams
@@ -75,11 +77,8 @@ async function ejecutar(p: NonNullable<ReturnType<typeof leer>>) {
           compitaNo.telegram_chat_id,
           [
             `Hola 💙`, ``,
-            `Esta vez el cliente decidió no continuar. No pasa nada: a veces simplemente no es el momento o no era la persona indicada, y eso no tiene nada que ver con tu talento ni tu valor como compita.`, ``,
-            `Sigue adelante con la misma actitud. Tu próxima oportunidad está más cerca de lo que crees. 🌟`, ``,
-            `💡 <b>¿Sabías que puedes mejorar tu perfil?</b>`,
-            `Puedes cambiar tu foto, actualizar tu descripción, ajustar tus servicios y horarios, o subir un video de presentación. Un perfil completo atrae más familias. Toca el botón de abajo para editarlo ahora. 👇`, ``,
-            `<i>También puedes escribir /perfil en cualquier momento para obtener un nuevo enlace, o /menu para ver todo lo que puedes hacer desde aquí.</i>`,
+            `Esta vez el cliente decidió no continuar. No dice nada de tu valor: a veces simplemente no encaja.`, ``,
+            `💡 Un perfil completo atrae más familias. Edítalo con el botón de abajo (o escribe /perfil).`,
           ].join('\n'),
           makeInlineKeyboard([
             [{ text: '✏️ Mejorar mi perfil', url: perfilUrl }],

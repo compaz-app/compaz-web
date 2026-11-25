@@ -8,6 +8,7 @@ import { createAdminSupabase } from '@/lib/supabase-server'
 import { getAjuste } from '@/lib/ajustes'
 import { registrarEvento } from '@/lib/eventos'
 import { descargarFotoTelegram } from '@/lib/telegram'
+import { limpiarImagen } from '@/lib/imagen'
 
 export const BUCKET_FOTOS = 'fotos-privadas'
 export type TipoFoto = 'llegada' | 'cliente' | 'familiar'
@@ -33,13 +34,15 @@ export async function guardarFotoPrivada(f: DatosFoto): Promise<{ id: string } |
   const peso = f.bytes.byteLength
   if (peso === 0 || peso > MAX_BYTES) { console.error('[fotos] tamaño no permitido:', peso); return null }
 
+  // Se quitan los metadatos (ubicación GPS) y se reduce: lo que se guarda pesa una fracción y no revela dónde se tomó.
+  const limpia = await limpiarImagen(f.bytes instanceof Uint8Array ? f.bytes : new Uint8Array(f.bytes))
   const admin = createAdminSupabase()
   const id = randomUUID()
-  const ruta = `${f.tipo}/${id}.${ext}`
+  const ruta = `${f.tipo}/${id}.${limpia.limpia ? limpia.ext : ext}`
   try {
     const dias = Number(await getAjuste('foto_retencion_dias'))
     const ahora = f.ahora ?? new Date()
-    const { error: eSube } = await admin.storage.from(BUCKET_FOTOS).upload(ruta, f.bytes, { contentType: f.contentType, upsert: false })
+    const { error: eSube } = await admin.storage.from(BUCKET_FOTOS).upload(ruta, limpia.bytes, { contentType: limpia.limpia ? limpia.contentType : f.contentType, upsert: false })
     if (eSube) { console.error('[fotos] no se pudo subir:', eSube.message); return null }
 
     const { error: eFila } = await admin.from('fotos_privadas').insert({

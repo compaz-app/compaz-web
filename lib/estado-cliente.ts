@@ -8,6 +8,7 @@
 //
 // REGLA: nunca queda "sin estado". Si la foto no encaja en nada, cae en 'bienvenida' (elegir un compita), que siempre tiene una acción útil.
 
+import { nombreDeSala } from '@/lib/llamada-ruta'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { cuposDelPlan } from '@/lib/visitas'
 import { fichaCompleta } from '@/lib/ficha'
@@ -21,14 +22,14 @@ export const CODIGOS_ESTADO = [
   // 1 Entrevista
   'elegir_horario', 'horario_pedido', 'horario_rechazado', 'entrevista_programada', 'entrevista_ahora',
   // 2 Decidir
-  'decidir', 'motivo_no',
+  'confirmar_llamada', 'decidir', 'motivo_no',
   // 3 Pagar
   'directa_aceptada', 'pagar', 'pago_revision', 'ficha_lista_espera',
   // 4 Ficha
   'ficha',
   // 5 Visitas
-  'agendar_visita', 'cita_pendiente', 'visita_programada', 'compita_llego', 'nadie_abre', 'visita_en_curso', 'visita_interrumpida', 'visita_cancelada_equipo',
-  'visita_terminada', 'agendar_otra', 'plan_agotado', 'cuenta_pausada',
+  'agendar_visita', 'visita_reagendada_compita', 'cita_pendiente', 'visita_programada', 'compita_llego', 'nadie_abre', 'visita_en_curso', 'compita_llamando', 'visita_interrumpida', 'visita_cancelada_equipo',
+  'visita_terminada', 'agendar_otra', 'sin_plan', 'plan_agotado', 'cuenta_pausada',
 ] as const
 export type CodigoEstado = (typeof CODIGOS_ESTADO)[number]
 
@@ -36,6 +37,10 @@ export type CodigoEstado = (typeof CODIGOS_ESTADO)[number]
 export interface SolicitudFoto {
   id: string; estado: string; tipo: string | null; compitaId: string; compitaNombre: string
   slotConfirmado: string | null; slotsPropuestos: number; seguimientoEnviado: boolean; tokenRespuesta: boolean
+  /** Cuándo se retomó la llamada de la entrevista (sala nueva tras cortarse), si pasó. Con eso el portal vuelve a ofrecer «Entrar a la entrevista». */
+  retomadaEn?: string | null
+  /** Ya se le preguntó «¿pudiste hablar?» y el cliente aún no contesta (en ningún canal). */
+  llamadaPorConfirmar: boolean
   /** El token de la sala de la entrevista (para el enlace de entrada del cliente). */
   token?: string | null
   /** true si el cliente dijo que NO contrata tras la entrevista. */
@@ -52,6 +57,9 @@ export interface VisitaFoto {
   id: string; estado: string; compitaNombre: string
   fechaProgramada: string | null; horaInicio: string | null
   llegadaEn: string | null; sinAccesoEn: string | null; fin: string | null; creadaEn: string
+  /** Cuándo el compita pidió una videollamada durante la visita, y la sala (solo si sigue abierta). Con eso el portal muestra «te está llamando» aunque se abra tarde. */
+  llamadaEn?: string | null
+  salaLlamada?: string | null
   /** Cuándo el cliente abrió el reporte de esta visita. Con eso, «¿cómo te fue?» termina y el portal pasa a agendar la siguiente. */
   reporteVistoEn?: string | null
   /** Hora que el cliente propuso y que el compita aún no confirma. */
@@ -92,11 +100,11 @@ export interface EstadoCliente {
 const PASO: Record<CodigoEstado, number> = {
   bienvenida: 0, solicitud_enviada: 0, solicitud_recibida: 0, directa_enviada: 0, mandado_enviado: 0, todas_rechazadas: 0,
   elegir_horario: 1, horario_pedido: 1, horario_rechazado: 1, entrevista_programada: 1, entrevista_ahora: 1,
-  decidir: 2, motivo_no: 2,
+  confirmar_llamada: 2, decidir: 2, motivo_no: 2,
   directa_aceptada: 3, pagar: 3, pago_revision: 3, ficha_lista_espera: 3,
   ficha: 4,
-  agendar_visita: 5, cita_pendiente: 5, visita_programada: 5, compita_llego: 5, nadie_abre: 5, visita_en_curso: 5, visita_interrumpida: 5, visita_cancelada_equipo: 5,
-  visita_terminada: 5, agendar_otra: 5, plan_agotado: 5, cuenta_pausada: 5,
+  agendar_visita: 5, visita_reagendada_compita: 5, cita_pendiente: 5, visita_programada: 5, compita_llego: 5, nadie_abre: 5, visita_en_curso: 5, compita_llamando: 5, visita_interrumpida: 5, visita_cancelada_equipo: 5,
+  visita_terminada: 5, agendar_otra: 5, sin_plan: 5, plan_agotado: 5, cuenta_pausada: 5,
 }
 export const pasoDe = (c: CodigoEstado) => PASO[c]
 
@@ -108,6 +116,8 @@ export const inicioVisita = (v: Pick<VisitaFoto, 'fechaProgramada' | 'horaInicio
 // Ventanas (en minutos) alrededor de la hora de una entrevista.
 const ENTREVISTA_ANTES_MIN = 60   // desde 1 hora antes aparece "es ahora" con el botón de entrar
 const ENTREVISTA_DURACION_MIN = 25 // 20 de llamada + 5 de margen: después toca decidir
+const RETOMADA_VISIBLE_MIN = 40   // la sala nueva de una llamada retomada dura unos 28 minutos
+const LLAMADA_VISIBLE_MIN = 15     // cuánto tiempo se ofrece «te está llamando» (la sala de la llamada dura poco)
 const AVISO_CANCELACION_H = 72     // cuánto tiempo se muestra "tu visita se canceló / se interrumpió"
 const VISITA_TERMINADA_H = 12      // cuánto tiempo se muestra "¿cómo te fue?" tras terminar
 
@@ -121,6 +131,9 @@ export function decidirEstado(f: FotoCliente): EstadoCliente {
 
   // 1. Una visita en vivo manda sobre todo lo demás.
   const enCurso = f.visitas.find((v) => v.estado === 'en_curso')
+  // Una llamada del compita sin contestar manda sobre el resto de la visita (dura pocos minutos: pasado ese tiempo ya no se ofrece).
+  const llamando = enCurso && enCurso.llamadaEn && enCurso.salaLlamada && ahora - new Date(enCurso.llamadaEn).getTime() < LLAMADA_VISIBLE_MIN * MIN
+  if (enCurso && llamando) return e('compita_llamando', { visitaId: enCurso.id, compitaNombre: enCurso.compitaNombre, sala: enCurso.salaLlamada! })
   if (enCurso) return e('visita_en_curso', { visitaId: enCurso.id, compitaNombre: enCurso.compitaNombre })
   const llego = f.visitas.find((v) => v.estado === 'confirmando_inicio')
   if (llego) return e('compita_llego', { visitaId: llego.id, compitaNombre: llego.compitaNombre })
@@ -136,6 +149,8 @@ export function decidirEstado(f: FotoCliente): EstadoCliente {
   if (pre) {
     // Sin ficha completa no se puede agendar: primero la ficha.
     if (!f.fichaCompleta) return e('ficha', { visitaId: pre.id, compitaNombre: pre.compitaNombre })
+    // El compita canceló la fecha (imprevisto): el portal lo dice, no solo el correo. Se va cuando hay una hora nueva propuesta o confirmada.
+    if (f.cancelaciones.some((c) => c.visitaId === pre.id && c.por === 'compita' && ahora - new Date(c.creadaEn).getTime() < AVISO_CANCELACION_H * HORA)) return e('visita_reagendada_compita', { visitaId: pre.id, compitaNombre: pre.compitaNombre })
     return e('agendar_visita', { visitaId: pre.id, compitaNombre: pre.compitaNombre })
   }
 
@@ -160,6 +175,11 @@ export function decidirEstado(f: FotoCliente): EstadoCliente {
   // 6. Decisión tras la entrevista.
   const sinCompita = f.solicitudes.filter((s) => s.compitaId !== f.compitaAsignado?.id)
   const tras = (s: SolicitudFoto) => s.slotConfirmado ? ahora >= new Date(s.slotConfirmado).getTime() + ENTREVISTA_DURACION_MIN * MIN : false
+  // La llamada se cortó y se retomó con una sala nueva: manda sobre «¿pudiste hablar?» y «¿contratas?» mientras la sala siga abierta.
+  const retomada = sinCompita.find((s) => s.tokenRespuesta && s.estado === 'aceptada' && !s.seguimientoEnviado && s.retomadaEn && ahora - new Date(s.retomadaEn).getTime() < RETOMADA_VISIBLE_MIN * MIN)
+  if (retomada) return e('entrevista_ahora', { solicitudId: retomada.id, compitaNombre: retomada.compitaNombre, cuando: retomada.slotConfirmado ?? undefined, ...(retomada.token ? { sala: retomada.token } : {}) })
+  const porConfirmar = sinCompita.find((s) => s.tokenRespuesta && s.estado === 'aceptada' && s.llamadaPorConfirmar && !s.seguimientoEnviado)
+  if (porConfirmar) return e('confirmar_llamada', { solicitudId: porConfirmar.id, compitaNombre: porConfirmar.compitaNombre, ...(porConfirmar.token ? { sala: porConfirmar.token } : {}) })
   const porDecidir = sinCompita.find((s) => s.tokenRespuesta && (s.estado === 'completada' || (s.estado === 'aceptada' && (s.seguimientoEnviado || tras(s)))))
   if (porDecidir) return e('decidir', { solicitudId: porDecidir.id, compitaNombre: porDecidir.compitaNombre })
   const dijoNo = masReciente(sinCompita.filter((s) => s.clienteDijoNo && !s.motivoRegistrado && ahora - new Date(s.creadaEn).getTime() < 7 * 24 * HORA))
@@ -194,6 +214,8 @@ export function decidirEstado(f: FotoCliente): EstadoCliente {
   if (f.compitaAsignado) {
     if (!f.fichaCompleta) return e('ficha', { compitaNombre: f.compitaAsignado.nombre })
     if (f.cupo && f.cupo.restantes <= 0) return e('plan_agotado', { compitaNombre: f.compitaAsignado.nombre })
+    // Sin plan activo (por ejemplo, el equipo anuló el pago) no se ofrece agendar: se pide pagar. Antes el portal seguía diciendo «Agenda tu próxima visita».
+    if (!f.cupo) return e('sin_plan', { compitaNombre: f.compitaAsignado.nombre })
     return e('agendar_otra', { compitaNombre: f.compitaAsignado.nombre })
   }
   if (f.solicitudes.length > 0 && f.solicitudes.every((s) => s.estado === 'rechazada')) return e('todas_rechazadas')
@@ -233,8 +255,8 @@ async function cargarTanda(ids: string[], ahora: Date): Promise<Map<string, Foto
   const hace30 = new Date(ahora.getTime() - 30 * 24 * HORA).toISOString()
   const [usR, solR, visR, cancR, pagoR, pausasR, cupos] = await Promise.all([
     admin.from('usuarios').select('*, compita:compitas(id, nombre)').in('id', ids),
-    admin.from('solicitudes').select('id, cliente_id, estado, tipo, compita_id, slot_confirmado, slots_propuestos, seguimiento_enviado, token_respuesta, confirmacion_cliente, created_at, compitas(nombre)').in('cliente_id', ids).gte('created_at', hace30).order('created_at', { ascending: false }),
-    admin.from('visitas').select('id, usuario_id, estado, fecha_programada, hora_inicio_programada, llegada_en, sin_acceso_en, fin, created_at, cita_propuesta_fecha, cita_propuesta_inicio, reporte_visto_en, compita:compitas(nombre)').in('usuario_id', ids).in('estado', ['pre_visita', 'programada', 'confirmando_inicio', 'en_curso', 'terminada']).order('created_at', { ascending: false }).limit(ids.length === 1 ? 20 : TOPE_FILAS_BASE),
+    admin.from('solicitudes').select('id, cliente_id, estado, tipo, compita_id, slot_confirmado, slots_propuestos, seguimiento_enviado, token_respuesta, confirmacion_cliente, confirmacion_llamada_enviada, created_at, compitas(nombre)').in('cliente_id', ids).gte('created_at', hace30).order('created_at', { ascending: false }),
+    admin.from('visitas').select('id, usuario_id, estado, fecha_programada, hora_inicio_programada, llegada_en, sin_acceso_en, fin, created_at, cita_propuesta_fecha, cita_propuesta_inicio, reporte_visto_en, llamada_solicitada_at, room_url, compita:compitas(nombre)').in('usuario_id', ids).in('estado', ['pre_visita', 'programada', 'confirmando_inicio', 'en_curso', 'terminada']).order('created_at', { ascending: false }).limit(ids.length === 1 ? 20 : TOPE_FILAS_BASE),
     admin.from('cancelaciones').select('usuario_id, visita_id, cancelado_por, justificada_por, creado_en').in('usuario_id', ids).gte('creado_en', new Date(ahora.getTime() - AVISO_CANCELACION_H * HORA).toISOString()),
     admin.from('solicitudes_pago').select('id, usuario_id').in('usuario_id', ids).eq('estado', 'pendiente'),
     admin.from('pausas_contacto').select('persona_id').eq('rol', 'cliente').eq('activa', true).in('persona_id', ids),
@@ -245,7 +267,7 @@ async function cargarTanda(ids: string[], ahora: Date): Promise<Map<string, Foto
     for (const id of ids) for (const [k, v] of await cargarTanda([id], ahora)) salida.set(k, v)
     return salida
   }
-  const solRows = (solR.data ?? []) as unknown as (Fila & { id: string; cliente_id: string; estado: string; tipo: string | null; compita_id: string; slot_confirmado: string | null; slots_propuestos: string[] | null; seguimiento_enviado: boolean | null; token_respuesta: string | null; confirmacion_cliente: boolean | null; created_at: string; compitas: { nombre: string } | null })[]
+  const solRows = (solR.data ?? []) as unknown as (Fila & { id: string; cliente_id: string; estado: string; tipo: string | null; compita_id: string; slot_confirmado: string | null; slots_propuestos: string[] | null; seguimiento_enviado: boolean | null; token_respuesta: string | null; confirmacion_cliente: boolean | null; confirmacion_llamada_enviada: boolean | null; created_at: string; compitas: { nombre: string } | null })[]
   const solIds = solRows.map((x) => x.id)
   const pagoPorUsuario = new Map<string, string>(); for (const p of (pagoR.data ?? []) as { id: string; usuario_id: string }[]) if (!pagoPorUsuario.has(p.usuario_id)) pagoPorUsuario.set(p.usuario_id, p.id)
   const pagoIds = [...pagoPorUsuario.values()]
@@ -258,6 +280,8 @@ async function cargarTanda(ids: string[], ahora: Date): Promise<Map<string, Foto
   const reservaDe = new Map<string, string>(); const reservaInicioDe = new Map<string, string>()
   for (const r of (reservas ?? []) as { solicitud_id: string; estado: string; inicio: string | null }[]) if (!reservaDe.has(r.solicitud_id)) { reservaDe.set(r.solicitud_id, r.estado); if (r.inicio) reservaInicioDe.set(r.solicitud_id, r.inicio) }
   const entregados = new Set(((avisos ?? []) as { entidad_id: string }[]).map((a) => a.entidad_id))
+  const { data: reconRows } = await admin.from('telegram_estados').select('chat_id, updated_at').in('chat_id', solRows.map((x) => `recon:${x.id}`))
+  const retomadaDe = new Map(((reconRows ?? []) as { chat_id: string; updated_at: string }[]).map((r) => [r.chat_id.slice('recon:'.length), r.updated_at]))
   const conMotivo = new Set(((motivos ?? []) as { entidad_id: string }[]).map((m) => m.entidad_id))
   const insistidos = new Set(((insistencias ?? []) as { entidad_id: string }[]).map((e) => e.entidad_id))
   const pausadas = new Set(((pausasR.data ?? []) as { persona_id: string }[]).map((x) => x.persona_id))
@@ -281,7 +305,7 @@ async function cargarTanda(ids: string[], ahora: Date): Promise<Map<string, Foto
         const sr = x as unknown as (typeof solRows)[number]
         return {
           id: sr.id, estado: sr.estado, tipo: sr.tipo, compitaId: sr.compita_id, compitaNombre: sr.compitas?.nombre ?? '', slotConfirmado: sr.slot_confirmado,
-          slotsPropuestos: (sr.slots_propuestos ?? []).length, seguimientoEnviado: !!sr.seguimiento_enviado, tokenRespuesta: !!sr.token_respuesta, token: sr.token_respuesta,
+          slotsPropuestos: (sr.slots_propuestos ?? []).length, seguimientoEnviado: !!sr.seguimiento_enviado, tokenRespuesta: !!sr.token_respuesta, llamadaPorConfirmar: !!sr.confirmacion_llamada_enviada && sr.confirmacion_cliente === null, retomadaEn: retomadaDe.get(sr.id) ?? null, token: sr.token_respuesta,
           clienteDijoNo: sr.confirmacion_cliente === false, motivoRegistrado: conMotivo.has(sr.id), avisoEntregado: entregados.has(sr.id),
           reserva: (reservaDe.get(sr.id) as SolicitudFoto['reserva']) ?? null, reservaInicio: reservaInicioDe.get(sr.id) ?? null, creadaEn: sr.created_at,
         }
@@ -290,11 +314,11 @@ async function cargarTanda(ids: string[], ahora: Date): Promise<Map<string, Foto
       cupo: cupo ? { restantes: cupo.restantes } : null,
       // Las 20 visitas más recientes de CADA cliente (la consulta ya viene ordenada de la más reciente a la más antigua).
       visitas: (visPorCliente.get(clienteId) ?? []).slice(0, 20).map((x) => {
-        const v = x as unknown as { id: string; estado: string; fecha_programada: string | null; hora_inicio_programada: string | null; llegada_en: string | null; sin_acceso_en: string | null; fin: string | null; created_at: string; cita_propuesta_fecha: string | null; cita_propuesta_inicio: string | null; reporte_visto_en?: string | null; compita: { nombre: string } | null }
+        const v = x as unknown as { id: string; estado: string; fecha_programada: string | null; hora_inicio_programada: string | null; llegada_en: string | null; sin_acceso_en: string | null; fin: string | null; created_at: string; cita_propuesta_fecha: string | null; cita_propuesta_inicio: string | null; reporte_visto_en?: string | null; llamada_solicitada_at?: string | null; room_url?: string | null; compita: { nombre: string } | null }
         return {
           citaPropuesta: v.cita_propuesta_fecha && v.cita_propuesta_inicio ? { fecha: v.cita_propuesta_fecha, inicio: v.cita_propuesta_inicio } : null,
           id: v.id, estado: v.estado, compitaNombre: v.compita?.nombre ?? '', fechaProgramada: v.fecha_programada, horaInicio: v.hora_inicio_programada,
-          llegadaEn: v.llegada_en, sinAccesoEn: v.sin_acceso_en, fin: v.fin, creadaEn: v.created_at, reporteVistoEn: v.reporte_visto_en ?? null,
+          llegadaEn: v.llegada_en, sinAccesoEn: v.sin_acceso_en, fin: v.fin, creadaEn: v.created_at, reporteVistoEn: v.reporte_visto_en ?? null, llamadaEn: v.llamada_solicitada_at ?? null, salaLlamada: v.room_url ? nombreDeSala(v.room_url) : null,
         }
       }),
       cancelaciones: (cancPorCliente.get(clienteId) ?? []).map((x) => {

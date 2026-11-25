@@ -11,6 +11,8 @@ import { sendTelegramMessage, TECLADO_INICIO, makeInlineKeyboard } from '@/lib/t
 import { reclamarUnaVez } from '@/lib/cron'
 import { sendEmail, SITE_URL } from '@/lib/email'
 import { esc } from '@/lib/html'
+import { anotarEventoChat } from '@/lib/chat-eventos'
+import { PLANES, type PlanId } from '@/lib/planes'
 import { hoyVE, horaVE, formatFechaVE } from '@/lib/format'
 import { faltaDireccion } from '@/lib/direccion-tipos'
 import { versionCita } from '@/lib/citas-version'
@@ -29,10 +31,11 @@ export async function anunciarCitaConfirmada(visitaId: string, usuarioId: string
   const admin = createAdminSupabase()
   const fechaFormateada = formatFechaVE(fecha, true)
   const horarioLabel = `${hora_inicio} – ${hora_fin}`
+  await anotarEventoChat(visitaId, `Visita agendada: ${fechaFormateada}, ${horarioLabel}`)
 
   const [{ data: compita }, { data: cliente }] = await Promise.all([
     admin.from('compitas').select('telegram_chat_id, nombre').eq('id', compitaId).single(),
-    admin.from('usuarios').select('nombre, email').eq('id', usuarioId).single(),
+    admin.from('usuarios').select('nombre, email, plan_contratado').eq('id', usuarioId).single(),
   ])
 
   // Si la visita es hoy en menos de 30 min, el cron no llegará a tiempo — avisar ahora mismo.
@@ -73,6 +76,8 @@ export async function anunciarCitaConfirmada(visitaId: string, usuarioId: string
   }
 
   if (cliente?.email) {
+    const planId = (cliente as { plan_contratado?: string | null }).plan_contratado
+    const planNombre = planId && planId in PLANES ? PLANES[planId as PlanId].nombre : ''
     try {
       await sendEmail({
         to: cliente.email,
@@ -81,7 +86,7 @@ export async function anunciarCitaConfirmada(visitaId: string, usuarioId: string
           <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:32px">
             <h2 style="color:#2D1464;font-size:22px;margin-bottom:12px">Visita confirmada</h2>
             <p style="color:#4A3B6B;font-size:15px;line-height:1.6">
-              La visita de <strong>${esc(compita?.nombre ?? 'tu compita')}</strong> con tu familiar está agendada.
+              La visita de <strong>${esc(compita?.nombre ?? 'tu compita')}</strong> con tu familiar está agendada${planNombre ? `, dentro de tu plan <strong>${esc(planNombre)}</strong>` : ''}.
             </p>
             <div style="background:#F5F0FF;border:2px solid #7C4DFF;border-radius:12px;padding:16px 20px;margin:20px 0;text-align:center">
               <p style="color:#6B5C90;font-size:13px;margin:0 0 4px">Fecha y horario</p>
@@ -94,8 +99,7 @@ export async function anunciarCitaConfirmada(visitaId: string, usuarioId: string
             <a href="${SITE_URL}/dashboard" style="display:inline-block;background:#FF6B2B;color:white;padding:12px 24px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:14px;margin-top:8px">
               Ver en el dashboard →
             </a>
-            <p style="color:#9990A8;font-size:13px;margin-top:32px">Compaz — <em>Cerca aunque estés lejos</em></p>
-          </div>
+</div>
         `,
       })
     } catch (e) { console.error('Email confirmar visita cliente:', e) }

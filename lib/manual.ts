@@ -387,7 +387,7 @@ export const ENTRADAS: EntradaManual[] = [
     id: 'cta-compita-perfil', seccion: 'cuentas', titulo: '¿Cómo registro a un compita a mano o corrijo su perfil?',
     paraQue: 'Para dar de alta a un compita sin esperar a que llene el formulario, o arreglar su zona, descripción, servicios, video o foto.',
     pasos: [
-      'Para registrarlo: abre Más, Invitar y baja a "Registrar un compita a mano". Llena nombre, zona, descripción y al menos un servicio.',
+      'Para registrarlo: abre Más, Invitar y baja a "Registrar un compita a mano". Llena nombre, zona, descripción y al menos un servicio. Las horas libres (mínimo 2 por semana) las carga el compita desde su enlace: sin ellas no se activa.',
       'Para corregir un perfil: abre su ficha en Personas y toca "Editar perfil".',
       'Un compita registrado a mano queda inactivo y sin verificar: verifícalo y actívalo desde su ficha.',
     ],

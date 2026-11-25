@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
+import { reducirFoto } from '@/lib/reducir-foto'
 import { ZONAS_MUNICIPIOS as ZONAS } from '@/lib/venezuela'
 import { OpcionesProximamenteCompita, SeccionCuidadorMascotas } from '@/components/ui/Proximamente'
 
@@ -61,6 +62,8 @@ const aMin = (hhmm: string) => Number(hhmm.slice(0, 2)) * 60 + Number(hhmm.slice
 
 interface Props {
   token: string
+  /** 'horarios': el compita llegó desde «Cambiar mis horas»; la pantalla baja a esa sección. */
+  foco?: string
   inicial: {
     nombre: string
     zona: string
@@ -79,8 +82,10 @@ function zonaStringToChips(zona: string): string[] {
   return zona.split(',').map(z => z.trim()).filter(Boolean)
 }
 
-export default function EditarPerfil({ token, inicial }: Props) {
+export default function EditarPerfil({ token, inicial, foco }: Props) {
   const fotoRef = useRef<HTMLInputElement>(null)
+  const horariosRef = useRef<HTMLDivElement>(null)
+  useEffect(() => { if (foco === 'horarios') horariosRef.current?.scrollIntoView({ block: 'start' }) }, [foco])
 
   const [zonas, setZonas] = useState<string[]>(zonaStringToChips(inicial.zona))
   const [estadoSel, setEstadoSel] = useState('')
@@ -161,7 +166,7 @@ export default function EditarPerfil({ token, inicial }: Props) {
     setErrorForm(null)
     try {
       const fd = new FormData()
-      fd.append('foto', file)
+      fd.append('foto', await reducirFoto(file)) // se reduce en el teléfono: sube en segundos aun con datos lentos
       fd.append('token', token)
       const res = await fetch('/api/compita/upload-foto', { method: 'POST', body: fd })
       const data = await res.json() as { url?: string; error?: string }
@@ -351,9 +356,9 @@ export default function EditarPerfil({ token, inicial }: Props) {
       </div>
 
       {/* Horarios */}
-      <div>
+      <div ref={horariosRef} id="horarios" style={{ scrollMarginTop: '12px' }}>
         <label style={s.label}>¿Cuándo puedes recibir llamadas de presentación? *</label>
-        <p style={s.hint}>Los clientes elegirán una hora dentro de tu disponibilidad para coordinar una llamada de 20 minutos. Bloques de 20 min, hasta las 8:00 PM.</p>
+        <p style={s.hint}>Los clientes elegirán una hora dentro de tu disponibilidad para coordinar una llamada de 20 minutos. Bloques de 20 min, hasta las 8:00 PM. <strong>Necesitas al menos 2 horas por semana</strong>: sin ellas tu perfil no se puede activar.</p>
         <p style={{ ...s.hint, color: '#9B8AB8', marginTop: '-6px' }}>
           Horarios en hora de Venezuela (UTC−4) — ahora son las {new Date().toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Caracas' })} VET
         </p>
@@ -362,7 +367,7 @@ export default function EditarPerfil({ token, inicial }: Props) {
           // Cuántas horas de 20 minutos verán los clientes por semana (franjas que se solapan no se cuentan dos veces).
           const bloques = new Set<string>()
           for (const h of horarios) for (let m = Math.ceil(aMin(h.inicio) / 20) * 20; m + 20 <= aMin(h.fin); m += 20) bloques.add(`${h.dia}-${m}`)
-          return <p style={{ ...s.hint, color: '#2D1464', fontWeight: 700 }}>Los clientes verán {bloques.size} {bloques.size === 1 ? 'hora libre' : 'horas libres'} de 20 minutos por semana.</p>
+          return <p style={{ ...s.hint, color: '#2D1464', fontWeight: 700 }}>Los clientes verán {bloques.size} {bloques.size === 1 ? 'hora libre' : 'horas libres'} de 20 minutos por semana.{bloques.size < 6 ? ' Faltan para llegar al mínimo de 2 horas (6 bloques).' : ''}</p>
         })()}
 
         {horarios.length > 0 && (

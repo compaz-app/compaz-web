@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import type { Compita, HorarioDisponible } from '@/types'
+import type { Compita } from '@/types'
 import LogoutButton from '@/components/ui/LogoutButton'
 import MapaCoberturaWrapper from '@/components/ui/MapaCoberturaWrapper'
 import { ZONAS_MUNICIPIOS as ZONAS } from '@/lib/venezuela'
@@ -18,6 +18,7 @@ interface Props {
 import type { Solicitud } from '@/types'
 import PerfilPublicoCompita from '@/components/ui/PerfilPublicoCompita'
 import IconoPersona from '@/components/ui/IconoPersona'
+import FotoRedonda from '@/components/ui/FotoRedonda'
 
 export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEmail, backHref = '/dashboard', backLabel = '← Mi portal' }: Props) {
   const router = useRouter()
@@ -26,20 +27,11 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
   const [municipio, setMunicipioState] = useState(searchParams.get('municipio') ?? '')
   const [mapaAbierto, setMapaAbierto] = useState(searchParams.get('mapa') === '1')
   const [seleccionada, setSeleccionada] = useState<Compita | null>(null)
-  const [enviando, setEnviando] = useState(false)
-  const [enviado, setEnviado] = useState<string | null>(null)
   const [solicitudes, setSolicitudes] = useState<Solicitud[]>([])
-  const [mostrarFormulario, setMostrarFormulario] = useState(false)
-  const [formMensaje, setFormMensaje] = useState('')
-  const [slotsElegidos, setSlotsElegidos] = useState<string[]>([])
-  const reagendarId = searchParams.get('reagendar')
-  const [reagendando, setReagendando] = useState(false)
-  const [diasAbiertos, setDiasAbiertos] = useState<Record<string, boolean>>({})
   const [agendando, setAgendando] = useState(false)
   const [errorAgendar, setErrorAgendar] = useState('')
   const [compitaAsignadaId, setCompitaAsignadaId] = useState<string | null>(null)
   const [compitasConHistorial, setCompitasConHistorial] = useState<string[]>([])
-  const [mensajeAutogenerado, setMensajeAutogenerado] = useState(false)
   const resultadosRef = useRef<HTMLDivElement>(null)
 
   async function agendarOtraVisita() {
@@ -67,21 +59,9 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
       .then((d) => {
         if (d.data?.compita_id) setCompitaAsignadaId(d.data.compita_id)
         if (Array.isArray(d.data?.compitas_con_historial)) setCompitasConHistorial(d.data.compitas_con_historial)
-        // Ya se registraron los datos del familiar al entrar al portal (PrimerAccesoModal):
-        // no se le vuelven a pedir aquí, se generan automáticamente (salvo que esté reagendando,
-        // donde ya se restaura el mensaje original de la solicitud).
-        if (d.data?.familiar_nombre && !reagendarId) {
-          const partes = [`Mi familiar es ${d.data.familiar_nombre}`]
-          if (d.data.familiar_edad) partes.push(`tiene ${d.data.familiar_edad} años`)
-          if (d.data.familiar_condicion) partes.push(`su condición: ${d.data.familiar_condicion}`)
-          let texto = `${partes.join(', ')}.`
-          if (d.data.familiar_notas) texto += ` ${d.data.familiar_notas}`
-          setFormMensaje(texto)
-          setMensajeAutogenerado(true)
-        }
       })
       .catch(() => {})
-  }, [reagendarId])
+  }, [])
 
   useEffect(() => {
     fetch('/api/mis-solicitudes')
@@ -89,41 +69,28 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
       .then((d) => {
         if (d.solicitudes) {
           setSolicitudes(d.solicitudes)
-          if (reagendarId) {
-            const sol = (d.solicitudes as Solicitud[]).find((s) => s.id === reagendarId)
-            if (sol) {
-              setFormMensaje(sol.mensaje)
-              setReagendando(true)
-              setMostrarFormulario(true)
-              // Seleccionar el compita directamente para no depender del segundo useEffect
-              const compitaSol = compitas.find((c) => c.id === sol.compita_id)
-              if (compitaSol) setSeleccionada(compitaSol)
-            }
-          }
         }
       })
       .catch(() => {})
-  }, [reagendarId, compitas])
+  }, [])
 
   useEffect(() => { history.scrollRestoration = 'auto' }, [])
 
   useEffect(() => {
     const fn = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { setSeleccionada(null); setMostrarFormulario(false) }
+      if (e.key === 'Escape') setSeleccionada(null)
     }
     document.addEventListener('keydown', fn)
     return () => document.removeEventListener('keydown', fn)
   }, [])
 
   // Abrir modal directamente si viene ?compita=<id> en la URL (ej: link desde email de rechazo)
-  // Solo cuando NO es reagendado — en ese caso el useEffect de mis-solicitudes ya setea seleccionada
   useEffect(() => {
-    if (reagendarId) return
     const id = searchParams.get('compita')
     if (!id) return
     const encontrada = compitas.find((c) => c.id === id)
     if (encontrada) setSeleccionada(encontrada)
-  }, [compitas, searchParams, reagendarId])
+  }, [compitas, searchParams])
 
   // Auto-scroll a resultados cuando se selecciona un municipio
   useEffect(() => {
@@ -178,151 +145,6 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
   const solicitudesActivas = [...solicitudesPendientes, ...solicitudesAceptadas]
   const idsYaSolicitados = new Set(solicitudesActivas.map((s) => s.compita_id))
   const MAX_SOLICITUDES = 3
-
-  // Genera todos los slots de 20 min en los próximos 14 días (8am-8pm VE) sin restricciones de disponibilidad
-  // Usado cuando el cliente reagenda tras una contrapropuesta del compita
-  function generarSlotsSinLimite(): { diaLabel: string; slots: { iso: string; hora: string }[] }[] {
-    const ahora = new Date()
-    const porDia: { diaLabel: string; slots: { iso: string; hora: string }[] }[] = []
-    for (let d = 0; d < 14; d++) {
-      // Calcular la fecha en timezone Venezuela para no depender del browser del cliente
-      const refVE = new Date(ahora.getTime() + d * 24 * 60 * 60 * 1000)
-      const partsVE = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Caracas', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(refVE)
-      const anoVE = Number(partsVE.find(p => p.type === 'year')!.value)
-      const mesVE = Number(partsVE.find(p => p.type === 'month')!.value) - 1
-      const diaVE = Number(partsVE.find(p => p.type === 'day')!.value)
-      const slotsDelDia: { iso: string; hora: string }[] = []
-      for (let hVE = 8; hVE < 20; hVE++) {
-        for (const m of [0, 20, 40]) {
-          // VE es UTC-4: construir UTC explícitamente
-          const slotUTC = new Date(Date.UTC(anoVE, mesVE, diaVE, hVE + 4, m, 0))
-          if (slotUTC > ahora) {
-            const hora = slotUTC.toLocaleTimeString('es-VE', {
-              timeZone: 'America/Caracas', hour: '2-digit', minute: '2-digit', hour12: true,
-            })
-            slotsDelDia.push({ iso: slotUTC.toISOString(), hora })
-          }
-        }
-      }
-      if (slotsDelDia.length > 0) {
-        const diaLabel = refVE.toLocaleDateString('es-VE', {
-          timeZone: 'America/Caracas', weekday: 'long', day: 'numeric', month: 'short',
-        })
-        porDia.push({ diaLabel, slots: slotsDelDia })
-      }
-    }
-    return porDia
-  }
-
-  // Genera slots de 20 min disponibles en los próximos 7 días según horarios del compita
-  // Retorna agrupados por día para mostrar como chips
-  function generarSlotsPorDia(horarios: HorarioDisponible[] | null): { diaLabel: string; slots: { iso: string; hora: string }[] }[] {
-    if (!horarios || horarios.length === 0) return []
-    const DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado']
-    const ahora = new Date()
-    const porDia: { diaLabel: string; slots: { iso: string; hora: string }[] }[] = []
-
-    for (let d = 0; d < 7; d++) {
-      const fecha = new Date(ahora)
-      fecha.setDate(ahora.getDate() + d)
-      const diaSemana = DIAS[fecha.getDay()] as HorarioDisponible['dia']
-      const horariosDelDia = horarios.filter((h) => h.dia === diaSemana)
-      if (horariosDelDia.length === 0) continue
-
-      const partsVE2 = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Caracas', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(fecha)
-      const anoVE2 = Number(partsVE2.find(p => p.type === 'year')!.value)
-      const mesVE2 = Number(partsVE2.find(p => p.type === 'month')!.value) - 1
-      const diaVE2 = Number(partsVE2.find(p => p.type === 'day')!.value)
-      const slotsDelDia: { iso: string; hora: string }[] = []
-      for (const horario of horariosDelDia) {
-        const [iH, iM] = horario.inicio.split(':').map(Number)
-        const [fH, fM] = horario.fin.split(':').map(Number)
-        let cH = iH, cM = iM
-
-        while (cH * 60 + cM + 20 <= fH * 60 + fM) {
-          // VE es UTC-4: construir UTC explícitamente
-          const slotUTC = new Date(Date.UTC(anoVE2, mesVE2, diaVE2, cH + 4, cM, 0))
-          if (slotUTC > ahora) {
-            const hora = slotUTC.toLocaleTimeString('es-VE', {
-              timeZone: 'America/Caracas',
-              hour: '2-digit', minute: '2-digit', hour12: true,
-            })
-            slotsDelDia.push({ iso: slotUTC.toISOString(), hora })
-          }
-          cM += 20
-          if (cM >= 60) { cM -= 60; cH++ }
-        }
-      }
-
-      if (slotsDelDia.length > 0) {
-        const diaLabel = fecha.toLocaleDateString('es-VE', {
-          timeZone: 'America/Caracas',
-          weekday: 'long', day: 'numeric', month: 'short',
-        })
-        porDia.push({ diaLabel, slots: slotsDelDia })
-      }
-    }
-    return porDia
-  }
-
-  function toggleSlot(iso: string) {
-    setSlotsElegidos((prev) =>
-      prev.includes(iso) ? prev.filter((s) => s !== iso) : prev.length < 3 ? [...prev, iso] : prev,
-    )
-  }
-
-  async function enviarSolicitud(compita: Compita) {
-    if (!formMensaje.trim() || slotsElegidos.length === 0) return
-    setEnviando(true)
-    try {
-      const res = await fetch('/api/solicitudes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          compita_id: compita.id,
-          mensaje: formMensaje,
-          slots_propuestos: slotsElegidos,
-        }),
-      })
-      const data = await res.json()
-      if (res.ok) {
-        setSolicitudes((prev) => [{
-          id: data.data?.solicitud_id ?? crypto.randomUUID(),
-          cliente_id: '',
-          compita_id: compita.id,
-          compita_nombre: compita.nombre,
-          compita_foto: compita.foto_url ?? null,
-          compita_zona: compita.zona ?? '',
-          mensaje: formMensaje,
-          estado: 'pendiente' as const,
-          franja_horaria: null,
-          slots_propuestos: slotsElegidos,
-          slot_confirmado: null,
-          room_url: null,
-          recordatorio_enviado: false,
-          seguimiento_enviado: false,
-          seguimiento2_enviado: false,
-          confirmacion_llamada_enviada: false,
-          confirmacion_cliente: null,
-          confirmacion_compita: null,
-          reagendado_slots: [],
-          token_respuesta: '',
-          created_at: new Date().toISOString(),
-          respondido_at: null,
-        }, ...prev])
-        setEnviado(compita.id)
-        setSeleccionada(null)
-        setMostrarFormulario(false)
-        setFormMensaje('')
-        setSlotsElegidos([])
-        setReagendando(false)
-      } else {
-        alert(data?.error ?? 'No se pudo enviar la solicitud. Intenta de nuevo.')
-      }
-    } finally {
-      setEnviando(false)
-    }
-  }
 
   return (
     <div style={{ minHeight: '100vh', background: '#FDFAF6', fontFamily: 'Inter, sans-serif' }}>
@@ -434,8 +256,7 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
                 {solicitudesPendientes.map((s) => (
                   <div key={s.id} style={{ background: 'white', borderRadius: '12px', padding: '11px 14px', display: 'flex', alignItems: 'center', gap: '10px', border: '1.5px solid #E8E0D4' }}>
                     {s.compita_foto
-                      // eslint-disable-next-line @next/next/no-img-element
-                      ? <img src={s.compita_foto} alt={s.compita_nombre ?? ''} style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                      ? <FotoRedonda src={s.compita_foto} alt={s.compita_nombre ?? ''} size={32} />
                       : <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#F0EBF8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}><IconoPersona /></div>
                     }
                     <span style={{ flex: 1, color: '#1A0A3C', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.compita_nombre}</span>
@@ -501,8 +322,7 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
                 >
                   {/* Avatar */}
                   {compita.foto_url
-                    // eslint-disable-next-line @next/next/no-img-element
-                    ? <img src={compita.foto_url} alt={compita.nombre} style={{ width: '52px', height: '52px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                    ? <FotoRedonda src={compita.foto_url} alt={compita.nombre} size={52} />
                     : <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: '#F0EBF8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', flexShrink: 0 }}><IconoPersona /></div>
                   }
                   {/* Info principal */}
@@ -532,10 +352,10 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
       {seleccionada && (
         <div
           style={{ position: 'fixed', inset: 0, background: 'rgba(26,10,60,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', zIndex: 2000 }}
-          onClick={(e) => { if (e.target === e.currentTarget) { setSeleccionada(null); setMostrarFormulario(false) } }}
+          onClick={(e) => { if (e.target === e.currentTarget) { setSeleccionada(null) } }}
         >
           <div style={{ background: '#FDFAF6', borderRadius: '24px', maxWidth: '560px', width: '100%', maxHeight: '90vh', overflowY: 'auto', position: 'relative' }}>
-            <button onClick={() => { setSeleccionada(null); setMostrarFormulario(false); setSlotsElegidos([]); setFormMensaje(''); setReagendando(false) }} style={{ position: 'absolute', top: '16px', right: '16px', background: 'white', border: '2px solid #E8E0D4', borderRadius: '9999px', width: '32px', height: '32px', cursor: 'pointer', fontSize: '16px', zIndex: 10 }}>×</button>
+            <button onClick={() => { setSeleccionada(null) }} style={{ position: 'absolute', top: '16px', right: '16px', background: 'white', border: '2px solid #E8E0D4', borderRadius: '9999px', width: '32px', height: '32px', cursor: 'pointer', fontSize: '16px', zIndex: 10 }}>×</button>
 
             <div style={{ padding: '28px' }}>
               <PerfilPublicoCompita compita={seleccionada} />
@@ -555,17 +375,17 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
                     {agendando ? 'Agendando…' : `Agendar otra visita con ${seleccionada.nombre}`}
                   </button>
                 </div>
-              ) : !reagendando && idsYaSolicitados.has(seleccionada.id) ? (
+              ) : idsYaSolicitados.has(seleccionada.id) ? (
                 <div style={{ background: '#FFF3E8', border: '2px solid #FF6B2B', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
                   <p style={{ color: '#C84B0E', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif', margin: '0 0 6px' }}>Solicitud enviada</p>
                   <p style={{ color: '#6B5C90', fontSize: '13px', margin: 0 }}>Ya solicitaste conocer a {seleccionada.nombre}. Te avisaremos cuando confirme un horario.</p>
                 </div>
-              ) : !reagendando && solicitudesActivas.length >= MAX_SOLICITUDES ? (
+              ) : solicitudesActivas.length >= MAX_SOLICITUDES ? (
                 <div style={{ background: '#F5F0E8', border: '2px solid #D4C9E8', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
                   <p style={{ color: '#4A3B6B', fontWeight: 700, fontFamily: 'Bricolage Grotesque, sans-serif', margin: '0 0 6px' }}>Límite de solicitudes alcanzado</p>
                   <p style={{ color: '#6B5C90', fontSize: '13px', margin: 0 }}>Ya tienes {MAX_SOLICITUDES} solicitudes pendientes.</p>
                 </div>
-              ) : !mostrarFormulario ? (
+              ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   <a
                     href={`/solicitar?compita=${seleccionada.id}&modo=entrevista`}
@@ -576,153 +396,6 @@ export default function CompitasMarketplace({ compitas, usuarioNombre, usuarioEm
                   <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                     <a href={`/solicitar?compita=${seleccionada.id}&modo=directa`} style={{ flex: '1 1 160px', textAlign: 'center', boxSizing: 'border-box', minHeight: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #2D1464', borderRadius: '9999px', color: '#2D1464', fontWeight: 700, fontSize: '14px', textDecoration: 'none', padding: '0 14px' }}>Contratarlo directo</a>
                     <a href={`/solicitar?compita=${seleccionada.id}&modo=mandado`} style={{ flex: '1 1 160px', textAlign: 'center', boxSizing: 'border-box', minHeight: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #2D1464', borderRadius: '9999px', color: '#2D1464', fontWeight: 700, fontSize: '14px', textDecoration: 'none', padding: '0 14px' }}>Pedir un mandado</a>
-                  </div>
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  {/* Banner reagendando */}
-                  {reagendando && (
-                    <div style={{ background: '#F0FDF4', border: '2px solid #86EFAC', borderRadius: '12px', padding: '12px 16px' }}>
-                      <p style={{ color: '#15803d', fontWeight: 700, fontSize: '13px', margin: '0 0 4px', fontFamily: 'Bricolage Grotesque, sans-serif' }}>Reagendando con {seleccionada.nombre}</p>
-                      <p style={{ color: '#166534', fontSize: '12px', margin: 0 }}>Tu descripción ya está guardada. Solo elige nuevos horarios para proponer.</p>
-                    </div>
-                  )}
-
-                  {/* Aviso llamada 20 min */}
-                  {!reagendando && (
-                    <div style={{ background: '#FFF3E8', border: '2px solid #FF6B2B', borderRadius: '12px', padding: '12px 16px' }}>
-                      <p style={{ color: '#C84B0E', fontWeight: 700, fontSize: '13px', margin: 0, fontFamily: 'Bricolage Grotesque, sans-serif' }}>Llamada de presentación de 20 minutos. La sala se cierra a los 23.</p>
-                    </div>
-                  )}
-
-                  {/* Mensaje sobre el familiar — ya se registró en el portal; solo se confirma/edita */}
-                  <div>
-                    {reagendando ? (
-                      <div style={{ background: '#F5F0FF', border: '2px solid rgba(45,20,100,0.15)', borderRadius: '12px', padding: '14px 16px' }}>
-                        <p style={{ fontSize: '11px', fontWeight: 700, color: '#6B5C90', margin: '0 0 6px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Tu descripción original</p>
-                        <p style={{ fontSize: '14px', color: '#1A0A3C', margin: 0, lineHeight: '1.6' }}>{formMensaje}</p>
-                      </div>
-                    ) : (
-                      <>
-                        <label style={{ display: 'block', fontWeight: 600, fontSize: '13px', color: '#1A0A3C', marginBottom: '6px' }}>
-                          Esto es lo que verá {seleccionada.nombre} sobre tu familiar{!mensajeAutogenerado && ' *'}
-                        </label>
-                        {mensajeAutogenerado && (
-                          <p style={{ color: '#6B5C90', fontSize: '12px', marginBottom: '8px' }}>
-                            Lo armamos con los datos que ya registraste. Puedes editarlo si quieres agregar algo.
-                          </p>
-                        )}
-                        <textarea
-                          value={formMensaje}
-                          onChange={(e) => { setFormMensaje(e.target.value); setMensajeAutogenerado(false) }}
-                          placeholder="Edad, condición de salud, qué tipo de acompañamiento necesita y en qué zona vive…"
-                          rows={4}
-                          style={{ width: '100%', border: '2px solid rgba(45,20,100,0.2)', borderRadius: '12px', padding: '12px', fontFamily: 'Inter, sans-serif', fontSize: '16px', color: '#1A0A3C', resize: 'vertical', boxSizing: 'border-box' }}
-                        />
-                      </>
-                    )}
-                  </div>
-
-                  {/* Slot picker — sin límite de disponibilidad del compita */}
-                  <div>
-                    <label style={{ display: 'block', fontWeight: 600, fontSize: '13px', color: '#1A0A3C', marginBottom: '4px' }}>
-                      Elige uno o varios horarios *
-                    </label>
-                    <p style={{ color: '#6B5C90', fontSize: '12px', marginBottom: '4px' }}>
-                      {seleccionada.nombre} confirmará uno. Puedes proponer hasta 3 para darle más opciones.
-                    </p>
-                    <p style={{ color: '#9B8AB8', fontSize: '11px', marginBottom: '10px' }}>
-                      Horarios en hora de Venezuela (UTC−4) — ahora son las {new Date().toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Caracas' })} VET
-                    </p>
-                    {(() => {
-                      const diasConSlots = generarSlotsSinLimite()
-                      if (diasConSlots.length === 0) {
-                        return <p style={{ color: '#9B8AB8', fontSize: '13px', textAlign: 'center', padding: '12px' }}>No hay horarios disponibles.</p>
-                      }
-                      return (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                          {diasConSlots.map(({ diaLabel, slots }) => {
-                            const tieneElegido = slots.some((s) => slotsElegidos.includes(s.iso))
-                            const abierto = diasAbiertos[diaLabel] ?? tieneElegido
-                            return (
-                              <div key={diaLabel} style={{ border: '2px solid rgba(45,20,100,0.12)', borderRadius: '12px', overflow: 'hidden' }}>
-                                <button
-                                  type="button"
-                                  onClick={() => setDiasAbiertos((prev) => ({ ...prev, [diaLabel]: !abierto }))}
-                                  style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: tieneElegido ? '#FFF3E8' : 'white', border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}
-                                >
-                                  <span style={{ fontSize: '13px', fontWeight: 700, color: tieneElegido ? '#C84B0E' : '#1A0A3C', textTransform: 'capitalize' }}>
-                                    {tieneElegido ? '✓ ' : ''}{diaLabel}
-                                  </span>
-                                  <span style={{ fontSize: '12px', color: '#6B5C90' }}>{abierto ? '▲' : '▼'}</span>
-                                </button>
-                                {abierto && (
-                                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', padding: '10px 14px', borderTop: '1px solid rgba(45,20,100,0.08)' }}>
-                                    {slots.map((slot) => {
-                                      const elegido = slotsElegidos.includes(slot.iso)
-                                      return (
-                                        <button
-                                          key={slot.iso}
-                                          type="button"
-                                          onClick={() => toggleSlot(slot.iso)}
-                                          disabled={!elegido && slotsElegidos.length >= 3}
-                                          style={{
-                                            background: elegido ? '#FF6B2B' : 'white',
-                                            color: elegido ? 'white' : '#1A0A3C',
-                                            border: `2px solid ${elegido ? '#FF6B2B' : 'rgba(45,20,100,0.2)'}`,
-                                            borderRadius: '9999px', padding: '6px 12px', cursor: (!elegido && slotsElegidos.length >= 3) ? 'not-allowed' : 'pointer',
-                                            fontFamily: 'Inter, sans-serif', fontSize: '13px', fontWeight: elegido ? 700 : 400,
-                                            opacity: (!elegido && slotsElegidos.length >= 3) ? 0.35 : 1,
-                                            transition: 'all 0.15s',
-                                          }}
-                                        >
-                                          {elegido ? '✓ ' : ''}{slot.hora}
-                                        </button>
-                                      )
-                                    })}
-                                  </div>
-                                )}
-                              </div>
-                            )
-                          })}
-                        </div>
-                      )
-                    })()}
-                    {slotsElegidos.length > 0 && (
-                      <p style={{ color: '#FF6B2B', fontSize: '12px', fontWeight: 700, marginTop: '8px' }}>
-                        {slotsElegidos.length === 3 ? '3/3 — máximo alcanzado' : `${slotsElegidos.length}/3 horarios seleccionados`}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Validación visible */}
-                  {(() => {
-                    const falta = []
-                    if (!formMensaje.trim()) falta.push('la descripción de tu familiar')
-                    if (slotsElegidos.length === 0) falta.push('al menos un horario')
-                    if (falta.length === 0) return null
-                    return (
-                      <p style={{ color: '#9B8AB8', fontSize: '13px', margin: 0, textAlign: 'center' }}>
-                        Falta: {falta.join(' y ')}
-                      </p>
-                    )
-                  })()}
-
-                  {/* Botones */}
-                  <div style={{ display: 'flex', gap: '10px' }}>
-                    <button
-                      onClick={() => { setMostrarFormulario(false); setSlotsElegidos([]); setFormMensaje(''); setReagendando(false) }}
-                      style={{ flex: 1, background: 'white', color: '#4A3B6B', border: '2px solid #D4C9E8', borderRadius: '9999px', padding: '14px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: '15px', cursor: 'pointer' }}
-                    >
-                      Cancelar
-                    </button>
-                    <button
-                      onClick={() => enviarSolicitud(seleccionada)}
-                      disabled={enviando || !formMensaje.trim() || slotsElegidos.length === 0}
-                      style={{ flex: 2, background: '#FF6B2B', color: 'white', border: 'none', borderRadius: '9999px', padding: '14px', fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: '15px', cursor: (enviando || !formMensaje.trim() || slotsElegidos.length === 0) ? 'not-allowed' : 'pointer', opacity: (enviando || !formMensaje.trim() || slotsElegidos.length === 0) ? 0.6 : 1 }}
-                    >
-                      {enviando ? 'Enviando…' : 'Enviar solicitud'}
-                    </button>
                   </div>
                 </div>
               )}

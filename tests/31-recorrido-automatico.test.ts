@@ -1,7 +1,7 @@
 /* eslint-disable */
 // Recorridos de punta a punta de lo AUTOMÁTICO, simulando el paso del tiempo: avisos, escalera, eventos,
 // decisiones y motivos encadenados sobre la misma base. Comprueba que las piezas hablan bien entre sí.
-import { db, net, session, limpiar, req, mkCompita, mkCliente, mkSolicitud, ahoraMas, emailsA, tgPara, tgBtn, firmaDaily, avisosAdmin } from './harness'
+import { db, net, session, limpiar, req, mkCompita, mkCliente, mkSolicitud, ahoraMas, emailsA, tgPara, tgBtn, firmaDaily, avisosAdmin, despacharDiferidos } from './harness'
 import { beforeEach, test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import { POST as crear } from '@/app/api/solicitudes/route'
@@ -22,7 +22,7 @@ const tipos = (solicitudId: string) => db.rows('eventos').filter((e) => e.entida
 const vencerPlazos = () => db.rows('avisos').forEach((a) => { if (a.plazo_accion_hasta) a.plazo_accion_hasta = hace(1) })
 
 describe('recorrido 1: el compita tarda en responder una solicitud', () => {
-  test('aviso, respaldo por correo, tarea para el equipo y, al final, la respuesta tardía sin romper nada', async () => {
+  test('aviso, recordatorio por Telegram, tarea para el equipo y, al final, la respuesta tardía sin romper nada', async () => {
     const compita = mkCompita({ telegram_chat_id: '980', nombre: 'Lucía Pérez', email: 'lucia@mail.test' })
     const cliente = mkCliente({ nombre: 'Carolina Pérez', email: 'caro@mail.test' })
     session.user = { id: cliente.id, email: cliente.email }
@@ -39,14 +39,14 @@ describe('recorrido 1: el compita tarda en responder una solicitud', () => {
     let e = await procesarEscalera()
     assert.deepEqual([e.respaldos, e.tareas], [0, 0])
 
-    // 3. Pasan las 6 horas sin respuesta: llega el correo de respaldo, una sola vez
+    // 3. Pasan las 6 horas sin respuesta: llega el recordatorio por Telegram (el compita siempre lo tiene; no hay correo), una sola vez
     vencerPlazos()
     e = await procesarEscalera()
     assert.equal(e.respaldos, 1)
-    assert.equal(emailsA('lucia@mail.test').length, 1)
-    assert.match(emailsA('lucia@mail.test')[0].subject, /^Recordatorio:/)
+    assert.equal(tgPara(980).length, 2)
+    assert.equal(emailsA('lucia@mail.test').length, 0)
     e = await procesarEscalera()
-    assert.equal(emailsA('lucia@mail.test').length, 1, 'una segunda corrida no repite el correo')
+    assert.equal(tgPara(980).length, 2, 'una segunda corrida no repite el recordatorio')
 
     // 4. El respaldo tampoco recibe respuesta: se abre UNA tarea para el equipo
     vencerPlazos()
@@ -70,7 +70,7 @@ describe('recorrido 1: el compita tarda en responder una solicitud', () => {
 })
 
 describe('recorrido 2: el cliente no decide tras la entrevista y al final dice que no', () => {
-  test('pregunta, recordatorio, tarea, decisión, motivo y la línea de eventos completa', async () => {
+  test('pregunta, un solo correo, tarea, decisión, motivo y la línea de eventos completa', async () => {
     const compita = mkCompita({ telegram_chat_id: '981', nombre: 'Lucía Pérez' })
     const cliente = mkCliente({ nombre: 'Carlos Ruiz', email: 'carlos@mail.test' })
     const sol = mkSolicitud(cliente, compita, { estado: 'aceptada', slot_confirmado: hace(30), room_url: 'https://compaz.daily.co/ent-y-1' })
@@ -78,16 +78,16 @@ describe('recorrido 2: el cliente no decide tras la entrevista y al final dice q
     // 1. Termina la llamada: el cliente recibe la pregunta y el compita las gracias
     const body = JSON.stringify({ event_type: 'meeting.ended', payload: { room_name: 'ent-y', room_url: sol.room_url, duration: 900 } })
     await dailyWebhook(req('/api/webhooks/daily', { body, headers: { 'content-type': 'application/json', ...firmaDaily(body) } }))
-    assert.equal(emailsA('carlos@mail.test').length, 1)
+    assert.equal(emailsA('carlos@mail.test').length, 0, 'primero el portal: el correo espera 24 h')
     assert.ok(tgPara(981).some((m) => m.text.includes('¡Gracias por la llamada!')))
+    await despacharDiferidos() // pasan las 24 h sin que lo vea: sale UN correo
+    assert.equal(emailsA('carlos@mail.test').length, 1)
 
-    // 2. No decide: recordatorio y luego tarea para el equipo
+    // 2. No decide: no hay un segundo correo; pasa a una tarea para el equipo
     vencerPlazos()
     let e = await procesarEscalera()
-    assert.equal(e.respaldos, 1)
-    assert.match(emailsA('carlos@mail.test').at(-1)!.subject, /^Recordatorio:/)
-    vencerPlazos()
-    e = await procesarEscalera()
+    assert.equal(e.respaldos, 0)
+    assert.equal(emailsA('carlos@mail.test').length, 1)
     assert.equal(e.tareas, 1)
     assert.match(db.rows('admin_flags').at(-1)!.entidad_nombre, /Carlos Ruiz no ha decidido/)
 

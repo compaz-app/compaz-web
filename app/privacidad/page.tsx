@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import CambiarCookies from "@/components/CambiarCookies";
 
 export const metadata: Metadata = {
   title: "Privacidad — Compaz",
   robots: { index: false, follow: false },
 };
 
-const secciones = [
+const secciones: { id?: string; titulo: string; cuerpo: string }[] = [
   {
     titulo: "Qué datos recolectamos",
     cuerpo:
@@ -23,9 +24,10 @@ const secciones = [
       "Tus datos se almacenan en Supabase, nuestro proveedor de base de datos, con acceso restringido al equipo de Compaz.",
   },
   {
-    titulo: "Medición y publicidad",
+    id: "cookies",
+    titulo: "Cookies y medición",
     cuerpo:
-      "En las páginas públicas de este sitio (la portada, la página para ser Compita y esta política) usamos Meta Pixel (Facebook), Google Analytics y Microsoft Clarity para medir la efectividad de nuestra publicidad y entender cómo se usa la página. Esto implica compartir cierta información de tu navegación con esos proveedores, conforme a sus propias políticas de privacidad. Clarity no graba lo que escribes en los formularios ni en el chat, y no incluimos esos datos en los eventos de medición. En tu cuenta, el portal, las videollamadas, los pagos y el panel del equipo no usamos ninguna de ellas.",
+      "Para iniciar sesión usamos cookies necesarias; no piden permiso. Para saber qué funciona en esta página pública usamos tres servicios de medición: Google Analytics, Microsoft Clarity (que puede registrar cómo se usa la pantalla) y Meta Pixel (Facebook), con el que además medimos la efectividad de nuestra publicidad. Esto implica compartir cierta información de tu navegación en esta página pública con esas empresas, conforme a sus propias políticas. Solo se activan si tú aceptas en el aviso de cookies, y no se usan en el portal, ni en las pantallas con enlaces privados. Aparte medimos, sin cookies y sin guardar quién eres, cuánto tarda en cargar cada pantalla para hacerla más rápida. Puedes cambiar tu decisión cuando quieras aquí abajo. Este texto es provisional, pendiente de revisión legal.",
   },
   {
     titulo: "Cómo pedir que borremos tus datos",
@@ -56,12 +58,12 @@ export default function PrivacidadPage() {
           className="text-sm mb-12"
           style={{ color: "#6B5C90", fontFamily: "var(--font-inter)" }}
         >
-          Última actualización: 17 de noviembre de 2026
+          Última actualización: 18 de noviembre de 2026
         </p>
 
         <div className="flex flex-col gap-9">
-          {secciones.map(({ titulo, cuerpo }) => (
-            <section key={titulo}>
+          {secciones.map(({ id, titulo, cuerpo }) => (
+            <section key={titulo} id={id}>
               <h2
                 className="text-lg sm:text-xl font-bold mb-2"
                 style={{ color: "#2D1464", fontFamily: "var(--font-display)" }}
@@ -74,6 +76,7 @@ export default function PrivacidadPage() {
               >
                 {cuerpo}
               </p>
+              {id === "cookies" && <CambiarCookies />}
             </section>
           ))}
         </div>

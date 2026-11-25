@@ -93,10 +93,14 @@ describe('seguimiento (¿ocurrió la llamada? / ¿contratas?)', () => {
     const compita = mkCompita({ telegram_chat_id: '710' }); const cli = mkCliente({ email: 'cli@mail.test' })
     mkSolicitud(cli, compita, { estado: 'aceptada', slot_confirmado: hace(30) })
     await seguimiento(cron('s')); await seguimiento(cron('s'))
+    // El cliente lo recibe por correo Y lo ve en su portal (una novedad, una sola vez).
     assert.equal(emailsA('cli@mail.test').length, 1)
+    assert.equal(db.rows('novedades_cliente').filter((n) => n.tipo === 'seguimiento_llamada').length, 1)
     assert.equal(tgPara(710).length, 1)
-    const urls = tgPara(710)[0].markup.inline_keyboard.flat().map((b: any) => b.url)
-    assert.ok(urls.every((u: string) => /quien=compita&s=[0-9a-f]{24}/.test(u)))
+    // El compita responde con un toque en Telegram (callback), sin página web de por medio; el cliente sí recibe enlaces firmados por correo.
+    const botones = tgPara(710)[0].markup.inline_keyboard.flat()
+    assert.ok(botones.every((b: any) => !b.url && /^ll:(si|no):[0-9a-f-]{36}$/.test(b.callback_data)))
+    assert.match(emailsA('cli@mail.test')[0].html, /quien=cliente&(amp;)?s=[0-9a-f]{24}/)
   })
 
   test('CASO CRÍTICO: nadie respondió y pasaron 4 h → igual se pregunta "¿quieres contratar?" (antes el NULL lo bloqueaba)', async () => {
@@ -105,6 +109,7 @@ describe('seguimiento (¿ocurrió la llamada? / ¿contratas?)', () => {
     await seguimiento(cron('s')); await seguimiento(cron('s'))
     const mails = emailsA('cli@mail.test').filter((e) => e.subject.includes('¿Cómo te fue'))
     assert.equal(mails.length, 1, 'exactamente un correo de decisión')
+    assert.equal(db.rows('novedades_cliente').filter((n) => n.tipo === 'seguimiento_decision').length, 1, 'y su novedad en el portal')
   })
 
   test('si alguien dijo que la llamada NO ocurrió, no se pregunta por contratar', async () => {
@@ -118,7 +123,7 @@ describe('seguimiento (¿ocurrió la llamada? / ¿contratas?)', () => {
     const compita = mkCompita(); const cli = mkCliente({ email: 'cli@mail.test' })
     mkSolicitud(cli, compita, { estado: 'completada', slot_confirmado: hace(5 * 60), confirmacion_llamada_enviada: true })
     await seguimiento(cron('s'))
-    assert.equal(emailsA('cli@mail.test').length, 1)
+    assert.equal(db.rows('novedades_cliente').filter((n) => n.tipo === 'seguimiento_decision').length, 1)
   })
 
   test('recordatorio de 24 h: una sola vez, y los enlaces "no" llevan firma de cliente', async () => {
@@ -141,33 +146,6 @@ describe('seguimiento (¿ocurrió la llamada? / ¿contratas?)', () => {
 })
 
 describe('cierre-rechazo', () => {
-  const conSugerir = (prefijo: 'sugerir_horarios' | 'sugerir_r', horasQueFaltan: number) => {
-    const compita = mkCompita({ telegram_chat_id: '720', nombre: 'Lucía' }); const cli = mkCliente({ email: 'cli@mail.test', nombre: 'Carlos' })
-    const sol = mkSolicitud(cli, compita, { estado: 'rechazada' })
-    db.seed('telegram_estados', { chat_id: '720', pendiente_accion: `${prefijo}:${sol.id}:cli@mail.test:Carlos`, pendiente_expira: new Date(Date.now() + horasQueFaltan * 3600_000).toISOString() })
-    return { sol }
-  }
-
-  test('recordatorio de 2 h se manda UNA vez (antes se repetía cada 30 min)', async () => {
-    conSugerir('sugerir_horarios', 20)
-    for (let i = 0; i < 6; i++) await cierre(cron('c'))
-    assert.equal(tgPara(720).filter((m) => m.text.includes('Recordatorio')).length, 1)
-  })
-
-  test('el estado "sugerir_r" (ya recordado) no vuelve a recordar', async () => {
-    conSugerir('sugerir_r', 10)
-    await cierre(cron('c')); await cierre(cron('c'))
-    assert.equal(tgPara(720).length, 0)
-  })
-
-  test('a las 24 h cierra: solicitud rechazada, email al cliente, aviso a la compita; idempotente', async () => {
-    const { sol } = conSugerir('sugerir_horarios', -1)
-    await cierre(cron('c')); await cierre(cron('c'))
-    assert.equal(db.rows('solicitudes').find((s) => s.id === sol.id)!.estado, 'rechazada')
-    assert.equal(emailsA('cli@mail.test').length, 1)
-    assert.equal(tgPara(720).filter((m) => m.text.includes('cerrada automáticamente')).length, 1)
-  })
-
   test('solicitud PENDIENTE ignorada: recordatorio a las 24 h (una vez) y cierre a las 72 h con email', async () => {
     const compita = mkCompita({ telegram_chat_id: '721' }); const cli = mkCliente({ email: 'cli@mail.test' })
     const s1 = mkSolicitud(cli, compita, { created_at: hace(26 * 60) })
@@ -178,6 +156,7 @@ describe('cierre-rechazo', () => {
     await cierre(cron('c')); await cierre(cron('c'))
     assert.equal(db.rows('solicitudes').find((s) => s.id === s1.id)!.estado, 'rechazada')
     assert.equal(emailsA('cli@mail.test').length, 1)
+    assert.equal(db.rows('novedades_cliente').filter((n) => n.tipo === 'solicitud_cerrada').length, 1)
   })
 })
 
@@ -238,6 +217,7 @@ describe('recordatorio-pago (renovación mensual, sin cobros automáticos)', () 
     assert.equal(m.length, 1)
     assert.ok(m[0].html.includes('Zelle') && m[0].html.includes('sin usar') && m[0].html.includes('condiciones'))
     assert.equal(avisosAdmin().filter((x) => x.text.includes('Renovaciones pendientes')).length, 1)
+    assert.equal(db.rows('novedades_cliente').filter((n) => n.tipo === 'renovar_plan').length, 1, 'también suena en la campana, una sola vez')
   })
   test('no avisa si es "A la carta", si todavía no pasó el mes, o si ya renovó', async () => {
     const a = mkCliente({ email: 'a@mail.test' }); pago(a, 'carta', 31)

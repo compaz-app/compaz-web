@@ -6,7 +6,7 @@ import './harness'
 import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs'
-import { RUTAS_CON_ANALITICA, rutaConAnalitica } from '@/lib/analitica'
+import { RUTAS_CON_ANALITICA, esRutaConAnalitica as rutaConAnalitica } from '@/lib/analitica-rutas'
 import { CmcError, pingCmc } from '@/lib/cmc-api'
 import { cargarFichaReal } from '@/lib/confianza/lectura-real'
 
@@ -15,43 +15,33 @@ const walk = (d: string): string[] => readdirSync(d).flatMap((n) => { const p = 
 /** Rutas de página de app/ (sin grupos ni segmentos dinámicos resueltos). */
 const rutasDePagina = () => walk('app').filter((f) => /\/page\.tsx$/.test(f)).map((f) => f.replace(/^app/, '').replace(/\/page\.tsx$/, '').replace(/\/\([^)]+\)/g, '') || '/')
 
+// Desde la integración con main (2026-11-25) la analítica vive en components/ScriptsAnaliticos.tsx y lib/analitica-rutas.ts
+// (main la hizo en paralelo, con permiso previo de cookies). La prueba 137 vigila las rutas; aquí queda lo que main no cubría.
 describe('dónde se carga la analítica', () => {
-  test('solo las páginas públicas de captación se miden; las demás (y las futuras) quedan fuera', () => {
-    assert.deepEqual([...RUTAS_CON_ANALITICA], ['/', '/se-compita', '/privacidad'])
+  test('toda página real de app/ fuera de las tres públicas queda sin medición', () => {
     for (const r of RUTAS_CON_ANALITICA) assert.ok(rutasDePagina().includes(r), `${r} debe existir como página`)
-    for (const r of ['/se-compita/', '/privacidad/']) assert.equal(rutaConAnalitica(r), true, r)
     const privadas = rutasDePagina().filter((r) => !(RUTAS_CON_ANALITICA as readonly string[]).includes(r))
     assert.ok(privadas.length > 15)
     for (const r of privadas) assert.equal(rutaConAnalitica(r), false, `${r} no debe medirse`)
-    for (const r of ['/panel', '/panel/', '/admin', '/dashboard', '/portal', '/sala/abc', '/reagendar/x', '/onboarding', '/compita/perfil', '/pago', '/login', '/solicitar', '/compitas', '/feedback/1', '/llamada/x', '/cuenta/eliminar', '/se-compita/otra', '/ruta-nueva', '', null, undefined])
-      assert.equal(rutaConAnalitica(r as any), false, String(r))
   })
-  test('ningún archivo carga Clarity, GA o Meta fuera de components/Analitica.tsx', () => {
+  test('ningún archivo carga Clarity, GA o Meta fuera de components/ScriptsAnaliticos.tsx', () => {
     const PATRON = /clarity\.ms\/tag|googletagmanager\.com\/gtag|fbevents\.js|facebook\.com\/tr\?/
     const archivos = [...walk('app'), ...walk('components'), ...walk('lib')].filter((f) => /\.(tsx?|js)$/.test(f))
-    assert.deepEqual(archivos.filter((f) => PATRON.test(leer(f))), ['components/Analitica.tsx'])
-    const layout = leer('app/layout.tsx')
-    assert.match(layout, /<Analitica \/>/)
-    assert.doesNotMatch(layout, /clarity\(|gtag\(|fbq\(|META_PIXEL|GA_MEASUREMENT/)
+    assert.deepEqual(archivos.filter((f) => PATRON.test(leer(f))), ['components/ScriptsAnaliticos.tsx'])
   })
-  test('Analitica no pinta nada en una ruta privada y corta la medición al entrar en una sin recargar', () => {
-    const s = leer('components/Analitica.tsx')
-    assert.match(s, /const publica = rutaConAnalitica\(ruta\)/)
-    assert.match(s, /if \(!publica\) return null/)
-    assert.match(s, /\[`ga-disable-\$\{GA_ID\}`\] = !publica/)
-    assert.match(s, /w\.clarity\('stop'\)/)
-    assert.match(s, /fbq\.disablePushState = true;/, 'Meta no debe seguir solo la navegación interna (llegaría a rutas privadas)')
+  test('Meta no sigue sola la navegación interna (llegaría a rutas privadas); las visitas públicas se cuentan a mano', () => {
+    const s = leer('components/ScriptsAnaliticos.tsx')
+    assert.match(s, /fbq\.disablePushState = true;/)
     assert.ok(s.indexOf('fbq.disablePushState') < s.indexOf("fbq('init'"), 'disablePushState va antes de init')
-    assert.match(s, /\$\{CLARITY_ID\}/)
+    assert.match(s, /fbq\?\.\('track', 'PageView'\)/)
   })
 })
 
 describe('la medición comercial pública sigue igual', () => {
   test('PageView inicial y conversiones: form_submit (GA) y Lead (Meta) en la portada y en /se-compita', () => {
-    const a = leer('components/Analitica.tsx')
-    assert.match(a, /gtag\('config', '\$\{GA_ID\}'\)/)
-    assert.match(a, /fbq\('init', '\$\{META_ID\}'\);\nfbq\('track', 'PageView'\);/)
-    assert.match(a, /w\.fbq\?\.\('track', 'PageView'\)/, 'las navegaciones internas entre páginas públicas siguen contando')
+    const a = leer('components/ScriptsAnaliticos.tsx')
+    assert.match(a, /gtag\('config', '\$\{gaId\}'\)/)
+    assert.match(a, /fbq\('init', '\$\{metaPixelId\}'\);\s*fbq\('track', 'PageView'\);/)
     const portada = leer('app/page.tsx')
     assert.match(portada, /gtag\?\.\("event", "form_submit", \{ event_category: "waitlist" \}\)/)
     assert.match(portada, /fbq\?\.\(\s*"track",\s*"Lead"\s*\)/)

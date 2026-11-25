@@ -1,5 +1,8 @@
 // Acciones del equipo sobre cuentas, visitas, tareas y reseñas (A-02 de la auditoría). Antes cada ruta de /api/admin tenía sus consultas dentro; ahora
 // viven aquí y las rutas solo autentican, validan el cuerpo y responden. Cada función devuelve un resultado, nunca una respuesta HTTP.
+import { limpiarImagen } from '@/lib/imagen'
+import { novedadInformativa } from '@/lib/novedades'
+import { anotarEventoChat } from '@/lib/chat-eventos'
 import { randomBytes } from 'node:crypto'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { sendTelegramMessage, TECLADO_SIN_VISITA } from '@/lib/telegram'
@@ -77,6 +80,7 @@ export async function forzarCierreVisita(visitaId: string, actorCorreo: string):
     .maybeSingle() as { data: (Visita & { compita: Compita; usuario: Usuario }) | null; error: unknown }
   if (error) return mal(500, 'No se pudo cerrar la visita')
   if (!visita) return mal(404, 'Visita no encontrada o ya cerrada')
+  await anotarEventoChat(visitaId, 'Visita terminada')
   // Avisar al compita por Telegram
   if (visita.compita?.telegram_chat_id) {
     sendTelegramMessage(visita.compita.telegram_chat_id, 'ℹ️ El equipo cerró la visita manualmente. Si tienes preguntas, escríbenos a hola@micompaz.com.', TECLADO_SIN_VISITA)
@@ -98,17 +102,23 @@ export async function generarInvitacionCompita(actorCorreo: string): Promise<Res
 export async function subirFotoCompita(buffer: Buffer, contentType: string, ext: string, nombre: string): Promise<Res<{ url: string }>> {
   const admin = createAdminSupabase()
   const slug = nombre.slice(0, 40).toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
-  const path = `compitas/${slug}-${Date.now()}.${ext}`
-  const { error } = await admin.storage.from('fotos').upload(path, buffer, { contentType, upsert: false })
+  // Foto pública: sin metadatos (ubicación GPS), girada, reducida y en WebP.
+  const limpia = await limpiarImagen(buffer)
+  const path = `compitas/${slug}-${Date.now()}.${limpia.ext}`
+  const { error } = await admin.storage.from('fotos').upload(path, limpia.bytes, { contentType: limpia.contentType, upsert: false })
   if (error) return mal(500, 'Error al subir la imagen')
   return bien({ url: admin.storage.from('fotos').getPublicUrl(path).data.publicUrl })
 }
 
-export async function invitarCliente(nombre: string, email: string, actorCorreo: string): Promise<Res<{ email: string; nombre: string }>> {
+export async function invitarCliente(nombre: string, email: string, actorCorreo: string): Promise<Res<{ email: string; nombre: string; reenviada?: boolean }>> {
   const admin = createAdminSupabase()
   const YA = 'Este cliente ya está registrado y no se le puede enviar otra invitación. Si no puede entrar, dile que pida un enlace nuevo en micompaz.com/login.'
-  const { data: existente } = await admin.from('usuarios').select('id').eq('email', email).maybeSingle()
-  if (existente) return mal(409, YA)
+  const { data: existente } = await admin.from('usuarios').select('id, nombre, activado, eliminada_en').eq('email', email).maybeSingle()
+  if (existente) {
+    // Invitado que todavía no abrió el correo: NO es cliente aún (el panel lo muestra como «Invitado»). Se le reenvía la invitación con un enlace nuevo.
+    if (existente.activado === false && !existente.eliminada_en) return reenviarInvitacionCliente(String(existente.nombre ?? nombre), email, actorCorreo, String(existente.id))
+    return mal(409, YA)
+  }
   // Crear la cuenta y obtener el enlace de activación (sin que Supabase envíe correo)
   const link = await admin.auth.admin.generateLink({ type: 'invite', email, options: { data: { nombre } } })
   if (link.error && (link.error.code === 'email_exists' || /already|registered|exists/i.test(link.error.message))) return mal(409, YA)
@@ -117,7 +127,8 @@ export async function invitarCliente(nombre: string, email: string, actorCorreo:
     return mal(500, 'No se pudo generar el enlace')
   }
   const { user, properties } = link.data
-  const { error: eU } = await admin.from('usuarios').upsert({ id: user.id, email, nombre }, { onConflict: 'id', ignoreDuplicates: true })
+  // activado: false a propósito: hasta que abra el correo y active su cuenta es un «Invitado», no un cliente.
+  const { error: eU } = await admin.from('usuarios').upsert({ id: user.id, email, nombre, activado: false }, { onConflict: 'id', ignoreDuplicates: true })
   if (eU) console.error('[invitar-cliente] upsert usuarios falló:', eU.message)
   const tipo = properties.verification_type ?? 'invite'
   const enlace = `${SITE_URL}/auth/confirm?token_hash=${encodeURIComponent(properties.hashed_token)}&type=${tipo}`
@@ -130,6 +141,22 @@ export async function invitarCliente(nombre: string, email: string, actorCorreo:
   }
   await anotarAccion(actorCorreo, `invitó a un cliente (${esc(nombre)})`, { tipo: 'cliente', id: user.id, nombre })
   return bien({ email, nombre })
+}
+
+/** Reenvía la invitación a quien todavía no se activó: enlace nuevo (el anterior deja de servir) y el mismo correo de bienvenida. */
+async function reenviarInvitacionCliente(nombre: string, email: string, actorCorreo: string, id: string): Promise<Res<{ email: string; nombre: string; reenviada: boolean }>> {
+  const link = await createAdminSupabase().auth.admin.generateLink({ type: 'magiclink', email })
+  if (link.error || !link.data?.properties?.hashed_token) {
+    console.error('[invitar-cliente] reenvío: generateLink falló:', link.error?.code, link.error?.message)
+    return mal(500, 'No se pudo generar el enlace')
+  }
+  const enlace = `${SITE_URL}/auth/confirm?token_hash=${encodeURIComponent(link.data.properties.hashed_token)}&type=${link.data.properties.verification_type ?? 'magiclink'}`
+  try { await sendBienvenidaCliente(email, nombre, enlace) } catch (e) {
+    console.error('[invitar-cliente] reenvío: correo falló:', e)
+    return mal(502, 'No se pudo enviar el correo. Vuelve a pulsar Reenviar.')
+  }
+  await anotarAccion(actorCorreo, `reenvió la invitación a un cliente (${esc(nombre)})`, { tipo: 'cliente', id, nombre })
+  return bien({ email, nombre, reenviada: true })
 }
 
 export async function registrarCompitaManual(body: Record<string, unknown>, actorCorreo: string): Promise<Res<Record<string, unknown>>> {
@@ -182,7 +209,7 @@ export async function avisarCompitaVerificada(compitaId: string): Promise<'teleg
           <h2 style="color:#2D1464;font-size:22px">¡Tu perfil fue verificado, ${esc(c.nombre.split(' ')[0])}!</h2>
           <p style="color:#4A3B6B;font-size:16px;line-height:1.6">Para aparecer ante las familias y recibir solicitudes, falta que conectes Telegram: abre el bot, pulsa <strong>Iniciar</strong>, escribe tu nombre tal como lo registraste y confirma el código que te llegará a este correo.</p>
           ${bot ? `<a href="https://t.me/${encodeURIComponent(bot)}" style="display:inline-block;background:#FF6B2B;color:white;padding:14px 28px;border-radius:9999px;text-decoration:none;font-weight:800;font-size:16px;margin-top:8px">Abrir el bot de Telegram →</a>` : ''}
-          <p style="color:#9990A8;font-size:13px;margin-top:28px">Compaz, <em>Cerca aunque estés lejos</em></p></div>`,
+</div>`,
       })
       return 'correo'
     } catch (e) { console.error('[verificar] correo a la compita falló:', e) }
@@ -231,6 +258,7 @@ export async function asignarPorEnlace(token: string): Promise<ResultadoAsignaci
         ].join('\n'))
       } catch (e) { console.error('Telegram asignar-rapido compita:', e) }
     }
+    await novedadInformativa({ usuarioId: actionToken.cliente_id, tipo: 'compita_asignada', titulo: `Tu compita está lista: ${compita.nombre.split(' ')[0]}. Ya puedes escribirle.`, entidad: 'cliente', entidadId: actionToken.cliente_id, clave: `compita_asignada:${actionToken.cliente_id}:${actionToken.compita_id}` })
     try {
       await sendEmail({
         to: cliente.email, subject: `Tu Compita está lista: ${compita.nombre}`,

@@ -1,10 +1,10 @@
 // POST /api/visita/confirmar-inicio — el cliente confirma que el compita llegó.
 // Transiciona confirmando_inicio → en_curso y notifica al compita por Telegram.
+import { anotarEventoChat } from '@/lib/chat-eventos'
 import { getClienteActivo } from '@/lib/auth'
 import { createAdminSupabase } from '@/lib/supabase-server'
 import { sendTelegramMessage, avisarAdmin, TECLADO_DURANTE_VISITA } from '@/lib/telegram'
 import { alertaAdmin } from '@/lib/alertas-admin'
-import { sendVisitaInicio } from '@/lib/resend'
 import { esc } from '@/lib/html'
 import { ok, err, unauthorized } from '@/lib/api'
 import type { Visita, Usuario } from '@/types'
@@ -29,6 +29,7 @@ export async function POST(req: Request) {
     .maybeSingle() as { data: (Visita & { compita: { id: string; nombre: string; telegram_chat_id: string | null }; usuario: Usuario }) | null }
 
   if (!visita) return err('No hay visita pendiente de confirmación', 409)
+  await anotarEventoChat(visitaId, 'Visita iniciada')
 
   const compita = visita.compita
   const usuario = visita.usuario
@@ -51,11 +52,7 @@ export async function POST(req: Request) {
     } catch (e) { console.error('[confirmar-inicio] Telegram compita:', e) }
   }
 
-  try { await sendVisitaInicio(usuario, compita as Parameters<typeof sendVisitaInicio>[1], visita) }
-  catch (e) {
-    console.error('[confirmar-inicio] email inicio:', e)
-    await alertaAdmin('tarea', `⚠️ No se pudo enviar el correo de inicio de visita a <b>${esc(usuario.nombre)}</b> (${esc(usuario.email)}).`)
-  }
+  // Sin correo: el cliente acaba de confirmar él mismo y el portal ya lo muestra. El correo «llegó con tu familiar» sale solo cuando la visita arranca sin que él actúe (cron aviso-inicio-visita).
 
   const horaInicio = new Date(ahora).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Caracas', hour12: true })
   await alertaAdmin('actividad', `▶️ <b>Visita iniciada</b>\n\n<b>Compita:</b> ${esc(compita.nombre)}\n<b>Cliente:</b> ${esc(usuario.nombre)}\n<b>Hora:</b> ${horaInicio}`)

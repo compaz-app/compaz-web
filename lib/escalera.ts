@@ -33,8 +33,10 @@ interface Regla {
 
 // Una regla por plantilla que espera acción de la persona. Las demás (informativas) no escalan.
 const REGLAS: Partial<Record<NombrePlantilla, Regla>> = {
-  solicitud_nueva: { respaldo: { canal: 'correo' }, siguienteMin: 18 * 60 },
-  llamada_terminada_cliente: { respaldo: { canal: 'correo' }, siguienteMin: 22 * 60 },
+  // El compita siempre tiene Telegram (sin él no se le puede contratar): el recordatorio va por ahí, no por correo.
+  solicitud_nueva: { respaldo: { canal: 'telegram' }, siguienteMin: 18 * 60 },
+  // El cliente ya recibe UN correo (a las 24 h si no lo vio en el portal): no se le manda un segundo; si tampoco actúa, va a una tarea del equipo.
+  llamada_terminada_cliente: { respaldo: null, siguienteMin: 22 * 60 },
 }
 
 interface Fila {
@@ -92,7 +94,7 @@ async function describir(admin: Admin, v: Fila): Promise<{ titulo: string; nota:
   if (v.plantilla === 'solicitud_nueva') {
     return {
       titulo: `${compita} no respondió una solicitud`,
-      nota: `${compita} no ha respondido la solicitud de entrevista de ${cliente}. Se le avisó por Telegram y por correo. Contáctalo para que responda, o ofrécele al cliente otro compita.`,
+      nota: `${compita} no ha respondido la solicitud de entrevista de ${cliente}. Se le avisó dos veces por Telegram. Contáctalo para que responda, o ofrécele al cliente otro compita.`,
     }
   }
   return {

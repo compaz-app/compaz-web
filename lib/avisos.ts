@@ -11,7 +11,7 @@ import { sendEmail } from '@/lib/email'
 import { PLANTILLAS, type Canal, type NombrePlantilla, type VariablesAviso } from '@/lib/plantillas-aviso'
 import type { EntidadEvento } from '@/lib/eventos'
 import { registrarNovedad, clienteTienePortalAbierto } from '@/lib/novedades'
-import { nivelDe, tituloDe, esperaDelCorreoMin } from '@/lib/novedades-politica'
+import { nivelDe, tituloDe, esperaDelCorreoMin, SOLO_PORTAL, ESPERA_FIJA_MIN } from '@/lib/novedades-politica'
 import { correoDiferidoActivo, CLAVE_NOVEDAD } from '@/lib/correos-diferidos'
 
 export type DestinatarioTipo = 'cliente' | 'compita' | 'admin'
@@ -173,7 +173,10 @@ export async function notificar(p: PedidoAviso, admin: Admin = createAdminSupaba
     if (p.destinatario.tipo === 'cliente' && p.canal === 'correo' && p.destinatario.id && !p.respaldoDe) {
       const nivel = nivelDe(p.plantilla)
       await registrarNovedad({ usuarioId: p.destinatario.id, tipo: p.plantilla, nivel, titulo: tituloDe(p.plantilla), entidad: p.entidad, entidadId: p.entidadId, clave: CLAVE_NOVEDAD(clave) }, admin)
-      if (correoDiferidoActivo()) {
+      if (SOLO_PORTAL.has(p.plantilla)) return { ok: true, estado: 'cancelado' } // solo portal (y resumen diario): no hay correo propio
+      const fija = ESPERA_FIJA_MIN[p.plantilla]
+      if (fija && p.variables?.corta !== true) { programado = new Date(ahora.getTime() + fija * 60_000); diferir = true } // primero el portal; el correo solo sale si pasa el plazo sin que lo vea
+      else if (correoDiferidoActivo()) {
         const espera = esperaDelCorreoMin(nivel, await clienteTienePortalAbierto(p.destinatario.id, admin, ahora))
         if (espera > 0) { programado = new Date(ahora.getTime() + espera * 60_000); diferir = true }
       }
