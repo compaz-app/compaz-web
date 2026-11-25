@@ -1,7 +1,7 @@
-// Velocidad que viven los usuarios reales (Core Web Vitals). Aquí vive la parte PURA (qué se acepta, cómo se resume) y la del servidor (guardar y leer).
+// Velocidad que viven los usuarios reales (Core Web Vitals). Aquí vive SOLO la parte PURA (qué se acepta, cómo se resume): la usa también el panel en el navegador, así que
+// NO puede importar nada del servidor. Guardar y leer de la base está en lib/velocidad-real-servidor.ts.
 // La medición sale del navegador (`components/MedirVelocidadReal.tsx`) y llega a /api/vitals. Todo es a prueba de fallos: si la tabla no existe todavía o la base
 // no responde, no se rompe nada (medir nunca debe volver lento ni inestable lo que mide).
-import { createAdminSupabase } from '@/lib/supabase-server'
 
 export const METRICAS = ['LCP', 'INP', 'CLS', 'FCP', 'TTFB'] as const
 export type Metrica = (typeof METRICAS)[number]
@@ -48,17 +48,6 @@ export function percentil(valores: number[], p: number): number | null {
   return o[Math.min(o.length - 1, Math.max(0, Math.ceil(p * o.length) - 1))]
 }
 
-export async function guardarMediciones(m: Medicion[]): Promise<boolean> {
-  if (m.length === 0) return true
-  try {
-    const { error } = await createAdminSupabase().from('web_vitals').insert(m.map((x) => ({
-      nombre: x.nombre, valor: x.valor, valoracion: valorar(x.nombre, x.valor), ruta: x.ruta, conexion: x.conexion, movil: x.movil,
-    })))
-    if (error) { console.error('[vitals] no se pudo guardar:', error.message); return false }
-    return true
-  } catch (e) { console.error('[vitals] error inesperado:', e); return false }
-}
-
 export interface FilaResumen { metrica: Metrica; muestras: number; p75: number; valoracion: Valoracion }
 export interface ResumenVelocidad {
   dias: number; total: number
@@ -71,7 +60,7 @@ export interface ResumenVelocidad {
   estado: 'sin_tabla' | 'sin_datos' | 'ok'
 }
 
-type Fila = { nombre: string; valor: number; ruta: string; conexion: string | null }
+export type Fila = { nombre: string; valor: number; ruta: string; conexion: string | null }
 export function resumir(filas: Fila[], dias: number): Omit<ResumenVelocidad, 'estado'> {
   const por = (f: Fila[]): FilaResumen[] => METRICAS.flatMap((metrica) => {
     const v = f.filter((x) => x.nombre === metrica).map((x) => Number(x.valor))
@@ -84,14 +73,4 @@ export function resumir(filas: Fila[], dias: number): Omit<ResumenVelocidad, 'es
     return { ruta, muestras: v.length, lcp: Math.round(p), valoracion: valorar('LCP', p) }
   }).filter((r) => r.muestras >= 5).sort((a, b) => b.lcp - a.lcp).slice(0, 5)
   return { dias, total: filas.length, general: por(filas), lentas: por(filas.filter((x) => x.conexion === '3g' || x.conexion === '2g' || x.conexion === 'slow-2g')), paginasLentas: rutas }
-}
-
-export async function resumenVelocidad(dias = 7): Promise<ResumenVelocidad> {
-  try {
-    const desde = new Date(Date.now() - dias * 86_400_000).toISOString()
-    const { data, error } = await createAdminSupabase().from('web_vitals').select('nombre, valor, ruta, conexion').gte('creado_en', desde).limit(20_000)
-    if (error) return { ...resumir([], dias), estado: 'sin_tabla' }
-    const filas = (data ?? []) as Fila[]
-    return { ...resumir(filas, dias), estado: filas.length === 0 ? 'sin_datos' : 'ok' }
-  } catch { return { ...resumir([], dias), estado: 'sin_tabla' } }
 }
