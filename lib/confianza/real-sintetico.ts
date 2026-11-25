@@ -14,7 +14,7 @@ export function listaSintetica(n = 120): FilaCmc[] {
     return {
       id: `COM-9${String(i + 1).padStart(3, '0')}`, nombre: `${NOMBRES[i % NOMBRES.length]} ${i + 1}`, zona: ZONAS[i % ZONAS.length],
       registro: new Date(Date.UTC(2026, 9, 1 + (i % 45))).toISOString(), etapa, estadoOperativo: etapa === 'Habilitado' ? 'Activo' : '', aceptaNuevos: etapa === 'Habilitado' ? 'Sí' : '',
-      preentrevista: i % 3 === 0 ? 'Enviada' : 'Respondida', duplicadoDe: i === 13 ? 'COM-9002' : '', clasificacionDuplicado: i === 13 ? 'Duplicado confirmado' : '',
+      preentrevista: i % 3 === 0 ? 'Enviado' : 'Formulario completado', duplicadoDe: i === 13 ? 'COM-9002' : '', clasificacionDuplicado: i === 13 ? 'Duplicado confirmado' : '',
       alertasAbiertas: i === 6 ? 1 : 0, alertasBloquean: i === 6 ? 1 : 0,
     }
   })

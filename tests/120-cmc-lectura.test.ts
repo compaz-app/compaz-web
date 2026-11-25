@@ -9,7 +9,7 @@ import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { createHash, createHmac } from 'node:crypto'
 import vm from 'node:vm'
 import { CLAVES_PRIVADAS, HUELLAS_REGLAS_CMC, compararReglas, CmcError, configuracionCmc, firmar, leerFichaCmc, leerListaCmc, limpiarPrivados, pingCmc, urlValida, validarLista, type FilaCmc } from '@/lib/cmc-api'
-import { construirFilas, normalizarEtapa, resumenReal, cuentaComoAspirante } from '@/lib/confianza/real'
+import { construirFilas, normalizarEtapa, resumenReal, cuentaComoAspirante, preentrevistaRespondida } from '@/lib/confianza/real'
 import { fichaSintetica, fuenteSinteticaPermitida, listaSintetica } from '@/lib/confianza/real-sintetico'
 import { fuenteDisponible } from '@/lib/confianza/lectura-real'
 
@@ -269,6 +269,15 @@ describe('clasificación de la operación real (lib/confianza/real.ts)', () => {
     const [a, b, c] = construirFilas([fila({ etapa: 'Preseleccionado', alertasBloquean: 1 }), fila({ id: 'COM-9105', etapa: 'Habilitado' }), fila({ id: 'COM-9106', etapa: 'Habilitado' })], new Map([['COM-9106', 'catalogo' as const]]))
     assert.equal(a.atencion, 'bloqueado'); assert.equal(b.atencion, 'accion'); assert.equal(c.atencion, 'al-dia')
     assert.equal(resumenReal([a, b, c]).enCatalogo, 1)
+  })
+  test('registrado con la preentrevista completada pide decisión; enviada o sin enviar es espera (valores reales del CMC)', () => {
+    const [a, b, c, d] = construirFilas([
+      fila({ id: 'COM-9111', preentrevista: 'Formulario completado' }), fila({ id: 'COM-9112', preentrevista: 'Enviado' }),
+      fila({ id: 'COM-9113', preentrevista: '' }), fila({ id: 'COM-9114', etapa: 'Descartado', preentrevista: 'Formulario completado' }),
+    ], new Map())
+    assert.equal(a.atencion, 'accion'); assert.equal(b.atencion, 'espera'); assert.equal(c.atencion, 'espera'); assert.equal(d.atencion, 'cerrado')
+    assert.equal(resumenReal([a, b, c, d]).requierenAtencion, 1)
+    assert.equal(preentrevistaRespondida(' formulario completado '), true); assert.equal(preentrevistaRespondida('Respondida'), false)
   })
   test('el resumen cuadra: la suma por etapa es igual a los aspirantes', () => {
     const r = resumenReal(construirFilas(listaSintetica(), new Map()))

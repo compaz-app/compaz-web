@@ -33,12 +33,16 @@ function conciliarHoja03() {
     if (aBl >= 0 && /^s[ií]/i.test(txt(a[k], aBl))) bloquea[idA] = (bloquea[idA] || 0) + 1;
   }
 
+  // Entrevistas registradas (hoja 08): cualquier código COM en sus primeras columnas.
+  var e8 = leer("'08 · Entrevistas Compitas'!A2:J"), entrevistados = {};
+  e8.forEach(function (f) { f.forEach(function (x) { (String(x).match(/COM-\d{4,6}/g) || []).forEach(function (c) { entrevistados[c] = 1; }); }); });
+
   var sinTilde = function (s) { return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase(); };
   var ETAPAS = ['Registrado', 'Preseleccionado', 'Entrevistado', 'En verificación', 'Habilitado', 'Descartado'];
   var PRUEBA_COD = { 'COM-1057': 1, 'COM-1062': 1, 'COM-1064': 1 };
   var PRUEBA_TXT = /\b(test|prueba|ejemplo|asdf|demo)\b/i;
 
-  var L = { filas: [], descartadas: [], duplicados: [], pruebas: [], aspirantes: [], atencion: [], bloqueados: [] };
+  var L = { filas: [], descartadas: [], duplicados: [], pruebas: [], aspirantes: [], atencion: [], bloqueados: [], preseleccionadosConEntrevista: [], excluidosSeleccion: [] };
   ETAPAS.concat(['Sin etapa']).forEach(function (e) { L['etapa:' + e] = []; });
   var cruce = {}, vistos = {}, filasConDatos = 0;
 
@@ -56,14 +60,16 @@ function conciliarHoja03() {
     ETAPAS.forEach(function (e) { if (sinTilde(e) === sinTilde(crudo)) et = e; });
     L['etapa:' + et].push(id);
     var pre = txt(f, cPre), sel = txt(f, cSel), bl = bloquea[id] || 0;
-    // Regla del panel, reescrita aquí para comprobarla.
+    // Lo que debe pedir acción según el CMC (la cola de entrevistas del CMC usa «Formulario completado»).
     var aten = bl > 0 ? 'bloqueado'
       : et === 'Sin etapa' ? 'accion'
-      : et === 'Registrado' ? (/respond/i.test(pre) ? 'accion' : 'espera')
+      : et === 'Registrado' ? (pre === 'Formulario completado' ? 'accion' : 'espera')
       : et === 'Preseleccionado' || et === 'Entrevistado' || et === 'En verificación' ? 'accion'
       : et === 'Habilitado' ? 'accion-si-no-esta-en-catalogo'
       : 'cerrado';
     if (aten === 'bloqueado') L.bloqueados.push(id);
+    if (et === 'Preseleccionado' && entrevistados[id]) L.preseleccionadosConEntrevista.push(id);
+    if (sel === 'Excluido') L.excluidosSeleccion.push(id);
     if (aten !== 'espera' && aten !== 'cerrado') L.atencion.push(id);
     var clave = et + ' | pre: ' + (pre || '—') + ' | sel: ' + (sel || '—') + (et === 'Habilitado' ? ' | op: ' + (txt(f, cOp) || '—') : '') + ' | alertas: ' + (abiertas[id] || 0) + '/' + bl + ' | panel: ' + aten;
     cruce[clave] = (cruce[clave] || 0) + 1;
@@ -75,7 +81,7 @@ function conciliarHoja03() {
   };
   var res = { filasConDatos: filasConDatos, cifras: {}, huellas: {}, listas: {} };
   Object.keys(L).forEach(function (k) { res.cifras[k] = L[k].length; if (k !== 'descartadas') res.huellas[k] = huella(L[k]); });
-  ['descartadas', 'pruebas', 'etapa:Sin etapa', 'etapa:En verificación', 'etapa:Habilitado', 'etapa:Descartado', 'bloqueados'].forEach(function (k) { res.listas[k] = L[k]; });
+  ['descartadas', 'pruebas', 'etapa:Sin etapa', 'etapa:En verificación', 'etapa:Habilitado', 'etapa:Descartado', 'bloqueados', 'preseleccionadosConEntrevista', 'excluidosSeleccion'].forEach(function (k) { res.listas[k] = L[k]; });
   console.log('CONCILIACION ' + JSON.stringify(res));
   Object.keys(cruce).sort().forEach(function (k) { console.log('CRUCE ' + cruce[k] + ' × ' + k); });
 }

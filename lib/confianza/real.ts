@@ -34,7 +34,9 @@ export interface FilaReal {
 
 /** El CMC solo da por duplicado lo que está marcado «Duplicado confirmado» (mismo criterio que el envío de la preentrevista). */
 export const esDuplicadoConfirmado = (clasificacion: string) => /duplicado confirmado/i.test(clasificacion)
-const preentrevistaRespondida = (estado: string) => /respond/i.test(estado)
+/** Mismo criterio que el CMC para la cola de entrevistas: la hoja 03 marca «Formulario completado» al recibir la preentrevista
+ *  (los otros valores reales son «Enviado» y vacío). Antes se buscaba «respond» y ningún valor real coincidía (conciliación 2026-11-25). */
+export const preentrevistaRespondida = (estado: string) => /^formulario completado$/i.test(estado.trim())
 
 function proximaYAtencion(f: Omit<FilaReal, 'proxima' | 'atencion'>): Pick<FilaReal, 'proxima' | 'atencion'> {
   if (f.duplicado) return { proxima: `Duplicado de ${f.duplicadoDe ?? 'otra ficha'}: no se gestiona aparte.`, atencion: 'excluido' }
