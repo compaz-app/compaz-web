@@ -4,6 +4,13 @@ La versión vigente está en `lib/version.ts` y se ve en el panel (menú lateral
 
 Reglas: mayor = cambio grande o lanzamiento; menor = función nueva; parche = arreglo. La etapa `beta` sale cuando el sistema corre una o dos semanas con uso real sin sorpresas.
 
+## 1.4.2-beta.1 (2026-11-25)
+Arreglo: producción vuelve a compilar (INC-003 en `docs/incidentes.md`).
+1. Desde `main@0da369e` la compilación de producción fallaba. `components/panel/mas/VelocidadReal.tsx`, del navegador, arrastraba `lib/supabase-server.ts` (`next/headers`) al importar constantes de `lib/velocidad-real.ts`. Producción quedó en 1.4.0.
+2. Las constantes puras de las métricas pasan a `lib/velocidad-metricas.ts`, sin servidor. `lib/velocidad-real.ts` las vuelve a exportar y el componente importa de ahí, con los tipos en `import type`.
+3. La prueba 144 falla si cualquier archivo con `'use client'` importa, directa o indirectamente, `lib/supabase-server.ts`.
+4. Solo este arreglo: no incluye el CMC 2A (PR #26). Sin migración.
+
 ## 1.4.1-beta.1 (2026-11-26)
 Integración: la rama de trabajo (versiones 1.3.9 a 1.3.48, todo lo de los últimos días) se junta con `main` (1.4.0, el panel «Sistema de Confianza» de Luis). Los números de versión de las dos líneas se cruzaron (1.3.x contra 1.4.0): esta es la primera que las contiene a las dos, por eso salta a 1.4.1 y no repite. Sin cambios de código propios: solo se resolvieron los choques de archivos compartidos (versión, historial, configuración de Next, entrada del manual y la página del panel).
 
