@@ -2,7 +2,8 @@
 // página sin cuenta), por eso es estricta: máximo 4 KB, solo las 5 métricas conocidas, números sanos, la ruta reducida a su primer tramo, un tope por conexión y
 // NUNCA responde con error ni explica nada (es una señal de fondo; no hay a quién mostrarle un mensaje). No guarda IP ni usuario. Ver lib/velocidad-real.ts.
 import { NextRequest, NextResponse } from 'next/server'
-import { guardarMediciones, validarMediciones } from '@/lib/velocidad-real'
+import { validarMediciones } from '@/lib/velocidad-real'
+import { guardarMediciones } from '@/lib/velocidad-real-servidor'
 import { sumarIntento } from '@/lib/limite'
 
 const MAX_BYTES = 4096

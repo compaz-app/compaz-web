@@ -1,5 +1,5 @@
 import { requierePermiso } from '@/lib/permisos'
-import { resumenVelocidad } from '@/lib/velocidad-real'
+import { resumenVelocidad } from '@/lib/velocidad-real-servidor'
 import { ok, serverError } from '@/lib/api'
 
 // GET /api/admin/velocidad-real — resumen de la velocidad que viven los usuarios reales (últimos 7 días, solo administrador). No escribe nada.

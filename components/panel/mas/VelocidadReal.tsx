@@ -3,8 +3,7 @@
 import { useState } from 'react'
 import Boton from '@/components/ui/base/Boton'
 import InfoBoton from '@/components/ui/InfoBoton'
-import { ETIQUETA_METRICA, UNIDAD } from '@/lib/velocidad-metricas'
-import type { ResumenVelocidad, FilaResumen } from '@/lib/velocidad-real'
+import { ETIQUETA_METRICA, UNIDAD, type ResumenVelocidad, type FilaResumen } from '@/lib/velocidad-real'
 
 const COLOR = { good: 'text-verde-oscuro', 'needs-improvement': 'text-naranja-oscuro', poor: 'text-rojo-oscuro' } as const
 const TEXTO = { good: 'Bien', 'needs-improvement': 'Mejorable', poor: 'Lento' } as const

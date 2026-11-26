@@ -37,5 +37,5 @@ test('ningún componente del navegador arrastra módulos solo de servidor', () =
       }
     }
   }
-  assert.deepEqual(fallos, [], 'Separa las constantes puras en un módulo sin servidor (como lib/velocidad-metricas.ts) o usa `import type`.')
+  assert.deepEqual(fallos, [], 'Separa las constantes puras en un módulo sin servidor (como lib/velocidad-real.ts, pura, y lib/velocidad-real-servidor.ts) o usa `import type`.')
 })

@@ -6,30 +6,31 @@ Cómo se escribe cada entrada: impacto, línea de tiempo, causa raíz, detecció
 
 ---
 
-## INC-003 · 24/25-nov-2026 · Producción dejó de actualizarse: la compilación de main falla
+## INC-003 · 24/25-nov-2026 · Producción dejó de actualizarse un día: la compilación de main fallaba
 
-**Impacto.** El despliegue de producción de `main@0da369e` (1.4.1-beta.1) falló el 24-nov a las 22:17 (hora de Netlify). Producción sigue publicada en `main@cf6e0f8` (1.4.0). Ninguno de los 39 cambios posteriores de main está en vivo, entre ellos el aviso de cookies (1.3.43), la medición de velocidad (1.3.40) y el cierre de tokens anónimos. No hubo caída: el sitio publicado siguió funcionando. Cualquier rama que integre main hereda el fallo (así se detectó en el PR #26).
+**Impacto.** El despliegue de producción de `main@0da369e` (1.4.1-beta.1) falló el 24-nov a las 22:17 (hora de Netlify). Producción se quedó en `main@cf6e0f8` (1.4.0) hasta que se publicó `main@3c1b16e`, el 25-nov a las 17:19 (hora de Netlify). Durante ese tiempo no hubo caída: el sitio publicado siguió funcionando, pero ninguno de los 38 cambios de 1.3.14 a 1.3.48 estaba en vivo. Cualquier rama que integrara main heredaba el fallo; así se detectó en el PR #26.
 
 **Línea de tiempo.**
 1. 24-nov, 22:17: falla el despliegue de producción de `main@0da369e`.
-2. 25-nov, 14:29: falla el preview del PR #26 tras integrar main.
-3. 25-nov: se identifica la causa y se corrige en la rama del PR #26.
+2. 25-nov, 14:29: falla el preview del PR #26 tras integrar main y se identifica la causa.
+3. 25-nov, 19:05–19:07 (hora de Juan): Juan sube el arreglo y la actualización de Next a main.
+4. 25-nov, 17:19 (hora de Netlify): producción publica `main@3c1b16e`.
 
 **Causa raíz.** `components/panel/mas/VelocidadReal.tsx` es un componente del navegador (`'use client'`) que importaba constantes de `lib/velocidad-real.ts`. Ese módulo importa `lib/supabase-server.ts`, que usa `next/headers`, solo de servidor. Turbopack no permite ese módulo en el navegador y la compilación se detiene. `tsc` y las pruebas no lo detectan porque no compilan para el navegador.
 
 **Detección.** Por el preview fallido del PR #26. Nadie recibió aviso del fallo de producción.
 
-**Arreglo (en la rama del PR #26, 1.5.0-beta.1).**
-- Las constantes puras de las métricas pasan a `lib/velocidad-metricas.ts`, sin servidor; `lib/velocidad-real.ts` las vuelve a exportar.
-- El componente importa de ahí, y los tipos con `import type`.
-- `next build` local ya no da ese error.
+**Arreglo (lo hizo Juan en `main`, 25-nov).**
+- `3685e98`: separa `lib/velocidad-real.ts` (pura, la usa el navegador) de `lib/velocidad-real-servidor.ts` (guardar y leer).
+- `3c1b16e`: actualiza Next de 16.4.3 a 16.4.6. `next build` 16.4.3 también se detenía por avisos de seguridad conocidos.
+- Producción publicó `main@3c1b16e` el 25-nov, con las versiones 1.3.14 a 1.3.48 y 1.4.1 juntas.
+- En paralelo se había preparado un arreglo alternativo (PR #27 y una versión previa del PR #26). Se descartó para no duplicar el de Juan: el PR #27 se cerró sin fusionar y el PR #26 adopta los archivos de `main`.
 
-**Qué no se pudo comprobar.** La compilación local completa: el entorno de pruebas no descarga las fuentes de Google. La confirma el preview de Netlify.
+**Hecho.** La prueba 144 (PR #26) falla si un archivo con `'use client'` importa, directa o indirectamente, `lib/supabase-server.ts`. Se comprobó que detecta el error original y que pasa con el arreglo de Juan.
 
 **Pendiente.**
-1. Si el PR #26 tarda en aprobarse, llevar este arreglo a main por separado para desbloquear producción.
-2. Activar en Netlify un aviso de despliegue fallido (*Deploy notifications → Deploy failed*), por correo o Telegram.
-3. HECHO: la prueba 144 falla si un archivo con `'use client'` importa, directa o indirectamente, `lib/supabase-server.ts`. Se comprobó que detecta el error original.
+1. Activar en Netlify un aviso de despliegue fallido (*Deploy notifications → Deploy failed*), por correo o Telegram.
+2. Los cambios a `main` pasan por un PR con su preview antes de fusionarse. Los 38 cambios de 1.3.14 a 1.3.48 entraron directo y nunca se vieron compilar hasta su publicación.
 
 **Qué se aprendió.** `tsc` y las pruebas en verde no garantizan que compile. Antes de fusionar a main hay que mirar el estado del preview.
 
