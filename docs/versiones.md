@@ -4,6 +4,46 @@ La versión vigente está en `lib/version.ts` y se ve en el panel (menú lateral
 
 Reglas: mayor = cambio grande o lanzamiento; menor = función nueva; parche = arreglo. La etapa `beta` sale cuando el sistema corre una o dos semanas con uso real sin sorpresas.
 
+## 1.5.0-beta.1 (2026-11-25)
+CMC fase 2A: lectura real del CMC en el panel (preparada; se activa al instalar la API, ver `docs/cmc/api-panel.md`).
+1. **Operación real con los datos del CMC original** (solo administradores, decidido en el servidor): todos los aspirantes de la hoja 03 por etapa, con el diseño aprobado (banda de indicadores, stepper de 6 pasos, tabla con búsqueda y paginación de 50). Filtros, búsqueda, página, ficha y pestaña en la dirección (`cf_etapa`, `cf_q`, `cf_pag`, `cf_id`, `cf_tab`).
+2. **Ficha real** (`cf_id=COM-…`): requisitos de habilitación tal como los calcula el CMC, ficha, estado operativo, preentrevista, entrevistas, verificaciones, onboarding, disponibilidad y cobertura, alertas e historial (hoja 17). Se muestra lo que llega, sin inventar campos; la próxima acción se rotula «orientativa».
+3. Separación: los duplicados confirmados y los perfiles de prueba no cuentan como aspirantes; la etapa vacía sale como «Sin etapa» (no se inventa). Las demos siguen solo en Demostración.
+4. Canal: `docs/cmc/api-panel.gs` (API de lectura para el Apps Script, firmada con HMAC-SHA256, hora, nonce de un solo uso, tope por minuto e interruptor) y `lib/cmc-api.ts` (cliente del servidor; caché de 60 s para la lista y 30 s para la ficha). Teléfonos, correos, documentos, direcciones y enlaces se borran en Apps Script y otra vez en la web.
+5. Sin la API configurada, el panel muestra la vista anterior. En un deploy preview sin API se usa una fuente sintética (COM-9xxx, personas ficticias) para revisar la pantalla. Clarity no graba el texto de la vista real (`data-clarity-mask`).
+6. Revisión visual (375, 768 y 1280 px, fuente sintética): la tabla de columnas aparece desde 1024 px (a 768 el nombre quedaba cortado; por debajo cada fila es una tarjeta); plurales correctos («1 duplicado confirmado»); con la fuente sintética ya no dice «Leído del CMC» sino «Datos inventados»; las pestañas de la ficha no muestran una barra vertical; nombres legibles para los campos del CMC («Etapa de selección», «Bloquea asignaciones»…); la fuente sintética tiene 120 aspirantes para poder probar la paginación.
+7. **Privacidad de la analítica:** al integrar main (25-nov) se adoptó su implementación, hecha en paralelo en 1.3.42 y 1.3.43 (`components/ScriptsAnaliticos.tsx`, `lib/analitica-rutas.ts`, permiso previo de cookies). Se retiraron `components/Analitica.tsx` y `lib/analitica.ts` de esta rama. De lo nuestro quedan:
+    - Meta no sigue sola la navegación interna (`fbq.disablePushState`), así que no cuenta una visita a `/panel` o `/portal` antes de que la medición se detenga; las visitas entre páginas públicas se cuentan a mano.
+    - Clarity no graba los formularios públicos ni el chat (`data-clarity-mask`).
+    - El evento `chat_message` no envía el texto.
+    - La búsqueda del CMC no va en la dirección.
+    - Los errores del CMC solo se registran como códigos.
+
+    Pruebas 121 y 137.
+8. **API de lectura en un proyecto de Apps Script independiente** (2026-11-18/19): el proyecto del CMC tiene un `doGet` que sirve la V2 y más de cien funciones públicas, así que una implementación anónima suya expondría la V2. La API vive en «CMC · API de lectura del panel» con solo tres archivos (`docs/cmc/api-lectura/`: `ApiPanel.gs` sin `doGet`, `HojaSoloLectura.gs` sin métodos de escritura y la copia literal de 30 funciones de lectura del CMC), el único permiso `spreadsheets.readonly` (lectura con la API de Sheets) y huellas por función comprobadas contra el CMC (`HUELLAS_REGLAS_CMC`). Publicada apagada; conexión solo en Deploy Previews. Detalle, paridad con la V2, pruebas y reversión en `docs/cmc/api-panel.md`.
+9. Prueba 120: ejecuta la API de Apps Script en una caja de arena con hojas sintéticas (firma, rechazos, minimización, sin escrituras), el cliente, la clasificación y el permiso. Sin migración. Diseño de la fase 2B (acciones) en `docs/cmc/api-panel.md`, sin activar.
+10. **Prueba de integración real** (2026-11-24, API activa solo para Deploy Previews):
+    - Rechazos comprobados.
+    - Cifras contrastadas con la hoja 03.
+    - Fichas de todas las etapas con las reglas de la V2.
+    - Sin datos personales.
+    - Sin escrituras en la hoja.
+    - Demostración aislada.
+
+    Corregido durante la prueba:
+    - **Cuota de Sheets:** cada petición hace 2 lecturas por lotes (antes, 2 por hoja). Si Google limita, la API responde `limite_google` con un mensaje claro.
+    - **Requisito «Referencia verificada»:** el filtro de privacidad ya no lo borra.
+
+    Resultados en `docs/cmc/api-panel.md` §7.
+11. **Conciliación automática de la hoja 03 con el panel** (2026-11-25, solo lectura). `docs/cmc/conciliacion/Conciliacion.gs` lee las hojas 03, 08 y 11 con lógica propia, sin pasar por el panel. Las 15 categorías coinciden con el panel código por código (huella SHA-256 de cada lista):
+    - 1008 filas, 1006 códigos únicos y 2 repetidos;
+    - 137 duplicados y 3 pruebas;
+    - 866 aspirantes;
+    - cada etapa.
+12. **Corregido: «Requieren atención» omitía 64 registrados con la preentrevista completada.** El panel buscaba «respond» en el estado, pero el CMC escribe «Formulario completado», que es el mismo criterio que usa su cola de entrevistas. Ahora cuentan como «revisar y decidir si se preselecciona». La cifra pasa de 318 a 382, sin esperas normales ni perfiles excluidos. Los datos sintéticos usan ahora los valores reales del CMC. Prueba 120.
+13. Integración con main (1.4.1-beta.1): la rama queda al día y sin conflictos.
+14. **INC-003** (producción no compilaba desde `main@0da369e`): lo corrigió Juan en `main` (`3685e98`, `3c1b16e`). Esta rama adopta su arreglo sin duplicarlo y agrega la prueba 144, que impide que un componente del navegador arrastre `lib/supabase-server.ts`. Detalle en `docs/incidentes.md`.
+
 ## 1.4.1-beta.1 (2026-11-26)
 Integración: la rama de trabajo (versiones 1.3.9 a 1.3.48, todo lo de los últimos días) se junta con `main` (1.4.0, el panel «Sistema de Confianza» de Luis). Los números de versión de las dos líneas se cruzaron (1.3.x contra 1.4.0): esta es la primera que las contiene a las dos, por eso salta a 1.4.1 y no repite. Sin cambios de código propios: solo se resolvieron los choques de archivos compartidos (versión, historial, configuración de Next, entrada del manual y la página del panel).
 
@@ -174,6 +214,7 @@ Un cliente invitado no cuenta como cliente hasta activar su cuenta.
 2. En Más, Invitar aparece «Invitados sin activar» con un botón «Reenviar». Reenviar manda un enlace nuevo (el anterior deja de servir). Invitar otra vez al mismo correo hace lo mismo en lugar de rechazarlo; quien ya activó su cuenta sigue sin poder reinvitarse (409).
 3. Los clientes que ya existían no cambian: solo se oculta a quien está marcado como no activado.
 4. Sin migración.
+
 ## 1.4.0-beta.1 (2026-11-17)
 CMC · Centro de Mando Compitaz (Sistema de Confianza) en el panel.
 1. Nueva sección del panel, «Sistema de Confianza» (`/panel?sec=confianza`), con el permiso de monitorear. En el teléfono no cabe en la barra inferior: se entra desde Más.

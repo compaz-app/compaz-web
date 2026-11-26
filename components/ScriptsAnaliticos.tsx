@@ -18,6 +18,15 @@ export default function ScriptsAnaliticos({ gaId, metaPixelId, clarityId }: { ga
   const permitido = esRutaConAnalitica(pathname) && decision === 'si'
   const cargados = useRef(false)
   if (permitido) cargados.current = true
+  const anterior = useRef<string | null>(null)
+
+  // Meta no sigue sola la navegación interna (fbq.disablePushState): si lo hiciera, contaría una visita a /panel o /portal
+  // antes de que el efecto de abajo la frene. Las visitas entre páginas públicas se cuentan aquí, a mano.
+  useEffect(() => {
+    if (!permitido) { anterior.current = null; return }
+    if (anterior.current !== null && anterior.current !== pathname) { try { (window as unknown as Ventana).fbq?.('track', 'PageView') } catch { /* nada */ } }
+    anterior.current = pathname
+  }, [permitido, pathname])
 
   useEffect(() => {
     if (permitido || !cargados.current) return
@@ -57,6 +66,7 @@ export default function ScriptsAnaliticos({ gaId, metaPixelId, clarityId }: { ga
               t.src=v;s=b.getElementsByTagName(e)[0];
               s.parentNode.insertBefore(t,s)}(window, document,'script',
               'https://connect.facebook.net/en_US/fbevents.js');
+              fbq.disablePushState = true;
               fbq('init', '${metaPixelId}');
               fbq('track', 'PageView');`}
           </Script>

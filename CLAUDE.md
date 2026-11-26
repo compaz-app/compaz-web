@@ -2,6 +2,7 @@
 
 ## 1. URL state persistence (obligatorio)
 Toda página o sección con tabs, filtros, selecciones o pasos multi-nivel debe persistir su estado en URL params (`useSearchParams` + `router.replace`) y restaurarlo al hacer refresh. El componente visual (mapa, lista, tab activo) también debe sincronizarse desde esos params al montar — no solo los dropdowns o la UI de texto.
+**Excepción (2026-11-17):** el texto libre de una búsqueda que pueda ser un nombre, correo o teléfono (p. ej. la búsqueda del CMC) NO va en la dirección: se guarda en `sessionStorage` de la pestaña. Las direcciones quedan en el historial, en registros y en herramientas de terceros.
 
 ## 2. Diseño responsive (obligatorio)
 Todo componente y página debe funcionar correctamente en mobile (≥375px) y desktop (≥1024px). Nunca diseñar solo para uno. Usar `flexWrap`, breakpoints con `@media`, o lógica condicional cuando la diferencia entre mobile y desktop sea significativa.

@@ -856,7 +856,7 @@ function Formulario({ rolInicial }: { rolInicial: string }) {
             </p>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4" data-clarity-mask="True">
             {/* Honeypot */}
             <input
               type="text"
